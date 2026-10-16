@@ -179,6 +179,7 @@ function heldEpisode(
         path,
         language,
       })),
+      ...(episode.stillPath === null ? {} : { stillPath: episode.stillPath }),
       subtitleLanguages: [],
       ...overrides,
     }),
@@ -292,8 +293,9 @@ describe('PATCH /api/series/:id — the episodes', () => {
     const response = await patchSeries(baseUrl, series.id, [
       ...heldFields(storage, series.id),
       heldEpisode(pilot, { season: 2, number: 5, title: 'The Pilot' }),
-      // A picked replacement: no `videoPath`, the bytes follow.
-      heldEpisode(lowTide, { videoPath: undefined }),
+      // A picked replacement: no `videoPath`, the bytes follow. The held
+      // still travels back as its path, as the form sends it.
+      heldEpisode(lowTide, { videoPath: undefined, stillPath: 'still.jpg' }),
       ['episodeVideo', videoPart('S01E02.recut.mp4')],
     ]);
 
@@ -681,5 +683,142 @@ describe('PATCH /api/series/:id — the Source file', () => {
       [2, null],
       [3, null],
     ]);
+  });
+});
+
+describe('the Movie form sets an episode’s Still', () => {
+  /** The still a body picks: an image part after its `episode` field. */
+  const stillPart = (filename = 'frame.jpg'): File => posterPart(filename);
+
+  it('stores a still picked on an add in its season’s folder, as S01E01-still', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const response = await send('POST', `${baseUrl}/api/series`, [
+      ['title', 'Harbor and Vine'],
+      ['year', '2019'],
+      ['episode', JSON.stringify({ season: 1, number: 1, title: 'Pilot' })],
+      ['episodeVideo', videoPart('S01E01.mp4')],
+      ['episodeStill', stillPart('Frame.JPG')],
+    ]);
+
+    expect(response.status).toBe(201);
+    const series = (await response.json()) as Series;
+    const [pilot] = storage.listEpisodes(series.id);
+    expect(pilot.stillPath).toMatch(/\/season-01\/S01E01-still\.jpg$/);
+    expect(existsSync(join(media, pilot.stillPath ?? ''))).toBe(true);
+  });
+
+  it('sets a picked still on a held episode, and keeps another’s held one', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const series = await addHarbor(baseUrl);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    storage.enrichEpisode(lowTide.id, { stillPath: 'held.still.jpg' });
+
+    const response = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(pilot),
+      ['episodeStill', stillPart()],
+      heldEpisode(storage.listEpisodes(series.id)[1]),
+    ]);
+
+    expect(response.status).toBe(200);
+    const [after, kept] = storage.listEpisodes(series.id);
+    expect(after.stillPath).toMatch(/\/season-01\/S01E01-still\.jpg$/);
+    expect(existsSync(join(media, after.stillPath ?? ''))).toBe(true);
+    expect(kept.stillPath).toBe('held.still.jpg');
+  });
+
+  it('replaces a held still, the old file removed and the new one never on its name', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const series = await addHarbor(baseUrl);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    const first = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(pilot),
+      ['episodeStill', stillPart()],
+      heldEpisode(lowTide),
+    ]);
+    expect(first.status).toBe(200);
+    const held = storage.listEpisodes(series.id)[0].stillPath ?? '';
+
+    const second = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(storage.listEpisodes(series.id)[0], {
+        stillPath: undefined,
+      }),
+      ['episodeStill', stillPart()],
+      heldEpisode(lowTide),
+    ]);
+
+    expect(second.status).toBe(200);
+    const replaced = storage.listEpisodes(series.id)[0].stillPath ?? '';
+    expect(replaced).toMatch(/S01E01-still-2\.jpg$/);
+    expect(existsSync(join(media, replaced))).toBe(true);
+    expect(existsSync(join(media, held))).toBe(false);
+  });
+
+  it('takes a held still away when the field carries neither path nor part', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const series = await addHarbor(baseUrl);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(pilot),
+      ['episodeStill', stillPart()],
+      heldEpisode(lowTide),
+    ]);
+    const held = storage.listEpisodes(series.id)[0];
+    expect(held.stillPath).not.toBeNull();
+
+    const response = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(held, { stillPath: undefined }),
+      heldEpisode(lowTide),
+    ]);
+
+    expect(response.status).toBe(200);
+    expect(storage.listEpisodes(series.id)[0].stillPath).toBeNull();
+    expect(existsSync(join(media, held.stillPath ?? ''))).toBe(false);
+  });
+
+  it('refuses a still that is not an image, writing nothing', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const series = await addHarbor(baseUrl);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    const files = filesUnder(media);
+
+    const response = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(pilot),
+      ['episodeStill', subtitlePart('frame.srt')],
+      heldEpisode(lowTide),
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: 'Not a still image: "frame.srt"',
+    });
+    expect(storage.listEpisodes(series.id)[0].stillPath).toBeNull();
+    expect(filesUnder(media)).toEqual(files);
+  });
+
+  it('refuses a second still after one episode field', async () => {
+    const { storage, baseUrl, media } = freshApi();
+    const series = await addHarbor(baseUrl);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+    const files = filesUnder(media);
+
+    const response = await patchSeries(baseUrl, series.id, [
+      ...heldFields(storage, series.id),
+      heldEpisode(pilot),
+      ['episodeStill', stillPart()],
+      ['episodeStill', stillPart('other.jpg')],
+      heldEpisode(lowTide),
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: 'Each still must follow its episode field',
+    });
+    expect(filesUnder(media)).toEqual(files);
   });
 });

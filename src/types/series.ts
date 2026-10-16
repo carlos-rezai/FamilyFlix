@@ -134,6 +134,8 @@ export interface NewEpisode {
   /** The **Library folder** its video is linked into; omitted or `null`, it is
    *  copied — so a {@link StoredVideo} spreads in whole. */
   videoFolderId?: string | null;
+  /** Its **Still**, a **Stored path**; none by default. */
+  stillPath?: string;
 }
 
 /** The episode after one, in its own series — what _Up next_ names. */

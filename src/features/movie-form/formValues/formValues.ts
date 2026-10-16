@@ -231,6 +231,7 @@ export function heldEpisodeRows({ seasons }: SeriesDetail): EpisodeFormRow[] {
           },
           language: track.language,
         })),
+      still: storedFile(episode.stillPath),
     }));
 }
 
@@ -402,8 +403,8 @@ export function movieFormData(values: MovieFormValues): FormData {
 /**
  * The body of a series save, `POST /api/series`, in the contract's order: the
  * series fields (the director's field travels as `creator`), the poster, then
- * each row as its `episode` JSON field followed by its `episodeVideo` and its
- * `episodeSubtitle` parts. The order is load-bearing: the route pairs the k-th
+ * each row as its `episode` JSON field followed by its `episodeVideo`, its
+ * picked **Still** as `episodeStill`, and its `episodeSubtitle` parts. The order is load-bearing: the route pairs the k-th
  * video with the k-th `episode` field and names the Series folder off a title
  * and year it has already read.
  *
@@ -444,13 +445,17 @@ export function seriesFormData(
       (subtitle) => subtitle.file.kind === 'picked'
     );
     // A held row — the **Series edit job**'s — names its episode, and its
-    // held files travel as the **Stored paths** they have.
+    // held files travel as the **Stored paths** they have; a held still left
+    // out is taken away.
     const held =
       row.id === undefined
         ? {}
         : {
             id: row.id,
             ...(row.file.kind === 'stored' ? { videoPath: row.file.path } : {}),
+            ...(row.still?.kind === 'stored'
+              ? { stillPath: row.still.path }
+              : {}),
             storedSubtitles: row.subtitles.flatMap((subtitle) =>
               subtitle.file.kind === 'stored'
                 ? [{ path: subtitle.file.path, language: subtitle.language }]
@@ -472,6 +477,9 @@ export function seriesFormData(
     );
     if (row.file.kind === 'picked') {
       body.append('episodeVideo', row.file.file);
+    }
+    if (row.still?.kind === 'picked') {
+      body.append('episodeStill', row.still.file);
     }
     for (const subtitle of subtitles) {
       if (subtitle.file.kind === 'picked') {
@@ -558,6 +566,7 @@ export function seriesResolveRows(
       number: String(number),
       title: claim?.title ?? '',
       subtitles: [],
+      still: null,
     };
   });
   return { rows, taken };

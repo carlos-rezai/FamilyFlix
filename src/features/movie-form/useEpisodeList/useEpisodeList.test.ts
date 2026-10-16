@@ -364,6 +364,7 @@ describe('useEpisodeList — refusals', () => {
             number: '3',
             title: '',
             subtitles: [],
+            still: null,
           },
         ],
         ['1x1', '1x2']

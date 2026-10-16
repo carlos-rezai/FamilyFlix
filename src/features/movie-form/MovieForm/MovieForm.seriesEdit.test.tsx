@@ -457,3 +457,91 @@ describe('MovieForm — the Series edit job, the Source file', () => {
     expect(screen.getByText('S02E01.mkv')).toBeTruthy();
   });
 });
+
+describe('MovieForm — the Series edit job, an episode’s Still', () => {
+  const HELD_STILL = `${FOLDER}/season-01/S01E01.still.jpg`;
+
+  /** The read with the Pilot holding a still. */
+  function withHeldStill(): void {
+    const pilot: Episode = { ...PILOT, stillPath: HELD_STILL };
+    answerSeries = () =>
+      Promise.resolve(
+        okResponse({
+          ...DETAIL,
+          seasons: [
+            DETAIL.seasons[0],
+            { number: 1, episodes: [LOW_TIDE, pilot], next: pilot },
+          ],
+          next: pilot,
+        })
+      );
+  }
+
+  const stillPicker = (tag: string) =>
+    screen.getByLabelText(
+      new RegExp(`choose still for ${tag}$`, 'i')
+    ) as HTMLInputElement;
+
+  it('draws a still slot on every row, a held still by its name', async () => {
+    withHeldStill();
+    await renderAt();
+
+    expect(screen.getByText('S01E01.still.jpg')).toBeTruthy();
+    expect(
+      screen.getByRole('button', { name: 'Remove still for S01E01' })
+    ).toBeTruthy();
+    expect(stillPicker('S01E02')).toBeTruthy();
+    expect(stillPicker('S02E01')).toBeTruthy();
+  });
+
+  it('sends a held still back as its path, with no file part', async () => {
+    withHeldStill();
+    await renderAt();
+    fireEvent.change(seriesTitle(), { target: { value: 'Harbor and Vine' } });
+
+    fireEvent.click(saveChanges());
+    const body = await sentBody();
+
+    const episodes = episodeFields(body);
+    expect(episodes[0].stillPath).toBe(HELD_STILL);
+    expect(episodes[1].stillPath).toBeUndefined();
+    expect(fileParts(body)).toEqual([]);
+  });
+
+  it('sends a picked still as bytes, straight after its own row', async () => {
+    await renderAt();
+    const frame = new File(['image bytes'], 'low-tide.jpg', {
+      type: 'image/jpeg',
+    });
+
+    await userEvent.upload(stillPicker('S01E02'), frame);
+    expect(screen.getByText('low-tide.jpg')).toBeTruthy();
+    fireEvent.click(saveChanges());
+    const body = await sentBody();
+
+    const order = [...body.entries()]
+      .filter(([name]) => name === 'episode' || name === 'episodeStill')
+      .map(([name, value]) =>
+        name === 'episode'
+          ? (JSON.parse(String(value)) as { number: number }).number
+          : (value as File).name
+      );
+    expect(order).toEqual([1, 2, 'low-tide.jpg', 1]);
+    expect(episodeFields(body)[1].stillPath).toBeUndefined();
+  });
+
+  it('sends neither path nor part for a held still its ✕ took away', async () => {
+    withHeldStill();
+    await renderAt();
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Remove still for S01E01' })
+    );
+    expect(stillPicker('S01E01')).toBeTruthy();
+    fireEvent.click(saveChanges());
+    const body = await sentBody();
+
+    expect(episodeFields(body)[0].stillPath).toBeUndefined();
+    expect(body.getAll('episodeStill')).toEqual([]);
+  });
+});

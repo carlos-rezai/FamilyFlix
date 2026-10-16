@@ -156,6 +156,15 @@ export interface UseMovieFormResult {
   setEpisodeTitle: (key: string, title: string) => void;
   /** Take the row holding `key` off the series. */
   removeEpisode: (key: string) => void;
+  /**
+   * Whether each **Episode file row** draws a **Still** slot — a series add
+   * or edit, never a Series Resolve.
+   */
+  episodeStills: boolean;
+  /** Put a **Still** chosen off the disk into the row holding `key`. */
+  pickEpisodeStill: (key: string, file: File) => void;
+  /** Empty the row's still slot; a held still goes on save. */
+  removeEpisodeStill: (key: string) => void;
   /** Append a picked track to the row holding `rowKey`, in English. */
   addEpisodeSubtitle: (rowKey: string, file: File) => void;
   /** Put a row's track holding `subtitleKey` into another language. */
@@ -731,6 +740,10 @@ export function useMovieForm(): UseMovieFormResult {
     setNumber: episodeList.setNumber,
     setEpisodeTitle: episodeList.setEpisodeTitle,
     removeEpisode: episodeList.removeEpisode,
+    // A Series Resolve's save has no Still to send, so it draws none.
+    episodeStills: resolving === null,
+    pickEpisodeStill: episodeList.pickEpisodeStill,
+    removeEpisodeStill: episodeList.removeEpisodeStill,
     addEpisodeSubtitle: episodeList.addEpisodeSubtitle,
     changeEpisodeSubtitleLanguage: episodeList.changeEpisodeSubtitleLanguage,
     removeEpisodeSubtitle: episodeList.removeEpisodeSubtitle,

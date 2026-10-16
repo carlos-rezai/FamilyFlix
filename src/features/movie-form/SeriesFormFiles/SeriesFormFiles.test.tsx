@@ -47,6 +47,9 @@ function renderFiles(poster: MovieFormFile | null = null) {
         onNumberChange={vi.fn()}
         onEpisodeTitleChange={vi.fn()}
         onRemoveEpisode={vi.fn()}
+        stills
+        onPickEpisodeStill={vi.fn()}
+        onRemoveEpisodeStill={vi.fn()}
         onAddEpisodeSubtitle={vi.fn()}
         onChangeEpisodeSubtitleLanguage={vi.fn()}
         onRemoveEpisodeSubtitle={vi.fn()}
@@ -137,6 +140,9 @@ describe('SeriesFormFiles — the Season posters list', () => {
           onNumberChange={vi.fn()}
           onEpisodeTitleChange={vi.fn()}
           onRemoveEpisode={vi.fn()}
+          stills
+          onPickEpisodeStill={vi.fn()}
+          onRemoveEpisodeStill={vi.fn()}
           onAddEpisodeSubtitle={vi.fn()}
           onChangeEpisodeSubtitleLanguage={vi.fn()}
           onRemoveEpisodeSubtitle={vi.fn()}

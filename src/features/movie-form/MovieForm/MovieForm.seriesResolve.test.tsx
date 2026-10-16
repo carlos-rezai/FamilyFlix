@@ -284,6 +284,12 @@ describe('MovieForm — the Series Resolve, a show not yet held', () => {
     }
   });
 
+  it('draws no Still slot on a row: its save has none to send', async () => {
+    await renderResolve(AT);
+
+    expect(screen.queryAllByLabelText(/choose still/i)).toEqual([]);
+  });
+
   it('numbers the rows by the Numbering guess: the folder’s season, the Episode word, else the next free number', async () => {
     await renderResolve(AT);
 

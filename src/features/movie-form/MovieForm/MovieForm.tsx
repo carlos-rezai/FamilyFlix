@@ -163,6 +163,9 @@ export function MovieForm() {
     setNumber,
     setEpisodeTitle,
     removeEpisode,
+    episodeStills,
+    pickEpisodeStill,
+    removeEpisodeStill,
     addEpisodeSubtitle,
     changeEpisodeSubtitleLanguage,
     removeEpisodeSubtitle,
@@ -324,6 +327,9 @@ export function MovieForm() {
             onNumberChange={setNumber}
             onEpisodeTitleChange={setEpisodeTitle}
             onRemoveEpisode={removeEpisode}
+            stills={episodeStills}
+            onPickEpisodeStill={pickEpisodeStill}
+            onRemoveEpisodeStill={removeEpisodeStill}
             onAddEpisodeSubtitle={addEpisodeSubtitle}
             onChangeEpisodeSubtitleLanguage={changeEpisodeSubtitleLanguage}
             onRemoveEpisodeSubtitle={removeEpisodeSubtitle}

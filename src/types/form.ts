@@ -140,6 +140,11 @@ export interface EpisodeFormRow {
   title: string;
   /** The episode's **Subtitles**, in the order they were attached. */
   subtitles: MovieFormSubtitle[];
+  /**
+   * The episode's **Still** — a held one, a picked file, or `null` while the
+   * slot is empty. A held row sent with none has its still taken away.
+   */
+  still: MovieFormFile | null;
 }
 
 /**

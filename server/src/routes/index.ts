@@ -60,6 +60,7 @@ import {
   readSeriesFields,
   seasonPosterEdits,
   seasonPosterNamer,
+  stillNamer,
 } from './seriesFormBody/seriesFormBody';
 import {
   conflictChoicesBody,
@@ -902,6 +903,9 @@ export function createApiRouter(
         ...(episode.title === undefined ? {} : { title: episode.title }),
         ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
         ...(subtitles.length === 0 ? {} : { subtitles }),
+        ...(episode.still === undefined
+          ? {}
+          : { stillPath: stored(episode.still) }),
       };
     });
 
@@ -967,12 +971,19 @@ export function createApiRouter(
         );
         return reserved;
       };
+      // A picked poster or still never lands on a held one's name, so a
+      // rollback can never take the held file with it.
       const { onFile, uploads } = collectEpisodeUploads(
         media,
         seriesFolder,
         seasonPosterNamer(
           (storage.getSeriesDetail(existing.id)?.seasons ?? []).flatMap(
             (season) => (season.posterPath === null ? [] : [season.posterPath])
+          )
+        ),
+        stillNamer(
+          held.flatMap((episode) =>
+            episode.stillPath === null ? [] : [episode.stillPath]
           )
         )
       );
@@ -987,7 +998,9 @@ export function createApiRouter(
           uploads.poster,
           ...uploads.seasonPosters,
           ...uploads.episodes.flatMap((upload) =>
-            upload === undefined ? [] : [upload.video, ...upload.subtitles]
+            upload === undefined
+              ? []
+              : [upload.video, upload.still, ...upload.subtitles]
           ),
         ];
         for (const path of written) {
@@ -1068,6 +1081,13 @@ export function createApiRouter(
               videoPath: episode.video,
               ...(runtimeMinutes === undefined ? {} : { runtimeMinutes }),
               subtitles: [...episode.heldTracks, ...episode.pickedTracks],
+              // A kept still leaves the column as it is; a held episode
+              // sending none has had its still taken away.
+              ...(episode.still.kind === 'picked'
+                ? { stillPath: episode.still.path }
+                : episode.still.kind === 'none'
+                  ? { stillPath: null }
+                  : {}),
             };
           }),
           // The series' folder is never renamed: a Stored path is as landed.

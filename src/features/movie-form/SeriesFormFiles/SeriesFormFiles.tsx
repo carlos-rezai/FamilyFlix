@@ -16,6 +16,7 @@ import {
   SUBTITLE_ACCEPT,
   VIDEO_ACCEPT,
 } from '../filesCard';
+import { typedNumber } from '../formValues/formValues';
 import type { EpisodeRefusal } from '../useEpisodeList/useEpisodeList';
 import {
   Caption,
@@ -36,6 +37,23 @@ const SEASON_POSTERS_LABEL = 'Season posters';
 const SEASON_POSTERS_LABEL_ID = 'season-posters-label';
 const seasonPosterChoose = (season: number): string =>
   `Choose poster for season ${season}`;
+
+/** A row's **Still** slot's name, and what it says while empty. */
+const STILL_LABEL = 'Still';
+const stillChoose = (tag: string): string => `Choose still for ${tag}`;
+const stillRemoves = (tag: string): string => `still for ${tag}`;
+
+/**
+ * What a row is called in its still picker's name: its tag while both numbers
+ * are typed, else its file's name — a blank number is a row mid-edit.
+ */
+function rowTag(row: EpisodeFormRow): string {
+  const season = typedNumber(row.season);
+  const number = typedNumber(row.number);
+  return season === null || number === null
+    ? row.file.filename
+    : formatEpisodeTag({ season, number });
+}
 
 /** What a row's own subtitle picker says. */
 const SUBTITLE_ADD = 'Add subtitle';
@@ -66,6 +84,15 @@ export interface SeriesFormFilesProps {
   onNumberChange: (key: string, number: string) => void;
   onEpisodeTitleChange: (key: string, title: string) => void;
   onRemoveEpisode: (key: string) => void;
+  /**
+   * Whether each row draws its **Still** slot, over the two handlers below —
+   * none in a Series Resolve.
+   */
+  stills: boolean;
+  /** Reports the image picked into the row holding `key`'s still slot. */
+  onPickEpisodeStill: (key: string, file: File) => void;
+  /** Reports that the row's still ✕ was pressed. */
+  onRemoveEpisodeStill: (key: string) => void;
   /** Reports a track picked on the row holding `rowKey`. */
   onAddEpisodeSubtitle: (rowKey: string, file: File) => void;
   onChangeEpisodeSubtitleLanguage: (
@@ -99,6 +126,9 @@ export function SeriesFormFiles({
   onNumberChange,
   onEpisodeTitleChange,
   onRemoveEpisode,
+  stills,
+  onPickEpisodeStill,
+  onRemoveEpisodeStill,
   onAddEpisodeSubtitle,
   onChangeEpisodeSubtitleLanguage,
   onRemoveEpisodeSubtitle,
@@ -156,6 +186,18 @@ export function SeriesFormFiles({
               }
               onRemove={() => onRemoveEpisode(episode.key)}
             >
+              {stills && (
+                <FileField
+                  label={STILL_LABEL}
+                  chooseLabel={stillChoose(rowTag(episode))}
+                  removes={stillRemoves(rowTag(episode))}
+                  filename={episode.still?.filename}
+                  accept={POSTER_ACCEPT}
+                  icon={<ImageIcon size={16} />}
+                  onPick={(file) => onPickEpisodeStill(episode.key, file)}
+                  onRemove={() => onRemoveEpisodeStill(episode.key)}
+                />
+              )}
               {episode.subtitles.map((subtitle) => (
                 <SubtitleRow
                   key={subtitle.key}

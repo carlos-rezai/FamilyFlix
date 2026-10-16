@@ -42,8 +42,8 @@ export interface SeriesWrite {
    * The **Series edit job**'s save, in one transaction: the fields, then the
    * **Two-pass renumber** of the held episodes, then the inserts and the
    * removals. A held episode keeps its id, so its watch state, resume position
-   * and still survive, and so does its **Source file** while its video stays;
-   * a replaced video clears it. Answers the series and the **Stored paths** no row
+   * and still survive — unless the edit sets or takes away its still — and so
+   * does its **Source file** while its video stays; a replaced video clears it. Answers the series and the **Stored paths** no row
    * points at any more, to clean up after the commit — or `null` for a series
    * the library does not hold. An id the series does not hold, an id twice or
    * a pair of numbers twice throws and commits nothing.
@@ -61,6 +61,11 @@ export interface EpisodeEdit {
   /** Set only when the video was replaced; an omitted key keeps the column. */
   runtimeMinutes?: number | null;
   subtitles?: NewSubtitle[];
+  /**
+   * Its **Still**: a Stored path to set, `null` to take it away; an omitted
+   * key keeps the column.
+   */
+  stillPath?: string | null;
 }
 
 /**
@@ -121,12 +126,12 @@ export function createSeriesWrite(
   const insertEpisode = db.prepare(`
     INSERT INTO episodes (
       id, series_id, season_number, episode_number, title, air_date,
-      runtime_minutes, video_path, source_file, video_folder_id, created_at,
-      updated_at
+      runtime_minutes, video_path, source_file, video_folder_id, still_path,
+      created_at, updated_at
     ) VALUES (
       @id, @series_id, @season_number, @episode_number, @title, @air_date,
-      @runtime_minutes, @video_path, @source_file, @video_folder_id, @created_at,
-      @updated_at
+      @runtime_minutes, @video_path, @source_file, @video_folder_id, @still_path,
+      @created_at, @updated_at
     )
   `);
   const fillSeriesFolder = db.prepare(
@@ -185,6 +190,7 @@ export function createSeriesWrite(
         video_path: input.videoPath,
         source_file: input.sourceFile ?? null,
         video_folder_id: input.videoFolderId ?? null,
+        still_path: input.stillPath ?? null,
         created_at: now,
         updated_at: now,
       });
@@ -289,6 +295,9 @@ export function createSeriesWrite(
   const setEpisodeRuntime = db.prepare(
     'UPDATE episodes SET runtime_minutes = ? WHERE id = ?'
   );
+  const setEpisodeStill = db.prepare(
+    'UPDATE episodes SET still_path = ? WHERE id = ?'
+  );
   const deleteEpisodeSubtitles = db.prepare(
     'DELETE FROM episode_subtitles WHERE episode_id = ?'
   );
@@ -300,6 +309,7 @@ export function createSeriesWrite(
       // A Linked video is not a Stored path, and never the app's to remove.
       ...(episode.videoFolderId === null ? [episode.videoPath] : []),
       ...episode.subtitles.map((track) => track.path),
+      ...(episode.stillPath === null ? [] : [episode.stillPath]),
     ]),
   ];
 
@@ -401,6 +411,9 @@ export function createSeriesWrite(
         if (episode.runtimeMinutes !== undefined) {
           setEpisodeRuntime.run(episode.runtimeMinutes, was.id);
         }
+        if (episode.stillPath !== undefined) {
+          setEpisodeStill.run(episode.stillPath, was.id);
+        }
         deleteEpisodeSubtitles.run(was.id);
         episode.subtitles?.forEach((track, position) => {
           insertEpisodeSubtitle.run({
@@ -426,6 +439,9 @@ export function createSeriesWrite(
             ...(episode.subtitles === undefined
               ? {}
               : { subtitles: episode.subtitles }),
+            ...(episode.stillPath == null
+              ? {}
+              : { stillPath: episode.stillPath }),
           });
         }
       }

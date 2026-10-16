@@ -50,6 +50,10 @@ export interface EpisodeList {
   setNumber: (key: string, number: string) => void;
   setEpisodeTitle: (key: string, title: string) => void;
   removeEpisode: (key: string) => void;
+  /** Put a picked **Still** into the row holding `key`. */
+  pickEpisodeStill: (key: string, file: File) => void;
+  /** Empty the row's still slot; a held still goes on save. */
+  removeEpisodeStill: (key: string) => void;
   /** Append a picked track to the row holding `rowKey`, in English. */
   addEpisodeSubtitle: (rowKey: string, file: File) => void;
   changeEpisodeSubtitleLanguage: (
@@ -112,6 +116,7 @@ export function useEpisodeList(): EpisodeList {
             number: String(tag.number),
             title: tag.title ?? '',
             subtitles: [],
+            still: null,
           },
         });
       }
@@ -135,6 +140,7 @@ export function useEpisodeList(): EpisodeList {
           number: String(number),
           title: '',
           subtitles: [],
+          still: null,
         });
       }
       return [...current, ...added];
@@ -173,6 +179,14 @@ export function useEpisodeList(): EpisodeList {
     (key: string) =>
       setEpisodes((current) => current.filter((row) => row.key !== key)),
     []
+  );
+  const pickEpisodeStill = useCallback(
+    (key: string, file: File) => edit(key, { still: pickedFile(file) }),
+    [edit]
+  );
+  const removeEpisodeStill = useCallback(
+    (key: string) => edit(key, { still: null }),
+    [edit]
   );
 
   const editSubtitles = useCallback(
@@ -263,6 +277,8 @@ export function useEpisodeList(): EpisodeList {
     setNumber,
     setEpisodeTitle,
     removeEpisode,
+    pickEpisodeStill,
+    removeEpisodeStill,
     addEpisodeSubtitle,
     changeEpisodeSubtitleLanguage,
     removeEpisodeSubtitle,

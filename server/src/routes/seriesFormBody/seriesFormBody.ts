@@ -23,8 +23,10 @@ import type { NewSubtitle } from '@/types';
  * One `episode` field of a series body, read: its numbers, its title, and the
  * languages its `episodeSubtitle` parts are paired with by order. An edit's
  * field may also carry the held episode's `id`, its held video as
- * `videoPath` (when no `episodeVideo` part follows) and its held tracks as
- * `storedSubtitles`.
+ * `videoPath` (when no `episodeVideo` part follows), its held tracks as
+ * `storedSubtitles`, and its held **Still** as `stillPath` — sent back
+ * untouched, as a Season poster's `path` is; a held episode whose field
+ * carries neither it nor an `episodeStill` part has its still taken away.
  */
 export interface EpisodeField {
   id?: string;
@@ -34,6 +36,7 @@ export interface EpisodeField {
   subtitleLanguages: string[];
   videoPath?: string;
   storedSubtitles?: NewSubtitle[];
+  stillPath?: string;
 }
 
 /**
@@ -45,6 +48,8 @@ export interface EpisodeField {
 export interface EpisodeUpload {
   video?: string;
   subtitles: (string | undefined)[];
+  /** A picked **Still**, once its bytes have landed. */
+  still?: string;
 }
 
 /** What a series request put on disk, filled in as its parts arrive. */
@@ -85,6 +90,7 @@ export function readEpisodeField(text: string): EpisodeField | null {
     subtitleLanguages,
     videoPath,
     storedSubtitles,
+    stillPath,
   } = value as Record<string, unknown>;
   // 0 is a number: a pilot, a season of specials.
   const counting = (n: unknown): n is number =>
@@ -111,6 +117,12 @@ export function readEpisodeField(text: string): EpisodeField | null {
   ) {
     return null;
   }
+  if (
+    stillPath !== undefined &&
+    (typeof stillPath !== 'string' || stillPath === '')
+  ) {
+    return null;
+  }
   const held = storedSubtitles ?? [];
   if (!Array.isArray(held) || !held.every(isStoredTrack)) {
     return null;
@@ -132,6 +144,7 @@ export function readEpisodeField(text: string): EpisodeField | null {
             language,
           })),
         }),
+    ...(stillPath === undefined ? {} : { stillPath }),
   };
 }
 
@@ -244,9 +257,34 @@ export const seasonPosterName = (season: number, extension: string): string =>
 export function seasonPosterNamer(
   heldPaths: readonly string[]
 ): (season: number, extension: string) => string {
+  const free = freeNamer(heldPaths);
+  return (season, extension) => free(seasonPosterName(season, extension));
+}
+
+/** The name a picked **Still** is stored under: `S01E03-still.jpg`. */
+export const stillName = (
+  season: number,
+  number: number,
+  extension: string
+): string => `${spellEpisodeTag(season, number)}-still${extension}`;
+
+/**
+ * {@link seasonPosterNamer} for a picked **Still**, given the Stored paths of
+ * the stills a series holds: {@link stillName}'s, numbered `-2`, `-3`… when a
+ * held still has it.
+ */
+export function stillNamer(
+  heldPaths: readonly string[]
+): (season: number, number: number, extension: string) => string {
+  const free = freeNamer(heldPaths);
+  return (season, number, extension) =>
+    free(stillName(season, number, extension));
+}
+
+/** A name no held path's basename has: as asked, else numbered `-2`, `-3`… */
+function freeNamer(heldPaths: readonly string[]): (name: string) => string {
   const held = new Set(heldPaths.map((path) => basename(path)));
-  return (season, extension) => {
-    const name = seasonPosterName(season, extension);
+  return (name) => {
     let candidate = name;
     for (let n = 2; held.has(candidate); n += 1) {
       candidate = name.replace(/(\.[^.]*)?$/, `-${n}$1`);
@@ -267,9 +305,11 @@ function isStoredTrack(track: unknown): track is NewSubtitle {
 }
 
 /**
- * The file half of a series body. Each `episodeVideo` and `episodeSubtitle`
- * belongs to the latest `episode` field before it, so a video before any
- * episode, or a second video after one, is out of order; each subtitle pairs
+ * The file half of a series body. Each `episodeVideo`, `episodeStill` and
+ * `episodeSubtitle` belongs to the latest `episode` field before it, so a
+ * video or a still before any episode, or a second of either after one, is
+ * out of order; a still lands in its season's folder under `nameStill`'s
+ * name; each subtitle pairs
  * with that episode's `subtitleLanguages`, and one beyond them is stray. A
  * refused part is drained and remembered, never thrown over.
  */
@@ -279,7 +319,12 @@ export function collectEpisodeUploads(
   nameSeasonPoster: (
     season: number,
     extension: string
-  ) => string = seasonPosterName
+  ) => string = seasonPosterName,
+  nameStill: (
+    season: number,
+    number: number,
+    extension: string
+  ) => string = stillName
 ): { onFile: OnFilePart; uploads: EpisodeUploads } {
   const uploads: EpisodeUploads = {
     folder: null,
@@ -290,6 +335,8 @@ export function collectEpisodeUploads(
   const videoArrived = new Set<number>();
   /** The `seasonPoster` fields a file part has already arrived for. */
   const seasonPosterArrived = new Set<number>();
+  /** The episode fields a still part has already arrived for. */
+  const stillArrived = new Set<number>();
 
   const onFile: OnFilePart = async (name, filename, part, before) => {
     const refuse = (sentence: string): void => {
@@ -326,6 +373,31 @@ export function collectEpisodeUploads(
       uploads.seasonPosters[index] = await media.storeUpload(
         uploads.folder,
         nameSeasonPoster(field.season, extname(filename).toLowerCase()),
+        part
+      );
+      return;
+    }
+    if (name === 'episodeStill') {
+      if (!isImageFilename(filename)) {
+        refuse(`Not a still image: ${JSON.stringify(filename)}`);
+        return;
+      }
+      const index = episodeFields.length - 1;
+      if (index < 0 || stillArrived.has(index)) {
+        refuse('Each still must follow its episode field');
+        return;
+      }
+      const field = readEpisodeField(episodeFields[index]);
+      if (field === null || field.stillPath !== undefined) {
+        refuse('Invalid episode field');
+        return;
+      }
+      stillArrived.add(index);
+      const upload = (uploads.episodes[index] ??= { subtitles: [] });
+      uploads.folder ??= resolveFolder(before);
+      upload.still = await media.storeUpload(
+        media.seasonFolder(uploads.folder, field.season),
+        nameStill(field.season, field.number, extname(filename).toLowerCase()),
         part
       );
       return;
@@ -407,11 +479,13 @@ export function collectEpisodeUploads(
 
 /**
  * One episode once its body has been read whole: its field, paired with the
- * paths its parts landed at — the video, and a track per language, in order.
+ * paths its parts landed at — the video, a track per language, in order, and
+ * a picked **Still** when one landed.
  */
 export interface LandedEpisode extends EpisodeField {
   video: string;
   subtitles: string[];
+  still?: string;
 }
 
 /**
@@ -425,6 +499,11 @@ export interface EditedEpisode extends EpisodeField {
   freshVideo: boolean;
   heldTracks: NewSubtitle[];
   pickedTracks: NewSubtitle[];
+  /**
+   * What the edit asks of its **Still**: the picked one that landed, the held
+   * one kept (its field's `stillPath`), or — neither — none.
+   */
+  still: { kind: 'picked'; path: string } | { kind: 'keep' } | { kind: 'none' };
 }
 
 /** The series' own fields, coerced into the shapes the storage takes. */
@@ -472,7 +551,12 @@ export function readSeriesFields(
     if (subtitles.length !== episode.subtitleLanguages.length) {
       return `Episode ${tag} is missing a subtitle`;
     }
-    return { ...episode, video: upload.video, subtitles };
+    return {
+      ...episode,
+      video: upload.video,
+      subtitles,
+      ...(upload.still === undefined ? {} : { still: upload.still }),
+    };
   });
 }
 
@@ -507,6 +591,12 @@ export function readSeriesEditFields(
         path,
         language: episode.subtitleLanguages[track],
       })),
+      still:
+        upload?.still !== undefined
+          ? { kind: 'picked', path: upload.still }
+          : episode.stillPath !== undefined
+            ? { kind: 'keep' }
+            : { kind: 'none' },
     };
   });
 }

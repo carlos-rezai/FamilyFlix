@@ -993,6 +993,7 @@ function episodeRow(
     number,
     title,
     subtitles: [],
+    still: null,
   };
 }
 

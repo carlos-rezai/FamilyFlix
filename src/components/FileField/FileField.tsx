@@ -38,6 +38,12 @@ export interface FileFieldProps {
   onPick: (file: File) => void;
   /** Reports that the ✕ was pressed. What that empties is the caller's business. */
   onRemove: () => void;
+  /**
+   * What the ✕ is named as removing, when the label alone would not tell
+   * one slot from its neighbours — a column of slots all labelled alike.
+   * Defaults to the label.
+   */
+  removes?: string;
 }
 
 /**
@@ -69,6 +75,7 @@ export function FileField({
   icon,
   onPick,
   onRemove,
+  removes = label,
 }: FileFieldProps) {
   return (
     <Row>
@@ -81,7 +88,7 @@ export function FileField({
                 filename. */}
             <IconSlot>{icon}</IconSlot>
             <Filename>{filename}</Filename>
-            <RemoveButton removes={label} onClick={onRemove} />
+            <RemoveButton removes={removes} onClick={onRemove} />
           </Filled>
         ) : (
           <FilePicker label={chooseLabel} accept={accept} onPick={onPick} />

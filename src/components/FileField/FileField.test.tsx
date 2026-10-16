@@ -23,6 +23,7 @@ function renderField(props: Partial<FileFieldProps> = {}) {
         icon={props.icon ?? ICON}
         onPick={props.onPick ?? onPick}
         onRemove={props.onRemove ?? onRemove}
+        removes={props.removes}
       />
     </ThemeProvider>
   );
@@ -117,6 +118,18 @@ describe('FileField — a filled slot', () => {
     // slot's own label.
     expect(
       screen.getByRole('button', { name: /remove poster/i })
+    ).toBeDefined();
+  });
+
+  it('names the removal as the caller asks, when slots share a label', () => {
+    renderField({
+      filename: 'frame.jpg',
+      label: 'Still',
+      removes: 'still for S01E02',
+    });
+
+    expect(
+      screen.getByRole('button', { name: 'Remove still for S01E02' })
     ).toBeDefined();
   });
 

@@ -26,6 +26,7 @@ const row = (season: string, key = `row-${season}`): EpisodeFormRow => ({
   number: '1',
   title: '',
   subtitles: [],
+  still: null,
 });
 
 const art = (name: string) =>
