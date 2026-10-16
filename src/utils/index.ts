@@ -5,7 +5,11 @@ export {
 } from './gradientFromId/gradientFromId';
 export { toRatingPercent } from './toRatingPercent/toRatingPercent';
 export { toRatingUnits } from './toRatingUnits/toRatingUnits';
-export { shownRating, type ShownRating } from './shownRating/shownRating';
+export {
+  shownRating,
+  tmdbRating,
+  type ShownRating,
+} from './shownRating/shownRating';
 export { toStarLabel } from './toStarLabel/toStarLabel';
 export {
   toProgressPercent,

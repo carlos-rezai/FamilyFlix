@@ -3,7 +3,7 @@ import {
   formatClock,
   gradientFromId,
   imageUrl,
-  shownRating,
+  tmdbRating,
   toRatingPercent,
 } from '@/utils';
 
@@ -79,13 +79,12 @@ function toTopTag(movie: Movie, hasPoster: boolean): string | null {
 
 /**
  * The **TMDB rating** as a percent while _Fill in ratings from TMDB_ is on and
- * a score is held, else `null` — asked of `shownRating` with no household
- * Rating, so the rounding is the cards' own. It stays beside `ratingPercent`,
- * never merged into it: the picker shows it only as a placeholder.
+ * a score is held, else `null` — `tmdbRating`, so the rounding is the cards'
+ * own. It stays beside `ratingPercent`, never merged into it: the picker shows
+ * it only as a placeholder.
  */
 function toTmdbPercent(movie: Movie, tmdbRatings: boolean): number | null {
-  const tmdb = shownRating(null, movie.tmdbScore, tmdbRatings);
-  return tmdb === null ? null : toRatingPercent(tmdb.units);
+  return tmdbRatings ? toRatingPercent(tmdbRating(movie.tmdbScore)) : null;
 }
 
 /**

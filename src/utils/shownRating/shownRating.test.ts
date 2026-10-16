@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { shownRating } from './shownRating';
+import { shownRating, tmdbRating } from './shownRating';
 
 /**
  * 26 — TMDB ratings (issue #370): the one client reading of the **Shown
@@ -44,5 +44,28 @@ describe('shownRating', () => {
 
   it('rounds a half up', () => {
     expect(shownRating(null, 6.5, true)).toEqual({ units: 7, source: 'tmdb' });
+  });
+});
+
+/**
+ * The **TMDB rating** on its own: the score in half-star units, a half
+ * rounding up, and nothing for no score — what the movie page's placeholder
+ * reads, whatever the household's Rating.
+ */
+describe('tmdbRating', () => {
+  it('gives null for no score held', () => {
+    expect(tmdbRating(null)).toBeNull();
+  });
+
+  it('rounds a half up', () => {
+    expect(tmdbRating(6.5)).toBe(7);
+  });
+
+  it('rounds below a half down', () => {
+    expect(tmdbRating(7.4)).toBe(7);
+  });
+
+  it('keeps a whole score as it is', () => {
+    expect(tmdbRating(8)).toBe(8);
   });
 });
