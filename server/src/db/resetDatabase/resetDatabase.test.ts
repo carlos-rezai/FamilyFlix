@@ -140,6 +140,20 @@ describe('resetDatabase', () => {
     }
   });
 
+  // Issue #382: migration #14's `still_source` goes with `episodes`, so the
+  // erased list does not change and an episode holding a sourced still is
+  // erased with the rest.
+  it('erases an episode holding a still and its Still source', () => {
+    fill(db);
+    db.prepare(
+      "UPDATE episodes SET still_path = ?, still_source = 'frame' WHERE id = ?"
+    ).run('show-0/season-01/s01e01.frame.jpg', 'episode-0');
+
+    resetDatabase(db);
+
+    expect(countOf(db, 'episodes')).toBe(0);
+  });
+
   it('keeps the twelve genres with the same ids', () => {
     const before = genresOf(db);
     fill(db);

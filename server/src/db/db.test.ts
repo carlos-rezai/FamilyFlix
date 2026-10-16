@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #13, a TMDB score of 0
-// read as no score (issue #374). Every "at the latest version" assertion reads
+// The version a fresh database migrates to — migration #14, an episode's
+// **Still source** (issue #382). Every "at the latest version" assertion reads
 // it, so the next migration moves one number rather than ten.
-const LATEST_VERSION = 13;
+const LATEST_VERSION = 14;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -256,6 +256,8 @@ function dropMigration11(db: TestDb): void {
  * written as after.
  */
 function dropMigration12(db: TestDb): void {
+  // Every wind-back to before #12 is also one to before #14.
+  dropMigration14(db);
   for (const table of ['movies', 'episodes']) {
     if (
       tableNames(db).includes(table) &&
@@ -263,6 +265,19 @@ function dropMigration12(db: TestDb): void {
     ) {
       db.prepare(`ALTER TABLE ${table} DROP COLUMN video_folder_id`).run();
     }
+  }
+}
+
+/**
+ * What migration #14 added, dropped: `episodes.still_source`, only where it
+ * exists, so every wind-back reads the same before #14 is written as after.
+ */
+function dropMigration14(db: TestDb): void {
+  if (
+    tableNames(db).includes('episodes') &&
+    columnNames(db, 'episodes').includes('still_source')
+  ) {
+    db.prepare('ALTER TABLE episodes DROP COLUMN still_source').run();
   }
 }
 
@@ -425,6 +440,7 @@ function v4Columns(db: TestDb, table: keyof typeof MIGRATION_5_COLUMNS) {
     'source_file',
     'media_folder',
     'video_folder_id',
+    'still_source',
   ];
   return columnNames(db, table).filter((column) => !added.includes(column));
 }
@@ -1734,10 +1750,10 @@ describe('db: migration #12 — the Linked video', () => {
 // Migration #13 turns every stored 0 back into NULL, on films and on series,
 // and touches no other score.
 describe('db: migration #13 — a score of 0 is no score', () => {
-  it('lands a fresh database at version 13', () => {
+  it('lands a fresh database at version 13 or later', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(13);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(13);
   });
 
   /**
@@ -1762,6 +1778,7 @@ describe('db: migration #13 — a score of 0 is no score', () => {
           );
         }
       }
+      dropMigration14(db);
       db.pragma('user_version = 12');
     } finally {
       db.close();
@@ -1854,6 +1871,62 @@ describe('db: migration #13 — a score of 0 is no score', () => {
     expect(
       after.getSeriesHome({ sort: 'highest-rated' }).series.map((s) => s.title)
     ).toEqual(['Low Show', 'Alpha Show', 'Zero Show']);
+  });
+});
+
+// 44 — Episode stills, Phase 1 (issue #382) adds migration #14: an episode's
+// **Still source** — `'tmdb'`, `'frame'` or `'picked'` — beside its still,
+// `NULL` exactly when the still is. No frames exist before it, so a held still
+// is backfilled by name: the series form's `-still.` is `'picked'`, any other
+// `'tmdb'`.
+describe('db: migration #14 — an episode’s Still source', () => {
+  it('lands a fresh database at version 14', () => {
+    const db = track(open(':memory:'));
+
+    expect(userVersion(db)).toBe(14);
+  });
+
+  it('adds a nullable still_source TEXT column to episodes', () => {
+    const db = track(open(':memory:'));
+
+    expect(
+      columnInfo(db, 'episodes').find(
+        (column) => column.name === 'still_source'
+      )
+    ).toMatchObject({ type: 'TEXT', notnull: 0 });
+  });
+
+  it('backfills a version-13 library by name: -still. picked, any other still tmdb, none NULL', () => {
+    const path = tempDbPath();
+    const db = open(path);
+    try {
+      insertSeries(db, 's1');
+      insertEpisode(db, 'e-picked', 's1', 1, 1);
+      insertEpisode(db, 'e-tmdb', 's1', 1, 2);
+      insertEpisode(db, 'e-none', 's1', 1, 3);
+      const setStill = db.prepare(
+        'UPDATE episodes SET still_path = ? WHERE id = ?'
+      );
+      setStill.run('Show (2018)/season-01/S01E01-still.jpg', 'e-picked');
+      setStill.run('Show (2018)/season-01/S01E02.still.jpg', 'e-tmdb');
+      dropMigration14(db);
+      db.pragma('user_version = 13');
+    } finally {
+      db.close();
+    }
+
+    const upgraded = track(open(path));
+
+    expect(userVersion(upgraded)).toBe(LATEST_VERSION);
+    expect(
+      upgraded
+        .prepare('SELECT id, still_source FROM episodes ORDER BY id')
+        .all()
+    ).toEqual([
+      { id: 'e-none', still_source: null },
+      { id: 'e-picked', still_source: 'picked' },
+      { id: 'e-tmdb', still_source: 'tmdb' },
+    ]);
   });
 });
 
