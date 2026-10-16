@@ -22,21 +22,27 @@ const FULLY_WATCHED =
  * Each **Sort order** over the `series s` alias, the movie's five read for
  * series: `unwatched-first` puts every series not fully watched ahead of the
  * fully watched ones, A–Z inside each group.
+ *
+ * Every body but `highest-rated`'s, which reads the **Shown rating** under the
+ * preference and so is filled in per query by {@link seriesOrderBy}, where the
+ * full table is checked — so the compiler demands every body exists.
  */
-function seriesOrderBy(sort: MovieSort, tmdbRatings: boolean): string {
-  if (sort === 'highest-rated') {
-    const shown = shownRatingSql('s', tmdbRatings);
-    return `${shown} IS NULL, ${shown} DESC, s.title COLLATE NOCASE`;
-  }
-  return SERIES_ORDER_BY[sort];
-}
-
 const SERIES_ORDER_BY: Record<Exclude<MovieSort, 'highest-rated'>, string> = {
   'recently-added': 's.created_at DESC, s.id',
   'a-z': 's.title COLLATE NOCASE ASC, s.id',
   year: 's.year IS NULL, s.year DESC, s.title COLLATE NOCASE',
   'unwatched-first': `CASE WHEN ${FULLY_WATCHED} THEN 1 ELSE 0 END, s.title COLLATE NOCASE`,
 };
+
+/** {@link SERIES_ORDER_BY} with `highest-rated` filled in under the preference. */
+function seriesOrderBy(sort: MovieSort, tmdbRatings: boolean): string {
+  const shown = shownRatingSql('s', tmdbRatings);
+  const bodies: Record<MovieSort, string> = {
+    ...SERIES_ORDER_BY,
+    'highest-rated': `${shown} IS NULL, ${shown} DESC, s.title COLLATE NOCASE`,
+  };
+  return bodies[sort];
+}
 
 /**
  * A {@link LibraryQuery}'s filters as a `WHERE` over `series s` and its bound

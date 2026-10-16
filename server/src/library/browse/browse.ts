@@ -35,17 +35,12 @@ export function shownRatingSql(alias: string, tmdbRatings: boolean): string {
  * `unwatched-first` rank groups unwatched (0) → in-progress (1) → watched (2),
  * with a case-insensitive title tiebreak inside every group.
  *
- * Typed over `ListSort` rather than `MovieSort`, so the record is one entry
- * wider than the wire's vocabulary and the compiler is what demands the extra
+ * Every body but `highest-rated`'s, which reads the **Shown rating** under the
+ * preference and so is filled in per query by {@link orderBy}. The full table
+ * is checked there, typed over `ListSort` rather than `MovieSort` — one entry
+ * wider than the wire's vocabulary — so the compiler is what demands every
  * body exists.
  */
-function orderBy(sort: ListSort, shownRating: string): string {
-  if (sort === 'highest-rated') {
-    return `${shownRating} IS NULL, ${shownRating} DESC, m.title COLLATE NOCASE`;
-  }
-  return ORDER_BY[sort];
-}
-
 const ORDER_BY: Record<Exclude<ListSort, 'highest-rated'>, string> = {
   'recently-added': RECENTLY_ADDED,
   'a-z': 'm.title COLLATE NOCASE ASC',
@@ -62,6 +57,15 @@ const ORDER_BY: Record<Exclude<ListSort, 'highest-rated'>, string> = {
   // is what keeps that true when someone edits `recently-added`.
   'last-watched': `m.last_watched_at IS NULL, m.last_watched_at DESC, ${RECENTLY_ADDED}`,
 };
+
+/** {@link ORDER_BY} with `highest-rated` filled in over the Shown rating. */
+function orderBy(sort: ListSort, shownRating: string): string {
+  const bodies: Record<ListSort, string> = {
+    ...ORDER_BY,
+    'highest-rated': `${shownRating} IS NULL, ${shownRating} DESC, m.title COLLATE NOCASE`,
+  };
+  return bodies[sort];
+}
 
 /**
  * Pure {@link MovieQuery} → parameterized SQL builder. Each present filter adds
