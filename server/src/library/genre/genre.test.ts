@@ -434,7 +434,9 @@ describe('library: getGenre on the LibraryStorage seam', () => {
     storage.addMovie(newMovie({ title: 'Chiller', genres: ['Horror'] }));
 
     const db = track(openDatabase(dbPath));
-    const aggregate = createGenre(createBrowse(db, createMovieReader(db)));
+    const aggregate = createGenre(
+      createBrowse(db, createMovieReader(db), () => false)
+    );
 
     const query: GenreQuery = { sort: 'a-z', search: 'Drama' };
 

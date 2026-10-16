@@ -416,19 +416,20 @@ export interface LibraryStorage {
 export function createSqliteStorage(dbPath: string): LibraryStorage {
   const db = openDatabase(dbPath);
 
+  const settingsRepository = createSettings(db);
+  const tmdbRatings = () => settingsRepository.settings().tmdbRatings;
   const reader = createMovieReader(db);
-  const browse = createBrowse(db, reader);
+  const browse = createBrowse(db, reader, tmdbRatings);
   const home = createHome(browse);
   const genre = createGenre(browse);
   const write = createWrite(db, reader);
   const watch = createWatch(db);
   const curation = createCuration(db);
-  const settingsRepository = createSettings(db);
   const folders = createFolders(db);
   const seriesReader = createSeriesReader(db);
   const enrich = createEnrich(db, reader);
   const seriesEnrich = createSeriesEnrich(db, seriesReader);
-  const seriesBrowse = createSeriesBrowse(db, seriesReader);
+  const seriesBrowse = createSeriesBrowse(db, seriesReader, tmdbRatings);
   const seriesWrite = createSeriesWrite(db, seriesReader);
   const seriesCuration = createSeriesCuration(db);
   const seriesWatch = createSeriesWatch(db);

@@ -9,6 +9,7 @@ import {
   type SeriesHomePayload,
 } from '@/types';
 import type { EpisodeRow, SeriesReader, SeriesRow } from '../read/read';
+import { shownRatingSql } from '../../browse/browse';
 
 /** The Series tab's Continue Watching row holds at most this many entries. */
 const CONTINUE_LIMIT = 15;
@@ -22,11 +23,18 @@ const FULLY_WATCHED =
  * series: `unwatched-first` puts every series not fully watched ahead of the
  * fully watched ones, A–Z inside each group.
  */
-const SERIES_ORDER_BY: Record<MovieSort, string> = {
+function seriesOrderBy(sort: MovieSort, tmdbRatings: boolean): string {
+  if (sort === 'highest-rated') {
+    const shown = shownRatingSql('s', tmdbRatings);
+    return `${shown} IS NULL, ${shown} DESC, s.title COLLATE NOCASE`;
+  }
+  return SERIES_ORDER_BY[sort];
+}
+
+const SERIES_ORDER_BY: Record<Exclude<MovieSort, 'highest-rated'>, string> = {
   'recently-added': 's.created_at DESC, s.id',
   'a-z': 's.title COLLATE NOCASE ASC, s.id',
   year: 's.year IS NULL, s.year DESC, s.title COLLATE NOCASE',
-  'highest-rated': 's.rating IS NULL, s.rating DESC, s.title COLLATE NOCASE',
   'unwatched-first': `CASE WHEN ${FULLY_WATCHED} THEN 1 ELSE 0 END, s.title COLLATE NOCASE`,
 };
 
@@ -34,7 +42,10 @@ const SERIES_ORDER_BY: Record<MovieSort, string> = {
  * A {@link LibraryQuery}'s filters as a `WHERE` over `series s` and its bound
  * parameters — search by title, one genre, a minimum rating. `''` for none.
  */
-function seriesWhere(query: LibraryQuery): { sql: string; params: unknown[] } {
+function seriesWhere(
+  query: LibraryQuery,
+  tmdbRatings: boolean
+): { sql: string; params: unknown[] } {
   const where: string[] = [];
   const params: unknown[] = [];
   if (query.search !== undefined) {
@@ -49,7 +60,7 @@ function seriesWhere(query: LibraryQuery): { sql: string; params: unknown[] } {
     params.push(query.genre);
   }
   if (query.minRating !== undefined) {
-    where.push('s.rating >= ?');
+    where.push(`${shownRatingSql('s', tmdbRatings)} >= ?`);
     params.push(query.minRating);
   }
   return {
@@ -77,7 +88,8 @@ export interface SeriesBrowse {
  */
 export function createSeriesBrowse(
   db: SqliteDatabase,
-  reader: SeriesReader
+  reader: SeriesReader,
+  tmdbRatings: () => boolean
 ): SeriesBrowse {
   // Continue Watching: per series, its earliest part-watched episode — not
   // watched, a resume position — most recently watched first, at most 15.
@@ -109,10 +121,11 @@ export function createSeriesBrowse(
 
   return {
     getSeriesHome: (query = { sort: DEFAULT_MOVIE_SORT }) => {
-      const where = seriesWhere(query);
+      const tmdbRatingsOn = tmdbRatings();
+      const where = seriesWhere(query, tmdbRatingsOn);
       const rows = db
         .prepare(
-          `SELECT s.* FROM series s ${where.sql} ORDER BY ${SERIES_ORDER_BY[query.sort]}`
+          `SELECT s.* FROM series s ${where.sql} ORDER BY ${seriesOrderBy(query.sort, tmdbRatingsOn)}`
         )
         .all(...where.params) as SeriesRow[];
       const { n } = db

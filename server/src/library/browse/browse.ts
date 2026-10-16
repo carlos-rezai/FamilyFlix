@@ -19,6 +19,17 @@ const IN_PROGRESS = 'm.watched = 0 AND m.resume_position_seconds > 0';
 const RECENTLY_ADDED = 'm.created_at DESC, m.id';
 
 /**
+ * The **Shown rating** over a table alias, spelled once: the household Rating,
+ * else — while **TMDB ratings** is on — the TMDB score rounded to half-star
+ * units. Off, the Rating alone. The movie and series browses both read it.
+ */
+export function shownRatingSql(alias: string, tmdbRatings: boolean): string {
+  return tmdbRatings
+    ? `COALESCE(${alias}.rating, CAST(ROUND(${alias}.tmdb_score) AS INTEGER))`
+    : `${alias}.rating`;
+}
+
+/**
  * Each {@link ListSort} mapped to its `ORDER BY` body (over the `movies m`
  * alias). `null` year/rating/stamp sort last via the `IS NULL` leading key; the
  * `unwatched-first` rank groups unwatched (0) → in-progress (1) → watched (2),
@@ -28,11 +39,17 @@ const RECENTLY_ADDED = 'm.created_at DESC, m.id';
  * wider than the wire's vocabulary and the compiler is what demands the extra
  * body exists.
  */
-const ORDER_BY: Record<ListSort, string> = {
+function orderBy(sort: ListSort, shownRating: string): string {
+  if (sort === 'highest-rated') {
+    return `${shownRating} IS NULL, ${shownRating} DESC, m.title COLLATE NOCASE`;
+  }
+  return ORDER_BY[sort];
+}
+
+const ORDER_BY: Record<Exclude<ListSort, 'highest-rated'>, string> = {
   'recently-added': RECENTLY_ADDED,
   'a-z': 'm.title COLLATE NOCASE ASC',
   year: 'm.year IS NULL, m.year DESC, m.title COLLATE NOCASE',
-  'highest-rated': 'm.rating IS NULL, m.rating DESC, m.title COLLATE NOCASE',
   'unwatched-first':
     `CASE WHEN m.watched = 1 THEN 2 WHEN ${IN_PROGRESS} THEN 1 ELSE 0 END, ` +
     'm.title COLLATE NOCASE',
@@ -58,7 +75,10 @@ const ORDER_BY: Record<ListSort, string> = {
  * statement: the assembly pass re-runs the filter as a subquery and must not be
  * handed the trailing `LIMIT` placeholder.
  */
-function buildListQuery(query: MovieQuery): {
+function buildListQuery(
+  query: MovieQuery,
+  tmdbRatings: boolean
+): {
   sql: string;
   params: unknown[];
   whereClause: string;
@@ -66,6 +86,7 @@ function buildListQuery(query: MovieQuery): {
 } {
   const where: string[] = [];
   const whereParams: unknown[] = [];
+  const shownRating = shownRatingSql('m', tmdbRatings);
 
   if (query.genre !== undefined) {
     where.push(
@@ -75,7 +96,7 @@ function buildListQuery(query: MovieQuery): {
     whereParams.push(query.genre);
   }
   if (query.minRating !== undefined) {
-    where.push('m.rating >= ?');
+    where.push(`${shownRating} >= ?`);
     whereParams.push(query.minRating);
   }
   if (query.search !== undefined) {
@@ -100,7 +121,7 @@ function buildListQuery(query: MovieQuery): {
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
   const limitClause = query.limit === undefined ? '' : ' LIMIT ?';
-  const sql = `SELECT m.* FROM movies m ${whereClause} ORDER BY ${ORDER_BY[query.sort]}${limitClause}`;
+  const sql = `SELECT m.* FROM movies m ${whereClause} ORDER BY ${orderBy(query.sort, shownRating)}${limitClause}`;
   const params =
     query.limit === undefined ? whereParams : [...whereParams, query.limit];
 
@@ -118,7 +139,15 @@ export interface Browse {
   countMovies(): number;
 }
 
-export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
+/**
+ * @param tmdbRatings the **TMDB ratings** preference, asked on every query so a
+ *   flip is read by the next request without a restart.
+ */
+export function createBrowse(
+  db: SqliteDatabase,
+  reader: MovieReader,
+  tmdbRatings: () => boolean
+): Browse {
   const selectGenreCounts = db.prepare(`
     SELECT g.id AS id, g.name AS name, COUNT(mg.movie_id) AS count
     FROM genres g
@@ -134,7 +163,10 @@ export function createBrowse(db: SqliteDatabase, reader: MovieReader): Browse {
   const selectMovieCount = db.prepare('SELECT COUNT(*) AS count FROM movies');
 
   function listMovies(query: MovieQuery): Movie[] {
-    const { sql, params, whereClause, whereParams } = buildListQuery(query);
+    const { sql, params, whereClause, whereParams } = buildListQuery(
+      query,
+      tmdbRatings()
+    );
     const rows = db.prepare(sql).all(...params) as MovieRow[];
     return reader.assembleMany(rows, whereClause, whereParams);
   }

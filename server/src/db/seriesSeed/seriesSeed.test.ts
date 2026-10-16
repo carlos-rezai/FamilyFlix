@@ -34,7 +34,7 @@ describe('seedSeries', () => {
   });
 
   const home = () =>
-    createSeriesBrowse(db, createSeriesReader(db)).getSeriesHome();
+    createSeriesBrowse(db, createSeriesReader(db), () => false).getSeriesHome();
 
   it('writes every mock series and episode, with a video behind each', () => {
     const report = seedSeries(db, mediaPath);
