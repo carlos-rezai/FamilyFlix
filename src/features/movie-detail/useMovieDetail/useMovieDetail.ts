@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import type { Movie, MovieDetailModel } from '@/types';
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { saveWatched } from '@/api/saveWatched/saveWatched';
-import { toRatingPercent, toRatingUnits } from '@/utils';
+import { toRatingUnits } from '@/utils';
 import { saveRating } from '../api/api';
 import { detailView } from '../detailView/detailView';
 import { useOptimisticEdit } from '@/hooks/useOptimisticEdit/useOptimisticEdit';
@@ -33,6 +33,18 @@ type MovieDetailState =
   | { status: 'error'; movie: null }
   | { status: 'ready'; movie: MovieDetailModel };
 
+/**
+ * What the hook holds: the same four members, the `ready` one carrying the
+ * record the read answered rather than the model drawn from it —
+ * `useSeriesRead`'s shape, so the model is drawn per render under the live
+ * preference.
+ */
+type HeldMovie =
+  | { status: 'loading'; movie: null }
+  | { status: 'not-found'; movie: null }
+  | { status: 'error'; movie: null }
+  | { status: 'ready'; movie: Movie };
+
 export type UseMovieDetailResult = MovieDetailState & {
   /** Re-run the load after a failure. */
   retry: () => void;
@@ -47,36 +59,38 @@ export type UseMovieDetailResult = MovieDetailState & {
   rate: (percent: number | null) => void;
 };
 
-/** The primary button once there is no resume point left to offer. */
-const PLAY_LABEL = 'Play';
+/** What a watched mark costs: the flag, and the resume offer it spends. */
+type WatchState = Pick<Movie, 'watched' | 'status' | 'resumePositionSeconds'>;
 
 /**
- * The model with the watched flag set — and with the resume offer dropped along
- * with it, because marking watched clears the stored position by repository
- * convention and un-marking does not hand it back. The button must not keep
- * offering a 52:00 the server has already discarded.
+ * The record marked by the movie's watched rule: watched forgets the resume
+ * position — the repository's convention — and unwatched keeps it, so the
+ * button must not keep offering a 52:00 the server has already discarded.
  */
-function withWatched(
-  movie: MovieDetailModel,
-  watched: boolean
-): MovieDetailModel {
-  return { ...movie, isWatched: watched, playLabel: PLAY_LABEL };
+function withWatched(movie: Movie, watched: boolean): Movie {
+  if (watched) {
+    return {
+      ...movie,
+      watched: true,
+      resumePositionSeconds: 0,
+      status: 'watched',
+    };
+  }
+  return {
+    ...movie,
+    watched: false,
+    status: movie.resumePositionSeconds > 0 ? 'in-progress' : 'unwatched',
+  };
 }
 
-/** The model with the favorite flag set. */
-function withFavorite(
-  movie: MovieDetailModel,
-  favorite: boolean
-): MovieDetailModel {
-  return { ...movie, isFavorite: favorite };
+/** The record with the favorite flag set. */
+function withFavorite(movie: Movie, isFavorite: boolean): Movie {
+  return { ...movie, isFavorite };
 }
 
-/** The model scored, or unscored — `null` is a cleared rating, not a missing one. */
-function withRating(
-  movie: MovieDetailModel,
-  percent: number | null
-): MovieDetailModel {
-  return { ...movie, ratingPercent: percent };
+/** The record scored, or unscored — `null` is a cleared rating, not a missing one. */
+function withRating(movie: Movie, rating: number | null): Movie {
+  return { ...movie, rating };
 }
 
 /**
@@ -89,28 +103,24 @@ function withRating(
  * `not-found` distinct from `error` here — the difference the parent sees is
  * which button they are offered.
  *
+ * It holds the record and draws it per render through `detailView`, under the
+ * household's _Fill in ratings from TMDB_, so a flip in Settings — or the
+ * preference landing after the film — redraws the page without reading it
+ * again.
+ *
  * It also owns the three edits this page can make — the watched tick, the
- * favorite heart and the rating — because the optimistic value and the loaded
- * movie are the same state. All three keep one bargain and `useOptimisticEdit`
- * is where that bargain is written; what each one says here is only what it
- * writes, what that costs, and how to save it. A refused save costs the edit,
- * not the page.
+ * favorite heart and the rating — each patching the held record. All three keep
+ * one bargain and `useOptimisticEdit` is where that bargain is written; what
+ * each one says here is only what it writes, what that costs, and how to save
+ * it. A refused save costs the edit, not the page.
  */
 export function useMovieDetail(id: string): UseMovieDetailResult {
-  const [state, setState] = useState<MovieDetailState>({
+  const [state, setState] = useState<HeldMovie>({
     status: 'loading',
     movie: null,
   });
   const [attempt, setAttempt] = useState(0);
-
-  /**
-   * The household's _Fill in ratings from TMDB_, read through a ref by the
-   * load so a preference landing late re-maps the placeholder below rather
-   * than reloading the page; the record is kept for that re-map.
-   */
   const tmdbRatings = useTmdbRatings();
-  const tmdbRatingsRef = useRef(tmdbRatings);
-  const recordRef = useRef<Movie | null>(null);
 
   useEffect(() => {
     let current = true;
@@ -121,14 +131,10 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
         if (!current) {
           return;
         }
-        recordRef.current = movie;
         setState(
           movie === null
             ? { status: 'not-found', movie: null }
-            : {
-                status: 'ready',
-                movie: detailView(movie, tmdbRatingsRef.current),
-              }
+            : { status: 'ready', movie }
         );
       })
       .catch(() => {
@@ -152,31 +158,13 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
    * through here so a save that answers after the page has moved on — a retry, a
    * different movie — cannot resurrect a movie the state has already dropped.
    */
-  const editMovie = useCallback(
-    (update: (movie: MovieDetailModel) => MovieDetailModel) => {
-      setState((current) =>
-        current.status === 'ready'
-          ? { status: 'ready', movie: update(current.movie) }
-          : current
-      );
-    },
-    []
-  );
-
-  /** The preference changed under a loaded film: only the placeholder moves. */
-  useEffect(() => {
-    if (tmdbRatingsRef.current === tmdbRatings) {
-      return;
-    }
-    tmdbRatingsRef.current = tmdbRatings;
-    const record = recordRef.current;
-    if (record !== null) {
-      const { tmdbPercent } = detailView(record, tmdbRatings);
-      editMovie((current) =>
-        current.id === record.id ? { ...current, tmdbPercent } : current
-      );
-    }
-  }, [tmdbRatings, editMovie]);
+  const editMovie = useCallback((update: (movie: Movie) => Movie) => {
+    setState((current) =>
+      current.status === 'ready'
+        ? { status: 'ready', movie: update(current.movie) }
+        : current
+    );
+  }, []);
 
   const movie = state.status === 'ready' ? state.movie : null;
 
@@ -189,8 +177,9 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
 
   /**
    * The one edit that costs more than the field it writes: marking watched also
-   * spends the resume offer, so what a refused save hands back is the pair, not
-   * the flag. A save that never landed never discarded the position.
+   * spends the resume offer, so what a refused save hands back is the watch
+   * state whole, not the flag. A save that never landed never discarded the
+   * position.
    */
   const toggleWatched = useCallback(() => {
     if (movie === null) {
@@ -198,8 +187,12 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
     }
 
     edit({
-      next: !movie.isWatched,
-      capture: ({ isWatched, playLabel }) => ({ isWatched, playLabel }),
+      next: !movie.watched,
+      capture: ({ watched, status, resumePositionSeconds }): WatchState => ({
+        watched,
+        status,
+        resumePositionSeconds,
+      }),
       apply: withWatched,
       restore: (current, previous) => ({ ...current, ...previous }),
       save: saveWatched,
@@ -221,24 +214,29 @@ export function useMovieDetail(id: string): UseMovieDetailResult {
   }, [movie, edit]);
 
   /**
-   * Percent on the way in, stored units on the wire — the picker above knows
-   * nothing about the domain and the column below stores 0–10. The echo comes
-   * back as units and is mapped before the hook reconciles it, so both sides of
-   * that comparison speak percent.
+   * Percent at the door, stored units from there in — the picker above knows
+   * nothing about the domain, and the record and the column below both speak
+   * 0–10. The route's echo is units too, so the reconcile compares units.
    */
   const rate = useCallback(
     (percent: number | null) => {
       edit({
-        next: percent,
-        capture: (current) => current.ratingPercent,
+        next: toRatingUnits(percent),
+        capture: (current) => current.rating,
         apply: withRating,
         restore: withRating,
-        save: (id, value) =>
-          saveRating(id, toRatingUnits(value)).then(toRatingPercent),
+        save: saveRating,
       });
     },
     [edit]
   );
 
-  return { ...state, retry, toggleWatched, toggleFavorite, rate };
+  const handlers = { retry, toggleWatched, toggleFavorite, rate };
+  return state.status === 'ready'
+    ? {
+        status: 'ready',
+        movie: detailView(state.movie, tmdbRatings),
+        ...handlers,
+      }
+    : { status: state.status, movie: null, ...handlers };
 }
