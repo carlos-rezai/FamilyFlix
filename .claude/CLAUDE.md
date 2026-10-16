@@ -143,7 +143,8 @@ familyflix/
 │ │ ├── loopbackGuard/ ← the **Loopback guard**: mounted first, standalone included, `403` for a Host or Origin that is not a **Trusted host**; `bind(port)` once `listen` has resolved
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
-│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()` and `setUltrawideMargins()` as upserts over the two preference keys, `subtitle-language` and `ultrawide-margins`; and three keys beside the preferences, never among them — `tmdb-api-key` and `enrichment-last-synced-at` — every one read through one `valueOf(key)`
+│ │ ├── browse/ ← the browse home's and the Genre page's filters and **Sort orders**; `shownRatingSql(alias, tmdbRatings)`, the **Shown rating** spelled once in SQL, and `highestRatedSql` beside it, _Highest rated_'s body — the series browse reads both; the preference read per query through an injected `tmdbRatings()`
+│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()`, `setUltrawideMargins()` and `setTmdbRatings()` as upserts over the three preference keys, `subtitle-language`, `ultrawide-margins` and `tmdb-ratings` — the two flags through one `flagOf(key, fallback)` and one `setFlag(key, on)`; and two keys beside the preferences, never among them — `tmdb-api-key` and `enrichment-last-synced-at` — every one read through one `valueOf(key)`
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`, and the **Sync gap** — what _Only what's missing_ syncs — once as `syncGap`
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from — an outcome, `removed` / `not-found` / `in-use` with the count of titles a **Linked video** plays from there, the count and the delete in one transaction
 │ │ ├── parentFolder/ ← pure: a Stored path some directories up — the **Media folder** a row written without one is given; shipping adds name theirs
@@ -221,10 +222,11 @@ familyflix/
 │ ├── seriesFixture/ ← the importer’s series fixture copied under a sandbox → { root, sheet }
 │ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
 ├── src/
-│ ├── App/ ← the router and the app-level providers every page renders inside; `App.tsx` stays flat here (log 18 Q16), and its six units are imported by path, no barrel
-│ │ ├── DisplayPreferenceProvider/ ← the household's **Ultrawide margins**, held app-wide outside the Snackbar stack: one `fetchSettings` on mount (**Blank until it lands**), and a setter shown at once, posted, the echo kept, put back on refusal, never rejecting
-│ │ ├── useDisplayPreference/ ← the context, `useDisplayPreference()` → `{ ultrawideMargins, setUltrawideMargins }`, throwing outside the provider, naming itself; the stack reads the context directly, so a suite without the provider reads as off
-│ │ ├── saveUltrawideMargins/ ← the one write, `POST /api/settings/ultrawide-margins` over `postValue`; one caller, so beside it rather than in `src/api/`
+│ ├── App/ ← the router and the app-level providers every page renders inside; `App.tsx` stays flat here (log 18 Q16), and its eight units are imported by path, no barrel
+│ │ ├── DisplayPreferenceProvider/ ← the household's display preferences, **Ultrawide margins** and **TMDB ratings**, held app-wide outside the Snackbar stack: one `fetchSettings` on mount lands both (**Blank until it lands**), and each setter one bargain, `useHeldFlag`'s — shown at once, posted, the echo kept, put back on refusal, never rejecting
+│ │ ├── useDisplayPreference/ ← the context, `useDisplayPreference()` → `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings }`, throwing outside the provider, naming itself; the stack reads the context directly, so a suite without the provider reads as off
+│ │ ├── useTmdbRatings/ ← the context's reader for every surface that draws stars: `true` only once the read has landed on, the stack's precedent, so a suite without the provider reads as off
+│ │ ├── saveUltrawideMargins/ saveTmdbRatings/ ← the two writes, `POST /api/settings/ultrawide-margins` and `…/tmdb-ratings` over `postValue`; one caller each, so beside it rather than in `src/api/`
 │ │ ├── ContentFrame/ ← the **Content frame**: the layout route's element around every route but the player's two, capped at the **Content measure** with auto side margins while the preference is `true`, nothing while `false` or `null`
 │ │ ├── SnackbarProvider/ ← the Snackbar stack: the queue, the ids off a counter, one timer per plain notice, the fixed bottom-right `column-reverse` column (newest nearest the corner, `pointer-events: none` with each card's wrapper taking them back, always mounted, no portal, no cap, no dedupe), and the action that takes its own notice off first and then runs; `right` follows the Content frame's corner while Ultrawide margins is on
 │ │ └── useSnackbar/ ← the context, `useSnackbar()` → `{ notify, dismiss }` (throwing outside the provider, naming itself), and `SnackbarNotice` — `{ variant, title?, message, action? }`; no `duration`, no `dismissible`: an action persists, everything else dies at 5s
@@ -403,10 +405,12 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
-│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, Settings (`subtitleLanguage`, `ultrawideMargins`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, `DEFAULT_TMDB_RATINGS`, Settings (`subtitleLanguage`, `ultrawideMargins`, `tmdbRatings`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s, and `RatingSource`, whose a **Shown rating** is; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
+│ │ ├── shownRating/ ← the **Shown rating**: the household Rating, else — while **TMDB ratings** is on — the **TMDB rating**, else none, with its **Rating source**; and `tmdbRating(score)`, the TMDB rating alone, the movie page's placeholder too — every mapper that draws stars reads them, the series ones included
+│ │ ├── tmdbMarks/ ← **TMDB-marked stars**: `tmdbMarks(source)` → `StarRating`'s `{ muted, tag }`, and `TMDB_TAG`, the one spelling of the word
 │ │ ├── accentScale/ ← the accent → its five: `accentHover`, `accentPress`, `accentSoft`, `accentLine`, `focusRing`
 │ │ ├── moviePath/ ← the film's page as a route, `/movie/<id>`, the id encoded: the cards open it, and it is the player's and the edit's **Landing**
 │ │ ├── seriesTabPath/ ← the Series tab as a route, `/?tab=series`: the series page's and a series delete's **Landing**, and a series add's **Fresh home**
@@ -754,8 +758,8 @@ number on the page is a read the app can truthfully answer now:
   nothing uploaded to take back, `409` in the upload's own words, `500`
   the same. Both echo the whole report, so the screen redraws from the
   echo rather than reading again.
-- `GET /api/settings` → `{ subtitleLanguage, ultrawideMargins }`, both
-  defaults applied, and `POST /api/settings/subtitle-language { value }` →
+- `GET /api/settings` → `{ subtitleLanguage, ultrawideMargins, tmdbRatings }`,
+  every default applied, and `POST /api/settings/subtitle-language { value }` →
   `{ value }`, a **Single-signal write** on the favorite / watched / rating
   precedent;
   `400` for a missing, empty or non-string value. Membership in the
@@ -766,6 +770,11 @@ number on the page is a read the app can truthfully answer now:
   **Single-signal write**; `400` for anything but a boolean. **Ultrawide
   margins** is held app-wide by `DisplayPreferenceProvider` in `App/`, not by
   the hub, and the **Content frame** follows it at once.
+- `POST /api/settings/tmdb-ratings { value }` → `{ value }`, the Display
+  group's _Fill in ratings from TMDB_, the same **Single-signal write** and the
+  same `400`; on by default. Held beside Ultrawide margins by the same
+  provider, so a flip redraws every loaded star at once; the server reads it
+  per query for _Highest rated_ and the **Minimum rating**.
 - The **Library folders page** at `/settings/folders`, the hub's second
   nested route, opened by the Library group's _📁 Library folders_ row:
   `GET /api/library-folders` → `LibraryFolder[]` in the order added, each
@@ -1096,7 +1105,7 @@ ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
-at scale + Season art**. Steps 10–15 came out of
+at scale + Season art**, and step 26, **TMDB ratings**. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1246,9 +1255,9 @@ episodes each): the copy was slow and doubled the disk, and the review ran to
 
 Step 26 came out of using step 25: a synced library still drew every title
 **Unrated** (0/5), because the **TMDB score** is stored and not drawn (log 23
-Q12). It is next; its grill-me, prototype revision and PRD come first:
+Q12). It is done (design log 43):
 
-26. 🔜 **TMDB ratings** — a **Display group** row, _Fill in ratings from
+26. ✅ **TMDB ratings** — a **Display group** row, _Fill in ratings from
     TMDB_, a Toggle **on by default**, a household preference beside
     **Ultrawide margins** (`settings` key, `GET /api/settings`, a
     **Single-signal write**). While on, a title draws its **Rating** if the
@@ -1327,7 +1336,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Ultrawide margins** — an optional left/right margin for ultra-wide monitors: the Display group's Toggle caps every screen but the player at 1920px, centred.
 
 - ✅ **Open the media folder** — _Open folder_ on the Storage card, over a no-argument `openMedia` bridge channel: main makes the managed media directory if it is missing and opens it in Explorer.
-- 🔜 **TMDB ratings** — the Display group's second row, _Fill in ratings from TMDB_, on by default: an unrated title draws its TMDB score as stars, marked as TMDB's; the family's own Rating, set by hand, always wins and is never overwritten (step 26).
+- ✅ **TMDB ratings** — the Display group's second row, _Fill in ratings from TMDB_, on by default: an unrated title draws its TMDB score as stars, marked as TMDB's; the family's own Rating, set by hand, always wins and is never overwritten (step 26).
 - ✅ **Factory reset** — the Storage card's last row: _Reset…_ opens the **Reset dialog**, what goes and what stays, and _Erase everything_ erases every title, watch history and setting, empties the managed media directory and takes back an uploaded component, then reloads onto an empty library. Refused in one sentence while an import or a Sync runs; Library folders on disk stay.
 
 ### System

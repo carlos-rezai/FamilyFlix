@@ -176,7 +176,7 @@ familyflix/
 │       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
-│   │   ├── DisplayPreferenceProvider/ # the household's Ultrawide margins, held app-wide; useDisplayPreference reads it, saveUltrawideMargins writes it
+│   │   ├── DisplayPreferenceProvider/ # the household's Ultrawide margins and TMDB ratings, held app-wide; useDisplayPreference and useTmdbRatings read them, saveUltrawideMargins and saveTmdbRatings write them
 │   │   ├── ContentFrame/     # the Content frame: every route but the player's, capped at 1920px and centred while Ultrawide margins is on
 │   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
 │   │   └── useSnackbar/      # `{ notify, dismiss }` off the stack, and SnackbarNotice
@@ -212,7 +212,7 @@ familyflix/
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
 │   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl and accentScale among them)
+│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks and accentScale among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 ├── release/            # gitignored: the Installer, and win-unpacked/ — the Packaged layout
 └── docs/
@@ -375,7 +375,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Import review — folders + sheet, adjustments listed | ✅ Done         |
 | Link or copy — import without a second copy         | ✅ Done         |
 | Review at scale + Season art — grouped review       | ✅ Done         |
-| TMDB ratings — fetched stars until the family rates | 🔜 Planned      |
+| TMDB ratings — fetched stars until the family rates | ✅ Done         |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -480,9 +480,9 @@ listed more than 1,400 rows. Both are done (design logs 41 and 42):
 
 Step 26 came out of using step 25: a synced library still showed every title
 at 0/5 stars, because a Sync stores TMDB's score but never draws it. It is
-next, and goes through grill-me and a prototype revision before it is built:
+done (design log 43):
 
-26. 🔜 **TMDB ratings** — a switch in Settings → Display, _Fill in ratings
+26. ✅ **TMDB ratings** — a switch in Settings → Display, _Fill in ratings
     from TMDB_, **on by default**. While it is on, a title the family hasn't
     rated shows TMDB's score as stars (7.8/10 → 4★, to the nearest half), so a
     synced library no longer reads 0/5 everywhere; setting the stars by hand
