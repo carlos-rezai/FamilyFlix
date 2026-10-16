@@ -12,6 +12,9 @@ export type StillPlan =
   | { kind: 'frame' }
   | null;
 
+/** A Still's kind: TMDB's, or a **Frame still**. */
+export type StillKind = NonNullable<StillPlan>['kind'];
+
 /** What one episode is to be given: its columns, and the still to take. */
 export interface EpisodePlan {
   /** The columns to write; empty when there is nothing to fill. */

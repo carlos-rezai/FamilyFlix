@@ -46,7 +46,7 @@ import {
   currentFields,
   currentSeriesFields,
 } from '../currentFields/currentFields';
-import { planEpisode } from '../planEpisode/planEpisode';
+import { planEpisode, type StillKind } from '../planEpisode/planEpisode';
 import { planFields } from '../planFields/planFields';
 import { planSeason, wantsSeasonPoster } from '../planSeason/planSeason';
 import {
@@ -264,6 +264,14 @@ const STOP_LINES: Readonly<Record<Stop, string>> = {
   refused: 'TMDB refused the key.',
   unreachable:
     'Lost the connection, so the sync stopped. Anything already fetched is kept.',
+};
+
+/** Each kind of Still: the stored name's suffix and the log line's mark. */
+const STILL_KINDS: Readonly<
+  Record<StillKind, { suffix: string; mark: string }>
+> = {
+  tmdb: { suffix: 'still', mark: '↓' },
+  frame: { suffix: 'frame', mark: '▣' },
 };
 
 export function createEnrichment({
@@ -700,7 +708,8 @@ export function createEnrichment({
               );
         if (signal.aborted) return;
         if (picture !== null) {
-          const name = `${stem}.${still.kind === 'tmdb' ? 'still' : 'frame'}.jpg`;
+          const { suffix, mark } = STILL_KINDS[still.kind];
+          const name = `${stem}.${suffix}.jpg`;
           try {
             const stored = await media.storeNamed(
               seriesFolder,
@@ -711,11 +720,7 @@ export function createEnrichment({
             if (still.kind === 'tmdb') replacedFrame = still.replaces;
             enrichment.stillPath = stored;
             enrichment.stillSource = still.kind;
-            log(
-              current,
-              `${still.kind === 'tmdb' ? '↓' : '▣'} ${name}  →  ${stored}`,
-              'scan'
-            );
+            log(current, `${mark} ${name}  →  ${stored}`, 'scan');
           } catch {
             // A still that cannot be stored leaves the gradient drawn.
           }
