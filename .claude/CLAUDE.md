@@ -149,7 +149,7 @@ familyflix/
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from — an outcome, `removed` / `not-found` / `in-use` with the count of titles a **Linked video** plays from there, the count and the delete in one transaction
 │ │ ├── parentFolder/ ← pure: a Stored path some directories up — the **Media folder** a row written without one is given; shipping adds name theirs
 │ │ │ └── folderOverlap/ ← pure: whether a path is, is inside or holds a listed folder — resolved, case-folded on Windows, by whole segments — and `clashSentence`, each clash's one sentence
-│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page — each season's **Season poster** with it — the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart, and `setSeriesRating`, a held series' rating off a Sheet row), `enrich` (a Sync's series and episode writes, `setSeasonPoster` and `seriesInScope`), and `nextEpisodeOf`, pure
+│ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page — each season's **Season poster** with it — the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart, and `setSeriesRating`, a held series' rating off a Sheet row), `enrich` (a Sync's series and episode writes, `setSeasonPoster`, `seriesInScope` and `stillSourcesOf`, each episode's **Still source**), and `nextEpisodeOf`, pure
 │ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike; and `spellYearSpan`, its writer, the Export's Year cell and title folders
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
 │ │ ├── createMedia/ ← the injected domain, every title found by its recorded **Media folder**: reserve a Movie folder, `openFolder` (a recorded Media folder, opened), `storedFolder` (the title's folder a Stored path lies under — a **Resolve**'s, over the route's bytes), `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the four removals — `removeFolder` a rollback's, `removeFile`, `removeTitleFolder` a Delete's, and `emptyRoot`, **Factory reset**'s, the root emptied best-effort and kept; and a Sync's two — `storeNamed` (into a Media folder, or a `season` under it), `readStored` (a stored file as a stream). Only `media/` touches managed storage; a **Linked video** is not managed storage
@@ -187,8 +187,9 @@ familyflix/
 │ │ ├── probe/ ← ffprobe wrapper → MediaProbe (container, codecs, duration)
 │ │ ├── mediaDuration/ ← an MP4’s own moov/mvhd, so a direct play needs no component
 │ │ ├── choosePlaybackPath/ ← pure: MediaProbe → direct / remux / transcode / cannot-play + argv
+│ │ ├── frameArgs/ ← pure: `FRAME_POINT`, the **Frame point** (a third of the duration), and `frameArgs(file, atSeconds)`, the one picture's argv — input seeking, one JPEG to stdout, no temp file
 │ │ ├── linkedVideoPath/ ← the linked boundary: `linkedVideoPath(folderPath, videoPath)`, a **Linked video**'s row → its file — video kinds only, then `mediaFilePath`'s containment — and `spellLinkedVideo(folderPath, file)`, its writer, the `episodeTag` pairing
-│ │ ├── createPlayback/ ← the injected domain: `createPlayback(mediaPath, slot, libraryFolderPath)` — `videoFile(StoredVideo) → VideoFile` (`file` / `missing` / `unreachable`, a Library folder's reach read afresh on every call), read, stream, subtitleFile, cues, capabilities, receiveComponent, removeComponent. It takes the slot rather than a component and reads it per request, so the next press of Play decides over whatever is live with nothing cached to clear
+│ │ ├── createPlayback/ ← the injected domain: `createPlayback(mediaPath, slot, libraryFolderPath)` — `videoFile(StoredVideo) → VideoFile` (`file` / `missing` / `unreachable`, a Library folder's reach read afresh on every call), read, stream, subtitleFile, cues, capabilities, receiveComponent, removeComponent, and `frame(StoredVideo, signal)` — a **Frame still** at the **Frame point** within the 20 s **Frame budget**, or `null`, never rejecting. It takes the slot rather than a component and reads it per request, so the next press of Play decides over whatever is live with nothing cached to clear
 │ │ ├── ffmpegComponent/ ← the injected seam: what this machine can be asked to do — probe, spawn, the hardware encoder, and `decoders()`, the raw `ffmpeg -decoders` listing (an encoders/decoders listing pair behind it)
 │ │ ├── mediaFilePath/ ← the under-media-root check between a stored string and an open file
 │ │ ├── derivedRuntime/ ← a Playback and a stored path → the runtime minutes off the bytes, never throwing; the form’s save and the importer both ask it
@@ -203,12 +204,12 @@ familyflix/
 │ │ ├── searchLadder/ ← pure: a title and its year → the **Search ladder**'s rungs, at most four, a repeat dropped — with its year, without, its **Search query**, the part before a subtitle; `createEnrichment`'s `searchTitled` climbs it off a typed table, one request per rung
 │ │ ├── fetchedFields/ ← pure: a TMDB movie or show → the ten fields; `releaseYear`, the one reading of a TMDB date
 │ │ ├── currentFields/ ← pure: a Movie or Series → its values now, in the fetched shape
-│ │ ├── planFields/ planEpisode/ planSeason/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and whether a **Still** is wanted; whether a Season's **Season poster** is wanted
+│ │ ├── planFields/ planEpisode/ planSeason/ ← pure: what to fill and which **Field conflicts** to raise; an episode's title, air date, runtime and its `StillPlan` — TMDB's **Still** with the held **Frame still** it replaces, a Frame still, or none; whether a Season's **Season poster** is wanted
 │ │ ├── plannedEnrichment/ ← pure: a plan → the columns a film, a series or _Apply choices_ writes
 │ │ ├── decisionFace/ ← pure: a search → an `ambiguous` Decision's top three **Candidates** (the genre off the pool, the language upper-cased) or a `missing` one's reason
 │ │ ├── writeBack/ ← the two **Write targets**: the permission check and its dry-run lines, `familyflix-metadata.csv` per **Library folder** and `poster.jpg` per **Source folder** — a **Collection folder** film's `<video stem>-poster.jpg` beside its video — with an Export, the only code that writes into a Library folder, each only ever adding what is not there
-│ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape
-│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list, 8 `episodes.source_file`, the **Source file** an **Episode link** remembers across scans, 9 `movies.source_file`, a **Collection folder** film's Source file, 10 `season_posters`, a Season's poster by `(series_id, season_number)`, 11 `media_folder` on both titles, each title's **Media folder**, backfilled, 12 `video_folder_id` on `movies` and `episodes`, the **Library folder** a **Linked video** plays from, 13 a stored TMDB score of `0` set back to `NULL` on both titles — a score of 0 is no score), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; `seriesSeed/`, the dev library's mock series; and `resetDatabase/`, **Factory reset**'s erase — `ERASED_TABLES` and `KEPT_TABLES` (the Genre pool), one transaction, a guard in its suite refusing a table in neither list
+│ │ └── createEnrichment/ ← the injected domain: the key, and the **Current enrichment run** — one in memory, its state machine as closures over the run, the abort controller and the Decisions, `createImporter`'s shape; it takes `playback` as `createImporter` does, for the **Frame still** alone
+│ ├── db/ ← SQLite connection + schema/migrations (1 the schema and the genre seed, 2 `last_watched_at`, 3 the `settings` table — nothing seeded, 4 `series` and `episodes` with their two joins, `series_genres` and `episode_subtitles` — no `seasons` table, 5 `original_title`, `tmdb_score` and `source_folder` on both titles and `still_path` on episodes, 6 `library_folders` and `library_folder_id` on both titles, 7 the carry-over of `settings.library-root` onto the list, 8 `episodes.source_file`, the **Source file** an **Episode link** remembers across scans, 9 `movies.source_file`, a **Collection folder** film's Source file, 10 `season_posters`, a Season's poster by `(series_id, season_number)`, 11 `media_folder` on both titles, each title's **Media folder**, backfilled, 12 `video_folder_id` on `movies` and `episodes`, the **Library folder** a **Linked video** plays from, 13 a stored TMDB score of `0` set back to `NULL` on both titles — a score of 0 is no score, 14 `episodes.still_source`, each Still's **Still source**, backfilled), shared by every domain module above; `better-sqlite3`'s `nativeBinding` taken from `FAMILYFLIX_SQLITE_BINDING` when set, so the shell runs on the Electron-ABI binding and Vitest on the package's own; `seriesSeed/`, the dev library's mock series; and `resetDatabase/`, **Factory reset**'s erase — `ERASED_TABLES` and `KEPT_TABLES` (the Genre pool), one transaction, a guard in its suite refusing a table in neither list
 │ ├── shell/ ← the server's half of the shell seam and its process lifecycle — infrastructure beside `db/`, not a domain
 │ │ ├── shellHandshake/ ← `shellHandshake(parentPort, startup)`: the startup answers `Started { server, shutdown }`, `ready` or `fatal` is posted, main's `shutdown` command runs the shutdown it was handed; inert with no parent port
 │ │ ├── listen/ ← the `127.0.0.1` bind, always; under the shell a taken **Shell port** falls back to an ephemeral one; `boundPort(server)`, the one reading of the port
@@ -218,6 +219,7 @@ familyflix/
 │ ├── fakeTmdb/ ← a scripted TMDB for the enrichment suites: each question off the suite's table, every call recorded, one held or failed on cue; the result, detail, TV and season builders, and `reviewed()`
 │ ├── offlineTmdb/ ← the one-line TMDB that answers unreachable, for suites composing the router for something else
 │ ├── fixedSlot/ ← a Component slot over one fixed component, for the thirty-odd suites that compose a Playback and never write to the slot
+│ ├── framelessPlayback/ ← a Playback that never takes a picture, its `frame` scripted when one is handed — `offlineTmdb`'s twin, for the `createEnrichment` suites
 │ ├── componentDir/ ← a component's two files in a sandbox, and `ffmpegIn` / `ffprobeIn` / `EXE` (re-exported from the resolver that owns it)
 │ ├── seriesFixture/ ← the importer’s series fixture copied under a sandbox → { root, sheet }
 │ └── libraryFixture/ ← the importer’s fixture copied under a sandbox → { root, sheet }
@@ -523,7 +525,10 @@ features into a route.
   code that touches managed storage; the one path it joins itself is under
   a **Library folder**, which its **Write targets** write into — and with an
   **Export**, the only writers into a Library folder, each only ever adding
-  what is not there. That rule is about **backend logic**; test doubles are not
+  what is not there. It reaches the Playback component only through the
+  injected `Playback`, `createImporter`'s precedent, for a **Frame still** —
+  so it is still not a second domain that knows there is an FFmpeg. That rule
+  is about **backend logic**; test doubles are not
   backend logic, which is why `server/src/test-support/` exists beside
   `db/` as the mirror of the frontend's rung — same one-line rule
   ("never imported by shipping code"), same one-folder-per-unit shape,
@@ -1105,8 +1110,8 @@ ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
-at scale + Season art**, and step 26, **TMDB ratings**; step 27, **Episode
-stills**, is next. Steps 10–15 came out of
+at scale + Season art**, step 26, **TMDB ratings**, and step 27, **Episode
+stills**. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1274,24 +1279,23 @@ Q12). It is done (design log 43):
 
 Step 27 came out of using step 26: TMDB holds a **Still** for every episode of
 some shows and for none of others, so a season page can be half gradients.
-The series form has taken a Still from a file since issue #379. It is planned,
-and goes through grill-me before a PRD:
+The series form has taken a Still from a file since issue #379. It is done
+(design log 44):
 
-27. 🔜 **Episode stills** — an **Episode** TMDB has no Still for takes one
-    from its own video: one frame at **a third of its runtime**, grabbed by
-    the **Playback component** (`ffmpeg -ss <t> -i <video> -frames:v 1`),
-    stored as a Stored path in its Series folder's `season-NN/` beside the
-    Sync's and the form's stills — a **Linked video** is read, never written
-    into. TMDB's Still is preferred whenever it has one; a Still picked in the
-    series form is never replaced; no component (`ffmpegBinary` absent)
-    leaves the gradient, never an error. To settle in the grill: when it runs
-    (a Sync's fallback after TMDB answers, at import, or an action of its
-    own) and its progress and cancel at a thousand episodes; whether a
-    Still's source is recorded (`tmdb` / `frame` / `picked`), so a later
-    Sync can replace a frame with TMDB's and the **Sync gap** still counts a
-    frame as missing TMDB art; a frame that lands black or on credits; the
-    runtime when none is stored (`probe`, `mediaDuration`); and whether an
-    Export carries a frame as it carries a Still.
+27. ✅ **Episode stills** — an **Episode** TMDB has no Still for takes a
+    **Frame still** from its own video, as a **Sync**'s fallback under the
+    Poster chip, never season 0: one frame at the **Frame point**, a third of
+    its duration (`probe`, else `mediaDuration`), grabbed by
+    `Playback.frame` over the **Component slot** within the 20 s **Frame
+    budget** and stored as `<stem>.frame.jpg` in its Series folder's
+    `season-NN/` — a **Linked video** is read, never written into. Migration
+    14 records each Still's **Still source** (`tmdb` / `frame` / `picked`):
+    a later Sync replaces a frame with TMDB's Still and removes the frame,
+    never grabs a second, and never touches a TMDB or picked Still. No
+    component, an unreadable video or a frame that will not come leaves the
+    gradient, never an error. The **Sync gap**, an Export and `src/` are
+    unchanged. Not this step: frames at import or on demand, a frame picker,
+    black or credits detection, frames for films.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1318,7 +1322,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Backdrop veil** — the movie and series pages' art over the whole viewport, staying put under an accent-tinted veil while the content scrolls over it.
 - ✅ **Single-title Sync** — the ⋯ menu's _Fetch from TMDB_ syncs that movie alone, re-attaching only to its own run; a library Sync left in review is let go by Start, never hijacked.
 - ✅ **Season posters** — each season card on the series page draws that season's own TMDB poster, fetched by the Sync that already reads every season, the gradient when there is none; an Export carries them under `seasons/`.
-- 🔜 **Episode stills** — an episode TMDB has no still for draws a frame from its own file, a third of the way in, taken with the bundled FFmpeg; TMDB's still preferred, a hand-picked one never replaced, the gradient with no FFmpeg (step 27).
+- ✅ **Episode stills** — an episode TMDB has no still for draws a frame from its own file, a third of the way in, taken with the bundled FFmpeg during a Sync; TMDB's still preferred and replacing a frame later, a hand-picked one never replaced, the gradient with no FFmpeg (step 27).
 
 ### Playback
 

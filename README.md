@@ -376,7 +376,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Link or copy — import without a second copy         | ✅ Done         |
 | Review at scale + Season art — grouped review       | ✅ Done         |
 | TMDB ratings — fetched stars until the family rates | ✅ Done         |
-| Episode stills — a frame from the file, as fallback | 🔜 Planned      |
+| Episode stills — a frame from the file, as fallback | ✅ Done         |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -495,15 +495,15 @@ done (design log 43):
 
 Step 27 came out of using step 26: TMDB has a still for every episode of some
 shows and for none of others, so half a season page can be gradients. It is
-planned, and goes through grill-me first:
+done (design log 44):
 
-27. 🔜 **Episode stills** — when TMDB has no still for an episode, FamilyFlix
+27. ✅ **Episode stills** — when TMDB has no still for an episode, a Sync
     takes one from the episode's own file: a single frame a third of the way
     in, grabbed with the FFmpeg it already ships, stored beside the episode's
     other art and never written into your Library folder. TMDB's still is
-    preferred whenever it has one, and a still you picked by hand in the
-    series form is never replaced. With no FFmpeg on the machine the episode
-    keeps its gradient.
+    preferred whenever it has one — a later Sync swaps a frame for it — and a
+    still you picked by hand in the series form is never replaced. With no
+    FFmpeg on the machine the episode keeps its gradient.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
