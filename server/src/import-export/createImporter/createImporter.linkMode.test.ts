@@ -337,3 +337,24 @@ describe('createImporter.scan — a cancelled Link run', () => {
     expect(existsSync(join(box.media, 'amelie-2001'))).toBe(false);
   });
 });
+
+describe('createImporter.scan — the Activity log names the mode', () => {
+  const texts = (run: ImportRun) => run.log.map((line) => line.text);
+
+  it('a Link scan logs each film as linked, in the imported line’s column', async () => {
+    const run = await scanOnce(sandbox(), 'link');
+
+    expect(texts(run)).toContain('✓ Linked     Amelie');
+    expect(texts(run)).toContain('✓ Linked     Die Hard');
+    expect(texts(run).some((text) => text.startsWith('✓ Imported '))).toBe(
+      false
+    );
+  });
+
+  it('a Copy scan logs each film as imported, as today', async () => {
+    const run = await scanOnce(sandbox(), 'copy');
+
+    expect(texts(run)).toContain('✓ Imported   Amelie');
+    expect(texts(run).some((text) => text.startsWith('✓ Linked '))).toBe(false);
+  });
+});

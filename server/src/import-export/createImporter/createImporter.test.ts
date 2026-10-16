@@ -31,8 +31,8 @@
 // per match imported, the complete line — plus the lines for what the run
 // skipped or could not do (an already-in-library row, a blank title, an
 // unknown genre name, a folder the scanner cannot read) and the two **Warning
-// lines** that never block (no subtitle, no poster). The log is capped at 80
-// lines, newest kept, so a snapshot stays small; and `currentItem` names the
+// lines** that never block (no subtitle, no poster). The log is capped at
+// `LOG_CAP` lines, newest kept, so a snapshot stays small; and `currentItem` names the
 // film's title while it is being copied, the folder while it is being found.
 //
 // Issue #129 makes **Problems** data: the matcher's other verdicts land on the
@@ -77,6 +77,7 @@ import {
   ImportBusyError,
   ImportPathError,
   ImportStartError,
+  LOG_CAP,
   ProblemNotFoundError,
   type Importer,
   type ResolveForm,
@@ -1131,23 +1132,27 @@ describe('createImporter — a match with no subtitle, and one with no poster', 
 });
 
 /**
- * The cap: a thousand-film run would put a thousand scanning lines on every
- * poll otherwise. Eighty, newest kept — the console reads the end of the
- * story, and the snapshot stays small.
+ * The cap: every poll carries the whole log, so it is bounded — two thousand
+ * lines, newest kept, enough that a large library's first warnings are still
+ * there at review.
  */
-describe('createImporter — the log is capped at 80 lines', () => {
-  it('never exceeds 80 lines and keeps the newest', async () => {
+describe('createImporter — the log is capped at LOG_CAP lines', () => {
+  it('is two thousand lines, so a large library reaches review whole', () => {
+    expect(LOG_CAP).toBe(2000);
+  });
+
+  it('never exceeds LOG_CAP lines and keeps the newest', async () => {
     const { storage, importer, root, sheet } = sandbox();
-    // A hundred more listed folders, none of them there: a scanning line and
-    // a warning each, and nothing to import for them.
-    for (let n = 1; n <= 100; n += 1) {
+    // More listed folders than half the cap, none of them there: a scanning
+    // line and a warning each, and nothing to import for them.
+    for (let n = 1; n <= LOG_CAP / 2 + 10; n += 1) {
       storage.addLibraryFolder(join(root, '..', `gone-${n}`));
     }
 
     await importer.start(sheet);
     const run = await untilReview(importer);
 
-    expect(run.log).toHaveLength(80);
+    expect(run.log).toHaveLength(LOG_CAP);
     expect(run.log[run.log.length - 1]).toEqual({
       text: '✓ Import complete: 2 imported, 0 need attention.',
       kind: 'success',

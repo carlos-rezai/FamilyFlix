@@ -305,10 +305,11 @@ export interface Importer {
 const SHEET_EXTENSIONS = ['.xlsx', '.csv'];
 
 /**
- * How many **Log lines** a snapshot carries, newest kept: a thousand-film run
- * would put a thousand scanning lines on every poll otherwise.
+ * How many **Log lines** a snapshot carries, newest kept. Enough that a large
+ * library's first warnings are still there when the **Review step** draws the
+ * log; bounded, because every poll carries the whole of it.
  */
-const LOG_CAP = 80;
+export const LOG_CAP = 2000;
 
 /** The reason strings the run fixes for the kinds the matcher does not give. */
 const REASON = {
@@ -760,6 +761,21 @@ export function createImporter({
   };
 
   /**
+   * A placed title's `success` line, worded by the run's **Import mode** —
+   * `✓ Linked` under `link`, `✓ Imported` under `copy` — the name in the
+   * same column either way.
+   */
+  const logPlaced = (current: ImportRun, label: string): void => {
+    log(
+      current,
+      current.mode === 'link'
+        ? `✓ Linked     ${label}`
+        : `✓ Imported   ${label}`,
+      'success'
+    );
+  };
+
+  /**
    * The genres a row names that the **Genre pool** knows, in the pool's own
    * spelling; a genre it does not know is dropped and the row still imports,
    * with one **Warning line** per unknown name across the run — the same
@@ -1155,7 +1171,7 @@ export function createImporter({
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
           ...(subtitles.length === 0 ? {} : { subtitles }),
         });
-        log(current, `✓ Imported   ${label}`, 'success');
+        logPlaced(current, label);
       } catch (error) {
         if (signal.aborted) {
           break;
@@ -1427,7 +1443,7 @@ export function createImporter({
       }
       if (added !== null) {
         imported += 1;
-        log(current, `✓ Imported   ${match.row.title}`, 'success');
+        logPlaced(current, match.row.title);
         warnOfMissingFiles(current, match);
       }
       current.done += 1;

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import { Accordion, PillTabs } from '@/components';
+import { Accordion, LogConsole, PillTabs } from '@/components';
 import { Button } from '@/primitives';
 import {
   PROBLEM_KINDS,
@@ -16,6 +16,7 @@ import { DOT_TONE } from '../ProblemRow/ProblemRow.styles';
 import { StatTile } from '../StatTile/StatTile';
 import {
   Actions,
+  ActivityLog,
   AllDone,
   AllDoneHeading,
   AllDoneLine,
@@ -29,6 +30,9 @@ import {
   SkipAllButton,
   Tiles,
 } from './ImportReview.styles';
+
+/** The console's height in the log's Accordion — the Running step's own 220. */
+const LOG_HEIGHT = 220;
 
 export interface ImportReviewProps {
   /** The **Current run**, in review. */
@@ -83,6 +87,12 @@ export interface ImportReviewProps {
  * _Skip all_ among its Accordion actions; every one reports its ids at once,
  * no confirm.
  *
+ * Between the tiles and the list, the run's **Activity log** on one closed
+ * **Accordion** — _Activity log_ and its line count — opening onto the Running
+ * step's own console, and absent for a run with no lines. A Link run places no
+ * video bytes, so it can reach review inside one poll and the Running step is
+ * never seen; this is where its lines are read.
+ *
  * The step draws the run it is handed and reports a press — _Skip_ and
  * _Apply choices_ name the problem's id — and never removes a row itself: the
  * **Run hook** does, and the next `run` shows it.
@@ -106,6 +116,7 @@ export function ImportReview({
     chosen
   );
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
+  const [logOpen, setLogOpen] = useState(false);
   const toggle = (title: string) =>
     setOpen((was) => {
       const next = new Set(was);
@@ -157,6 +168,19 @@ export function ImportReview({
           }
         />
       </Tiles>
+
+      {run.log.length > 0 && (
+        <ActivityLog>
+          <Accordion
+            label="Activity log"
+            count={run.log.length}
+            expanded={logOpen}
+            onToggle={() => setLogOpen((was) => !was)}
+          >
+            <LogConsole lines={run.log} height={LOG_HEIGHT} />
+          </Accordion>
+        </ActivityLog>
+      )}
 
       {run.problems.length > 0 ? (
         <>

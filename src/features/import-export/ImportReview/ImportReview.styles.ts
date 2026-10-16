@@ -9,6 +9,11 @@ export const Tiles = styled.div`
   margin-bottom: 28px;
 `;
 
+/** The Activity log's Accordion, set the tiles' 28px over the list. */
+export const ActivityLog = styled.div`
+  margin-bottom: 28px;
+`;
+
 /** "Needs attention" — the list's small uppercase heading, in the faint ink. */
 export const ListHeading = styled.div`
   margin-bottom: 12px;

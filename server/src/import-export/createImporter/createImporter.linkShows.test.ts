@@ -424,3 +424,13 @@ describe('createImporter — a held show gains an episode on a re-run', () => {
     });
   });
 });
+
+describe('createImporter.scan — the Activity log names the mode over a show', () => {
+  it('a Link scan logs each episode as linked', async () => {
+    const run = await scanOnce(sandbox(), 'link');
+
+    const texts = run.log.map((line) => line.text);
+    expect(texts).toContain('✓ Linked     Harbor & Vine · S01E01');
+    expect(texts).toContain('✓ Linked     Harbor & Vine · S01E02');
+  });
+});
