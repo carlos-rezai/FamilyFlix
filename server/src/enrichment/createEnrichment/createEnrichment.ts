@@ -681,7 +681,7 @@ export function createEnrichment({
         fields,
         stillSources.get(episode.id) ?? null
       );
-      // A held **Frame still** TMDB's still replaces: removed once it is written.
+      // The held **Frame still** TMDB's still replaces, once it is written.
       let replacedFrame: string | null = null;
       if (still !== null && seriesFolder !== null) {
         const stem = posix.basename(
@@ -708,14 +708,7 @@ export function createEnrichment({
               picture,
               seasonNumber
             );
-            if (
-              still.kind === 'tmdb' &&
-              stillSources.get(episode.id) === 'frame' &&
-              episode.stillPath !== null &&
-              episode.stillPath !== stored
-            ) {
-              replacedFrame = episode.stillPath;
-            }
+            if (still.kind === 'tmdb') replacedFrame = still.replaces;
             enrichment.stillPath = stored;
             enrichment.stillSource = still.kind;
             log(

@@ -3,11 +3,12 @@ import type { EpisodeEnrichment, StillSource } from '../../library';
 import type { TmdbSeasonEpisode } from '../tmdbClient/tmdbClient';
 
 /**
- * The **Still** an episode is to be given: TMDB's, by its image path, or a
- * **Frame still** off its own video — or `null` for none.
+ * The **Still** an episode is to be given: TMDB's, by its image path, with the
+ * held **Frame still** it replaces — `null` when nothing is held — or a
+ * **Frame still** off its own video; or `null` for none.
  */
 export type StillPlan =
-  | { kind: 'tmdb'; path: string }
+  | { kind: 'tmdb'; path: string; replaces: string | null }
   | { kind: 'frame' }
   | null;
 
@@ -32,12 +33,17 @@ const blank = (value: string | null): boolean =>
 function planStill(
   theirs: TmdbSeasonEpisode | undefined,
   fields: readonly EnrichField[],
+  heldPath: string | null,
   held: StillSource | null
 ): StillPlan {
   if (!fields.includes('poster')) return null;
   const offered = theirs?.still_path;
   if (offered && (held === null || held === 'frame')) {
-    return { kind: 'tmdb', path: offered };
+    return {
+      kind: 'tmdb',
+      path: offered,
+      replaces: held === 'frame' ? heldPath : null,
+    };
   }
   return held === null ? { kind: 'frame' } : null;
 }
@@ -57,7 +63,7 @@ export function planEpisode(
   held: StillSource | null
 ): EpisodePlan {
   const enrichment: EpisodeEnrichment = {};
-  const still = planStill(theirs, fields, held);
+  const still = planStill(theirs, fields, episode.stillPath, held);
   if (theirs === undefined) return { enrichment, still };
   if (blank(episode.title) && theirs.name && theirs.name.trim() !== '') {
     enrichment.title = theirs.name;

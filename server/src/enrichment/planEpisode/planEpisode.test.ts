@@ -102,10 +102,11 @@ describe('planEpisode: the still — issue #384', () => {
   const HELD_STILL = bare({ stillPath: 'show/season-01/S01E01.still.jpg' });
 
   describe('a listed episode, under Poster', () => {
-    it('plans TMDB’s still when it offers one and nothing is held', () => {
+    it('plans TMDB’s still when it offers one and nothing is held, replacing nothing', () => {
       expect(planEpisode(bare(), THEIRS, ['poster'], null).still).toEqual({
         kind: 'tmdb',
         path: '/s01e01.jpg',
+        replaces: null,
       });
     });
 
@@ -116,10 +117,11 @@ describe('planEpisode: the still — issue #384', () => {
       ).toEqual({ kind: 'frame' });
     });
 
-    it('plans TMDB’s still over a held frame', () => {
+    it('plans TMDB’s still over a held frame, replacing the frame’s path', () => {
       expect(planEpisode(HELD_FRAME, THEIRS, ALL, 'frame').still).toEqual({
         kind: 'tmdb',
         path: '/s01e01.jpg',
+        replaces: 'show/season-01/S01E01.frame.jpg',
       });
     });
 
