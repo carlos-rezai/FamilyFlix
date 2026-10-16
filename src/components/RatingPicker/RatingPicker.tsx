@@ -109,8 +109,8 @@ function segmentLabel(percent: number): string {
  *
  * The **Rating preview** under the pointer is local state and goes no further:
  * nothing outside the molecule ever sees an uncommitted rating, and the label
- * keeps reading the stored value throughout, so a hover can never look like a
- * rating that took. Focus previews exactly as the pointer does, and the
+ * never follows the pointer, so a hover can never look like a rating that
+ * took. Focus previews exactly as the pointer does, and the
  * preview is dropped when focus leaves the strip — moving between segments
  * inside it is not leaving, which is why the blur is read on the strip rather
  * than on each segment.
@@ -119,6 +119,11 @@ function segmentLabel(percent: number): string {
  * one holding the current value names the clear instead, so the "click it
  * again" grammar is announced rather than guessed at. The ten of them arrive
  * as a group called "Your rating" rather than as loose furniture.
+ *
+ * A **placeholder** — TMDB's rating, on the movie page — is drawn while `value`
+ * is `null` and nothing is previewed: the stars muted, the label `x / 5` with
+ * its tag after it. It is never the value. A click on its own segment adopts it
+ * as the household's rating, and no segment ever offers it as a clear.
  *
  * It speaks percent in both directions, exactly as `StarRating` does: a
  * molecule that is meant to know nothing about the domain must not start
@@ -134,8 +139,9 @@ export function RatingPicker({
   onChange,
 }: RatingPickerProps) {
   const [preview, setPreview] = useState<number | null>(null);
-  const placeheld = value === null && preview === null ? placeholder : null;
-  const shown = preview ?? value ?? placeheld;
+  const placeholderShown =
+    value === null && preview === null ? placeholder : null;
+  const shown = preview ?? value ?? placeholderShown;
 
   /** Focus moving from one segment to another inside the strip is not leaving. */
   function handleBlur(event: FocusEvent<HTMLSpanElement>) {
@@ -158,7 +164,7 @@ export function RatingPicker({
             {STAR}
             <StarFill
               $fill={fillOf(shown, nth)}
-              $muted={placeheld !== null}
+              $muted={placeholderShown !== null}
               aria-hidden="true"
             >
               {STAR}
