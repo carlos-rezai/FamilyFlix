@@ -820,14 +820,14 @@ describe('SeriesDetail — the ⋯ menu', () => {
  * picker: a series' Rating is still set in the series edit.
  */
 describe('SeriesDetail — the Shown rating', () => {
-  function renderWithPreference(tmdbRatings: boolean | null) {
+  function tree(tmdbRatings: boolean | null) {
     const preference: DisplayPreferenceApi = {
       ultrawideMargins: null,
       setUltrawideMargins: () => Promise.resolve(),
       tmdbRatings,
       setTmdbRatings: () => Promise.resolve(),
     };
-    return render(
+    return (
       <DisplayPreferenceContext.Provider value={preference}>
         <MemoryRouter initialEntries={['/series/harbor']}>
           <ThemeProvider theme={theme}>
@@ -840,6 +840,10 @@ describe('SeriesDetail — the Shown rating', () => {
     );
   }
 
+  function renderWithPreference(tmdbRatings: boolean | null) {
+    return render(tree(tmdbRatings));
+  }
+
   it('draws TMDB’s rating, tagged, on an unrated series while on — and no picker', async () => {
     serve(unstarted({ rating: null, tmdbScore: 7.4 }));
 
@@ -850,6 +854,26 @@ describe('SeriesDetail — the Shown rating', () => {
     expect(screen.getByText('TMDB')).toBeDefined();
     expect(screen.queryByRole('group', { name: 'Your rating' })).toBeNull();
     expect(screen.queryByRole('button', { name: /clear rating/i })).toBeNull();
+  });
+
+  it('follows a flip under a loaded series, without reading it again', async () => {
+    serve(unstarted({ rating: null, tmdbScore: 7.4 }));
+
+    const { rerender } = renderWithPreference(true);
+    await findTitle('Harbor & Vine');
+    expect(screen.getByText('TMDB')).toBeDefined();
+    const reads = fetchMock.mock.calls.length;
+
+    rerender(tree(false));
+
+    expect(screen.queryByText('TMDB')).toBeNull();
+    expect(screen.queryByText('3.5')).toBeNull();
+
+    rerender(tree(true));
+
+    expect(screen.getByText('3.5')).toBeDefined();
+    expect(screen.getByText('TMDB')).toBeDefined();
+    expect(fetchMock.mock.calls.length).toBe(reads);
   });
 
   it('draws a rated series’ own Rating, unmarked, where an unrated one draws TMDB’s', async () => {

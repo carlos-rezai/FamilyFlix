@@ -1325,14 +1325,14 @@ describe('MovieDetail — the Detail backdrop', () => {
  * clearing that Rating brings the placeholder back.
  */
 describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => {
-  function renderWithPreference(tmdbRatings: boolean | null) {
+  function tree(tmdbRatings: boolean | null) {
     const preference: DisplayPreferenceApi = {
       ultrawideMargins: null,
       setUltrawideMargins: () => Promise.resolve(),
       tmdbRatings,
       setTmdbRatings: () => Promise.resolve(),
     };
-    return render(
+    return (
       <DisplayPreferenceContext.Provider value={preference}>
         <MemoryRouter initialEntries={['/movie/m1']}>
           <ThemeProvider theme={theme}>
@@ -1344,6 +1344,16 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
       </DisplayPreferenceContext.Provider>
     );
   }
+
+  function renderWithPreference(tmdbRatings: boolean | null) {
+    return render(tree(tmdbRatings));
+  }
+
+  /** How many times the page asked for its film. */
+  const movieReads = () =>
+    fetchMock.mock.calls.filter(([input]) =>
+      String(input).includes('/api/movies/')
+    ).length;
 
   /** Everything the picker reads beside its stars. */
   const ratingLabel = () =>
@@ -1395,6 +1405,39 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
       })
     );
     expect(screen.queryByText('TMDB')).toBeNull();
+  });
+
+  it('follows a flip under a loaded film, without reading it again', async () => {
+    serveMovie({ rating: null, tmdbScore: 7.4 });
+
+    const { rerender } = renderWithPreference(true);
+    await findTitle('Northwind');
+    expect(ratingLabel()).toContain('3.5 / 5');
+
+    rerender(tree(false));
+
+    expect(screen.getByText(/not rated/i)).toBeDefined();
+    expect(screen.queryByText('TMDB')).toBeNull();
+
+    rerender(tree(true));
+
+    expect(ratingLabel()).toContain('3.5 / 5');
+    expect(screen.getByText('TMDB')).toBeDefined();
+    expect(movieReads()).toBe(1);
+  });
+
+  it('draws the placeholder when the preference lands after the film', async () => {
+    serveMovie({ rating: null, tmdbScore: 7.4 });
+
+    const { rerender } = renderWithPreference(null);
+    await findTitle('Northwind');
+    expect(screen.getByText(/not rated/i)).toBeDefined();
+
+    rerender(tree(true));
+
+    expect(ratingLabel()).toContain('3.5 / 5');
+    expect(screen.getByText('TMDB')).toBeDefined();
+    expect(movieReads()).toBe(1);
   });
 
   it('brings the placeholder back when the Rating is cleared', async () => {
