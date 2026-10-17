@@ -406,7 +406,7 @@ switcher translated onto the router's real history.
 | **History step** (new)   | `navigate(-1)`: returning to the entry behind, as it was left — sort, filters and scroll intact, because `useRestoredScroll` keys on the entry. What a **Leaving** is; a push of the same URL is a different entry and a fresh screen, and leaves a duplicate the next Back walks into.                                                                                                                                                                                                                                                                                                            | go back, pop, navigate back, return             |
 | **Leaving** (new)        | Any control that takes the family or the maintainer off the screen they are on: the **Back button**, Escape in the player, _Save changes_, _Save & continue_, _Skip this one_, Cancel, the Delete dialog's confirm. All of them are **History steps** except the three **Fresh homes**.                                                                                                                                                                                                                                                                                                            | exit, navigate away, close, dismiss             |
 | **Landing** (updated)    | A screen's own destination for the no-history case — `location.key === 'default'`, a deep link or a reload — pushed so the screen it lands on has a Back of its own. The library by default; the player's is its **Movie detail page**, Import's is Settings, the **Movie form**'s is where its **Form context** came from: the **Review step** in **Import context**, the movie for an edit, Settings for an add; the **Series page**'s is the **Series tab**, the **Season page**'s its **Series page**, an **Episode**'s player its **Season page**. Read off the URL, never off fetched state. | fallback route, default route, home for, origin |
-| **Fresh home** (updated) | The three **Leavings** that are pushes and not steps: the **Movie form**'s _Add to library_, Bulk import's Finish — the prototype's `goBrowse()`, a new entry on the **Browse home** at the top with nothing filtered, the film just added on its shelf — and a **Factory reset**'s `location.assign('/')`, the one that also reloads, so every provider starts from nothing (log 37 Q8). A push rather than a replace: nothing the app draws can tell the two apart, and one rule with a third shape is two rules.                                                                                | go home, browse, reset, replace                 |
+| **Fresh home** (updated) | The three **Leavings** that are pushes and not steps: the **Movie form**'s _Add to library_ (with **Add and sync** off), Bulk import's Finish — the prototype's `goBrowse()`, a new entry on the **Browse home** at the top with nothing filtered, the film just added on its shelf — and a **Factory reset**'s `location.assign('/')`, the one that also reloads, so every provider starts from nothing (log 37 Q8). A push rather than a replace: nothing the app draws can tell the two apart, and one rule with a third shape is two rules.                                                    | go home, browse, reset, replace                 |
 
 ## Motion & interaction states (new)
 
@@ -758,8 +758,19 @@ for an **Episode**, a **Sync** takes one from the episode's own video. Planned (
 | **Still source** (new) | Where an **Episode**'s **Still** came from: `tmdb`, `frame` or `picked` (`episodes.still_source`, migration 14), `NULL` exactly when there is no Still. Server side only. A Sync replaces a `frame` Still with TMDB's; it never replaces a `tmdb` or `picked` one.                                                                                                                       | origin, provider                          |
 | **Still plan** (new)   | What `planEpisode` answers for an Episode's art: `{ kind: 'tmdb', path }`, `{ kind: 'frame' }`, or `null`.                                                                                                                                                                                                                                                                               | still fill                                |
 
+## Add and sync (new)
+
+Design log 45: step 28, initiative `add-and-sync`. A title added by hand is
+filled from TMDB by a **Single-title Sync** run straight after its save. Planned (🔜).
+
+| Term                         | Definition                                                                                                                                                                                                                                                                                                                                                          | Aliases to avoid                |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------- |
+| **Add and sync** (new)       | The **Movie form**'s plain-add option, the `EnrichCheckCard` ticked (`enrich` in `useMovieForm`), on both **Form kinds**, off on every mount: the save replaces `/add` with the new title's page, then pushes the **Enrichment flow** for that title, **Started on arrival**. Not offered on an edit or a Resolve. With it off, the add ends on its **Fresh home**. | auto-sync, quick add, smart add |
+| **Started on arrival** (new) | The **Enrichment flow** opened with `?start=1` (`EnrichQuery.start`) pressing its own Start once — when the summary and the arrival read have both landed, with setup's defaults — then replacing the URL without the parameter. Never pressed over a **Let-go line**, nor when the run already belongs here; Start's own rules answer no key, offline and busy.    | auto-start, autostart, kick off |
+
 ## Relationships
 
+- An **Add and sync** save makes exactly one title and starts at most one **Single-title Sync** over it; a Sync that fails, stops or is skipped never undoes the add.
 - An **Episode** has at most one **Still**, and the Still has exactly one **Still source**. A Sync takes a **Frame still** only for an Episode with no Still that TMDB offers none for, and replaces it when TMDB later offers one.
 - A **Library folder** has zero-or-more titles (**Movies** and **Series**) recorded against it; a title has at most one Library folder, and none once its folder is removed or when it was added by hand.
 - A **Folder scan** walks every reachable **Library folder** in the order added and is one **Current run**; a spreadsheet import reads every listed Library folder too (log 40), and no typed root joins the list.
@@ -1570,6 +1581,16 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "The next Sync that reaches the show swaps each frame for
 > TMDB's Still and deletes the frame file. A Still Mom picked in the series
 > form is `picked`, and no Sync ever touches it."
+
+> **Dev:** "Mom adds _The Matrix_ with only its file picked and the TMDB box
+> ticked. Where does she end up?"
+> **Domain expert:** "On the **Enrichment flow** for that film, **Started on
+> arrival** — the bar running, then the review if TMDB was unsure. _Back to
+> the movie_ steps onto its page, with the synopsis and poster in."
+> **Dev:** "And if a library Sync was still waiting for review?"
+> **Domain expert:** "Then the **Let-go line** is drawn and nothing starts
+> until she presses _Fetch details_. Letting a review go is her press, never
+> an arrival's."
 
 ## Flagged ambiguities
 
@@ -2443,6 +2464,11 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Search query" is not the Title key (new):** both fold a title, for
   different readers — the key for comparing ours with theirs, the query for
   asking TMDB. Never send a Title key to TMDB, never compare Search queries.
+- **"Start" is the button; Started on arrival is the flow pressing it (new):**
+  `?start=1` is not a second way to start a Sync — it is the flow pressing
+  its own Start, under every rule the button has. Say **Started on arrival**,
+  never "auto-start", and never of a Sync the form started: the form starts
+  none.
 - **"TMDB rating" is no longer an alias of the TMDB score (new):** log 23
   listed it as one to avoid. Since log 43 the **TMDB score** is the stored
   `vote_average`, 0–10 to one decimal, and the **TMDB rating** is that score
