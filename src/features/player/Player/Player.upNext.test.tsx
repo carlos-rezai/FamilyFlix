@@ -19,6 +19,7 @@ import {
 } from '@/test-support/LocationProbe/LocationProbe';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
+import { stubFullscreen } from '@/test-support/stubFullscreen/stubFullscreen';
 
 /**
  * 22 — Series (TV), Phase 6: "Up next — the countdown and auto-play"
@@ -513,5 +514,46 @@ describe('Player — a film', () => {
 
     expect(upNext()).toBeNull();
     expect(screen.queryByRole('button', { name: 'Play now' })).toBeNull();
+  });
+});
+
+/**
+ * Fullscreen across a **Sideways move**: the next episode is a fresh `Player`,
+ * keyed on what it plays, and a browser leaves fullscreen the moment the
+ * element filling the screen leaves the document. So what fills the screen is
+ * the surface around the player, which outlives it — the family watching a run
+ * of episodes in fullscreen stays there.
+ */
+describe('Player — fullscreen across episodes', () => {
+  stubMediaElement();
+  stubFullscreen();
+
+  it('stays fullscreen when the next episode plays on', async () => {
+    const { container, video } = await playing('e24');
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+    await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
+    const surface = document.fullscreenElement;
+    moveTo(video, 2640);
+
+    emit(video, 'ended');
+
+    const next = await pictureOn(container, '/api/episodes/e25/stream');
+    expect(document.fullscreenElement).toBe(surface);
+    expect(surface?.isConnected).toBe(true);
+    expect(surface?.contains(next)).toBe(true);
+  });
+
+  it('stays fullscreen after Play now', async () => {
+    const { container, video } = await playing('e24');
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+    await waitFor(() => expect(document.fullscreenElement).not.toBeNull());
+    const surface = document.fullscreenElement;
+    moveTo(video, 2630);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Play now' }));
+
+    const next = await pictureOn(container, '/api/episodes/e25/stream');
+    expect(surface?.isConnected).toBe(true);
+    expect(surface?.contains(next)).toBe(true);
   });
 });

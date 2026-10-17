@@ -9,7 +9,7 @@ import {
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-import { Player } from './Player';
+import { PlayerScreen } from '../PlayerScreen/PlayerScreen';
 import { theme } from '@/styles/theme';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { Cue, Movie, PlaybackRead } from '@/types';
@@ -234,7 +234,7 @@ function renderScreen() {
           <Route path="/movie/:id" element={<span>Movie page</span>} />
           <Route
             path="/movie/:id/play"
-            element={<Player playable={{ kind: 'movie', id: 'm1' }} />}
+            element={<PlayerScreen playable={{ kind: 'movie', id: 'm1' }} />}
           />
         </Routes>
       </MemoryRouter>
@@ -2118,7 +2118,7 @@ describe('Player — leaving is a history step', () => {
             <Route path="/movie/:id" element={<MoviePageStub />} />
             <Route
               path="/movie/:id/play"
-              element={<Player playable={{ kind: 'movie', id: 'm1' }} />}
+              element={<PlayerScreen playable={{ kind: 'movie', id: 'm1' }} />}
             />
           </Routes>
         </MemoryRouter>

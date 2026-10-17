@@ -304,6 +304,7 @@ familyflix/
 │ │ │ ├── DeleteSeriesDialog/ useDeleteSeries/ ← the movie's Delete dialog worded for a series, _its N episodes_ in the singular at one; `{ deleting, deleteSeries }`, onto the Series tab once the series is gone
 │ │ │ └── api/ ← saveSeasonWatched, saveSeriesWatched, deleteSeries (one caller each)
 │ │ ├── player/ ← built-in video player, subtitle handling, resume position — for any **Playable**, a movie or an episode
+│ │ │ ├── PlayerScreen/ ← the **Fullscreen surface**: the unkeyed surface fullscreen is asked of, around the `Player` keyed on its **Playable**, so the next episode plays on still in fullscreen
 │ │ │ ├── Player/ ← the organism: owns the hooks, renders the rest
 │ │ │ ├── PlayerControls/ ← the top and bottom chrome bars
 │ │ │ ├── PlayerScrubber/ ← the seek bar

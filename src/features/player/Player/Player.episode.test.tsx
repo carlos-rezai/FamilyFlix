@@ -9,7 +9,7 @@ import {
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-import { Player } from './Player';
+import { PlayerScreen } from '../PlayerScreen/PlayerScreen';
 import { theme } from '@/styles/theme';
 import type {
   Cue,
@@ -214,7 +214,7 @@ function renderScreen(
           />
           <Route
             path="/episode/:id/play"
-            element={<Player playable={PLAYABLE} />}
+            element={<PlayerScreen playable={PLAYABLE} />}
           />
         </Routes>
       </MemoryRouter>

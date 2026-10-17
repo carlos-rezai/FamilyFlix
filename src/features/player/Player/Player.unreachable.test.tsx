@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
-import { Player } from './Player';
+import { PlayerScreen } from '../PlayerScreen/PlayerScreen';
 import { theme } from '@/styles/theme';
 import type { Movie } from '@/types';
 import {
@@ -96,7 +96,7 @@ function renderScreen() {
           <Route path="/movie/:id" element={<span>Movie page</span>} />
           <Route
             path="/movie/:id/play"
-            element={<Player playable={{ kind: 'movie', id: 'm1' }} />}
+            element={<PlayerScreen playable={{ kind: 'movie', id: 'm1' }} />}
           />
         </Routes>
       </MemoryRouter>

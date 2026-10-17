@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom';
 
-import { Player } from '@/features/player/Player/Player';
+import { PlayerScreen } from '@/features/player/PlayerScreen/PlayerScreen';
 import type { Playable } from '@/types';
 
 interface PlayerPageProps {
@@ -15,7 +15,8 @@ interface PlayerPageProps {
  * `/movie/:id/play` and `/episode/:id/play` — the player screen.
  *
  * Composition only, the way every page in this app is: read the `:id` the route
- * matched and hand it to `Player` as a **Playable**, which owns the picture, the
+ * matched and hand it to `PlayerScreen` as a **Playable**: the **Fullscreen
+ * surface**, around a `Player` that owns the picture, the
  * chrome, the hooks and the state.
  *
  * No `MainLayout` — COMPONENT-SPEC §6 makes the player one self-contained
@@ -24,9 +25,5 @@ interface PlayerPageProps {
 export default function PlayerPage({ kind = 'movie' }: PlayerPageProps) {
   const { id } = useParams<{ id: string }>();
 
-  // Keyed on what it plays, so a **Sideways move** to the next episode is a
-  // fresh player rather than the last one's state carried over.
-  return (
-    <Player key={`${kind}:${id ?? ''}`} playable={{ kind, id: id ?? '' }} />
-  );
+  return <PlayerScreen playable={{ kind, id: id ?? '' }} />;
 }

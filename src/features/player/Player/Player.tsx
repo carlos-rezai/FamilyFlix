@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { RefObject } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
@@ -46,6 +47,11 @@ import {
  */
 interface PlayerProps {
   playable: Playable;
+  /**
+   * What fills the screen: the **Fullscreen surface** around this player,
+   * which outlives it, so the next episode plays on still in fullscreen.
+   */
+  surfaceRef: RefObject<HTMLElement | null>;
 }
 
 /**
@@ -159,7 +165,7 @@ function noticeFor(
  * is handed the very handler its button is handed, so a key and a button cannot
  * drift apart.
  */
-export function Player({ playable }: PlayerProps) {
+export function Player({ playable, surfaceRef }: PlayerProps) {
   const { kind, id } = playable;
   // The element is held in state rather than in a plain ref, because it arrives
   // late: the guard below keeps it off the screen until the reads have settled,
@@ -169,9 +175,6 @@ export function Player({ playable }: PlayerProps) {
   // the element itself changes, which is the moment the hook has to bind.
   const [picture, setPicture] = useState<HTMLVideoElement | null>(null);
   const videoRef = useMemo(() => ({ current: picture }), [picture]);
-  // The whole surface — chrome, subtitle box and picture together — because
-  // that is what fills the screen, not the bare element inside it.
-  const stageRef = useRef<HTMLDivElement>(null);
 
   // The two reads the screen opens with.
   const { movie, episode, playback, unavailable, opened } = useOpeningReads(
@@ -291,7 +294,10 @@ export function Player({ playable }: PlayerProps) {
         : seasonPath(episode.series.id, episode.episode.season)
   );
 
-  const { toggleFullscreen } = useFullscreen(stageRef);
+  // The surface around the player — chrome, subtitle box and picture together,
+  // never the bare element — and the caller's, not this stage, so it survives
+  // the remount a move to the next episode is.
+  const { toggleFullscreen } = useFullscreen(surfaceRef);
 
   // **Up next**: the card in an episode's last 15 seconds and what the end of
   // its file does — the rules are the hook's; the screen draws its answer.
@@ -323,7 +329,7 @@ export function Player({ playable }: PlayerProps) {
   const { g1, g2 } = gradientFromId(id);
 
   return (
-    <Stage ref={stageRef} $idle={!visible} onMouseMove={onMouseMove}>
+    <Stage $idle={!visible} onMouseMove={onMouseMove}>
       <ArtLayer aria-hidden="true">
         <Backdrop url={imageUrl(movie?.posterPath ?? null)} g1={g1} g2={g2} />
         <Scrim />
