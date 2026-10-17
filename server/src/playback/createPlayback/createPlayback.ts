@@ -210,13 +210,28 @@ export interface Playback {
    * point**. The bytes are collected before answering, so a stream handed
    * back is a whole picture.
    *
-   * `null` in every case with no picture — no component, a `missing` or
-   * `unreachable` video, no duration, an empty stdout, the **Frame budget**
-   * spent, the signal aborted — killing the process wherever one runs. It
-   * never rejects (`derivedRuntime`'s rule).
+   * `{ kind: 'none', reason }` in every case with no picture — no component,
+   * a `missing` or `unreachable` video, no duration, the **Frame budget**
+   * spent, the signal aborted, or a grab that ran and gave nothing — killing
+   * the process wherever one runs. It never rejects (`derivedRuntime`'s rule).
    */
-  frame(video: StoredVideo, signal: AbortSignal): Promise<Readable | null>;
+  frame(video: StoredVideo, signal: AbortSignal): Promise<FrameOutcome>;
 }
+
+/** Why a {@link Playback.frame} answered no picture. */
+export type NoFrameReason =
+  | 'no-component'
+  | 'missing'
+  | 'unreachable'
+  | 'no-duration'
+  | 'timed-out'
+  | 'aborted'
+  | 'failed';
+
+/** A **Frame still**'s picture, or the reason there is none. */
+export type FrameOutcome =
+  | { kind: 'frame'; picture: Readable }
+  | { kind: 'none'; reason: NoFrameReason };
 
 /**
  * The **Frame budget**: how long one picture may take before its process is
@@ -226,41 +241,50 @@ export interface Playback {
 const FRAME_BUDGET_MS = 20_000;
 
 /**
- * A grab's stdout collected whole, or `null` for an empty one, an error, the
- * budget spent or the signal aborted — the process killed on every `null`.
+ * A grab's stdout collected whole as a `frame`, or `none` with its reason —
+ * `failed` for an empty one or an error, `timed-out` at the budget, `aborted`
+ * on the signal — the process killed on every `none`.
  */
 function collectFrame(
   conversion: PlaybackProcess,
   signal: AbortSignal
-): Promise<Buffer | null> {
+): Promise<FrameOutcome> {
   return new Promise((resolve) => {
     const chunks: Buffer[] = [];
     let settled = false;
 
-    const settle = (bytes: Buffer | null): void => {
+    const settle = (outcome: FrameOutcome): void => {
       if (settled) {
         return;
       }
       settled = true;
       clearTimeout(timer);
       signal.removeEventListener('abort', onAbort);
-      if (bytes === null) {
+      if (outcome.kind === 'none') {
         conversion.kill();
       }
-      resolve(bytes);
+      resolve(outcome);
     };
-    const onAbort = (): void => settle(null);
-    const timer = setTimeout(() => settle(null), FRAME_BUDGET_MS);
+    const none = (reason: NoFrameReason): FrameOutcome => ({
+      kind: 'none',
+      reason,
+    });
+    const onAbort = (): void => settle(none('aborted'));
+    const timer = setTimeout(() => settle(none('timed-out')), FRAME_BUDGET_MS);
 
     signal.addEventListener('abort', onAbort);
     conversion.stdout.on('data', (chunk: Buffer | string) => {
       chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
     });
-    conversion.stdout.on('error', () => settle(null));
-    conversion.stdout.on('close', () => settle(null));
+    conversion.stdout.on('error', () => settle(none('failed')));
+    conversion.stdout.on('close', () => settle(none('failed')));
     conversion.stdout.on('end', () => {
       const bytes = Buffer.concat(chunks);
-      settle(bytes.length > 0 ? bytes : null);
+      settle(
+        bytes.length > 0
+          ? { kind: 'frame', picture: Readable.from([bytes]) }
+          : none('failed')
+      );
     });
   });
 }
@@ -438,24 +462,26 @@ export function createPlayback(
         // Read once, so the probe and the grab are the same component.
         const component = slot.current();
         if (component === null) {
-          return null;
+          return { kind: 'none', reason: 'no-component' };
         }
         const found = videoFile(video);
         if (found.kind !== 'file') {
-          return null;
+          return { kind: 'none', reason: found.kind };
         }
         const seconds = durationOf(found.file, component);
-        if (seconds === null || seconds <= 0 || signal.aborted) {
-          return null;
+        if (seconds === null || seconds <= 0) {
+          return { kind: 'none', reason: 'no-duration' };
+        }
+        if (signal.aborted) {
+          return { kind: 'none', reason: 'aborted' };
         }
 
         const conversion = component.spawn(
           frameArgs(found.file, seconds * FRAME_POINT)
         );
-        const bytes = await collectFrame(conversion, signal);
-        return bytes === null ? null : Readable.from([bytes]);
+        return await collectFrame(conversion, signal);
       } catch {
-        return null;
+        return { kind: 'none', reason: 'failed' };
       }
     },
   };

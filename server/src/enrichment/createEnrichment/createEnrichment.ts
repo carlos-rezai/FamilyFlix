@@ -728,10 +728,19 @@ export function createEnrichment({
           episode.videoPath,
           posix.extname(episode.videoPath)
         );
-        const picture =
-          still.kind === 'tmdb'
-            ? await tmdbStill(still.path, signal)
-            : await playback.frame(episode, signal);
+        let picture: Readable | null;
+        if (still.kind === 'tmdb') {
+          picture = await tmdbStill(still.path, signal);
+        } else {
+          const outcome = await playback.frame(episode, signal);
+          picture = outcome.kind === 'frame' ? outcome.picture : null;
+          if (outcome.kind === 'none' && outcome.reason !== 'aborted') {
+            // The gradient stays, but the log says why (issue #390).
+            const words = outcome.reason.replace('-', ' ');
+            const { mark } = STILL_KINDS.frame;
+            log(current, `${mark} ${stem}  no frame: ${words}`, 'scan');
+          }
+        }
         if (signal.aborted) return;
         if (picture !== null) {
           const { suffix, mark } = STILL_KINDS[still.kind];
