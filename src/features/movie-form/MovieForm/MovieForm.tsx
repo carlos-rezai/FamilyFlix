@@ -367,8 +367,8 @@ export function MovieForm() {
         )}
       </Fields>
 
-      {/* **Add and sync**: a plain film add alone, between the Files card and
-        the actions. */}
+      {/* **Add and sync**: a plain add of either kind alone, between the Files
+        card and the actions. */}
       {showEnrich && (
         <EnrichSlot>
           <EnrichCheckCard
