@@ -273,6 +273,7 @@ familyflix/
 │ │ ├── Accordion/ ← `mol.Accordion` 1:1: a header button — the chevron, the label, the caller's marks, the count pill — with the caller's actions beside it, over a body unmounted while closed; controlled, `aria-expanded` and `aria-controls`, a **Control**. The Import review's **Review groups** draw it
 │ │ ├── EpisodeFileRow/ ← `mol.EpisodeFileRow` 1:1: one **Episode file row** — the `S` and `E` number fields (digits, two and three), the title, the ✕, the filename in mono, and a children slot for its subtitles; a refusal drawn when given — the refused field's border and one `danger` line under the controls; presentational, the browser's focus ring kept
 │ │ ├── FieldDiff/ ← `mol.FieldDiff` 1:1: one _Yours \| {theirs}_ row per differing field, the theirs side until a press chooses otherwise, then _Apply choices_ and _Keep all mine_; generic in its key, so each caller — the Sync's `DecisionRow`, the import's `ProblemRow` — maps its own wire type on and off it. Graduated from `enrichment/` when Import review drew it too
+│ │ ├── EnrichCheckCard/ ← `mol.EnrichCheckCard` 1:1: _Also fetch metadata and posters from TMDB_, the one native checkbox under a `<label>` card, its hint chosen by whether a key is stored — the keyed one, `keyedHint`, each caller's own sentence. Graduated from `import-export/` when the Movie form's plain add drew it too; Import setup, the Library folders page's Scan and the form compose it
 │ │ ├── EpisodeRow/ ← `mol.EpisodeRow` 1:1: the 16:9 thumbnail, `S02E04` and the title, the air date, the Resume label, the watched box that only marks; a **Card**, its box a **Control**
 │ │ └── PosterCard/
 │ │ ├── PosterCard.tsx
@@ -326,24 +327,24 @@ familyflix/
 │ │ │ ├── volumePreference/ ← the level and mute, in localStorage
 │ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume, fetchEpisode — each addressed by a Playable
 │ │ ├── enrichment/ ← the Enrichment flow at `/enrich`: a Sync with TMDB in its three scopes, ImportFlow's sibling
-│ │ │ ├── EnrichmentFlow/ ← the organism: owns useEnrichmentRun and the summary, the Back rule, Start's three outcomes and the notices, renders one of the three steps
+│ │ │ ├── EnrichmentFlow/ ← the organism: owns useEnrichmentRun and the summary, the Back rule, Start's three outcomes and the notices, renders one of the three steps; opened with `start=1` it is **Started on arrival** — once the summary and the arrival read land it presses its own Start once, never over the title's own run or a **Let-go line**, and replaces the URL without `start`
 │ │ │ ├── EnrichmentSetup/ EnrichmentProgress/ EnrichmentReview/ ← the three steps: the banners, scope cards, chips and _Where it is saved_; the determinate bar and the log; the two tiles, the Seasons section, the **Kind filter** with _Skip all_, then the Decision rows or _All done_
 │ │ │ ├── SetupBanner/ ScopeCard/ WriteTargetRow/ ← the setup's molecules: the offline and key banners by tone; the radio card, its dot on the left; a Write target's tile, lines and Toggle or _Required_
 │ │ │ ├── DecisionRow/ ← one Decision: the dot by kind, the title, reason and path, _Skip_, then one face
 │ │ │ ├── SeasonChoices/ ← a single-series review's **Seasons** section: one card per **Season choice** — the held tile, `S02` over its Season poster or the gradient, then each TMDB choice it is handed, the series' marked _Series poster_ — a press reporting `(season, path)`
 │ │ │ ├── CandidatePicker/ TitleSearch/ ← two of the three faces: the Candidate cards and the dashed _Search by title_; the 44px box — the third, _Yours \| TMDB_ per field, is `components/FieldDiff/`
-│ │ │ ├── useEnrichmentRun/ ← start, poll at 500 ms while running, cancel, and the review's writes, each settling one row; opened for a film, only that film's run re-attaches — another's in review is the **Waiting run**, and Start's `409` over another's rejects with `EnrichmentBusyError`
+│ │ │ ├── useEnrichmentRun/ ← start, poll at 500 ms while running, cancel, and the review's writes, each settling one row; opened for a film, only that film's run re-attaches — another's in review is the **Waiting run**, and Start's `409` over another's rejects with `EnrichmentBusyError`; `attaching` until the arrival read answers, so Started on arrival never decides on a guess
 │ │ │ ├── enrichmentView/ ← pure: the running card's words, the estimate, the scope cards' lines, _All done_'s _Saved to …_, and the **Let-go line**
 │ │ │ └── api/ ← startEnrichment, fetchCurrentEnrichment, cancelEnrichment, the four Decision writes, dismissDecisions and saveSeasonPoster (one caller each)
 │ │ ├── maintainer.styles.ts ← the furniture the Maintainer’s screens extend: the header row, heading and lede; the captioned field
-│ │ ├── movie-form/ ← Add a movie or a series, Edit a movie or a series: one form with five jobs, manual file pickers, the **Form kind** on the **Kind tabs**; and Resolve, the Import context over a film, an edit or an `unplaced` show
+│ │ ├── movie-form/ ← Add a movie or a series, Edit a movie or a series: one form with five jobs, manual file pickers, the **Form kind** on the **Kind tabs**, and **Add and sync**'s box on a plain add; and Resolve, the Import context over a film, an edit or an `unplaced` show
 │ │ │ ├── MovieForm/ ← the organism: the header row with the Kind tabs on a plain add, the fields both kinds share, the kind's words, and one of the two Files cards
 │ │ │ ├── MovieFormFiles/ SeriesFormFiles/ ← the two Files cards: the video, poster and subtitle list; and the poster, the _Season posters_ list — one slot per **Season** the rows hold — over the **Episode file rows** and _＋ Add episode files_
 │ │ │ ├── filesCard.styles.ts filesCard.ts ← what both Files cards share, flat as `maintainer.styles.ts` is: the card, its caption and the list section; the three `accept` lists, the caption and the poster slot's names
 │ │ │ ├── FoundFileChoice/ ← the **Found-file choice**: a film Resolve's videos as a radio group in the video slot's place, handed one Found file slot each, the picker kept under them
-│ │ │ ├── formJob/ ← pure: the URL → one of the five jobs (`add`, `edit`, `resolve`, `seriesEdit`), `?problem=` over `?movie=` over `?series=`; and `formLanding(job)`, each job's **Landing**
+│ │ │ ├── formJob/ ← pure: the URL → one of the five jobs (`add`, `edit`, `resolve`, `seriesEdit`), `?problem=` over `?movie=` over `?series=`; `formLanding(job)`, each job's **Landing**; and `addLeaving(kind, id, sync)`, where a finished add goes — the kind's **Fresh home**, or with **Add and sync** the title's page replaced and the flow pushed
 │ │ │ ├── loadFormRecord/ ← a job's reads in one place — `fetchMovie`, `fetchSeriesDetail`, `fetchProblem` with the held series beside it — → what the form opens on, or `null` for a record that is gone; never rejecting
-│ │ │ ├── useMovieForm/ ← the state and the writes: the kind, the **Save gate** per kind, the title prefill, each job's save — a switch over the job — and where it lands
+│ │ │ ├── useMovieForm/ ← the state and the writes: the kind, the **Save gate** per kind, the title prefill, **Add and sync**'s box (`enrich`, off on every mount, kept across a switch of Form kind), each job's save — a switch over the job — and where it lands, the add's through `addLeaving`
 │ │ │ ├── useEpisodeList/ ← the series' rows: a pick read off its tags, the edits, each row's subtitles, `refusals` — each refused row by its key, its field and its sentence (0 is a number: a pilot, a special) — and `episodesComplete`, the series half of the gate, closed exactly while a row is refused
 │ │ │ ├── useSeasonPosters/ ← the series' _Season posters_, `useEpisodeList`'s pattern: one `SeasonPosterSlot` per season the rows hold — read through `formValues`' `typedNumber`, the form's one reading of a typed number — `pick`, `remove`, and `hold`, the series edit's held posters, each `held`; none drawn in a Series Resolve
 │ │ │ ├── readEpisodeTag/ ← the client mirror of the server's `episodeTag`, `TAG_SHAPES` exported, held to it by a drift guard over one table — and `readSeasonFolder` to `groupShows`' `seasonOf` by the same guard
@@ -360,9 +361,8 @@ familyflix/
 │ │ │ ├── importView/ ← pure: an ImportRun → headline, stat line, percent, elapsed, ETA
 │ │ │ ├── LibraryFolders/ ← the Library folders page's organism: the Folder rows, the add row with Browse… when the bridge exists, then What the scanner accepts, the `EnrichCheckCard` and **Scan folders**
 │ │ │ ├── folderLine/ ← pure: a listed folder's line, _N titles_ or _Can’t be reached right now_ — the Folder row's and Import setup's
-│ │ │ ├── FolderRow/ FolderShapes/ EnrichCheckCard/ ← the page's molecules: one listed folder with its `folderLine` and its ✕; the three accepted folder shapes, Import setup's too; the Also fetch from TMDB box and its stored-key hint, Import setup's too
+│ │ │ ├── FolderRow/ FolderShapes/ ← the page's molecules: one listed folder with its `folderLine` and its ✕; the three accepted folder shapes, Import setup's too
 │ │ │ ├── useLibraryFolders/ ← the list read on mount, the add (the route's own sentence kept on a refusal) and the remove
-│ │ │ ├── useKeyStored/ ← whether a TMDB key is stored, `false` until it lands and for a failed read: the `EnrichCheckCard` hint's one read
 │ │ │ ├── useFolderScan/ ← Scan folders: the Folder scan posted with the box, `/import` pushed on a `201` and a `409`, `scanning` let go otherwise
 │ │ │ ├── ExportModal/ ← the Export dialog: owns useExport; the idle face over Modal — the Format cards, _Save to_ with Browse… when the bridge exists, the **Folder name field** with the title count at its heading's right, the two Include toggles, the column pills — and Export ready over the bare one, the folder written and where — the same card, so the pop-in runs once
 │ │ │ ├── ChoiceCard/ ← one choice card: a role="radio" button with a label and a line, the pair in a radiogroup — the Export dialog's Format and the **Import mode** both draw it
@@ -407,7 +407,7 @@ familyflix/
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
-│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; and `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands
+│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands; and `useKeyStored`, whether a TMDB key is stored — `false` until it lands and for a failed read — the `EnrichCheckCard` hint's one read on Import setup, the Library folders page and the Movie form
 │ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, `DEFAULT_TMDB_RATINGS`, Settings (`subtitleLanguage`, `ultrawideMargins`, `tmdbRatings`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s, and `RatingSource`, whose a **Shown rating** is; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
@@ -420,7 +420,7 @@ familyflix/
 │ │ ├── spellYearSpan/ ← a **Year range** spelled — `2022`, `2019–2023`, `2021–`, `null` with no year — the server's `spellYearSpan` mirrored, held to `yearSpan` by a round-trip guard: the series page and the series edit both read it
 │ │ ├── seriesPath/ seasonPath/ episodePlayPath/ ← the three series routes, `/series/<id>`, `/series/<id>/season/<n>`, `/episode/<id>/play`, the ids encoded
 │ │ ├── movieFormPath/ ← the **Movie form** as a route — `/add` and its four queries — and `opensSeriesResolve`, the rule both the Review step's _Resolve_ and the form's Import context read: `unplaced`, or `failed` with a held series
-│ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all` or `?movie=<id>`, the id encoded: Settings' sync row, Import's _Finish_ and the ⋯ menu's _⟳ Fetch from TMDB_
+│ │ ├── enrichPath/ ← the Enrichment flow as a route, `/enrich`, `?scope=all`, `?movie=<id>` or `?series=<id>`, the last two with `&start=1` when **Started on arrival**, the id encoded: Settings' sync row, Import's _Finish_, both ⋯ menus' _⟳ Fetch from TMDB_ and the Movie form's **Add and sync**; and `parseEnrichQuery`, its reader, held to it by a round trip
 │ │ ├── formatElapsed/ ← a run's clock, `m:ss` rounded and never rolling into hours — not `formatClock`, which floors and grows an hour field for playback
 │ │ ├── formatEpisodeTag/ ← the client’s one spelling of the Episode tag: `S02E04`, `S02` or `E04`, two digits a side
 │ │ ├── imageUrl/ ← a **Stored path** → `/api/images/<path>`, `null` in and `null` out: the one spelling of the image route in `src/`, held there by a guard
@@ -1111,8 +1111,8 @@ ending with **Software update** (v0.2.0), and so are steps 10–15: the
 second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
-at scale + Season art**, step 26, **TMDB ratings**, and step 27, **Episode
-stills**. Steps 10–15 came out of
+at scale + Season art**, step 26, **TMDB ratings**, step 27, **Episode
+stills**, and step 28, **Add and sync**. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1298,22 +1298,22 @@ The series form has taken a Still from a file since issue #379. It is done
     unchanged. Not this step: frames at import or on demand, a frame picker,
     black or credits detection, frames for films.
 
-Step 28 came out of using v0.7.0: adding one title by hand means typing every
-field TMDB already knows. It still needs its grill-me, PRD and a prototype
-revision before it is built:
+Step 28 came out of using v0.7.0: adding one title by hand meant typing every
+field TMDB already knows. It is done (design log 45):
 
-28. 🔜 **Add and sync** — the **Movie form**'s plain add, for a film or a
-    series, gains an option to fill the record from TMDB: pick the files,
-    let the title fill itself from the video's name, leave the other fields
-    blank, and a **Single-title Sync** over the new title fills them after
-    the save. To settle in the grill: where the option is drawn (a checkbox
-    beside _Add to library_, `EnrichCheckCard`'s precedent, or a second
-    button), whether the **Save gate** stays a title and a video, where the
-    save lands — the Enrichment flow's single run (`enrichPath`), or the
-    title's page with the Sync in the background — what happens with no
-    TMDB key stored or offline, how an unsettled match (`ambiguous`,
-    `missing`) is answered, and whether an edit gets it too (step 16's ⋯
-    _Fetch from TMDB_ already covers a held title).
+28. ✅ **Add and sync** — the **Movie form**'s plain add, for a film or a
+    series, draws the `EnrichCheckCard` — graduated to `components/`, its
+    keyed hint the caller's — off on every mount and kept across a switch of
+    **Form kind**; never on an edit or a Resolve. The **Save gate** is
+    unchanged. A ticked save replaces `/add` with the title's page, then
+    pushes `enrichPath({ movie | series: id, start: true })`: the flow is
+    **Started on arrival**, pressing its own Start once the summary and the
+    arrival read (`attaching`) have landed — never over the title's own run
+    or a **Let-go line** — and replacing the URL without `start`, so a step
+    back or a reload starts nothing. No key or offline is the flow's own
+    Start, as a press would be; an unsettled match is the Sync's review.
+    Nothing on the server changes. Not this step: the box on an edit or a
+    Resolve, a background Sync, a year off the filename, a remembered tick.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1360,7 +1360,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is: a held title's Sheet fills written during the run, its Sheet differences settled on a _Yours | Spreadsheet_ diff, the Folder picker on `ambiguous` and _Import as_ on `no-row` (step 23, design log 40).
 - ✅ **Link or copy** — every import offers Link (the default) or Copy: a linked title plays from its Library folder, with no second copy and no copy time; the mode kept per title, a linked file never deleted by the app, TMDB art still in managed storage (step 24).
 - ✅ **Review at scale + Season art** — the review grouped by title, filtered by kind, with bulk actions, and fewer rows filed at the source; a single-series Sync's Seasons section picks each season's poster from TMDB's choices, and the series edit takes one from a file (step 25).
-- 🔜 **Add and sync** — add a film or a series by its files alone and let TMDB fill the rest: an option on the Movie form's plain add that runs a Single-title Sync over the new title once it is saved (step 28).
+- ✅ **Add and sync** — add a film or a series by its files alone and let TMDB fill the rest: the box on the Movie form's plain add, and a ticked save lands on the title's own Sync, Started on arrival (step 28).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet over the listed Library folders becomes Movies and Series during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
