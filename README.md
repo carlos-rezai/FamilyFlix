@@ -377,6 +377,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Review at scale + Season art — grouped review       | ✅ Done         |
 | TMDB ratings — fetched stars until the family rates | ✅ Done         |
 | Episode stills — a frame from the file, as fallback | ✅ Done         |
+| Add and sync — add by files, TMDB fills the rest    | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -504,6 +505,14 @@ done (design log 44):
     preferred whenever it has one — a later Sync swaps a frame for it — and a
     still you picked by hand in the series form is never replaced. With no
     FFmpeg on the machine the episode keeps its gradient.
+
+Step 28 came out of using v0.7.0: adding one title by hand means typing every
+field TMDB already knows. It is planned:
+
+28. 🔜 **Add and sync** — when you add a movie or a series by hand, you can
+    pick its files and let TMDB fill in the rest: the title comes from the
+    video's name, everything else is left blank, and a Sync for just that
+    title fills the synopsis, poster, cast and the rest once it is saved.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 

@@ -1298,6 +1298,23 @@ The series form has taken a Still from a file since issue #379. It is done
     unchanged. Not this step: frames at import or on demand, a frame picker,
     black or credits detection, frames for films.
 
+Step 28 came out of using v0.7.0: adding one title by hand means typing every
+field TMDB already knows. It still needs its grill-me, PRD and a prototype
+revision before it is built:
+
+28. 🔜 **Add and sync** — the **Movie form**'s plain add, for a film or a
+    series, gains an option to fill the record from TMDB: pick the files,
+    let the title fill itself from the video's name, leave the other fields
+    blank, and a **Single-title Sync** over the new title fills them after
+    the save. To settle in the grill: where the option is drawn (a checkbox
+    beside _Add to library_, `EnrichCheckCard`'s precedent, or a second
+    button), whether the **Save gate** stays a title and a video, where the
+    save lands — the Enrichment flow's single run (`enrichPath`), or the
+    title's page with the Sync in the background — what happens with no
+    TMDB key stored or offline, how an unsettled match (`ambiguous`,
+    `missing`) is answered, and whether an edit gets it too (step 16's ⋯
+    _Fetch from TMDB_ already covers a held title).
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1343,6 +1360,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is: a held title's Sheet fills written during the run, its Sheet differences settled on a _Yours | Spreadsheet_ diff, the Folder picker on `ambiguous` and _Import as_ on `no-row` (step 23, design log 40).
 - ✅ **Link or copy** — every import offers Link (the default) or Copy: a linked title plays from its Library folder, with no second copy and no copy time; the mode kept per title, a linked file never deleted by the app, TMDB art still in managed storage (step 24).
 - ✅ **Review at scale + Season art** — the review grouped by title, filtered by kind, with bulk actions, and fewer rows filed at the source; a single-series Sync's Seasons section picks each season's poster from TMDB's choices, and the series edit takes one from a file (step 25).
+- 🔜 **Add and sync** — add a film or a series by its files alone and let TMDB fill the rest: an option on the Movie form's plain add that runs a Single-title Sync over the new title once it is saved (step 28).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet over the listed Library folders becomes Movies and Series during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
