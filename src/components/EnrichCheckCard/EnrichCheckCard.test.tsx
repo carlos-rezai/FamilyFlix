@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
-import { EnrichCheckCard, type EnrichCheckCardProps } from './EnrichCheckCard';
+import { EnrichCheckCard, type EnrichCheckCardProps } from '@/components';
 import { theme } from '@/styles/theme';
 
 /**
@@ -17,11 +17,18 @@ import { theme } from '@/styles/theme';
  * The hint is chosen by whether a TMDB key is stored. Controlled: `checked`,
  * `keySet` and `onToggle` are handed in. `ImportSetup`'s own suite still
  * covers the card where it is composed.
+ *
+ * 45 — Add and sync (issue #394): graduated to `components/` on `FieldDiff`'s
+ * precedent, now that the Movie form draws it too, and re-exported from the
+ * barrel. It gains `keyedHint`, the hint drawn while a key is stored — each
+ * caller's own sentence. The key-less hint stays the card's own.
  */
 
 const LABEL = 'Also fetch metadata and posters from TMDB';
 const HINT_WITH_KEY =
   'Runs straight after the import, over everything it brings in. Needs the internet.';
+const FORM_HINT =
+  'Runs straight after the save, over this title. Needs the internet.';
 const HINT_WITHOUT_KEY =
   'Needs a TMDB key. Add one under Settings → Network first.';
 
@@ -31,6 +38,7 @@ function renderCard(props: Partial<EnrichCheckCardProps> = {}) {
       <EnrichCheckCard
         checked={false}
         keySet={true}
+        keyedHint={HINT_WITH_KEY}
         onToggle={() => undefined}
         {...props}
       />
@@ -102,6 +110,21 @@ describe('EnrichCheckCard — the hint', () => {
 
     expect(screen.getByText(HINT_WITH_KEY)).toBeDefined();
     expect(screen.queryByText(HINT_WITHOUT_KEY)).toBeNull();
+  });
+
+  it('reads whichever keyed hint its caller hands it', () => {
+    renderCard({ keySet: true, keyedHint: FORM_HINT });
+
+    expect(screen.getByText(FORM_HINT)).toBeDefined();
+    expect(screen.queryByText(HINT_WITH_KEY)).toBeNull();
+    expect(screen.queryByText(HINT_WITHOUT_KEY)).toBeNull();
+  });
+
+  it('keeps its own without-key hint whatever keyed hint it is handed', () => {
+    renderCard({ keySet: false, keyedHint: FORM_HINT });
+
+    expect(screen.getByText(HINT_WITHOUT_KEY)).toBeDefined();
+    expect(screen.queryByText(FORM_HINT)).toBeNull();
   });
 
   it('reads the without-key hint when none is', () => {

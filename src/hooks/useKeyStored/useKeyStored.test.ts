@@ -14,6 +14,9 @@ import {
  * page both choose the `EnrichCheckCard`'s hint by: `GET /api/tmdb/key` once
  * on mount, `true` for a key, `false` for none, for a failed read, and until
  * the read lands — and nothing set once the screen has gone.
+ *
+ * 45 — Add and sync (issue #394): moved to `src/hooks/`, a hook two features
+ * now call — the Movie form chooses its own card's hint by it. Unchanged.
  */
 
 const fetchMock = vi.fn<typeof fetch>();
