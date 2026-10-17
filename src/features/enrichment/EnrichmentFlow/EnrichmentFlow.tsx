@@ -14,7 +14,7 @@ import {
   type EnrichScope,
   type TitleReference,
 } from '@/types';
-import { moviePath, parseEnrichQuery, seriesPath } from '@/utils';
+import { enrichPath, moviePath, parseEnrichQuery, seriesPath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
 import { EnrichmentSetup } from '../EnrichmentSetup/EnrichmentSetup';
@@ -67,7 +67,7 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  * a step back or a reload starts nothing.
  */
 export function EnrichmentFlow() {
-  const [params, setParams] = useSearchParams();
+  const [params] = useSearchParams();
   // The flow's query, read once through `enrichPath`'s own reader.
   const query = useMemo(() => parseEnrichQuery(params), [params]);
   const movieId = query.movie ?? null;
@@ -273,9 +273,8 @@ export function EnrichmentFlow() {
     decided.current = true;
     const press =
       run === null && (waiting === null || waiting.decisions.length === 0);
-    const next = new URLSearchParams(params);
-    next.delete('start');
-    setParams(next, { replace: true });
+    // The same route without `start`, written by its one writer.
+    navigate(enrichPath({ ...query, start: undefined }), { replace: true });
     if (press) onStart();
   }, [
     startOnArrival,
@@ -283,8 +282,8 @@ export function EnrichmentFlow() {
     attaching,
     run,
     waiting,
-    params,
-    setParams,
+    query,
+    navigate,
     onStart,
   ]);
 
