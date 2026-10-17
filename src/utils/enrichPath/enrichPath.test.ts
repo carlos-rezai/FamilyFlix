@@ -37,3 +37,31 @@ describe('enrichPath', () => {
     );
   });
 });
+
+// 45 — Add and sync (issue #393): **Started on arrival**.
+describe('enrichPath with start', () => {
+  it('writes start=1 beside a movie', () => {
+    const path = enrichPath({ movie: 'm1', start: true });
+
+    expect(path).toBe('/enrich?movie=m1&start=1');
+    const params = new URLSearchParams(path.split('?')[1]);
+    expect(params.get('movie')).toBe('m1');
+    expect(params.get('start')).toBe('1');
+  });
+
+  it('writes start=1 beside a series', () => {
+    const path = enrichPath({ series: 's1', start: true });
+
+    expect(path).toBe('/enrich?series=s1&start=1');
+    const params = new URLSearchParams(path.split('?')[1]);
+    expect(params.get('series')).toBe('s1');
+    expect(params.get('start')).toBe('1');
+  });
+
+  it('reads every existing query back unchanged', () => {
+    expect(enrichPath()).toBe('/enrich');
+    expect(enrichPath({ scope: 'all' })).toBe('/enrich?scope=all');
+    expect(enrichPath({ movie: 'm1' })).toBe('/enrich?movie=m1');
+    expect(enrichPath({ series: 's1' })).toBe('/enrich?series=s1');
+  });
+});
