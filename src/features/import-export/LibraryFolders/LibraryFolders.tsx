@@ -7,11 +7,14 @@ import { EnrichCheckCard, PageHeader } from '@/components';
 import { FolderListEditor } from '../FolderListEditor/FolderListEditor';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { ImportModeChoice } from '../ImportModeChoice/ImportModeChoice';
-import { IMPORT_ENRICH_HINT } from '../ImportSetup/ImportSetup';
 import { useFolderScan } from '../useFolderScan/useFolderScan';
 import { useKeyStored } from '@/hooks/useKeyStored/useKeyStored';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 import { GroupHeading, ScanActions, ScanStack } from './LibraryFolders.styles';
+
+/** The `EnrichCheckCard`'s keyed hint on the group Scan — the scan's own. */
+const ENRICH_HINT =
+  'Runs straight after the scan, over everything it brings in. Needs the internet.';
 
 /**
  * The **Library folders page**'s organism: the maintainer header — Back,
@@ -19,7 +22,7 @@ import { GroupHeading, ScanActions, ScanStack } from './LibraryFolders.styles';
  * `FolderListEditor`: the Folder rows with their ✕, the add row, and
  * _Browse…_ in the desktop app. Then
  * the group **Scan**: _What the scanner accepts_, the **Import mode** (Link on
- * every mount), the `EnrichCheckCard` with Import setup's stored-key hint, and
+ * every mount), the `EnrichCheckCard` with the scan's own keyed hint, and
  * **Scan folders** — sending the box and the mode —
  * disabled with no folder listed, which posts the **Folder scan** and pushes
  * `/import` — on a `409` too, so the run already in flight is the one shown.
@@ -56,7 +59,7 @@ export function LibraryFolders() {
             <EnrichCheckCard
               checked={enrich}
               keySet={keySet}
-              keyedHint={IMPORT_ENRICH_HINT}
+              keyedHint={ENRICH_HINT}
               onToggle={() => setEnrich((ticked) => !ticked)}
             />
             <ScanActions>

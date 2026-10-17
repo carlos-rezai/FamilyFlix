@@ -24,11 +24,8 @@ import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
  */
 const PATH_FIELD = { mono: true, height: 50, rounded: false } as const;
 
-/**
- * The `EnrichCheckCard`'s keyed hint wherever an import is started — Import
- * setup and the Library folders page's Scan alike.
- */
-export const IMPORT_ENRICH_HINT =
+/** The `EnrichCheckCard`'s keyed hint on Import setup — the import's own. */
+const ENRICH_HINT =
   'Runs straight after the import, over everything it brings in. Needs the internet.';
 
 export interface ImportSetupProps {
@@ -138,7 +135,7 @@ export function ImportSetup({
       <EnrichCheckCard
         checked={enrich}
         keySet={keySet}
-        keyedHint={IMPORT_ENRICH_HINT}
+        keyedHint={ENRICH_HINT}
         onToggle={onToggleEnrich}
       />
 
