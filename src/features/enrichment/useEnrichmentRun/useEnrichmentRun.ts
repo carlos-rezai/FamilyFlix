@@ -64,6 +64,11 @@ export interface EnrichmentRunState {
    */
   waiting: EnrichmentRun | null;
   /**
+   * `true` from mount until the arrival read of the **Current enrichment
+   * run** answers — with a held run, a `404` or a failure; `false` after.
+   */
+  attaching: boolean;
+  /**
    * Start a Sync and hold the snapshot it answered. A `409` is answered by
    * holding the run already going instead when it belongs here, and by
    * rejecting with `EnrichmentBusyError` when it does not. Rejects otherwise.
@@ -131,6 +136,7 @@ export function useEnrichmentRun(
   );
   const [run, setRun] = useState<EnrichmentRun | null>(null);
   const [waiting, setWaiting] = useState<EnrichmentRun | null>(null);
+  const [attaching, setAttaching] = useState(true);
   /** Bumped by every start and cancel, so a read from before either is stale. */
   const generation = useRef(0);
 
@@ -148,6 +154,9 @@ export function useEnrichmentRun(
       })
       .catch(() => {
         // Nothing to re-attach to: setup it is.
+      })
+      .finally(() => {
+        if (!left) setAttaching(false);
       });
     return () => {
       left = true;
@@ -262,6 +271,7 @@ export function useEnrichmentRun(
   return {
     run,
     waiting,
+    attaching,
     start,
     cancel,
     search,

@@ -6,6 +6,8 @@ export interface EnrichQuery {
   movie?: string;
   /** _Just this series_: the single-title **Sync** from the series' ⋯ menu. */
   series?: string;
+  /** **Started on arrival**: the flow presses its own Start, once. */
+  start?: boolean;
 }
 
 /**
@@ -19,11 +21,17 @@ export interface EnrichQuery {
  *
  * Pure, so the same query always yields the same route.
  */
-export function enrichPath({ scope, movie, series }: EnrichQuery = {}): string {
+export function enrichPath({
+  scope,
+  movie,
+  series,
+  start,
+}: EnrichQuery = {}): string {
   const params = new URLSearchParams();
   if (scope !== undefined) params.set('scope', scope);
   if (movie !== undefined) params.set('movie', movie);
   if (series !== undefined) params.set('series', series);
+  if (start === true) params.set('start', '1');
   const query = params.toString();
   return query === '' ? '/enrich' : `/enrich?${query}`;
 }
