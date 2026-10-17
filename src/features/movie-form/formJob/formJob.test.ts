@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
-import { formJob, formLanding, type FormJob } from './formJob';
+import { enrichPath, moviePath, seriesPath, seriesTabPath } from '@/utils';
+
+import { addLeaving, formJob, formLanding, type FormJob } from './formJob';
 
 /** The job the URL after `/add` opens. */
 const jobAt = (query: string): FormJob => formJob(new URLSearchParams(query));
@@ -130,5 +132,35 @@ describe('formLanding', () => {
     expect(formLanding(jobAt('?kind=series&problem=p5&series=s1'))).toBe(
       '/import'
     );
+  });
+});
+
+describe('addLeaving', () => {
+  it('pushes a film’s Fresh home with the box off', () => {
+    expect(addLeaving('movie', 'm 1', false)).toEqual({
+      replace: null,
+      push: '/',
+    });
+  });
+
+  it('pushes a series’ Fresh home with the box off', () => {
+    expect(addLeaving('series', 's 1', false)).toEqual({
+      replace: null,
+      push: seriesTabPath(),
+    });
+  });
+
+  it('replaces with the film’s page, then pushes its Sync, with the box on', () => {
+    expect(addLeaving('movie', 'm 1', true)).toEqual({
+      replace: moviePath('m 1'),
+      push: enrichPath({ movie: 'm 1', start: true }),
+    });
+  });
+
+  it('replaces with the series’ page, then pushes its Sync, with the box on', () => {
+    expect(addLeaving('series', 's 1', true)).toEqual({
+      replace: seriesPath('s 1'),
+      push: enrichPath({ series: 's 1', start: true }),
+    });
   });
 });

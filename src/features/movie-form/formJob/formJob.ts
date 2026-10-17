@@ -1,5 +1,5 @@
 import type { FormKind } from '@/types';
-import { moviePath, seriesPath } from '@/utils';
+import { enrichPath, moviePath, seriesPath, seriesTabPath } from '@/utils';
 
 /**
  * The query parameter that says which movie this screen is amending — the
@@ -40,6 +40,17 @@ export const KIND_PARAM = 'kind';
  * is a different journey's end.
  */
 const ADD_LANDING = '/settings';
+
+/**
+ * The **Fresh home** a finished add lands on — the shelf the film has just
+ * joined, at the top and unfiltered. A push rather than a step.
+ */
+const FRESH_HOME = '/';
+
+/**
+ * The series kind's **Fresh home**: the Series tab the show has just joined.
+ */
+const SERIES_FRESH_HOME = seriesTabPath();
 
 /**
  * The **Import context**'s **Landing**: the **Review step**, where the rest of
@@ -139,4 +150,29 @@ export function formLanding(job: FormJob): string {
     case 'add':
       return ADD_LANDING;
   }
+}
+
+/**
+ * Where a finished add goes — its **Leaving**, which is not its **Landing**:
+ * the Landing is where Back goes, and the leaving is where the save does.
+ *
+ * - with **Add and sync** off, the kind's **Fresh home**, pushed;
+ * - with it on, the title's page in the form's place, so Back from the flow
+ *   never walks into `/add`, then the **Enrichment flow** over the title,
+ *   **Started on arrival**.
+ */
+export function addLeaving(
+  kind: FormKind,
+  id: string,
+  sync: boolean
+): { replace: string | null; push: string } {
+  if (!sync) {
+    return {
+      replace: null,
+      push: kind === 'series' ? SERIES_FRESH_HOME : FRESH_HOME,
+    };
+  }
+  return kind === 'series'
+    ? { replace: seriesPath(id), push: enrichPath({ series: id, start: true }) }
+    : { replace: moviePath(id), push: enrichPath({ movie: id, start: true }) };
 }
