@@ -118,10 +118,11 @@ export function createUpdates(world: UpdatesWorld): Updates {
       status = { ...status, installing: true };
       onStatus(status);
       // The **Ordered shutdown** first — it cancels a running Import or
-      // Enrichment and closes the database — then a silent install and a
-      // relaunch. The quit gate's own shutdown then resolves at once.
+      // Enrichment and closes the database — then the installer with its
+      // progress window shown, and a relaunch. The quit gate's own shutdown
+      // then resolves at once.
       void shutdown().then(
-        () => updater.quitAndInstall(true, true),
+        () => updater.quitAndInstall(false, true),
         (error: unknown) => log(`Update install failed: ${text(error)}`)
       );
     },

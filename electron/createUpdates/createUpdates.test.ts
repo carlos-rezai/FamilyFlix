@@ -302,7 +302,8 @@ describe('createUpdates — the logger', () => {
 // and pushes the whole status. `install()` is a no-op with no offer; with
 // one it pushes `installing`, awaits the **Ordered shutdown** (which cancels
 // a running Import or Enrichment and closes the database), and only once that
-// has resolved calls `quitAndInstall(true, true)` — silent, then relaunch.
+// has resolved calls `quitAndInstall(false, true)` — the installer's progress
+// window shown, then relaunch.
 
 /** A shutdown held open until the test lets it finish. */
 function heldShutdown() {
@@ -418,13 +419,13 @@ describe('createUpdates — install', () => {
     expect(fake.updater.quitAndInstall).toHaveBeenCalledTimes(1);
   });
 
-  it('installs silently and relaunches: quitAndInstall(true, true)', async () => {
+  it('installs visibly and relaunches: quitAndInstall(false, true)', async () => {
     const { fake, updates } = setup();
     fake.emit('update-downloaded', { version: '0.2.0' });
 
     updates.install();
     await settle();
 
-    expect(fake.updater.quitAndInstall).toHaveBeenCalledWith(true, true);
+    expect(fake.updater.quitAndInstall).toHaveBeenCalledWith(false, true);
   });
 });

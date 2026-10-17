@@ -753,6 +753,13 @@ means:
     installs on Electron's `quit` event, and the gate already orders that
     after the shutdown.
 
+    **Amended 2026-10-17:** `quitAndInstall(false, true)`. A silent install
+    left the screen empty for as long as NSIS took — the app gone, nothing
+    saying it was coming back. Non-silent, the one-click installer draws its
+    progress window (no wizard pages: `oneClick` has none), and the relaunch
+    holds through `autoRunAppAfterInstall` and `runAfterFinish`. The quit
+    path stays silent: electron-updater's `onQuit` install has no option.
+
 39. **A run in flight when Update now is pressed?** ✅ **Cancelled by the
     Ordered shutdown, exactly as closing the window would cancel it.** An
     Import rolls its current folder back, and an Enrichment keeps what it
