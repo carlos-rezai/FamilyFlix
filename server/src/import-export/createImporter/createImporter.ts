@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import {
   basename,
   dirname,
@@ -1122,6 +1123,8 @@ export function createImporter({
     const failures: { video: string; reason: string }[] = [];
 
     for (const episode of episodes) {
+      // A turn of the loop per episode, as per film: see `importPlaced`.
+      await nextTurn();
       const label = episodeLabel(row.title, episode);
       current.currentItem = label;
       try {
@@ -1429,6 +1432,11 @@ export function createImporter({
 
     let imported = 0;
     for (const { match, libraryFolder } of films) {
+      // A turn of the loop before each title. A Link run awaits nothing for a
+      // title with no art or subtitles, and its runtime is a synchronous
+      // probe, so without it no poll is answered until the run is in review:
+      // the Running step would sit frozen on an empty Activity log.
+      await nextTurn();
       current.currentItem = match.row.title;
       const added = await importMatch(
         match,
