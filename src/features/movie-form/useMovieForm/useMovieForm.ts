@@ -382,15 +382,19 @@ export function useMovieForm(): UseMovieFormResult {
   const search = searchParams.toString();
   const job = useMemo(() => formJob(new URLSearchParams(search)), [search]);
 
+  const plainAdd = job.kind === 'add';
+
   // The kind is the URL's, on a plain add alone: beside a context there is
   // nothing to switch. A series edit is the series kind, with no tabs to
   // switch it.
-  const showKindTabs = job.kind === 'add';
+  const showKindTabs = plainAdd;
 
-  // **Add and sync**: off on every mount, drawn and read on a plain add of
-  // either kind, and kept across a switch on the Kind tabs.
+  // **Add and sync**: drawn and read on a plain add of either kind, off on
+  // every mount, kept across a switch of Form kind.
+  const showEnrich = plainAdd;
   const [enrich, setEnrich] = useState(false);
   const toggleEnrich = useCallback(() => setEnrich((ticked) => !ticked), []);
+
   // The **Series Resolve**: an `unplaced` show's _Resolve_, and the held
   // series it joins. The kind is the series' once the problem read back is
   // `unplaced`: beside any other problem the ask is ignored.
@@ -403,7 +407,6 @@ export function useMovieForm(): UseMovieFormResult {
     (job.kind === 'add' && job.formKind === 'series')
       ? 'series'
       : 'movie';
-  const showEnrich = job.kind === 'add';
   const setParam = useQueryParamWriter();
   const setKind = useCallback(
     (next: FormKind) => setParam(KIND_PARAM, next, 'movie'),
