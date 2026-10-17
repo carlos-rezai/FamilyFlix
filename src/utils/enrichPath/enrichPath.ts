@@ -12,9 +12,11 @@ export interface EnrichQuery {
 
 /**
  * The **Enrichment flow**, as a route — `/enrich`, `/enrich?scope=all`,
- * `/enrich?movie=<id>` or `/enrich?series=<id>`. Four features name it:
- * Settings' _Sync metadata & posters_, Import's _Finish_, and the movie and
- * series pages' _⟳ Fetch from TMDB_.
+ * `/enrich?movie=<id>` or `/enrich?series=<id>`, the last two with `&start=1`
+ * when it is **Started on arrival**. Five callers name it: Settings' _Sync
+ * metadata & posters_, Import's _Finish_, the movie and series pages' _⟳ Fetch
+ * from TMDB_, and the Movie form's **Add and sync**. {@link parseEnrichQuery}
+ * reads it back.
  *
  * The id travels through `URLSearchParams`, `movieFormPath`'s precedent, so it
  * reads back whole whatever it holds.

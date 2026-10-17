@@ -4,7 +4,8 @@ import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
 
 /**
  * Whether a TMDB key is stored — the read the `EnrichCheckCard`'s hint is
- * chosen by, on Import setup and on the Library folders page alike. `false`
+ * chosen by, wherever it is drawn: Import setup, the Library folders page and
+ * the Movie form's plain add. `false`
  * until the read lands, and `false` still for a read that failed, which the
  * hint treats as no key. A read landing after unmount is dropped.
  */

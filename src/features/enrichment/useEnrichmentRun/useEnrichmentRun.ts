@@ -64,8 +64,11 @@ export interface EnrichmentRunState {
    */
   waiting: EnrichmentRun | null;
   /**
-   * `true` from mount until the arrival read of the **Current enrichment
-   * run** answers — with a held run, a `404` or a failure; `false` after.
+   * Whether the read made on mount has yet to answer — with a held run, a
+   * `404` or a failure. Until it has, the hook does not know whose run is
+   * held, and **Started on arrival** cannot decide whether to press Start:
+   * a press on a guess could let go of a **Waiting run** or start over the
+   * title's own.
    */
   attaching: boolean;
   /**
