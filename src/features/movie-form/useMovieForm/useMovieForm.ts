@@ -11,8 +11,12 @@ import type {
   MovieFormValues,
   SeasonPosterSlot,
 } from '@/types';
-import { enrichPath, moviePath, seriesPath, seriesTabPath } from '@/utils';
-import { formJob, formLanding, KIND_PARAM } from '../formJob/formJob';
+import {
+  addLeaving,
+  formJob,
+  formLanding,
+  KIND_PARAM,
+} from '../formJob/formJob';
 import {
   loadFormRecord,
   type ResolvingProblem,
@@ -33,18 +37,6 @@ import {
   updateSeries,
 } from '../api/api';
 import { pickedFile, pickedSubtitle } from '../formValues/formValues';
-
-/**
- * The **Fresh home** a finished add lands on — the shelf the film has just
- * joined, at the top and unfiltered. A push rather than a step, and the one
- * leaving on this screen that is.
- */
-const FRESH_HOME = '/';
-
-/**
- * The series kind's **Fresh home**: the Series tab the show has just joined.
- */
-const SERIES_FRESH_HOME = seriesTabPath();
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
@@ -674,30 +666,24 @@ export function useMovieForm(): UseMovieFormResult {
           // been finished in. The **Landing** is the same URL, for the
           // deep-linked edit that has no such entry to step onto.
           return updateMovie(standing.movie, values).then(() => goBack());
-        case 'add':
-          // Each kind's **Fresh home**, pushed: the shelf the title joined.
-          return kind === 'series'
-            ? createSeries(values, episodes, seasonPosters).then(({ id }) => {
-                if (showEnrich && enrich) {
-                  // **Add and sync**, the series half: the series' page in
-                  // the form's place, then the flow over it.
-                  navigate(seriesPath(id), { replace: true });
-                  navigate(enrichPath({ series: id, start: true }));
-                  return;
-                }
-                navigate(SERIES_FRESH_HOME);
-              })
-            : createMovie(values).then(({ id }) => {
-                if (showEnrich && enrich) {
-                  // **Add and sync**: the film's page in the form's place, so
-                  // Back from the flow never walks into `/add`, then the
-                  // **Enrichment flow** over it, **Started on arrival**.
-                  navigate(moviePath(id), { replace: true });
-                  navigate(enrichPath({ movie: id, start: true }));
-                  return;
-                }
-                navigate(FRESH_HOME);
-              });
+        case 'add': {
+          // Where a finished add goes is `addLeaving`'s: the kind's **Fresh
+          // home**, or with **Add and sync** the title's page in the form's
+          // place and then the flow over it.
+          const created =
+            kind === 'series'
+              ? createSeries(values, episodes, seasonPosters)
+              : createMovie(values);
+          return created.then(({ id }) => {
+            const { replace, push } = addLeaving(
+              kind,
+              id,
+              showEnrich && enrich
+            );
+            if (replace !== null) navigate(replace, { replace: true });
+            navigate(push);
+          });
+        }
       }
     };
 
