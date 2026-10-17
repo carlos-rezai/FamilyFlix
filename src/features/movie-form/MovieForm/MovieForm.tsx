@@ -1,4 +1,10 @@
-import { PageHeader, PillTabs, RatingPicker } from '@/components';
+import {
+  EnrichCheckCard,
+  PageHeader,
+  PillTabs,
+  RatingPicker,
+} from '@/components';
+import { useKeyStored } from '@/hooks/useKeyStored/useKeyStored';
 import { Button, Textarea, TextField } from '@/primitives';
 import type { FormKind } from '@/types';
 import { GenrePicker } from '../GenrePicker/GenrePicker';
@@ -21,6 +27,7 @@ import {
   FieldHint,
   UnderCaption,
   Actions,
+  EnrichSlot,
 } from './MovieForm.styles';
 
 /**
@@ -86,6 +93,10 @@ const SAVE = {
   import: { save: 'Save & continue', saving: 'Saving…' },
 } as const;
 
+/** The `EnrichCheckCard`'s keyed hint on a plain add — the form's own. */
+const ENRICH_HINT =
+  'Runs straight after the save, over this title. Needs the internet.';
+
 /** The other way out, and the one the gate never closes. */
 const CANCEL_LABEL = 'Cancel';
 
@@ -136,6 +147,9 @@ export function MovieForm() {
     kind,
     showKindTabs,
     setKind,
+    showEnrich,
+    enrich,
+    toggleEnrich,
     values,
     setTitle,
     setYear,
@@ -177,6 +191,7 @@ export function MovieForm() {
     back,
     cancel,
   } = useMovieForm();
+  const keySet = useKeyStored();
 
   const wording = WORDING[kind];
   const heading = editing ? HEADING.edit : wording.heading;
@@ -351,6 +366,19 @@ export function MovieForm() {
           />
         )}
       </Fields>
+
+      {/* **Add and sync**: a plain film add alone, between the Files card and
+        the actions. */}
+      {showEnrich && (
+        <EnrichSlot>
+          <EnrichCheckCard
+            checked={enrich}
+            keySet={keySet}
+            keyedHint={ENRICH_HINT}
+            onToggle={toggleEnrich}
+          />
+        </EnrichSlot>
+      )}
 
       <Actions>
         {/* The label is the whole of the in-flight state: it says the work

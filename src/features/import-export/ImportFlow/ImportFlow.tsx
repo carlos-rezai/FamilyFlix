@@ -10,7 +10,7 @@ import { ImportProgress } from '../ImportProgress/ImportProgress';
 import { ImportReview } from '../ImportReview/ImportReview';
 import { ImportSetup } from '../ImportSetup/ImportSetup';
 import { useImportRun } from '../useImportRun/useImportRun';
-import { useKeyStored } from '../useKeyStored/useKeyStored';
+import { useKeyStored } from '@/hooks/useKeyStored/useKeyStored';
 
 /**
  * The header's words, by what the run reads: a sheet, or the Library folders.

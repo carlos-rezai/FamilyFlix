@@ -11,7 +11,7 @@ import type {
   MovieFormValues,
   SeasonPosterSlot,
 } from '@/types';
-import { seriesTabPath } from '@/utils';
+import { enrichPath, moviePath, seriesTabPath } from '@/utils';
 import { formJob, formLanding, KIND_PARAM } from '../formJob/formJob';
 import {
   loadFormRecord,
@@ -100,6 +100,15 @@ export interface UseMovieFormResult {
   showKindTabs: boolean;
   /** Switch the kind, writing `?kind=` as a `replace`. */
   setKind: (kind: FormKind) => void;
+  /**
+   * Whether the `EnrichCheckCard` is drawn: on a plain film add, and only
+   * there — **Add and sync**.
+   */
+  showEnrich: boolean;
+  /** Whether _Also fetch metadata and posters from TMDB_ is ticked. */
+  enrich: boolean;
+  /** Tick the box, or untick it. */
+  toggleEnrich: () => void;
   /** What is in the fields right now. */
   values: MovieFormValues;
   setTitle: (title: string) => void;
@@ -385,6 +394,11 @@ export function useMovieForm(): UseMovieFormResult {
   // nothing to switch. A series edit is the series kind, with no tabs to
   // switch it.
   const showKindTabs = job.kind === 'add';
+
+  // **Add and sync**: off on every mount, drawn and read on a plain film add
+  // alone.
+  const [enrich, setEnrich] = useState(false);
+  const toggleEnrich = useCallback(() => setEnrich((ticked) => !ticked), []);
   // The **Series Resolve**: an `unplaced` show's _Resolve_, and the held
   // series it joins. The kind is the series' once the problem read back is
   // `unplaced`: beside any other problem the ask is ignored.
@@ -397,6 +411,7 @@ export function useMovieForm(): UseMovieFormResult {
     (job.kind === 'add' && job.formKind === 'series')
       ? 'series'
       : 'movie';
+  const showEnrich = job.kind === 'add' && kind === 'movie';
   const setParam = useQueryParamWriter();
   const setKind = useCallback(
     (next: FormKind) => setParam(KIND_PARAM, next, 'movie'),
@@ -665,7 +680,17 @@ export function useMovieForm(): UseMovieFormResult {
             ? createSeries(values, episodes, seasonPosters).then(() =>
                 navigate(SERIES_FRESH_HOME)
               )
-            : createMovie(values).then(() => navigate(FRESH_HOME));
+            : createMovie(values).then(({ id }) => {
+                if (showEnrich && enrich) {
+                  // **Add and sync**: the film's page in the form's place, so
+                  // Back from the flow never walks into `/add`, then the
+                  // **Enrichment flow** over it, **Started on arrival**.
+                  navigate(moviePath(id), { replace: true });
+                  navigate(enrichPath({ movie: id, start: true }));
+                  return;
+                }
+                navigate(FRESH_HOME);
+              });
       }
     };
 
@@ -688,6 +713,8 @@ export function useMovieForm(): UseMovieFormResult {
     values,
     episodes,
     seasonPosters,
+    showEnrich,
+    enrich,
     navigate,
     goBack,
     editing,
@@ -713,6 +740,9 @@ export function useMovieForm(): UseMovieFormResult {
     kind,
     showKindTabs,
     setKind,
+    showEnrich,
+    enrich,
+    toggleEnrich,
     values,
     setTitle,
     setYear,

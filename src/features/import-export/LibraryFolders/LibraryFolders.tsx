@@ -3,13 +3,13 @@ import { useState } from 'react';
 import type { ImportMode } from '@/types';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { Button } from '@/primitives';
-import { PageHeader } from '@/components';
-import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
+import { EnrichCheckCard, PageHeader } from '@/components';
 import { FolderListEditor } from '../FolderListEditor/FolderListEditor';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { ImportModeChoice } from '../ImportModeChoice/ImportModeChoice';
+import { IMPORT_ENRICH_HINT } from '../ImportSetup/ImportSetup';
 import { useFolderScan } from '../useFolderScan/useFolderScan';
-import { useKeyStored } from '../useKeyStored/useKeyStored';
+import { useKeyStored } from '@/hooks/useKeyStored/useKeyStored';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 import { GroupHeading, ScanActions, ScanStack } from './LibraryFolders.styles';
 
@@ -56,6 +56,7 @@ export function LibraryFolders() {
             <EnrichCheckCard
               checked={enrich}
               keySet={keySet}
+              keyedHint={IMPORT_ENRICH_HINT}
               onToggle={() => setEnrich((ticked) => !ticked)}
             />
             <ScanActions>

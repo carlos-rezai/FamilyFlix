@@ -14,7 +14,7 @@ import {
 } from './ImportSetup.styles';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { FolderListEditor } from '../FolderListEditor/FolderListEditor';
-import { EnrichCheckCard } from '../EnrichCheckCard/EnrichCheckCard';
+import { EnrichCheckCard } from '@/components';
 import { ImportModeChoice } from '../ImportModeChoice/ImportModeChoice';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 
@@ -23,6 +23,13 @@ import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
  * 50px box with the soft corner rather than the search bar's pill.
  */
 const PATH_FIELD = { mono: true, height: 50, rounded: false } as const;
+
+/**
+ * The `EnrichCheckCard`'s keyed hint wherever an import is started — Import
+ * setup and the Library folders page's Scan alike.
+ */
+export const IMPORT_ENRICH_HINT =
+  'Runs straight after the import, over everything it brings in. Needs the internet.';
 
 export interface ImportSetupProps {
   /** The spreadsheet path as typed. */
@@ -131,6 +138,7 @@ export function ImportSetup({
       <EnrichCheckCard
         checked={enrich}
         keySet={keySet}
+        keyedHint={IMPORT_ENRICH_HINT}
         onToggle={onToggleEnrich}
       />
 

@@ -62,3 +62,7 @@ export {
   type FieldDiffSide,
 } from './FieldDiff/FieldDiff';
 export { Accordion, type AccordionProps } from './Accordion/Accordion';
+export {
+  EnrichCheckCard,
+  type EnrichCheckCardProps,
+} from './EnrichCheckCard/EnrichCheckCard';

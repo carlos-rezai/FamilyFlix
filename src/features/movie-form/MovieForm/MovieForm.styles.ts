@@ -131,3 +131,11 @@ export const Actions = styled.div`
   gap: 14px;
   margin-top: ${({ theme }) => theme.space.s6};
 `;
+
+/**
+ * Where the `EnrichCheckCard` sits on a plain add: 24px under the Files card,
+ * above the actions.
+ */
+export const EnrichSlot = styled.div`
+  margin-top: ${({ theme }) => theme.space.s5};
+`;
