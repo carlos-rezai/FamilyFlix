@@ -10,7 +10,9 @@ export type TmdbAuthOutcome = 'accepted' | 'refused' | 'unreachable';
 export type TmdbOutcome<T> =
   | { kind: 'ok'; value: T }
   | { kind: 'refused' }
-  | { kind: 'unreachable' };
+  | { kind: 'unreachable' }
+  /** TMDB answered `404`: it holds no such thing — not a lost connection. */
+  | { kind: 'not-found' };
 
 /** One result of `/3/search/movie`, the fields a Sync reads. */
 export interface TmdbMovieResult {
@@ -182,6 +184,13 @@ export interface TmdbClientOptions {
   timeoutMs?: number;
   /** How long the reachability probe waits before TMDB counts as offline. */
   probeTimeoutMs?: number;
+  /**
+   * How a `429`'s `Retry-After` is waited out — resolving early once `signal`
+   * aborts. A real timer unless a test hands in its own.
+   */
+  wait?: (ms: number, signal?: AbortSignal) => Promise<void>;
+  /** How many times a `429` is asked again before it counts as unreachable. */
+  rateLimitRetries?: number;
 }
 
 const TMDB_ORIGIN = 'https://api.themoviedb.org';
@@ -190,6 +199,35 @@ const IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
 const LANGUAGE = 'en-US';
 const DEFAULT_TIMEOUT_MS = 8000;
 const DEFAULT_PROBE_TIMEOUT_MS = 3000;
+const DEFAULT_RATE_LIMIT_RETRIES = 3;
+/** A `429`'s wait when its `Retry-After` is absent or unreadable. */
+const DEFAULT_RETRY_AFTER_MS = 1000;
+/** The longest a single `Retry-After` is waited, whatever TMDB asks. */
+const MAX_RETRY_AFTER_MS = 10_000;
+
+/** A real timer, cut short when the signal aborts. */
+function waitFor(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve) => {
+    if (signal?.aborted) {
+      resolve();
+      return;
+    }
+    const done = () => {
+      clearTimeout(timer);
+      signal?.removeEventListener('abort', done);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    signal?.addEventListener('abort', done, { once: true });
+  });
+}
+
+/** A `Retry-After` in seconds → milliseconds to wait, bounded. */
+function retryAfterMs(response: Response): number {
+  const seconds = Number(response.headers.get('Retry-After'));
+  if (!Number.isFinite(seconds) || seconds <= 0) return DEFAULT_RETRY_AFTER_MS;
+  return Math.min(seconds * 1000, MAX_RETRY_AFTER_MS);
+}
 
 /**
  * A TMDB client over an injected `fetch`, so nothing that composes one in a
@@ -200,9 +238,15 @@ export function createTmdbClient(
   {
     timeoutMs = DEFAULT_TIMEOUT_MS,
     probeTimeoutMs = DEFAULT_PROBE_TIMEOUT_MS,
+    wait = waitFor,
+    rateLimitRetries = DEFAULT_RATE_LIMIT_RETRIES,
   }: TmdbClientOptions = {}
 ): TmdbClient {
-  /** One GET under the key and the timeout; `null` when nothing answered. */
+  /**
+   * One GET under the key and the timeout; `null` when nothing answered. A
+   * `429` is waited out for its `Retry-After` and asked again, at most
+   * `rateLimitRetries` times; the last `429` is answered as it came.
+   */
   async function get(
     path: string,
     key: string,
@@ -221,7 +265,17 @@ export function createTmdbClient(
       url.searchParams.set('api_key', auth.apiKey);
     }
 
-    return send(url, headers, signal);
+    let response = await send(url, headers, signal);
+    for (
+      let retry = 0;
+      retry < rateLimitRetries && response?.status === 429 && !signal?.aborted;
+      retry += 1
+    ) {
+      await wait(retryAfterMs(response), signal);
+      if (signal?.aborted) break;
+      response = await send(url, headers, signal);
+    }
+    return response;
   }
 
   /** One request under the timeout; `null` when nothing answered. */
@@ -252,6 +306,7 @@ export function createTmdbClient(
   async function json<T>(response: Response | null): Promise<TmdbOutcome<T>> {
     if (response === null) return { kind: 'unreachable' };
     if (response.status === 401) return { kind: 'refused' };
+    if (response.status === 404) return { kind: 'not-found' };
     if (!response.ok) return { kind: 'unreachable' };
     try {
       return { kind: 'ok', value: (await response.json()) as T };

@@ -343,11 +343,37 @@ export function createEnrichment({
     };
     for (const [index, rung] of rungs.entries()) {
       const answer = await SEARCHES[kind](client, apiKey, rung, signal);
-      if (answer.kind !== 'ok') return { kind: answer.kind };
-      last = { kind: 'ok', value: answer.value, rung, later: index > 0 };
-      if (answer.value.length > 0) break;
+      if (answer.kind === 'refused' || answer.kind === 'unreachable') {
+        return { kind: answer.kind };
+      }
+      // A rung TMDB answered `404` holds nothing: the next rung is asked.
+      const results = answer.kind === 'ok' ? answer.value : [];
+      last = { kind: 'ok', value: results, rung, later: index > 0 };
+      if (results.length > 0) break;
     }
     return last;
+  }
+
+  /**
+   * A title whose recorded TMDB id TMDB no longer holds: unsettled, a
+   * `missing` Decision for the review, never a Stop.
+   */
+  function notOnTmdb(title: Movie | Series): {
+    kind: 'unsettled';
+    reason: string;
+    decision: Decision;
+  } {
+    const ours: TitledYear = { title: title.title, year: title.year };
+    return {
+      kind: 'unsettled',
+      reason: 'no result on TMDB',
+      decision: {
+        id: randomUUID(),
+        title: title.title,
+        path: sourcePath(title.id),
+        ...decisionFace(ours, title.title, [], NO_MATCH_REASON),
+      },
+    };
   }
 
   /** `↳ found as “…”` when a rung past the first answered. */
@@ -400,6 +426,9 @@ export function createEnrichment({
       id = search.value[0].id;
     }
     const detail = await client.movie(apiKey, id, signal);
+    if (detail.kind === 'not-found') {
+      return notOnTmdb(movie);
+    }
     if (detail.kind !== 'ok') {
       return { kind: 'stop', stop: detail.kind };
     }
@@ -599,6 +628,9 @@ export function createEnrichment({
       id = search.value[0].id;
     }
     const detail = await client.tv(apiKey, id, signal);
+    if (detail.kind === 'not-found') {
+      return notOnTmdb(series);
+    }
     if (detail.kind !== 'ok') {
       return { kind: 'stop', stop: detail.kind };
     }
@@ -782,8 +814,10 @@ export function createEnrichment({
     if (choosing) {
       const asked = await client.seriesImages(apiKey, detail.id, signal);
       if (signal.aborted) return written;
-      if (asked.kind !== 'ok') return { kind: 'stop', stop: asked.kind };
-      showImages = asked.value;
+      if (asked.kind === 'refused' || asked.kind === 'unreachable') {
+        return { kind: 'stop', stop: asked.kind };
+      }
+      showImages = asked.kind === 'ok' ? asked.value : [];
     }
     const offered = new Map<number, SeasonChoice['choices']>();
 
@@ -796,6 +830,26 @@ export function createEnrichment({
         signal
       );
       if (signal.aborted) return written;
+      if (theirs.kind === 'not-found') {
+        // TMDB answered, and lists no such season: its episodes still go
+        // through, each with no TMDB episode, so each takes a Frame still.
+        log(
+          current,
+          `⚠ ${series.title}: TMDB has no season ${season.number}`,
+          'warning'
+        );
+        await writeEpisodes(
+          current,
+          seriesFolder,
+          season.number,
+          season.episodes,
+          { season_number: season.number, poster_path: null, episodes: [] },
+          fields,
+          stillSources,
+          signal
+        );
+        continue;
+      }
       if (theirs.kind !== 'ok') return { kind: 'stop', stop: theirs.kind };
       // No default poster: the season's images, in any language, instead.
       let images: TmdbPoster[] = [];
@@ -809,8 +863,10 @@ export function createEnrichment({
           signal
         );
         if (signal.aborted) return written;
-        if (asked.kind !== 'ok') return { kind: 'stop', stop: asked.kind };
-        images = asked.value;
+        if (asked.kind === 'refused' || asked.kind === 'unreachable') {
+          return { kind: 'stop', stop: asked.kind };
+        }
+        images = asked.kind === 'ok' ? asked.value : [];
       }
       if (choosing) {
         offered.set(

@@ -95,7 +95,7 @@ export type FakeTmdb = { [M in keyof TmdbClient]: Mock<TmdbClient[M]> } & {
   fail(
     method: Exclude<keyof TmdbClient, 'authenticate' | 'reachable'>,
     nth: number,
-    kind: 'refused' | 'unreachable'
+    kind: 'refused' | 'unreachable' | 'not-found'
   ): void;
 };
 
@@ -145,7 +145,7 @@ export function fakeTmdb(script: TmdbScript = {}): FakeTmdb {
   const failures: {
     method: keyof TmdbClient;
     nth: number;
-    kind: 'refused' | 'unreachable';
+    kind: 'refused' | 'unreachable' | 'not-found';
   }[] = [];
 
   /** Record the call, then answer it — failed, held, or off the table. */

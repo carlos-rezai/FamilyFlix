@@ -84,10 +84,7 @@ function knowsBothShows(): FakeTmdb {
 type Frame = Playback['frame'];
 const pictured: Frame = async () => Readable.from([Buffer.from(FRAME_BYTES)]);
 
-/**
- * The `kind` the season call answers, cast through the fake's own `fail`:
- * the fake learns `not-found` alongside the client.
- */
+/** The `kind` the season call answers, as the fake's own `fail` takes it. */
 type FailKind = Parameters<FakeTmdb['fail']>[2];
 
 /** A keyed library holding both shows, a sandbox media root, the domain. */
@@ -162,8 +159,8 @@ function sync(enrichment: Awaited<ReturnType<typeof world>>['enrichment']) {
 }
 
 /** The first show's season 2 — its second `season` call — answered `kind`. */
-function seasonTwoAnswers(client: FakeTmdb, kind: string) {
-  client.fail('season', 2, kind as FailKind);
+function seasonTwoAnswers(client: FakeTmdb, kind: FailKind) {
+  client.fail('season', 2, kind);
 }
 
 const LOST_CONNECTION = 'Lost the connection';
@@ -203,7 +200,7 @@ describe('createEnrichment: a season TMDB does not list', () => {
     const run = await reviewed(enrichment);
 
     expect(run.enriched).toBe(2);
-    expect(storage.getSeries(first.id)?.description).toBe(
+    expect(storage.getSeries(first.id)?.synopsis).toBe(
       'A lighthouse keeper’s daughters.'
     );
   });
@@ -250,7 +247,7 @@ describe('createEnrichment: a season TMDB does not list', () => {
       NEXT.id,
       expect.anything()
     );
-    expect(storage.getSeries(next.id)?.description).toBe(
+    expect(storage.getSeries(next.id)?.synopsis).toBe(
       'A fishing town keeps the secret the sea gave back.'
     );
     expect(episodeOf(storage, next.id, 1, 1).title).toBe('Low Tide');
