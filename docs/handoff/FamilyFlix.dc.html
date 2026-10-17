@@ -1034,7 +1034,7 @@
               canSave,
               // Add and sync: the box on a plain add alone, both kinds — never on an edit or a Resolve. Off on every mount.
               showEnrich:s.addContext==='settings', enrich:!!s.fEnrich, onToggleEnrich:()=>this.setState(x=>({fEnrich:!x.fEnrich})), keySet:s.tmdbConnected,
-              enrichHint:'Runs straight after the save, over this title. Needs the internet.',
+              keyedHint:'Runs straight after the save, over this title. Needs the internet.',
               labelStyle, inputStyle, textareaStyle,
               title:s.fTitle, year:s.fYear, onTitle:(e)=>this.onFTitle(e), onYear:(e)=>this.onFYear(e),
               director:s.fDirector, cast:s.fCast, description:s.fDescription, onDirector:(e)=>this.onFDirector(e), onCast:(e)=>this.onFCast(e), onDescription:(e)=>this.onFDescription(e),
