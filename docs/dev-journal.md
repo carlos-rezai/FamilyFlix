@@ -11,6 +11,77 @@ Newest entry first.
 
 ---
 
+## 2026-10-17 — Add and sync — the refactor (issue 396)
+
+Twelve commits against `docs/refactor-plans/45-add-and-sync-refactor.md`, one
+per plan commit, the initiative's closing round. **9697 tests pass across 579
+files**, against 9681 across 579 at the end of the build (`cd72732`): sixteen
+new cases, four `addLeaving` rows and twelve `parseEnrichQuery` rows, and no
+new suite. `tsc -b --force` is clean. `eslint src server electron` reports
+one error and 99 warnings, the same as before the round. Every folder this
+round touched is lint-clean.
+
+### What shipped
+
+Log 45's slices: the prototype revision (392), then one RED and one GREEN
+each, 393 to 395. The **Movie form**'s plain add, for a film or a series,
+draws the `EnrichCheckCard`, graduated to `components/` with `keyedHint` the
+caller's. The box is off on every mount and kept across a switch of **Form
+kind**. A ticked save replaces `/add` with the title's page, then pushes the
+**Enrichment flow** over it, **Started on arrival**. The flow presses its own
+Start once the summary and the arrival read have landed, never over the
+title's own run or a **Let-go line**, and drops `start` from the URL. Nothing
+on the server changed.
+
+### What each group changed
+
+- **Group 1, the add's leaving, once** (`3429c7f`–`40b3f81`).
+  `addLeaving(kind, id, sync)` in `formJob`, beside `formLanding`, decides
+  where a finished add goes. The two Fresh homes moved beside `ADD_LANDING`.
+  The save's `add` case is one create chosen by kind and one `.then`. One
+  `plainAdd` local feeds `showKindTabs` and `showEnrich`, and the box's state
+  is declared in one place.
+- **Group 2, the flow's query, read once** (`314a934`–`591d92a`).
+  `parseEnrichQuery` sits in `enrichPath`'s unit, held to it by a round trip.
+  The flow reads it once. The arrival drops `start` by writing `enrichPath`
+  over the query without it, so no hand-built `URLSearchParams` is left, and
+  it presses only when `letGoLine(waiting)` is `null`.
+- **Group 3, the box's words** (`aa8d080`–`a61b0fc`). The one visible change,
+  a `fix:`: the Library folders page draws the prototype's scan sentence,
+  _Runs straight after the scan…_, a gap left over from step 14. Each caller
+  keeps its keyed hint as a private constant, and `ImportSetup` exports no
+  sentence. Four docblocks caught up. The prototype names the prop
+  `keyedHint` everywhere.
+- **Group 4, the docs** (`882f771`, and this commit). CLAUDE.md, the README
+  and the glossary know the initiative shipped, and step 28 is ✅. The
+  glossary's **Leaving** row names Add and sync's leaving, a replace and then
+  a push.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope. `useQueryParamWriter` stays in
+`features/search/`. The two MovieForm enrich suites keep their own harnesses.
+There is no `arrivalPress` helper. The other jobs' leavings stay `goBack()`.
+An empty `?movie=` or `?series=` is still an id.
+
+No existing case had to change in Groups 1 and 2.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **`useQueryParamWriter` to `hooks/`**: `movie-form` imports it from
+  `features/search/`.
+- **The follow-ups from the Episode stills entry** are unchanged by this
+  initiative, the lint error in `EnrichmentReview.test.tsx` among them.
+
+### The initiative
+
+**Add and sync is done**: the prototype revision (392), the three slices
+(393–395) and this round (396). Issue 391 is closed with it.
+
+---
+
 ## 2026-10-16 — Episode stills — the refactor (issue 386)
 
 Ten commits against `docs/refactor-plans/44-episode-stills-refactor.md`, one
