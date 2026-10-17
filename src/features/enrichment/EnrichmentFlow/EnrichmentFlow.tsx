@@ -14,7 +14,7 @@ import {
   type EnrichScope,
   type TitleReference,
 } from '@/types';
-import { moviePath, seriesPath } from '@/utils';
+import { moviePath, parseEnrichQuery, seriesPath } from '@/utils';
 import { EnrichmentProgress } from '../EnrichmentProgress/EnrichmentProgress';
 import { EnrichmentReview } from '../EnrichmentReview/EnrichmentReview';
 import { EnrichmentSetup } from '../EnrichmentSetup/EnrichmentSetup';
@@ -68,8 +68,10 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  */
 export function EnrichmentFlow() {
   const [params, setParams] = useSearchParams();
-  const movieId = params.get('movie');
-  const seriesId = params.get('series');
+  // The flow's query, read once through `enrichPath`'s own reader.
+  const query = useMemo(() => parseEnrichQuery(params), [params]);
+  const movieId = query.movie ?? null;
+  const seriesId = query.series ?? null;
   // The one title a `single` Sync is over, read once: `?movie=` before
   // `?series=`, and `null` for a library Sync.
   const single = useMemo<TitleReference | null>(
@@ -110,14 +112,14 @@ export function EnrichmentFlow() {
   // `?scope=all` is where the Import flow's _Finish_ lands: _Everything_
   // selected, the prototype's `setState({ enScope: 'all' })`, nothing started.
   const [libraryScope, setLibraryScope] = useState<EnrichScope>(() =>
-    params.get('scope') === 'all' ? 'all' : 'missing'
+    query.scope === 'all' ? 'all' : 'missing'
   );
   // Both on to begin with, the prototype's `enWriteSheet` / `enWritePosters`.
   const [writeSheet, setWriteSheet] = useState(true);
   const [writePosters, setWritePosters] = useState(true);
   const scope: EnrichScope = single === null ? libraryScope : 'single';
   // `?scope=all` is set by the Import flow's Finish alone.
-  const fromImport = single === null && params.get('scope') === 'all';
+  const fromImport = single === null && query.scope === 'all';
 
   useEffect(() => {
     if (single === null) {
@@ -263,7 +265,7 @@ export function EnrichmentFlow() {
     writePosters,
   ]);
 
-  const startOnArrival = single !== null && params.get('start') === '1';
+  const startOnArrival = single !== null && query.start === true;
   const decided = useRef(false);
   useEffect(() => {
     if (!startOnArrival || decided.current) return;
