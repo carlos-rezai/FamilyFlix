@@ -19,10 +19,11 @@
 // its own, which is what keeps the Settings page and the Play button on one
 // answer. The encoder detection is unchanged.
 //
-// What no test here asserts is that a machine can actually *run* what its
-// ffmpeg build lists — a laptop with no NVIDIA card still gets `h264_nvenc`
-// from a full build. That is not something a test can pin, and the journal is
-// right about it; the selection is the half that is ours.
+// Issue #388: a build listing an encoder is not a machine that can run it — a
+// full build lists `h264_nvenc` on an AMD machine, and every transcode there
+// wrote nothing. So the pair grows a third member, `runs`: a trial encode per
+// listed candidate, in preference order, the first that runs chosen. It is a
+// seam like the other two, so nothing here spawns a trial either.
 
 import { describe, expect, it, vi } from 'vitest';
 
@@ -54,13 +55,14 @@ const DECODERS = [
  */
 function pair(
   encoders: string | null,
-  decoders: string | null = null
+  decoders: string | null = null,
+  runs: FfmpegListing['runs'] = () => true
 ): FfmpegListing {
-  return { encoders: () => encoders, decoders: () => decoders };
+  return { encoders: () => encoders, decoders: () => decoders, runs };
 }
 
 /** What `ffmpeg -encoders` prints: a legend, a rule, then one line each. */
-function listing(...encoders: string[]): FfmpegListing {
+function encodersListing(...encoders: string[]): string {
   const lines = [
     'Encoders:',
     ' V..... = Video',
@@ -70,7 +72,19 @@ function listing(...encoders: string[]): FfmpegListing {
     ...encoders.map((name) => ` V....D ${name}          hardware H.264`),
     ' A....D aac                  AAC (Advanced Audio Coding)',
   ];
-  return pair(lines.join('\n'));
+  return lines.join('\n');
+}
+
+/** A listing whose every encoder runs when tried. */
+function listing(...encoders: string[]): FfmpegListing {
+  return pair(encodersListing(...encoders));
+}
+
+/** A listing where only the named encoders run when tried. */
+function running(listed: string[], ...thatRun: string[]): FfmpegListing {
+  return pair(encodersListing(...listed), null, (_, encoder) =>
+    thatRun.includes(encoder)
+  );
 }
 
 /** The hardware encoder a component composed over that listing reports. */
@@ -116,6 +130,57 @@ describe('ffmpegComponent — which hardware encoder is chosen', () => {
   });
 });
 
+describe('ffmpegComponent — only an encoder that runs is chosen', () => {
+  it('passes over NVENC on a machine that cannot run it', () => {
+    // The AMD machine of issue #388: all three listed, AMF the one that runs.
+    expect(
+      encoderFrom(running(['h264_amf', 'h264_nvenc', 'h264_qsv'], 'h264_amf'))
+    ).toBe('h264_amf');
+  });
+
+  it('keeps the preference order among those that run', () => {
+    expect(
+      encoderFrom(
+        running(['h264_amf', 'h264_nvenc', 'h264_qsv'], 'h264_amf', 'h264_qsv')
+      )
+    ).toBe('h264_qsv');
+  });
+
+  it('falls back to software when none of those listed runs', () => {
+    expect(
+      encoderFrom(running(['h264_amf', 'h264_nvenc', 'h264_qsv']))
+    ).toBeNull();
+  });
+
+  it('tries only what the build lists, on the ffmpeg it was handed', () => {
+    const runs = vi.fn<FfmpegListing['runs']>(() => false);
+
+    ffmpegComponent(
+      BINARIES,
+      pair(encodersListing('h264_amf', 'h264_qsv'), null, runs)
+    );
+
+    expect(runs.mock.calls).toEqual([
+      ['/opt/ffmpeg/bin/ffmpeg', 'h264_qsv'],
+      ['/opt/ffmpeg/bin/ffmpeg', 'h264_amf'],
+    ]);
+  });
+
+  it('stops trying at the first that runs', () => {
+    const runs = vi.fn<FfmpegListing['runs']>(() => true);
+
+    ffmpegComponent(
+      BINARIES,
+      pair(encodersListing('h264_amf', 'h264_nvenc'), null, runs)
+    );
+
+    expect(runs).toHaveBeenCalledExactlyOnceWith(
+      '/opt/ffmpeg/bin/ffmpeg',
+      'h264_nvenc'
+    );
+  });
+});
+
 describe('ffmpegComponent — when there is no hardware encoder', () => {
   it('answers null for a build with software encoding only', () => {
     // Software is slower and always there, which is why this is a state and
@@ -154,7 +219,11 @@ describe('ffmpegComponent — what it decodes', () => {
   it('asks the decoder side of the pair, on the ffmpeg it was handed', () => {
     const decoders = vi.fn<FfmpegListing['decoders']>(() => DECODERS);
 
-    ffmpegComponent(BINARIES, { encoders: () => null, decoders }).decoders();
+    ffmpegComponent(BINARIES, {
+      encoders: () => null,
+      decoders,
+      runs: () => true,
+    }).decoders();
 
     expect(decoders).toHaveBeenCalledWith('/opt/ffmpeg/bin/ffmpeg');
   });
@@ -175,7 +244,11 @@ describe('ffmpegComponent — the seam and the composition', () => {
   it('asks the ffmpeg it was handed, not some ffmpeg on the path', () => {
     const encoders = vi.fn<FfmpegListing['encoders']>(() => null);
 
-    ffmpegComponent(BINARIES, { encoders, decoders: () => null });
+    ffmpegComponent(BINARIES, {
+      encoders,
+      decoders: () => null,
+      runs: () => true,
+    });
 
     expect(encoders).toHaveBeenCalledExactlyOnceWith('/opt/ffmpeg/bin/ffmpeg');
   });
@@ -188,6 +261,7 @@ describe('ffmpegComponent — the seam and the composition', () => {
     const component = ffmpegComponent(BINARIES, {
       encoders,
       decoders: () => null,
+      runs: () => true,
     });
     void component.hardwareEncoder;
     void component.hardwareEncoder;

@@ -107,6 +107,10 @@ function remuxArgs(file: string, offsetSeconds: number): string[] {
  * Re-encode to what Chromium reads. The audio is re-encoded whichever codec it
  * arrived as: a **Transcode** answers one shape, and a path that sometimes
  * copied the audio would be two paths wearing one name.
+ *
+ * The pixels are 8-bit 4:2:0 whatever the source was: from a 10-bit film
+ * libx264 would keep the depth and write High 10, which Chromium cannot decode
+ * (issue #388).
  */
 function transcodeArgs(
   file: string,
@@ -117,10 +121,12 @@ function transcodeArgs(
     hardwareEncoder === null
       ? ['-c:v', SOFTWARE_ENCODER, '-preset', 'veryfast', '-crf', '20']
       : ['-c:v', hardwareEncoder];
+  const pixels = ['-pix_fmt', 'yuv420p'];
 
   return [
     ...inputArgs(file, offsetSeconds),
     ...video,
+    ...pixels,
     '-c:a',
     'aac',
     '-b:a',

@@ -177,6 +177,32 @@ describe('choosePlaybackPath — a codec the browser cannot decode', () => {
 
     expect(args).toContain(MKV);
   });
+
+  it.each([
+    ['software', SOFTWARE],
+    ['hardware', { available: true, hardwareEncoder: 'h264_amf' }],
+  ] as const)(
+    'writes 8-bit 4:2:0 on a %s encode, whatever the source was',
+    (_, component) => {
+      // Issue #388. From a 10-bit HEVC, libx264 keeps the depth and writes
+      // High 10, which Chromium cannot decode — and NVENC refuses the 10-bit
+      // input outright. Asking for yuv420p is what makes every transcode one
+      // shape the element reads.
+      const args = argvOf(
+        choose(MKV, probeOf({ videoCodec: 'hevc' }), component)
+      );
+
+      const at = args.indexOf('-pix_fmt');
+      expect(at).toBeGreaterThan(args.indexOf('-i'));
+      expect(args[at + 1]).toBe('yuv420p');
+    }
+  );
+
+  it('leaves the pixels alone on a remux, which encodes nothing', () => {
+    const args = argvOf(choose(MKV, probeOf({ container: 'matroska' })));
+
+    expect(args).not.toContain('-pix_fmt');
+  });
 });
 
 describe('choosePlaybackPath — which encoder does the work', () => {

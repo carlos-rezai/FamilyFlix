@@ -30,7 +30,7 @@ export interface PlaybackProcess {
  */
 export interface PlaybackComponent {
   /**
-   * The hardware encoder this machine reports, or `null` for one with none.
+   * The hardware encoder this machine can run, or `null` for one with none.
    * Read once when the component is composed rather than per request: it is a
    * fact about the machine, and asking ffmpeg what it can encode costs more
    * than the film it would be asked about.
@@ -68,6 +68,12 @@ const HARDWARE_ENCODERS = [
 const LISTING_BUFFER_BYTES = 4 * 1024 * 1024;
 
 /**
+ * How long one trial encode is given. A working encoder opens in well under a
+ * second; one whose driver is missing fails faster still.
+ */
+const TRIAL_TIMEOUT_MS = 10_000;
+
+/**
  * What one of ffmpeg's listings printed, or `null` for every way of not
  * knowing — taken as an argument so the selection can be asked about a
  * listing rather than about the machine running the test, the way `probe`
@@ -77,14 +83,21 @@ const LISTING_BUFFER_BYTES = 4 * 1024 * 1024;
 export type Listing = (ffmpeg: string) => string | null;
 
 /**
- * The two listings a component is composed over — `ffmpeg -encoders`, read
- * once for the hardware encoder, and `ffmpeg -decoders`, read on demand for
- * the **Codec report**. One seam for both spawns, and neither answer stands
- * in for the other.
+ * Whether a build of ffmpeg can actually encode with the named encoder on this
+ * machine — a trial run, `true` only for one that exited cleanly.
+ */
+export type EncoderTrial = (ffmpeg: string, encoder: string) => boolean;
+
+/**
+ * What a component is composed over — `ffmpeg -encoders`, read once for the
+ * hardware encoders a build lists, a trial of each in turn, and
+ * `ffmpeg -decoders`, read on demand for the **Codec report**. One seam for
+ * every spawn, and no answer stands in for another.
  */
 export interface FfmpegListing {
   encoders: Listing;
   decoders: Listing;
+  runs: EncoderTrial;
 }
 
 /** Ask a build of ffmpeg for one of its listings. */
@@ -104,29 +117,66 @@ function listing(flag: '-encoders' | '-decoders'): Listing {
   };
 }
 
-/** The pair that actually runs ffmpeg: what `main.ts` composes over. */
+/**
+ * One tenth of a second of a flat colour through the encoder, thrown away — in
+ * the pixel format every **Transcode** asks for, so an encoder that cannot take
+ * it fails here rather than on a film.
+ */
+const runs: EncoderTrial = (ffmpeg, encoder) => {
+  const result = spawnSync(
+    ffmpeg,
+    [
+      '-hide_banner',
+      '-loglevel',
+      'error',
+      '-f',
+      'lavfi',
+      '-i',
+      'color=size=256x256:duration=0.1',
+      '-c:v',
+      encoder,
+      '-pix_fmt',
+      'yuv420p',
+      '-f',
+      'null',
+      '-',
+    ],
+    { stdio: 'ignore', timeout: TRIAL_TIMEOUT_MS, windowsHide: true }
+  );
+
+  return result.error === undefined && result.status === 0;
+};
+
+/** The set that actually runs ffmpeg: what `main.ts` composes over. */
 const FFMPEG_LISTING: FfmpegListing = {
   encoders: listing('-encoders'),
   decoders: listing('-decoders'),
+  runs,
 };
 
 /**
- * Which hardware encoder this build of ffmpeg was compiled with, if any.
+ * The first hardware encoder, in preference order, that this build of ffmpeg
+ * lists **and** this machine can run, if any.
  *
- * A build listing an encoder is not a machine that can run it — a laptop with
- * no NVIDIA card still gets `h264_nvenc` from a full build — so the fallback
- * that matters is at the other end: **the stream route**, which holds its
- * headers until the conversion produces a byte and answers a 500 when it never
- * does. The player draws that as the `could-not-start` notice rather than
- * spinning for the rest of the evening.
- *
- * What is asserted in this file is the *selection*, and it is in the argv.
+ * A build listing an encoder is not a machine that can run it — a full build
+ * lists `h264_nvenc` on an AMD machine, where it cannot load `nvcuda.dll` and
+ * every transcode wrote nothing (issue #388) — so each listed candidate is
+ * tried before it is chosen, and the trials stop at the first that runs. None
+ * running is software, slower and always there.
  */
-function detectHardwareEncoder(listed: string | null): string | null {
-  if (listed === null) {
+function detectHardwareEncoder(
+  ffmpeg: string,
+  listed: FfmpegListing
+): string | null {
+  const printed = listed.encoders(ffmpeg);
+  if (printed === null) {
     return null;
   }
-  return HARDWARE_ENCODERS.find((name) => listed.includes(name)) ?? null;
+  return (
+    HARDWARE_ENCODERS.find(
+      (name) => printed.includes(name) && listed.runs(ffmpeg, name)
+    ) ?? null
+  );
 }
 
 /**
@@ -139,7 +189,8 @@ function detectHardwareEncoder(listed: string | null): string | null {
  * signal every way of failing has in common.
  *
  * `listed` is the seam: what `ffmpeg -encoders` and `ffmpeg -decoders` would
- * have printed, defaulting to running them. It is what lets the encoder
+ * have printed and what a trial encode would have answered, defaulting to
+ * running them. It is what lets the encoder
  * preference order be asserted on a machine that has no hardware encoder and
  * no ffmpeg either, and the **Codec report** on one with no FFmpeg at all.
  */
@@ -148,7 +199,7 @@ export function ffmpegComponent(
   listed: FfmpegListing = FFMPEG_LISTING
 ): PlaybackComponent {
   return {
-    hardwareEncoder: detectHardwareEncoder(listed.encoders(binaries.ffmpeg)),
+    hardwareEncoder: detectHardwareEncoder(binaries.ffmpeg, listed),
     decoders: () => listed.decoders(binaries.ffmpeg),
     probe: (file) => probeFile(binaries.ffprobe, file),
     spawn: (args) => {
