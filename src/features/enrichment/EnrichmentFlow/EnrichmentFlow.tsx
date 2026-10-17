@@ -61,8 +61,8 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  *
  * Opened with `start=1` beside `movie` or `series` it is **Started on
  * arrival**: once the summary and the arrival read have both landed it
- * decides once — nothing over the title's own run or a **Waiting run** with
- * Decisions, else its own Start with setup's defaults — and replaces the URL
+ * decides once — never pressed over the title's own run or a **Let-go
+ * line**, else its own Start with setup's defaults — and replaces the URL
  * without `start` first, so a Settings push lands on top of the clean URL and
  * a step back or a reload starts nothing.
  */
@@ -271,8 +271,8 @@ export function EnrichmentFlow() {
     if (!startOnArrival || decided.current) return;
     if (summary === null || attaching) return;
     decided.current = true;
-    const press =
-      run === null && (waiting === null || waiting.decisions.length === 0);
+    // Never pressed over the title's own run, nor over a **Let-go line**.
+    const press = run === null && letGoLine(waiting) === null;
     // The same route without `start`, written by its one writer.
     navigate(enrichPath({ ...query, start: undefined }), { replace: true });
     if (press) onStart();
