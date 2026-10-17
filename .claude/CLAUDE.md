@@ -1112,7 +1112,8 @@ second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
 at scale + Season art**, step 26, **TMDB ratings**, step 27, **Episode
-stills**, and step 28, **Add and sync**. Steps 10–15 came out of
+stills**, and step 28, **Add and sync**. Step 29, **Audio tracks**, is
+next. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1315,6 +1316,27 @@ field TMDB already knows. It is done (design log 45):
     Nothing on the server changes. Not this step: the box on an edit or a
     Resolve, a background Sync, a year off the filename, a remembered tick.
 
+Step 29 came out of using v0.8.0: some films carry several audio languages,
+and the player plays whichever is first. It is planned — grill-me, a PRD and
+a prototype revision first, since `docs/handoff/` draws neither an Audio
+section nor an audio picker:
+
+29. 🔜 **Audio tracks** — Settings → Playback gains an _Audio_ section
+    beside Subtitles: a **Preferred audio language**, **English by default**,
+    a household preference in the `settings` table beside the **Preferred
+    subtitle language** (`GET /api/settings`, a **Single-signal write**),
+    chosen off the **Language pool** over FilterDropdown. The player opens a
+    title on the track in that language, else the file's default, else its
+    first, and its controls gain an audio picker — as VLC's _Audio → Audio
+    Track_ — to switch track mid-film, keeping the position. To settle in the
+    grill: Chromium's `audioTracks` is off by default, so a switch is most
+    likely the server's own remux or transcode mapping the chosen stream
+    (`-map 0:a:N`) and re-anchoring the offset, a multi-track MP4 leaving
+    direct play for it; `probe` learning each audio stream's language and
+    title; what a track with no language tag is called; whether a choice in
+    the player is remembered per title or only for that viewing; and how
+    episodes inherit it.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1347,6 +1369,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Built-in video player** — local playback, subtitle tracks, transport controls.
 - ✅ **Watch tracking** — watched / in-progress / unwatched states and resume position.
 - ✅ **Episode playback** — the player unchanged for movies; for an episode the title reads `Show · S02E04 · Episode title`, and an **Up next** card appears in the last 15 s with a countdown, Play now and Cancel — auto-play next is the player's only addition. No skip-intro, no in-player episode list.
+- 🔜 **Audio tracks** — a film with several audio languages opens on the household's Preferred audio language (English by default), and the player's controls carry an audio picker to switch track mid-film, as VLC does (step 29).
 
 ### Maintainer tools
 
@@ -1375,6 +1398,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Codec manager — view installed codecs** — the Codec report off the component the player uses: one row per catalogued format, Built-in or Installed.
 - ✅ **Codec manager — add a playback component** — the Component drop zone under the rows and the ✕ on the Component row: a pair dropped is staged, verified and sworn into the Component slot, and the next press of Play converts with it.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
+- 🔜 **Audio preferences** — an _Audio_ section on the Playback card: the household's Preferred audio language, English by default, kept beside the subtitle language and honoured by the player (step 29).
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Roadmap's **Move the media folder**.
 - ✅ **Network group** — a fifth Settings group, between Display and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household, just movie titles to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
 - ✅ **Software update** — the About card's first row: an Update offer downloaded at launch from GitHub Releases, Update now, and Check for updates; closing the app installs it. Designed in `17-software-update`, shipped as v0.2.0.

@@ -378,6 +378,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | TMDB ratings — fetched stars until the family rates | ✅ Done         |
 | Episode stills — a frame from the file, as fallback | ✅ Done         |
 | Add and sync — add by files, TMDB fills the rest    | ✅ Done         |
+| Audio tracks — English by default, switch in player | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -515,6 +516,16 @@ field TMDB already knows. It is done (design log 45):
     that title starts by itself and fills the synopsis, poster, cast and the
     rest. A match it is unsure of waits in that Sync's review; Back from it
     lands on the title's page.
+
+Step 29 came out of using v0.8.0: some films carry several audio languages,
+and the player plays whichever comes first. It is planned:
+
+29. 🔜 **Audio tracks** — Settings → Playback gains an _Audio_ section beside
+    Subtitles, where you choose the household's preferred audio language —
+    English by default. A film with several audio tracks opens on that
+    language when it has it, and the player gets an audio menu to switch
+    track mid-film without losing your place, the way VLC's _Audio → Audio
+    Track_ does.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
