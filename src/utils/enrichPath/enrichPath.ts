@@ -35,3 +35,23 @@ export function enrichPath({
   const query = params.toString();
   return query === '' ? '/enrich' : `/enrich?${query}`;
 }
+
+/**
+ * The **Enrichment flow**'s query read back — {@link enrichPath}'s mirror, in
+ * its unit as `opensSeriesResolve` sits beside `movieFormPath`: `scope` only
+ * when it is `all`, `movie` and `series` as given, `start` only when it is
+ * `1`, and anything else ignored.
+ *
+ * An empty `?movie=` stays an id, as the flow has always read it: a cleared
+ * search box is `parseLibraryQuery`'s case, not an id's.
+ */
+export function parseEnrichQuery(params: URLSearchParams): EnrichQuery {
+  const query: EnrichQuery = {};
+  if (params.get('scope') === 'all') query.scope = 'all';
+  const movie = params.get('movie');
+  if (movie !== null) query.movie = movie;
+  const series = params.get('series');
+  if (series !== null) query.series = series;
+  if (params.get('start') === '1') query.start = true;
+  return query;
+}

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { enrichPath } from './enrichPath';
+import { enrichPath, parseEnrichQuery, type EnrichQuery } from './enrichPath';
 
 describe('enrichPath', () => {
   it('answers the bare route with nothing asked', () => {
@@ -63,5 +63,41 @@ describe('enrichPath with start', () => {
     expect(enrichPath({ scope: 'all' })).toBe('/enrich?scope=all');
     expect(enrichPath({ movie: 'm1' })).toBe('/enrich?movie=m1');
     expect(enrichPath({ series: 's1' })).toBe('/enrich?series=s1');
+  });
+});
+
+/** The query a route written by {@link enrichPath} reads back as. */
+const readBack = (path: string): EnrichQuery =>
+  parseEnrichQuery(new URLSearchParams(path.split('?')[1] ?? ''));
+
+describe('parseEnrichQuery', () => {
+  it.each<EnrichQuery>([
+    {},
+    { scope: 'all' },
+    { movie: 'm1' },
+    { series: 's1' },
+    { movie: 'a&b #c' },
+    { series: 'a&b #c' },
+    { movie: 'm1', start: true },
+    { series: 's1', start: true },
+  ])('reads %o back from the route it writes', (query) => {
+    expect(readBack(enrichPath(query))).toEqual(query);
+  });
+
+  it('ignores a parameter it does not read', () => {
+    expect(readBack('/enrich?movie=m1&tab=series')).toEqual({ movie: 'm1' });
+  });
+
+  it('ignores a scope other than all', () => {
+    expect(readBack('/enrich?scope=missing')).toEqual({});
+  });
+
+  it('ignores a start other than 1', () => {
+    expect(readBack('/enrich?movie=m1&start=true')).toEqual({ movie: 'm1' });
+    expect(readBack('/enrich?movie=m1&start=0')).toEqual({ movie: 'm1' });
+  });
+
+  it('keeps an empty id as an id', () => {
+    expect(readBack('/enrich?movie=')).toEqual({ movie: '' });
   });
 });

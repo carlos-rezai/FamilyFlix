@@ -38,7 +38,7 @@ export { seriesPath } from './seriesPath/seriesPath';
 export { seriesTabPath } from './seriesTabPath/seriesTabPath';
 export { seasonPath } from './seasonPath/seasonPath';
 export { episodePlayPath } from './episodePlayPath/episodePlayPath';
-export { enrichPath } from './enrichPath/enrichPath';
+export { enrichPath, parseEnrichQuery } from './enrichPath/enrichPath';
 export {
   movieFormPath,
   opensSeriesResolve,
