@@ -602,6 +602,26 @@
             </sc-if>
           </div>
 
+          <!-- Add and sync: on a plain add alone, both kinds, between the Files card and the
+               actions — never on an edit or a Resolve. Off on every mount; Add to library keeps
+               its label. Ticked, the save lands on the title's page with the Enrichment flow
+               pushed over it, Started on arrival. -->
+          <sc-if
+            value="{{ form.showEnrich }}"
+            hint-placeholder-val="{{ true }}"
+          >
+            <div style="margin-top: 24px">
+              <dc-import
+                name="mol.EnrichCheckCard"
+                checked="{{ form.enrich }}"
+                key-set="{{ form.keySet }}"
+                keyed-hint="{{ form.enrichHint }}"
+                on-toggle="{{ form.onToggleEnrich }}"
+                hint-size="100%,74px"
+              ></dc-import>
+            </div>
+          </sc-if>
+
           <div
             style="
               display: flex;

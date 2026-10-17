@@ -382,53 +382,14 @@
                   </sc-for>
                 </div>
               </div>
-              <label
-                style="
-                  display: flex;
-                  align-items: flex-start;
-                  gap: 12px;
-                  padding: 14px 16px;
-                  background: var(--color-surface);
-                  border: 1px solid var(--color-border-soft);
-                  border-radius: 10px;
-                  cursor: pointer;
-                  margin-top: 4px;
-                "
-              >
-                <span style="{{ imp.enrichBoxStyle }}"
-                  >{{ imp.enrichCheck }}</span
-                >
-                <input
-                  type="checkbox"
-                  checked="{{ imp.enrich }}"
-                  onChange="{{ imp.onToggleEnrich }}"
-                  style="position: absolute; opacity: 0; width: 0; height: 0"
-                />
-                <span style="flex: 1; min-width: 0">
-                  <span
-                    style="
-                      display: block;
-                      font-family: var(--font-sans);
-                      font-size: 15px;
-                      font-weight: 600;
-                      color: var(--color-text);
-                    "
-                    >Also fetch metadata and posters from TMDB</span
-                  >
-                  <span
-                    style="
-                      display: block;
-                      font-family: var(--font-sans);
-                      font-size: 13px;
-                      color: var(--color-text-faint);
-                      margin-top: 2px;
-                      line-height: 1.45;
-                      text-wrap: pretty;
-                    "
-                    >{{ imp.enrichHint }}</span
-                  >
-                </span>
-              </label>
+              <dc-import
+                name="mol.EnrichCheckCard"
+                checked="{{ imp.enrich }}"
+                key-set="{{ imp.keySet }}"
+                keyed-hint="{{ imp.keyedHint }}"
+                on-toggle="{{ imp.onToggleEnrich }}"
+                hint-size="100%,74px"
+              ></dc-import>
               <!-- With no folder listed Start import is disabled: drawn secondary and inert, as the
                    Sync's Start is before its key is tested (the built Button takes `disabled`). -->
               <div style="{{ imp.startWrapStyle }}">

@@ -384,53 +384,14 @@
                   </sc-for>
                 </div>
               </div>
-              <label
-                style="
-                  display: flex;
-                  align-items: flex-start;
-                  gap: 12px;
-                  padding: 14px 16px;
-                  background: var(--color-surface);
-                  border: 1px solid var(--color-border-soft);
-                  border-radius: 10px;
-                  cursor: pointer;
-                  margin-top: 4px;
-                "
-              >
-                <span style="{{ lf.enrichBoxStyle }}"
-                  >{{ lf.enrichCheck }}</span
-                >
-                <input
-                  type="checkbox"
-                  checked="{{ lf.enrich }}"
-                  onChange="{{ lf.onToggleEnrich }}"
-                  style="position: absolute; opacity: 0; width: 0; height: 0"
-                />
-                <span style="flex: 1; min-width: 0">
-                  <span
-                    style="
-                      display: block;
-                      font-family: var(--font-sans);
-                      font-size: 15px;
-                      font-weight: 600;
-                      color: var(--color-text);
-                    "
-                    >Also fetch metadata and posters from TMDB</span
-                  >
-                  <span
-                    style="
-                      display: block;
-                      font-family: var(--font-sans);
-                      font-size: 13px;
-                      color: var(--color-text-faint);
-                      margin-top: 2px;
-                      line-height: 1.45;
-                      text-wrap: pretty;
-                    "
-                    >{{ lf.enrichHint }}</span
-                  >
-                </span>
-              </label>
+              <dc-import
+                name="mol.EnrichCheckCard"
+                checked="{{ lf.enrich }}"
+                key-set="{{ lf.keySet }}"
+                keyed-hint="{{ lf.keyedHint }}"
+                on-toggle="{{ lf.onToggleEnrich }}"
+                hint-size="100%,74px"
+              ></dc-import>
               <div style="display: flex">
                 <dc-import
                   name="prim.Button"

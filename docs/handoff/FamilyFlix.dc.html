@@ -398,7 +398,7 @@
 
         // ---- nav ----
         openDetail(id){ this.setState(s=>({screen:'detail',selectedId:id,openDrop:null,gearOpen:false,editMenuOpen:false,detailReturn:s.screen==='genre'?'genre':'browse'})); }
-        backFromDetail(){ this.setState(s=>({screen:s.detailReturn==='genre'?'genre':'browse',playing:false,editMenuOpen:false})); }
+        backFromDetail(){ this.setState(s=>({screen:s.detailReturn==='genre'?'genre':s.detailReturn==='settings'?'settings':'browse',detailReturn:s.detailReturn==='settings'?'browse':s.detailReturn,playing:false,editMenuOpen:false})); }
         goBrowse(){ this.setState({screen:'browse',playing:false,gearOpen:false,openDrop:null,editMenuOpen:false,impStep:'setup',impProgress:0,addContext:null}); }
         goAdd(){ this.resetForm(); this.setState({screen:'add',gearOpen:false,addContext:'settings',resolveId:null}); }
         // Link is chosen on every visit to either start, never remembered (log 41 Q11).
@@ -522,7 +522,7 @@
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
         // ---- add form ----
-        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fSeasonPosters:{},fFound:[],fFoundPick:0,fRating:0,fRatingHover:null}); }
+        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fSeasonPosters:{},fFound:[],fFoundPick:0,fRating:0,fRatingHover:null,fEnrich:false}); }
         setFRating(pct){ this.setState({fRating:pct}); }
         hoverFRating(pct){ this.setState({fRatingHover:pct}); }
         clearFRatingHover(){ this.setState({fRatingHover:null}); }
@@ -559,7 +559,19 @@
         chooseLang(i,l){ this.setState(st=>({subLangOpen:null, fSubs:st.fSubs.map((x,j)=>j===i?{...x,lang:l}:x)})); }
         toggleChip(g){ this.setState(s=>({fGenres:s.fGenres.includes(g)?s.fGenres.filter(x=>x!==g):[...s.fGenres,g]})); }
         backFromAdd(){ if(this.state.addContext==='seriesImport') this.setState({screen:'import',impStep:'review',addContext:null,resolveId:null}); else if(this.state.addContext==='seriesEdit') this.setState({screen:'series',addContext:null}); else if(this.state.addContext==='import') this.setState({screen:'import',impStep:'review',addContext:null,resolveId:null}); else if(this.state.addContext==='edit') this.setState({screen:'detail',addContext:null}); else if(this.state.addContext==='settings') this.setState({screen:'settings',addContext:null,gearOpen:false,openDrop:null}); else this.goBrowse(); }
-        saveMovie(){ if(this.state.addContext==='seriesEdit'){ this.setState({screen:'series',addContext:null}); return; } if(this.state.addContext==='import'||this.state.addContext==='seriesImport'){ const id=this.state.resolveId; this.setState(s=>({screen:'import',impStep:'review',impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1,addContext:null,resolveId:null})); } else if(this.state.addContext==='edit'){ this.setState({screen:'detail',addContext:null}); } else { this.goBrowse(); } }
+        saveMovie(){ if(this.state.addContext==='seriesEdit'){ this.setState({screen:'series',addContext:null}); return; } if(this.state.addContext==='import'||this.state.addContext==='seriesImport'){ const id=this.state.resolveId; this.setState(s=>({screen:'import',impStep:'review',impProblems:s.impProblems.filter(p=>p.id!==id),impMatched:s.impMatched+1,addContext:null,resolveId:null})); } else if(this.state.addContext==='edit'){ this.setState({screen:'detail',addContext:null}); } else if(this.state.fEnrich){ this.addAndSync(); } else { this.goBrowse(); } }
+        // Add and sync: the title is added, the form replaced by its page, the flow pushed over it and Started on
+        // arrival — Start pressed once with setup's defaults, under Start's own rules (no key → Settings and the
+        // notice; offline → the banner). History is Settings → the title's page → the flow; both ways out of the
+        // flow step onto the page, and the page's Back onto Settings.
+        addAndSync(){ const s=this.state; const isSeries=s.fKind==='series'; const title=s.fTitle.trim();
+          if(isSeries){ const id='s'+Date.now(); const bySeason={}; for(const e of s.fEpisodes){ const n=parseInt(e.season,10); bySeason[n]=(bySeason[n]||0)+1; }
+            const seasons=Object.keys(bySeason).map(Number).sort((a,b)=>a-b).map(n=>bySeason[n]);
+            this.rawSeries=[...this.rawSeries,{id,title,ys:parseInt(s.fYear,10)||null,ye:null,genres:[...s.fGenres],g1:'#2a3540',g2:'#5f93a8',rating:0,creator:s.fDirector,cast:s.fCast?s.fCast.split(',').map(x=>x.trim()).filter(Boolean):[],runtime:null,syn:s.fDescription,seasons,titles:s.fEpisodes.map(e=>e.title||'')}];
+            this.setState({seriesId:id,seriesReturn:'settings',addContext:null,fEnrich:false,screen:'enrich',enReturn:'series',enStep:'setup',enSingleTitle:title,enSingleKind:'series',enSeriesId:id,enSeasonPicks:{},enScope:'single'},()=>this.startEnrich());
+          } else { const id=Date.now();
+            this.rawMovies=[...this.rawMovies,{id,title,year:parseInt(s.fYear,10)||null,genres:[...s.fGenres],runtime:null,st:'unwatched',prog:0,g1:'#2a3540',g2:'#5f93a8',syn:s.fDescription,added:0}];
+            this.setState({selectedId:id,detailReturn:'settings',addContext:null,fEnrich:false,screen:'enrich',enReturn:'detail',enStep:'setup',enSingleTitle:title,enSingleKind:'movie',enSeriesId:null,enScope:'single'},()=>this.startEnrich()); } }
 
         // ---- series ----
         seriesById(id){ return this.rawSeries.find(x=>x.id===id)||null; }
@@ -596,9 +608,9 @@
         }
         toggleSeriesFav(id){ this.setState(st=>({seriesFavs:st.seriesFavs.includes(id)?st.seriesFavs.filter(x=>x!==id):[...st.seriesFavs,id]})); }
         setTab(t){ this.setState({tab:t,search:'',openDrop:null,gearOpen:false}); }
-        openSeries(id){ this.setState({screen:'series',seriesId:id,gearOpen:false,openDrop:null}); }
+        openSeries(id){ this.setState({screen:'series',seriesId:id,seriesReturn:null,gearOpen:false,openDrop:null}); }
         openSeason(n){ this.setState({screen:'season',seasonN:n}); }
-        backFromSeries(){ this.setState({screen:'browse',tab:'series'}); }
+        backFromSeries(){ this.setState(s=>s.seriesReturn==='settings'?{screen:'settings',seriesReturn:null}:{screen:'browse',tab:'series'}); }
         backFromSeason(){ this.setState({screen:'series'}); }
         toggleEpWatched(ep){ this.setState(st=>{ const cur=st.epState[ep.key]||{}; const now=!cur.watched; return {epState:{...st.epState,[ep.key]:{watched:now,progress:now?0:cur.progress||0}}}; }); }
         toggleSeasonAll(){ const eps=this.episodesOf(this.state.seriesId,this.state.seasonN); const allW=eps.every(e=>e.watched);
@@ -920,9 +932,9 @@
               refusal:s.folderRefusal, refused:s.folderRefusal!==null,
               // The group Scan: the shapes, the Import mode, the TMDB box, then Scan folders.
               modes:modeChoices(),
-              enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(), enrichCheck:s.impEnrich?'✓':'',
-              enrichBoxStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',width:'22px',height:'22px',marginTop:'1px',borderRadius:'6px',border:'2px solid '+(s.impEnrich?accent:'var(--color-text-faint)'),background:s.impEnrich?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
-              enrichHint:s.tmdbConnected?'Runs straight after the scan, over everything it brings in. Needs the internet.':'Needs a TMDB key. Add one under Settings → Network first.',
+              // The graduated mol.EnrichCheckCard: the keyed hint is ours, the key-less one the card's.
+              enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(), keySet:s.tmdbConnected,
+              keyedHint:'Runs straight after the scan, over everything it brings in. Needs the internet.',
               scanVariant:s.libraryFolders.length>0?'primary':'secondary', onScan:()=>this.scanFolders(),
             },
             codecModel:{
@@ -1020,6 +1032,9 @@
                 subtitles:ep.subs.map((x,k)=>({...x, remove:()=>this.removeEpisodeSub(i,k), onLangChange:(l)=>this.setEpisodeSubLang(i,k,l)}))})),
               addEpisodeFiles:()=>this.addEpisodeFiles(),
               canSave,
+              // Add and sync: the box on a plain add alone, both kinds — never on an edit or a Resolve. Off on every mount.
+              showEnrich:s.addContext==='settings', enrich:!!s.fEnrich, onToggleEnrich:()=>this.setState(x=>({fEnrich:!x.fEnrich})), keySet:s.tmdbConnected,
+              enrichHint:'Runs straight after the save, over this title. Needs the internet.',
               labelStyle, inputStyle, textareaStyle,
               title:s.fTitle, year:s.fYear, onTitle:(e)=>this.onFTitle(e), onYear:(e)=>this.onFYear(e),
               director:s.fDirector, cast:s.fCast, description:s.fDescription, onDirector:(e)=>this.onFDirector(e), onCast:(e)=>this.onFCast(e), onDescription:(e)=>this.onFDescription(e),
@@ -1070,10 +1085,9 @@
               elapsedLabel:'Elapsed '+fmt(elapsed), etaLabel: etaSec>0 ? ('About '+fmt(etaSec)+' left') : '', hasEta: etaSec>0,
               log:s.impLog,
               matched:s.impMatched, problemCount:s.impProblems.length, problems,
-              enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(),
-              enrichCheck:s.impEnrich?'✓':'',
-              enrichBoxStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',width:'22px',height:'22px',marginTop:'1px',borderRadius:'6px',border:'2px solid '+(s.impEnrich?accent:'var(--color-text-faint)'),background:s.impEnrich?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
-              enrichHint:s.tmdbConnected?'Runs straight after the import, over everything it brings in. Needs the internet.':'Needs a TMDB key. Add one under Settings → Network first.',
+              // The graduated mol.EnrichCheckCard: the keyed hint is ours, the key-less one the card's.
+              enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(), keySet:s.tmdbConnected,
+              keyedHint:'Runs straight after the import, over everything it brings in. Needs the internet.',
               hasProblems:s.impProblems.length>0, allResolved:s.impProblems.length===0,
               groups, hasKindFilter:kindsHeld.length>1, kindOptions, kind:impKind, onKind:(k)=>this.setImpKind(k),
               hasSkipKind:impKind!=='all'&&impKind!=='differs', onSkipKind:()=>this.skipProblems(shownIds),
