@@ -6,12 +6,14 @@
 // through `videoFile`, its duration off the file (the probe, then the MP4's own
 // `mvhd`), and the component the **Component slot** holds at the call spawned
 // over `frameArgs(file, duration × FRAME_POINT)` through the existing `spawn`
-// seam. Its stdout is collected and answered as a stream.
+// seam. Its stdout is collected and answered as `{ kind: 'frame', picture }`.
 //
-// `null` in every case with no picture — no component, a `missing` or
-// `unreachable` video, no duration, an empty stdout, the **Frame budget**
-// (20 s) spent, the signal aborted — killing the process wherever one runs.
-// It never rejects (`derivedRuntime`'s rule).
+// Issue #390: every case with no picture answers `{ kind: 'none', reason }`
+// rather than a bare `null`, so the Sync can log why — `no-component`, a
+// `missing` or `unreachable` video, `no-duration`, `timed-out` at the **Frame
+// budget** (20 s), `aborted`, and `failed` for a grab that ran and gave
+// nothing (an empty stdout, a spawn or stdout error) — killing the process
+// wherever one runs. It never rejects (`derivedRuntime`'s rule).
 //
 // The last block runs real ffmpeg — the Default component, else one on PATH —
 // over a multi-frame video it makes itself, and skips on a machine with none.
@@ -37,7 +39,7 @@ import {
 import { FRAME_POINT, frameArgs } from '../frameArgs/frameArgs';
 import type { MediaProbe } from '../probe/probe';
 
-import { createPlayback } from './createPlayback';
+import { createPlayback, type FrameOutcome } from './createPlayback';
 
 /** What the scripted component's stdout does once spawned. */
 type Script =
@@ -149,6 +151,14 @@ function sandbox(contents: string | Buffer = 'episode bytes'): {
   };
 }
 
+/** The picture of a `frame` outcome, failing the test for a `none`. */
+function pictureOf(outcome: FrameOutcome): Readable {
+  if (outcome.kind !== 'frame') {
+    throw new Error(`no frame: ${outcome.reason}`);
+  }
+  return outcome.picture;
+}
+
 async function bytesOf(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = [];
   for await (const chunk of stream) {
@@ -174,8 +184,8 @@ describe('createPlayback.frame — a picture', () => {
       () => null
     ).frame(video, live());
 
-    expect(frame).not.toBeNull();
-    expect(await bytesOf(frame as Readable)).toEqual(JPEG);
+    expect(frame.kind).toBe('frame');
+    expect(await bytesOf(pictureOf(frame))).toEqual(JPEG);
   });
 
   it('spawns frameArgs over the file at a third of its duration', async () => {
@@ -201,7 +211,7 @@ describe('createPlayback.frame — a picture', () => {
       () => null
     ).frame(video, live());
 
-    expect(frame).not.toBeNull();
+    expect(frame.kind).toBe('frame');
     expect(component.spawned).toHaveLength(1);
     const args = component.spawned[0];
     expect(Number(args[args.indexOf('-ss') + 1])).toBeCloseTo(10 / 3, 3);
@@ -224,8 +234,8 @@ describe('createPlayback.frame — a picture', () => {
   });
 });
 
-describe('createPlayback.frame — null before a process runs', () => {
-  it('answers null with no component', async () => {
+describe('createPlayback.frame — no frame before a process runs', () => {
+  it('answers no-component with no component in the slot', async () => {
     const { media, file, video } = sandbox();
     copyFileSync(FIXTURE_VIDEO, file);
 
@@ -234,10 +244,10 @@ describe('createPlayback.frame — null before a process runs', () => {
         video,
         live()
       )
-    ).toBeNull();
+    ).toEqual({ kind: 'none', reason: 'no-component' });
   });
 
-  it('answers null for a missing video, spawning nothing', async () => {
+  it('answers missing for a missing video, spawning nothing', async () => {
     const { media } = sandbox();
     const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
 
@@ -246,11 +256,11 @@ describe('createPlayback.frame — null before a process runs', () => {
         { videoPath: 'gone/S09E09.mkv', videoFolderId: null },
         live()
       )
-    ).toBeNull();
+    ).toEqual({ kind: 'none', reason: 'missing' });
     expect(component.spawned).toEqual([]);
   });
 
-  it('answers null for a linked video whose Library folder is unreachable, spawning nothing', async () => {
+  it('answers unreachable for a linked video whose Library folder is unreachable, spawning nothing', async () => {
     const { media, folder } = sandbox();
     const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
     const unplugged = join(folder, 'not-plugged-in');
@@ -262,11 +272,11 @@ describe('createPlayback.frame — null before a process runs', () => {
         { videoPath: 'Show/S01E01.mkv', videoFolderId: FOLDER_ID },
         live()
       )
-    ).toBeNull();
+    ).toEqual({ kind: 'none', reason: 'unreachable' });
     expect(component.spawned).toEqual([]);
   });
 
-  it('answers null with no duration, spawning nothing', async () => {
+  it('answers no-duration with no duration, spawning nothing', async () => {
     // Not an MP4, and a probe that says nothing: no Frame point.
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'bytes', bytes: JPEG }, null);
@@ -276,13 +286,13 @@ describe('createPlayback.frame — null before a process runs', () => {
         video,
         live()
       )
-    ).toBeNull();
+    ).toEqual({ kind: 'none', reason: 'no-duration' });
     expect(component.spawned).toEqual([]);
   });
 });
 
-describe('createPlayback.frame — null once a process runs, killing it', () => {
-  it('answers null for an empty stdout, killing the process', async () => {
+describe('createPlayback.frame — no frame once a process runs, killing it', () => {
+  it('answers failed for an empty stdout, killing the process', async () => {
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'empty' });
 
@@ -291,11 +301,11 @@ describe('createPlayback.frame — null once a process runs, killing it', () => 
         video,
         live()
       )
-    ).toBeNull();
+    ).toEqual({ kind: 'none', reason: 'failed' });
     expect(component.killed).toBeGreaterThan(0);
   });
 
-  it('answers null at the Frame budget (20 s), killing the process', async () => {
+  it('answers timed-out at the Frame budget (20 s), killing the process', async () => {
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'hang' });
@@ -315,11 +325,11 @@ describe('createPlayback.frame — null once a process runs, killing it', () => 
     expect(component.killed).toBe(0);
 
     await vi.advanceTimersByTimeAsync(1_000);
-    expect(await answer).toBeNull();
+    expect(await answer).toEqual({ kind: 'none', reason: 'timed-out' });
     expect(component.killed).toBeGreaterThan(0);
   });
 
-  it('answers null on abort, killing the process', async () => {
+  it('answers aborted on abort, killing the process', async () => {
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'hang' });
     const controller = new AbortController();
@@ -332,11 +342,11 @@ describe('createPlayback.frame — null once a process runs, killing it', () => 
     await new Promise((resolve) => setImmediate(resolve));
     controller.abort();
 
-    expect(await answer).toBeNull();
+    expect(await answer).toEqual({ kind: 'none', reason: 'aborted' });
     expect(component.killed).toBeGreaterThan(0);
   });
 
-  it('answers null for a signal already aborted, leaving no process running', async () => {
+  it('answers aborted for a signal already aborted, leaving no process running', async () => {
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'hang' });
     const controller = new AbortController();
@@ -347,13 +357,13 @@ describe('createPlayback.frame — null once a process runs, killing it', () => 
         video,
         controller.signal
       )
-    ).toBeNull();
+    ).toEqual({ kind: 'none', reason: 'aborted' });
     expect(component.killed).toBe(component.spawned.length);
   });
 });
 
 describe('createPlayback.frame — never rejects', () => {
-  it('answers null when the spawn throws', async () => {
+  it('answers failed when the spawn throws', async () => {
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'spawn-throws' });
 
@@ -362,10 +372,10 @@ describe('createPlayback.frame — never rejects', () => {
         video,
         live()
       )
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ kind: 'none', reason: 'failed' });
   });
 
-  it('answers null when stdout errors, killing the process', async () => {
+  it('answers failed when stdout errors, killing the process', async () => {
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'stdout-error' });
 
@@ -374,11 +384,11 @@ describe('createPlayback.frame — never rejects', () => {
         video,
         live()
       )
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ kind: 'none', reason: 'failed' });
     expect(component.killed).toBeGreaterThan(0);
   });
 
-  it('answers null when the probe throws and the file has no header to read', async () => {
+  it('answers no-duration when the probe throws and the file has no header to read', async () => {
     const { media, video } = sandbox();
     const component = scriptedComponent({ kind: 'bytes', bytes: JPEG });
     component.probe = () => {
@@ -390,7 +400,7 @@ describe('createPlayback.frame — never rejects', () => {
         video,
         live()
       )
-    ).resolves.toBeNull();
+    ).resolves.toEqual({ kind: 'none', reason: 'no-duration' });
   });
 });
 
@@ -447,8 +457,8 @@ describe.skipIf(realBinaries === null)(
         () => null
       ).frame(video, live());
 
-      expect(frame).not.toBeNull();
-      const bytes = await bytesOf(frame as Readable);
+      expect(frame.kind).toBe('frame');
+      const bytes = await bytesOf(pictureOf(frame));
       expect(bytes.length).toBeGreaterThan(100);
       expect([...bytes.subarray(0, 3)]).toEqual([0xff, 0xd8, 0xff]);
     }, 30_000);

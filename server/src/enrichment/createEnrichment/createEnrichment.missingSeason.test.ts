@@ -82,7 +82,10 @@ function knowsBothShows(): FakeTmdb {
 }
 
 type Frame = Playback['frame'];
-const pictured: Frame = async () => Readable.from([Buffer.from(FRAME_BYTES)]);
+const pictured: Frame = async () => ({
+  kind: 'frame',
+  picture: Readable.from([Buffer.from(FRAME_BYTES)]),
+});
 
 /** The `kind` the season call answers, as the fake's own `fail` takes it. */
 type FailKind = Parameters<FakeTmdb['fail']>[2];

@@ -139,7 +139,10 @@ function stocksTheShow(): FakeTmdb {
 type Frame = Playback['frame'];
 
 /** A frame that answers a picture at once. */
-const pictured: Frame = async () => Readable.from([Buffer.from(FRAME_BYTES)]);
+const pictured: Frame = async () => ({
+  kind: 'frame',
+  picture: Readable.from([Buffer.from(FRAME_BYTES)]),
+});
 
 interface Options {
   client?: FakeTmdb;

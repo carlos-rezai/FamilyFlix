@@ -7,8 +7,15 @@
 // at all. `createEnrichment` takes a `Playback`, and a `frame` plan asks it
 // for a picture of the episode's own video — stored as `<stem>.frame.jpg` in
 // the Series folder's `season-NN/` with source `'frame'`, and logged
-// `▣ <name>  →  <stored>`. A `null` answer or a failed store is silent and
-// leaves the gradient; a failed TMDB image never falls back to a frame.
+// `▣ <name>  →  <stored>`. A failed store is silent and leaves the gradient;
+// a failed TMDB image never falls back to a frame.
+//
+// Issue #390: a frame that does not come still leaves the gradient, but is no
+// longer silent. `frame` answers `{ kind: 'none', reason }`, and the Sync logs
+// one scan line per such episode naming it and the reason in words —
+// `▣ S01E01  no frame: no component` — save `aborted`, which is a Stop and
+// logs nothing. A series picked in the review takes its frames as a
+// confident match does, through the same show pass.
 //
 // Composed over a real in-memory library, a real `Media` over a sandbox, a
 // fake TMDB, and a Playback whose `frame` is scripted — no real ffmpeg runs.
@@ -50,11 +57,14 @@ const FRAME_BYTES = 'a frame off the video';
 /**
  * A TMDB that knows the show — no poster or backdrop of its own, so the only
  * image asked for is an episode's still. Season 1 lists E01 with no still and
- * E02 with one; E03 is not listed at all.
+ * E02 with one; E03 is not listed at all. Handed several search results, the
+ * show is not **Confident** and goes to the review.
  */
-function knowsTheShow(): FakeTmdb {
+function knowsTheShow(
+  results = [tmdbTvResult(SHOW_ID, TITLE, 2018)]
+): FakeTmdb {
   return fakeTmdb({
-    tvSearches: { [TITLE]: [tmdbTvResult(SHOW_ID, TITLE, 2018)] },
+    tvSearches: { [TITLE]: results },
     shows: [
       tmdbTvDetail(SHOW_ID, TITLE, 2018, {
         poster_path: null,
@@ -90,7 +100,10 @@ const findsNothing = (): FakeTmdb => fakeTmdb({ tvSearches: { [TITLE]: [] } });
 type Frame = Playback['frame'];
 
 /** A frame that answers a picture at once. */
-const pictured: Frame = async () => Readable.from([Buffer.from(FRAME_BYTES)]);
+const pictured: Frame = async () => ({
+  kind: 'frame',
+  picture: Readable.from([Buffer.from(FRAME_BYTES)]),
+});
 
 interface Options {
   client?: FakeTmdb;
@@ -352,21 +365,52 @@ describe('createEnrichment: when no frame is taken', () => {
 });
 
 describe('createEnrichment: a frame that does not land', () => {
-  it('leaves the gradient and logs nothing when the frame answers null', async () => {
-    const { enrichment, storage, frame, addShow } = world({
-      frame: async () => null,
+  it.each([
+    ['no-component', 'no component'],
+    ['missing', 'missing'],
+    ['unreachable', 'unreachable'],
+    ['no-duration', 'no duration'],
+    ['timed-out', 'timed out'],
+    ['failed', 'failed'],
+  ] as const)(
+    'leaves the gradient and logs one line naming the reason: %s',
+    async (reason, words) => {
+      const { enrichment, storage, frame, addShow } = world({
+        frame: async () => ({ kind: 'none', reason }),
+      });
+      const { id } = await addShow([[1, 1]]);
+
+      await sync(enrichment);
+      const run = await reviewed(enrichment);
+
+      expect(frame).toHaveBeenCalledTimes(1);
+      const episode = episodeOf(storage, id, 1, 1);
+      expect(episode.stillPath).toBeNull();
+      expect(storage.stillSourcesOf(id).has(episode.id)).toBe(false);
+      expect(frameLines(run.log)).toEqual([
+        { text: `▣ S01E01  no frame: ${words}`, kind: 'scan' },
+      ]);
+      expect(run.decisions).toEqual([]);
+    }
+  );
+
+  it('logs one no-frame line per episode that gets none, beside the frames that came', async () => {
+    const { enrichment, storage, addShow } = world({
+      frame: async (video) =>
+        video.videoPath.endsWith('S01E03.mkv')
+          ? { kind: 'none', reason: 'no-duration' }
+          : pictured(video, new AbortController().signal),
     });
-    const { id } = await addShow([[1, 1]]);
+    const { id } = await addShow();
 
     await sync(enrichment);
     const run = await reviewed(enrichment);
 
-    expect(frame).toHaveBeenCalledTimes(1);
-    const episode = episodeOf(storage, id, 1, 1);
-    expect(episode.stillPath).toBeNull();
-    expect(storage.stillSourcesOf(id).has(episode.id)).toBe(false);
-    expect(frameLines(run.log)).toEqual([]);
-    expect(run.decisions).toEqual([]);
+    const first = episodeOf(storage, id, 1, 1).stillPath;
+    expect(frameLines(run.log)).toEqual([
+      { text: `▣ S01E01.frame.jpg  →  ${first}`, kind: 'scan' },
+      { text: '▣ S01E03  no frame: no duration', kind: 'scan' },
+    ]);
   });
 
   it('leaves the gradient and logs nothing when the frame cannot be stored', async () => {
@@ -395,11 +439,13 @@ describe('createEnrichment: a frame that does not land', () => {
 describe('createEnrichment: Stop aborts a frame in flight', () => {
   it('aborts the frame’s signal, stores nothing and takes no further frame', async () => {
     let asked: AbortSignal | null = null;
-    // A grab that runs until it is stopped, answering null as `frame` does.
+    // A grab that runs until it is stopped, answering `aborted` as `frame` does.
     const held: Frame = (_video, signal) => {
       asked = signal;
       return new Promise((resolve) => {
-        signal.addEventListener('abort', () => resolve(null));
+        signal.addEventListener('abort', () =>
+          resolve({ kind: 'none', reason: 'aborted' })
+        );
       });
     };
     const { enrichment, storage, frame, addShow } = world({ frame: held });
@@ -467,6 +513,60 @@ describe('createEnrichment: a frame of a Linked video', () => {
     expect(storage.stillSourcesOf(series.id).get(linked.id)).toBe('frame');
     expect(filesUnder(libraryFolder)).toEqual([
       join(TITLE, 'Season 01', 'S01E01.mkv'),
+    ]);
+  });
+});
+
+describe('createEnrichment: a series picked in the review', () => {
+  /** Two shows answer the search, so the show waits on an ambiguous Decision. */
+  const ambiguous = () =>
+    knowsTheShow([
+      tmdbTvResult(SHOW_ID, TITLE, 2018),
+      tmdbTvResult(SHOW_ID + 1, TITLE, 2011),
+    ]);
+
+  it('takes its frames on the pick, as a confident match does', async () => {
+    const { enrichment, storage, frame, addShow } = world({
+      client: ambiguous(),
+    });
+    const { id, folder } = await addShow();
+
+    await sync(enrichment);
+    const run = await reviewed(enrichment);
+    expect(run.decisions).toHaveLength(1);
+    expect(frame).not.toHaveBeenCalled();
+
+    const [decision] = run.decisions;
+    expect(await enrichment.pick(decision.id, SHOW_ID)).toEqual({
+      kind: 'picked',
+    });
+
+    expect(episodeOf(storage, id, 1, 1).stillPath).toBe(
+      `${folder}/season-01/S01E01.frame.jpg`
+    );
+    expect(episodeOf(storage, id, 1, 3).stillPath).toBe(
+      `${folder}/season-01/S01E03.frame.jpg`
+    );
+  });
+
+  it('logs a no-frame line for an episode the pick gets no frame for', async () => {
+    const { enrichment, storage, addShow } = world({
+      client: ambiguous(),
+      frame: async (video) =>
+        video.videoPath.endsWith('S01E03.mkv')
+          ? { kind: 'none', reason: 'unreachable' }
+          : pictured(video, new AbortController().signal),
+    });
+    const { id } = await addShow();
+
+    await sync(enrichment);
+    const [decision] = (await reviewed(enrichment)).decisions;
+    await enrichment.pick(decision.id, SHOW_ID);
+
+    const first = episodeOf(storage, id, 1, 1).stillPath;
+    expect(frameLines(enrichment.current()?.log ?? [])).toEqual([
+      { text: `▣ S01E01.frame.jpg  →  ${first}`, kind: 'scan' },
+      { text: '▣ S01E03  no frame: unreachable', kind: 'scan' },
     ]);
   });
 });
