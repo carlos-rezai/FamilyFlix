@@ -1,8 +1,8 @@
 # 46 — Audio tracks
 
 > **Initiative:** `audio-tracks`
-> **Issue:** to be filed by `write-a-prd` (build order step 29)
-> **PRD:** `docs/PRDs/46-audio-tracks.md` (to be written)
+> **Issue:** #397 (build order step 29)
+> **PRD:** `docs/PRDs/46-audio-tracks.md`
 
 This log is the `grill-me` session for build order step 29, 🔜 **Audio
 tracks**. It was held before the PRD and the prototype revision, against the
