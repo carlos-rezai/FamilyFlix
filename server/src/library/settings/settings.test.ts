@@ -15,7 +15,7 @@
 // **Language pool** is not checked — a display vocabulary, not a constraint,
 // the rule a **Subtitle**'s own language follows.
 
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -23,11 +23,17 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createSqliteStorage } from '..';
 import { openDatabase, type SqliteDatabase } from '../../db';
 import { createSettings } from './settings';
-import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 import {
+  shippingSourcesMatching,
+  withoutComments,
+} from '@/test-support/shippingSources/shippingSources';
+import {
+  DEFAULT_AUDIO_LANGUAGE,
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
+  LANGUAGE_POOL,
+  type PoolLanguage,
   type Settings,
 } from '@/types';
 import {
@@ -506,5 +512,50 @@ describe('library: tmdbRatings / setTmdbRatings — the TMDB ratings preference'
     storage.reset();
 
     expect(storage.settings().tmdbRatings).toBe(true);
+  });
+});
+
+// 46 — Audio tracks, Phase 1 (issue #399): the pool renamed. The **Language
+// pool** is no longer the subtitles' alone — the **Preferred audio language**
+// is chosen off it too — so its list is `LANGUAGE_POOL` and its union
+// `PoolLanguage`, for every reader. `DEFAULT_SUBTITLE_LANGUAGE` stays, and
+// `DEFAULT_AUDIO_LANGUAGE`, English, is born beside it with nothing reading it.
+describe('library: the Language pool — renamed for audio beside subtitles', () => {
+  it('lists the seven languages as LANGUAGE_POOL, in the dropdown order', () => {
+    expect(LANGUAGE_POOL).toEqual([
+      'English',
+      'Spanish',
+      'French',
+      'German',
+      'Portuguese',
+      'Italian',
+      'Dutch',
+    ]);
+  });
+
+  it('exports DEFAULT_AUDIO_LANGUAGE as English, a member of the pool', () => {
+    const audio: PoolLanguage = DEFAULT_AUDIO_LANGUAGE;
+
+    expect(audio).toBe('English');
+    expect(LANGUAGE_POOL).toContain(DEFAULT_AUDIO_LANGUAGE);
+  });
+
+  it('leaves no code, shipping or test, naming the old list or its union', () => {
+    // Spelled in halves so this suite does not name them itself.
+    const pattern = new RegExp(
+      `\\b(?:${'SUBTITLE_' + 'LANGUAGES'}|${'Subtitle' + 'Language'})\\b`
+    );
+    const sources = (root: string): string[] =>
+      readdirSync(root, { recursive: true, encoding: 'utf8' })
+        .map((entry) => `${root}/${entry}`.replace(/\\/g, '/'))
+        .filter((path) => /\.tsx?$/.test(path))
+        .filter((path) => !/\/(?:dist|node_modules)\//.test(path));
+    const readers = ['server/src', 'src', 'electron']
+      .flatMap(sources)
+      .filter((path) =>
+        pattern.test(withoutComments(readFileSync(path, 'utf8')))
+      );
+
+    expect(readers).toEqual([]);
   });
 });
