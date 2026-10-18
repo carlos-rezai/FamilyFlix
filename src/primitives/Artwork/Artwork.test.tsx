@@ -50,6 +50,13 @@ describe('Artwork', () => {
     );
   });
 
+  it('quotes the url, so a name with parentheses still paints', () => {
+    // Unquoted, `(` ends `url(` early and the whole declaration is dropped.
+    const background = renderArtwork("/api/images/a/Pilot (Part 1)'s.jpg");
+
+    expect(background).toContain('url("/api/images/a/Pilot (Part 1)\'s.jpg")');
+  });
+
   it('paints the gradient alone when there is no artwork', () => {
     const background = renderArtwork(null);
 

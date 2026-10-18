@@ -11,6 +11,15 @@ describe('imageUrl', () => {
     );
   });
 
+  it('encodes each segment, so a Still named after its video loads', () => {
+    // A Still is `<video stem>.frame.jpg`, and a stem keeps its spaces.
+    expect(
+      imageUrl('fck-thats-delicious/season-04/Episode 5 - #1 50% off?.jpg')
+    ).toBe(
+      '/api/images/fck-thats-delicious/season-04/Episode%205%20-%20%231%2050%25%20off%3F.jpg'
+    );
+  });
+
   it('gives null for a title with no image', () => {
     expect(imageUrl(null)).toBeNull();
   });

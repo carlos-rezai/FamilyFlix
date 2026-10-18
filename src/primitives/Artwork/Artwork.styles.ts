@@ -27,7 +27,8 @@ export const Root = styled.div<{
   place-items: center;
   background-image: ${({ $url, $g1, $g2 }) => {
     const gradient = `linear-gradient(155deg, ${$g1} 0%, ${$g2} 100%)`;
-    return $url ? `url(${$url}), ${gradient}` : gradient;
+    // Quoted: a `(` or `'` in a file's name would end an unquoted `url(`.
+    return $url ? `url("${$url}"), ${gradient}` : gradient;
   }};
   background-position: center;
   background-size: cover;
