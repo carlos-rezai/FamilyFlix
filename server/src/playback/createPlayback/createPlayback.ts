@@ -12,6 +12,7 @@ import { capabilities } from '../capabilities/capabilities';
 import {
   choosePlaybackPath,
   type ComponentAvailability,
+  type PlaybackDecision,
 } from '../choosePlaybackPath/choosePlaybackPath';
 import type {
   ComponentSlot,
@@ -337,26 +338,39 @@ export function createPlayback(
   libraryFolderPath: LibraryFolderPath
 ): Playback {
   /**
-   * Probe the file and decide, which is the one thing both `read` and `stream`
-   * do. Neither remembers the answer: the decision is made per request from the
-   * file and from whatever the slot holds now, which is what lets a film that
-   * could not be played this morning play this afternoon.
+   * The domain's one call of the format policy: a file, the component and the
+   * probe already read off it → the **Playback path** at that offset for that
+   * **Audio track index**. `decide` asks it once per request, and `read` once
+   * more per track over the same probe.
+   */
+  const decisionFor = (
+    file: string,
+    component: PlaybackComponent | null,
+    probe: MediaProbe | null,
+    offsetSeconds: number,
+    audioTrack: number
+  ): PlaybackDecision =>
+    choosePlaybackPath({
+      file,
+      probe,
+      component: availabilityOf(component),
+      offsetSeconds,
+      audioTrack,
+    });
+
+  /**
+   * Read the slot, probe once and decide, which is the one thing both `read`
+   * and `stream` do. Neither remembers the answer: the decision is made per
+   * request from the file and from whatever the slot holds now, which is what
+   * lets a film that could not be played this morning play this afternoon.
    */
   const decide = (file: string, offsetSeconds = 0, audioTrack = 0) => {
     const component = slot.current();
     const probe = component === null ? null : component.probe(file);
-    const availability = availabilityOf(component);
     return {
       component,
       probe,
-      availability,
-      decision: choosePlaybackPath({
-        file,
-        probe,
-        component: availability,
-        offsetSeconds,
-        audioTrack,
-      }),
+      decision: decisionFor(file, component, probe, offsetSeconds, audioTrack),
     };
   };
 
@@ -415,7 +429,7 @@ export function createPlayback(
   return {
     videoFile,
     read: (file) => {
-      const { probe, availability, decision } = decide(file);
+      const { component, probe, decision } = decide(file);
       const durationSeconds = lengthOf(file, probe);
 
       // A film whose length nothing can determine is a film that cannot be
@@ -431,15 +445,10 @@ export function createPlayback(
       }
 
       // Each track's own path, from the one probe: what choosing it would take.
-      const tracks = audioTracks(probe, (audioTrack) => {
-        const { path } = choosePlaybackPath({
-          file,
-          probe,
-          component: availability,
-          audioTrack,
-        });
-        return path === 'no-track' ? 'cannot-play' : path;
-      });
+      const tracks = audioTracks(
+        probe,
+        (audioTrack) => decisionFor(file, component, probe, 0, audioTrack).path
+      );
       return { path: decision.path, durationSeconds, audioTracks: tracks };
     },
     duration: (file) => durationOf(file, slot.current()),
