@@ -1,0 +1,1052 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,600;8..60,700&display=swap"
+        />
+        <style>
+          html,
+          body {
+            margin: 0;
+            height: 100%;
+            background: #1b1611;
+          }
+          a {
+            color: var(--color-accent);
+          }
+          a:hover {
+            color: var(--color-accent-hover);
+          }
+          @keyframes ffPop {
+            from {
+              opacity: 0;
+              transform: translateY(4px) scale(0.98);
+            }
+            to {
+              opacity: 1;
+              transform: none;
+            }
+          }
+          @keyframes ffFade {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+          @keyframes ffSpin {
+            to {
+              transform: rotate(360deg);
+            }
+          }
+        </style>
+      </helmet>
+      <div
+        data-screen-label="Manage library"
+        style="position: relative; height: 100%; background: var(--color-bg-2)"
+      >
+        <div style="height: 100%; overflow-y: auto">
+          <div
+            style="
+              max-width: 780px;
+              margin: 0 auto;
+              padding: var(--space-6) var(--space-6) var(--space-8);
+            "
+          >
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 16px;
+                margin-bottom: 6px;
+              "
+            >
+              <dc-import
+                name="prim.IconButton"
+                icon="back"
+                variant="outline"
+                size="42"
+                title="Back"
+                on-click="{{ onBack }}"
+                hint-size="42px,42px"
+              ></dc-import>
+              <h1
+                style="
+                  font-family: var(--font-serif);
+                  font-weight: 600;
+                  font-size: 30px;
+                  color: var(--color-text);
+                  margin: 0;
+                  flex: 1;
+                "
+              >
+                Manage library
+              </h1>
+            </div>
+            <p
+              style="
+                font-family: var(--font-sans);
+                font-size: 15px;
+                color: var(--color-text-faint);
+                margin: 0 0 28px 58px;
+                text-wrap: pretty;
+              "
+            >
+              Every title’s folder, as FamilyFlix knows it. Edit its details,
+              clear them, or delete it for good.
+            </p>
+
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                flex-wrap: wrap;
+                margin-bottom: 16px;
+              "
+            >
+              <div
+                role="tablist"
+                aria-label="Library"
+                style="
+                  flex: 0 0 auto;
+                  display: flex;
+                  gap: 4px;
+                  padding: 4px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-pill);
+                "
+              >
+                <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="2">
+                  <button
+                    role="tab"
+                    aria-selected="{{ t.active }}"
+                    onClick="{{ t.onClick }}"
+                    style="{{ t.style }}"
+                    style-active="transform:scale(.97)"
+                  >
+                    {{ t.label }}<span style="{{ t.countStyle }}"
+                      >{{ t.count }}</span
+                    >
+                  </button>
+                </sc-for>
+              </div>
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  color: var(--color-text-faint);
+                "
+              >
+                {{ summary }}
+              </div>
+            </div>
+
+            <sc-if value="{{ isEmpty }}" hint-placeholder-val="{{ false }}">
+              <div
+                style="
+                  padding: 48px 20px;
+                  text-align: center;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  color: var(--color-text-faint);
+                "
+              >
+                {{ emptyLabel }}
+              </div>
+            </sc-if>
+
+            <div style="display: flex; flex-direction: column; gap: 8px">
+              <sc-for list="{{ rows }}" as="r" hint-placeholder-count="5">
+                <div style="{{ r.rowStyle }}">
+                  <div
+                    style="
+                      flex: 0 0 auto;
+                      display: grid;
+                      place-items: center;
+                      width: 40px;
+                      height: 40px;
+                      border-radius: 9px;
+                      background: var(--color-accent-soft);
+                      color: var(--color-accent);
+                    "
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M3 7.5A1.5 1.5 0 014.5 6h4.38a1.5 1.5 0 011.06.44L11.5 8h8A1.5 1.5 0 0121 9.5v8a1.5 1.5 0 01-1.5 1.5h-15A1.5 1.5 0 013 17.5v-10z"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linejoin="round"
+                      ></path>
+                    </svg>
+                  </div>
+                  <div style="flex: 1; min-width: 0">
+                    <div
+                      style="
+                        display: flex;
+                        align-items: baseline;
+                        gap: 8px;
+                        flex-wrap: wrap;
+                      "
+                    >
+                      <span style="{{ r.titleStyle }}">{{ r.title }}</span>
+                      <span
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          color: var(--color-text-faint);
+                        "
+                        >{{ r.year }}</span
+                      >
+                    </div>
+                    <div
+                      style="
+                        font-family: var(--font-mono);
+                        font-size: 13px;
+                        color: var(--color-text-faint);
+                        margin-top: 3px;
+                        overflow-wrap: anywhere;
+                      "
+                    >
+                      {{ r.path }}
+                    </div>
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                        flex-wrap: wrap;
+                        margin-top: 8px;
+                        font-family: var(--font-sans);
+                        font-size: 12px;
+                      "
+                    >
+                      <span
+                        style="
+                          font-weight: 600;
+                          letter-spacing: 0.3px;
+                          color: var(--color-text-dim);
+                          background: var(--color-surface-3);
+                          border: 1px solid var(--color-border);
+                          padding: 2px 8px;
+                          border-radius: var(--radius-pill);
+                        "
+                        >{{ r.sourceLabel }}</span
+                      >
+                      <span style="color: var(--color-text-faint)"
+                        >{{ r.filesLabel }}</span
+                      >
+                      <span style="color: var(--color-border)">·</span>
+                      <span style="{{ r.statusStyle }}"
+                        ><span style="{{ r.dotStyle }}"></span>{{ r.statusLabel
+                        }}</span
+                      >
+                    </div>
+                  </div>
+
+                  <div
+                    style="
+                      flex: 0 0 auto;
+                      display: flex;
+                      align-items: center;
+                      gap: 6px;
+                    "
+                  >
+                    <div style="position: relative">
+                      <button
+                        onClick="{{ r.onToggleEdit }}"
+                        aria-haspopup="menu"
+                        aria-expanded="{{ r.editOpen }}"
+                        disabled="{{ r.syncing }}"
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 6px;
+                          height: 36px;
+                          padding: 0 12px 0 14px;
+                          background: var(--color-surface-3);
+                          border: 1px solid var(--color-border);
+                          border-radius: 8px;
+                          color: var(--color-text);
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          font-weight: 600;
+                          cursor: pointer;
+                          transition: background 120ms var(--ease-out);
+                        "
+                        style-hover="background:var(--color-border)"
+                        style-active="transform:scale(.97);transition-duration:60ms"
+                        style-focus-visible="outline:2px solid var(--color-focus-ring);outline-offset:2px"
+                      >
+                        Edit<svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M6 9l6 6 6-6"
+                            stroke="currentColor"
+                            stroke-width="2.2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          ></path>
+                        </svg>
+                      </button>
+                      <sc-if
+                        value="{{ r.editOpen }}"
+                        hint-placeholder-val="{{ false }}"
+                      >
+                        <div
+                          role="menu"
+                          style="
+                            position: absolute;
+                            top: 42px;
+                            right: 0;
+                            z-index: 30;
+                            min-width: 220px;
+                            padding: 6px;
+                            background: var(--color-surface-2);
+                            border: 1px solid var(--color-border);
+                            border-radius: var(--radius-md);
+                            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+                            animation: ffPop 0.14s ease;
+                          "
+                        >
+                          <button
+                            role="menuitem"
+                            onClick="{{ r.onEditManual }}"
+                            style="
+                              display: flex;
+                              align-items: flex-start;
+                              gap: 10px;
+                              width: 100%;
+                              padding: 10px 12px;
+                              background: transparent;
+                              border: none;
+                              border-radius: var(--radius-sm);
+                              cursor: pointer;
+                              text-align: left;
+                            "
+                            style-hover="background:var(--color-surface-3)"
+                          >
+                            <svg
+                              style="
+                                flex: 0 0 auto;
+                                margin-top: 2px;
+                                color: var(--color-text-dim);
+                              "
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                            >
+                              <path
+                                d="M4 20h4L19 9l-4-4L4 16v4z"
+                                stroke="currentColor"
+                                stroke-width="1.9"
+                                stroke-linejoin="round"
+                              ></path>
+                            </svg>
+                            <span
+                              ><span
+                                style="
+                                  display: block;
+                                  font-family: var(--font-sans);
+                                  font-size: 15px;
+                                  color: var(--color-text);
+                                "
+                                >Edit details</span
+                              ><span
+                                style="
+                                  display: block;
+                                  font-family: var(--font-sans);
+                                  font-size: 12px;
+                                  color: var(--color-text-faint);
+                                  margin-top: 1px;
+                                "
+                                >Change title, year, poster by hand</span
+                              ></span
+                            >
+                          </button>
+                          <button
+                            role="menuitem"
+                            onClick="{{ r.onSync }}"
+                            style="
+                              display: flex;
+                              align-items: flex-start;
+                              gap: 10px;
+                              width: 100%;
+                              padding: 10px 12px;
+                              background: transparent;
+                              border: none;
+                              border-radius: var(--radius-sm);
+                              cursor: pointer;
+                              text-align: left;
+                            "
+                            style-hover="background:var(--color-surface-3)"
+                          >
+                            <svg
+                              style="
+                                flex: 0 0 auto;
+                                margin-top: 2px;
+                                color: var(--color-text-dim);
+                              "
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                            >
+                              <path
+                                d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6"
+                                stroke="currentColor"
+                                stroke-width="1.9"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              ></path>
+                            </svg>
+                            <span
+                              ><span
+                                style="
+                                  display: block;
+                                  font-family: var(--font-sans);
+                                  font-size: 15px;
+                                  color: var(--color-text);
+                                "
+                                >Sync with TMDB</span
+                              ><span
+                                style="
+                                  display: block;
+                                  font-family: var(--font-sans);
+                                  font-size: 12px;
+                                  color: var(--color-text-faint);
+                                  margin-top: 1px;
+                                "
+                                >Fetch details and artwork again</span
+                              ></span
+                            >
+                          </button>
+                        </div>
+                      </sc-if>
+                    </div>
+
+                    <div style="position: relative">
+                      <button
+                        onClick="{{ r.onToggleMore }}"
+                        aria-label="{{ r.moreLabel }}"
+                        aria-haspopup="menu"
+                        aria-expanded="{{ r.moreOpen }}"
+                        disabled="{{ r.syncing }}"
+                        style="
+                          display: grid;
+                          place-items: center;
+                          width: 36px;
+                          height: 36px;
+                          background: transparent;
+                          border: 1px solid transparent;
+                          border-radius: 8px;
+                          color: var(--color-text-faint);
+                          cursor: pointer;
+                          transition:
+                            background 120ms var(--ease-out),
+                            color 120ms var(--ease-out);
+                        "
+                        style-hover="background:var(--color-surface-3);color:var(--color-text)"
+                        style-active="transform:scale(.94);transition-duration:60ms"
+                        style-focus-visible="outline:2px solid var(--color-focus-ring);outline-offset:2px"
+                      >
+                        <svg
+                          width="18"
+                          height="18"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                        >
+                          <circle cx="5" cy="12" r="1.8"></circle>
+                          <circle cx="12" cy="12" r="1.8"></circle>
+                          <circle cx="19" cy="12" r="1.8"></circle>
+                        </svg>
+                      </button>
+                      <sc-if
+                        value="{{ r.moreOpen }}"
+                        hint-placeholder-val="{{ false }}"
+                      >
+                        <div
+                          role="menu"
+                          style="
+                            position: absolute;
+                            top: 42px;
+                            right: 0;
+                            z-index: 30;
+                            min-width: 200px;
+                            padding: 6px;
+                            background: var(--color-surface-2);
+                            border: 1px solid var(--color-border);
+                            border-radius: var(--radius-md);
+                            box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+                            animation: ffPop 0.14s ease;
+                          "
+                        >
+                          <button
+                            role="menuitem"
+                            onClick="{{ r.onAskClear }}"
+                            disabled="{{ r.noMeta }}"
+                            style="{{ r.clearItemStyle }}"
+                            style-hover="background:var(--color-surface-3)"
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                            >
+                              <path
+                                d="M4 6h16M9 6V4h6v2M7 10v8m10-8v8M12 10v8"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                              ></path></svg
+                            >Clear metadata
+                          </button>
+                          <div
+                            style="
+                              height: 1px;
+                              background: var(--color-border-soft);
+                              margin: 4px 6px;
+                            "
+                          ></div>
+                          <button
+                            role="menuitem"
+                            onClick="{{ r.onAskDelete }}"
+                            style="
+                              display: flex;
+                              align-items: center;
+                              gap: 10px;
+                              width: 100%;
+                              padding: 10px 12px;
+                              background: transparent;
+                              border: none;
+                              border-radius: var(--radius-sm);
+                              cursor: pointer;
+                              text-align: left;
+                              font-family: var(--font-sans);
+                              font-size: 15px;
+                              color: var(--color-danger);
+                            "
+                            style-hover="background:rgba(201,122,106,.12)"
+                          >
+                            <svg
+                              width="16"
+                              height="16"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                            >
+                              <path
+                                d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"
+                                stroke="currentColor"
+                                stroke-width="1.8"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                              ></path></svg
+                            >Delete…
+                          </button>
+                        </div>
+                      </sc-if>
+                    </div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+
+        <sc-if value="{{ menuOpen }}" hint-placeholder-val="{{ false }}">
+          <div
+            onClick="{{ closeMenus }}"
+            style="position: absolute; inset: 0; z-index: 20"
+          ></div>
+        </sc-if>
+
+        <sc-if value="{{ modalOpen }}" hint-placeholder-val="{{ false }}">
+          <div
+            onClick="{{ onScrim }}"
+            style="
+              position: absolute;
+              inset: 0;
+              z-index: 90;
+              display: grid;
+              place-items: center;
+              padding: 24px;
+              background: var(--color-scrim);
+              backdrop-filter: blur(4px);
+              animation: ffFade 0.18s ease;
+            "
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="ml-modal-title"
+              style="
+                width: 520px;
+                max-width: 100%;
+                background: var(--color-surface-2);
+                border: 1px solid var(--color-border);
+                border-radius: var(--radius-lg);
+                box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+                overflow: hidden;
+                animation: ffPop 0.2s ease;
+              "
+            >
+              <div
+                style="
+                  padding: 28px 28px 0;
+                  display: flex;
+                  align-items: flex-start;
+                  gap: 14px;
+                "
+              >
+                <div style="{{ modal.tileStyle }}">
+                  <sc-if
+                    value="{{ modal.isDelete }}"
+                    hint-placeholder-val="{{ true }}"
+                    ><svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M5 7h14M10 7V5h4v2M7 7l1 12h8l1-12"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      ></path></svg
+                  ></sc-if>
+                  <sc-if
+                    value="{{ modal.isClear }}"
+                    hint-placeholder-val="{{ false }}"
+                    ><svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M4 6h16M9 6V4h6v2M7 10v8m10-8v8M12 10v8"
+                        stroke="currentColor"
+                        stroke-width="1.8"
+                        stroke-linecap="round"
+                      ></path></svg
+                  ></sc-if>
+                </div>
+                <div style="flex: 1; min-width: 0">
+                  <h2
+                    id="ml-modal-title"
+                    style="
+                      margin: 0;
+                      font-family: var(--font-serif);
+                      font-weight: 600;
+                      font-size: 24px;
+                      color: var(--color-text);
+                      overflow-wrap: anywhere;
+                    "
+                  >
+                    {{ modal.title }}
+                  </h2>
+                  <p
+                    style="
+                      margin: 4px 0 0;
+                      font-family: var(--font-sans);
+                      font-size: 14px;
+                      color: var(--color-text-faint);
+                      text-wrap: pretty;
+                    "
+                  >
+                    {{ modal.subtitle }}
+                  </p>
+                </div>
+                <button
+                  onClick="{{ closeModal }}"
+                  aria-label="Close"
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    width: 34px;
+                    height: 34px;
+                    background: transparent;
+                    border: none;
+                    border-radius: var(--radius-sm);
+                    color: var(--color-text-faint);
+                    cursor: pointer;
+                    font-size: 16px;
+                  "
+                  style-hover="background:var(--color-surface-3);color:var(--color-text-dim)"
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div
+                style="
+                  padding: 22px 28px 28px;
+                  display: flex;
+                  flex-direction: column;
+                  gap: 18px;
+                "
+              >
+                <div
+                  style="
+                    padding: 12px 14px;
+                    background: var(--color-bg-2);
+                    border: 1px solid var(--color-border-soft);
+                    border-radius: 9px;
+                    font-family: var(--font-mono);
+                    font-size: 13px;
+                    color: var(--color-text-dim);
+                    overflow-wrap: anywhere;
+                  "
+                >
+                  {{ modal.path }}
+                </div>
+
+                <div
+                  style="
+                    display: grid;
+                    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                    gap: 12px;
+                  "
+                >
+                  <div>
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 12px;
+                        font-weight: 700;
+                        letter-spacing: 0.9px;
+                        text-transform: uppercase;
+                        color: var(--color-danger);
+                        margin-bottom: 8px;
+                      "
+                    >
+                      Removed
+                    </div>
+                    <sc-for
+                      list="{{ modal.removed }}"
+                      as="x"
+                      hint-placeholder-count="3"
+                    >
+                      <div
+                        style="
+                          display: flex;
+                          gap: 8px;
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          line-height: 1.45;
+                          color: var(--color-text);
+                          margin-bottom: 4px;
+                        "
+                      >
+                        <span style="color: var(--color-danger)">✕</span>{{ x }}
+                      </div>
+                    </sc-for>
+                  </div>
+                  <div>
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 12px;
+                        font-weight: 700;
+                        letter-spacing: 0.9px;
+                        text-transform: uppercase;
+                        color: var(--color-text-faint);
+                        margin-bottom: 8px;
+                      "
+                    >
+                      Kept
+                    </div>
+                    <sc-for
+                      list="{{ modal.kept }}"
+                      as="x"
+                      hint-placeholder-count="2"
+                    >
+                      <div
+                        style="
+                          display: flex;
+                          gap: 8px;
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          line-height: 1.45;
+                          color: var(--color-text-dim);
+                          margin-bottom: 4px;
+                        "
+                      >
+                        <span style="color: var(--color-success)">✓</span>{{ x
+                        }}
+                      </div>
+                    </sc-for>
+                    <sc-if
+                      value="{{ modal.keptNone }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          color: var(--color-text-faint);
+                        "
+                      >
+                        Nothing
+                      </div>
+                    </sc-if>
+                  </div>
+                </div>
+
+                <sc-if
+                  value="{{ modal.warnLinked }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div
+                    style="
+                      display: flex;
+                      gap: 10px;
+                      padding: 12px 14px;
+                      background: rgba(201, 122, 106, 0.1);
+                      border: 1px solid rgba(201, 122, 106, 0.32);
+                      border-radius: 9px;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      line-height: 1.5;
+                      color: var(--color-text);
+                      text-wrap: pretty;
+                    "
+                  >
+                    <span
+                      style="
+                        flex: 0 0 auto;
+                        color: var(--color-danger);
+                        font-weight: 700;
+                      "
+                      >!</span
+                    >
+                    <span
+                      >This is a linked folder. It’s deleted from where it lives
+                      on disk, not just unlinked — and it won’t be in the
+                      Recycle Bin.</span
+                    >
+                  </div>
+                </sc-if>
+
+                <div
+                  style="
+                    display: flex;
+                    justify-content: flex-end;
+                    gap: 10px;
+                    margin-top: 4px;
+                  "
+                >
+                  <button
+                    onClick="{{ closeModal }}"
+                    style="
+                      height: 44px;
+                      padding: 0 20px;
+                      background: var(--color-surface-3);
+                      border: 1px solid var(--color-border);
+                      border-radius: 10px;
+                      color: var(--color-text);
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      font-weight: 600;
+                      cursor: pointer;
+                      transition: background 120ms var(--ease-out);
+                    "
+                    style-hover="background:var(--color-border)"
+                    style-active="transform:scale(.98);transition-duration:60ms"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick="{{ modal.onConfirm }}"
+                    style="{{ modal.confirmStyle }}"
+                    style-active="transform:scale(.98);transition-duration:60ms"
+                  >
+                    {{ modal.confirmLabel }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ hasSnack }}" hint-placeholder-val="{{ false }}">
+          <div
+            role="status"
+            style="
+              position: absolute;
+              right: 24px;
+              bottom: 24px;
+              z-index: 200;
+              display: flex;
+              align-items: center;
+              gap: 12px;
+              max-width: 420px;
+              padding: 14px 16px;
+              background: var(--color-surface-3);
+              border: 1px solid var(--color-border);
+              border-radius: var(--radius-md);
+              box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+              font-family: var(--font-sans);
+              font-size: 14px;
+              color: var(--color-text);
+              animation: ffPop 0.18s ease;
+            "
+          >
+            <span style="{{ snackDot }}"></span>{{ snackText }}
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":900,"height":820},"onBack":{"editor":null,"tsType":"() =&gt; void"},"onEditManual":{"editor":null,"tsType":"(title: ManagedTitle) =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        state = {
+          tab: 'movies', openMenu: null, modal: null, snack: null, syncing: {},
+          items: [
+            { id:'m1', kind:'movies', title:'Coco', year:2017, path:'E:\\Movies\\Coco (2017)', source:'linked', files:3, meta:'tmdb' },
+            { id:'m2', kind:'movies', title:'Paddington 2', year:2017, path:'C:\\FamilyFlix\\Media\\Paddington 2 (2017)', source:'imported', files:2, meta:'tmdb' },
+            { id:'m3', kind:'movies', title:'My Neighbor Totoro', year:1988, path:'E:\\Movies\\Tonari no Totoro (1988)', source:'linked', files:4, meta:'manual' },
+            { id:'m4', kind:'movies', title:'The Iron Giant', year:1999, path:'E:\\Movies\\The Iron Giant (1999)', source:'linked', files:1, meta:'none' },
+            { id:'m5', kind:'movies', title:'Inside Out', year:2015, path:'C:\\FamilyFlix\\Media\\Inside Out (2015)', source:'imported', files:2, meta:'tmdb' },
+            { id:'m6', kind:'movies', title:'Spirited Away', year:2001, path:'E:\\Movies\\Spirited Away (2001)', source:'linked', files:3, meta:'tmdb' },
+            { id:'s1', kind:'series', title:'Bluey', year:2018, path:'E:\\Series\\Bluey', source:'linked', seasons:3, episodes:151, meta:'tmdb' },
+            { id:'s2', kind:'series', title:'Avatar: The Last Airbender', year:2005, path:'C:\\FamilyFlix\\Media\\Avatar The Last Airbender', source:'imported', seasons:3, episodes:61, meta:'tmdb' },
+            { id:'s3', kind:'series', title:'Planet Earth II', year:2016, path:'E:\\Series\\Planet Earth II', source:'linked', seasons:1, episodes:6, meta:'manual' },
+            { id:'s4', kind:'series', title:'Hilda', year:2018, path:'E:\\Series\\Hilda', source:'linked', seasons:2, episodes:21, meta:'none' }
+          ]
+        };
+
+        componentWillUnmount(){ clearTimeout(this.snackT); Object.values(this.syncT||{}).forEach(clearTimeout); }
+
+        toast(text, tone){ clearTimeout(this.snackT); this.setState({ snack:{ text, tone:tone||'success' } }); this.snackT = setTimeout(()=>this.setState({ snack:null }), 3200); }
+        folderName(p){ return p.split('\\').pop(); }
+        filesLabel(it){ return it.kind==='movies' ? it.files+(it.files===1?' file':' files') : it.seasons+(it.seasons===1?' season':' seasons')+' · '+it.episodes+' episodes'; }
+
+        sync(it){
+          this.syncT = this.syncT || {};
+          this.setState(s=>({ openMenu:null, syncing:{ ...s.syncing, [it.id]:true } }));
+          this.syncT[it.id] = setTimeout(()=>{
+            this.setState(s=>({ syncing:{ ...s.syncing, [it.id]:false }, items:s.items.map(x=>x.id===it.id?{ ...x, meta:'tmdb' }:x) }));
+            this.toast('“'+it.title+'” synced with TMDB.');
+          }, 1600);
+        }
+        editManual(it){
+          this.setState({ openMenu:null });
+          if (this.props.onEditManual) this.props.onEditManual(it);
+          else this.toast('Opens the '+(it.kind==='movies'?'movie':'series')+' form for “'+it.title+'”.', 'info');
+        }
+        confirm(){
+          const m = this.state.modal; if (!m) return;
+          const it = this.state.items.find(x=>x.id===m.id); if (!it) return this.setState({ modal:null });
+          if (m.kind==='delete') {
+            this.setState(s=>({ modal:null, items:s.items.filter(x=>x.id!==it.id) }));
+            this.toast('“'+it.title+'” and its folder were deleted.', 'danger');
+          } else {
+            this.setState(s=>({ modal:null, items:s.items.map(x=>x.id===it.id?{ ...x, meta:'none' }:x) }));
+            this.toast('Metadata cleared for '+this.folderName(it.path)+'.', 'info');
+          }
+        }
+
+        renderVals(){
+          const s = this.state;
+          const counts = { movies:s.items.filter(i=>i.kind==='movies').length, series:s.items.filter(i=>i.kind==='series').length };
+          const tabs = [['movies','Movies'],['series','Series']].map(([v,l])=>{
+            const active = s.tab===v;
+            return { label:l, count:counts[v], active,
+              onClick:()=>this.setState({ tab:v, openMenu:null }),
+              style:{ display:'flex', alignItems:'center', gap:'8px', height:'38px', padding:'0 18px 0 20px', background:active?'var(--color-accent)':'transparent', border:'none', borderRadius:'var(--radius-pill)', color:active?'#1a1109':'var(--color-text-faint)', fontFamily:'var(--font-sans)', fontSize:'15px', fontWeight:active?700:500, whiteSpace:'nowrap', cursor:'pointer', transition:'background 120ms var(--ease-out), color 120ms var(--ease-out)' },
+              countStyle:{ fontSize:'12px', fontWeight:600, padding:'1px 7px', borderRadius:'var(--radius-pill)', background:active?'rgba(26,17,9,.16)':'var(--color-surface-3)', color:active?'#1a1109':'var(--color-text-faint)' } };
+          });
+          const list = s.items.filter(i=>i.kind===s.tab);
+          const statusOf = { tmdb:['Synced with TMDB','var(--color-success)'], manual:['Edited by hand','var(--color-info)'], none:['No metadata','var(--color-warning)'] };
+          const rows = list.map(it=>{
+            const syncing = !!s.syncing[it.id];
+            const noMeta = it.meta==='none';
+            const [label, tone] = syncing ? ['Syncing with TMDB…','var(--color-accent)'] : statusOf[it.meta];
+            const editOpen = s.openMenu && s.openMenu.id===it.id && s.openMenu.kind==='edit';
+            const moreOpen = s.openMenu && s.openMenu.id===it.id && s.openMenu.kind==='more';
+            return {
+              title: noMeta && !syncing ? this.folderName(it.path) : it.title,
+              year: noMeta ? '' : it.year,
+              path: it.path, sourceLabel: it.source==='linked'?'Linked':'Imported', filesLabel: this.filesLabel(it),
+              statusLabel: label, syncing, noMeta, editOpen:!!editOpen, moreOpen:!!moreOpen, moreLabel:'More actions for '+it.title,
+              rowStyle:{ position:'relative', zIndex:(editOpen||moreOpen)?25:'auto', display:'flex', alignItems:'center', gap:'14px', padding:'14px 14px 14px 16px', background:'var(--color-surface)', border:'1px solid var(--color-border-soft)', borderRadius:'var(--radius-md)', opacity:syncing?.75:1, transition:'opacity 180ms var(--ease-out)' },
+              titleStyle:{ fontFamily: noMeta?'var(--font-mono)':'var(--font-sans)', fontSize: noMeta?'15px':'16px', fontWeight: noMeta?500:600, color: noMeta?'var(--color-text-dim)':'var(--color-text)' },
+              statusStyle:{ display:'inline-flex', alignItems:'center', gap:'6px', color:'var(--color-text-dim)' },
+              dotStyle: syncing
+                ? { width:'10px', height:'10px', borderRadius:'50%', border:'2px solid var(--color-accent-line)', borderTopColor:'var(--color-accent)', animation:'ffSpin .8s linear infinite' }
+                : { width:'7px', height:'7px', borderRadius:'50%', background:tone },
+              clearItemStyle:{ display:'flex', alignItems:'center', gap:'10px', width:'100%', padding:'10px 12px', background:'transparent', border:'none', borderRadius:'var(--radius-sm)', cursor:noMeta?'default':'pointer', textAlign:'left', fontFamily:'var(--font-sans)', fontSize:'15px', color:'var(--color-text)', opacity:noMeta?.4:1, pointerEvents:noMeta?'none':'auto' },
+              onToggleEdit:()=>this.setState(st=>({ openMenu: st.openMenu&&st.openMenu.id===it.id&&st.openMenu.kind==='edit' ? null : { id:it.id, kind:'edit' } })),
+              onToggleMore:()=>this.setState(st=>({ openMenu: st.openMenu&&st.openMenu.id===it.id&&st.openMenu.kind==='more' ? null : { id:it.id, kind:'more' } })),
+              onEditManual:()=>this.editManual(it), onSync:()=>this.sync(it),
+              onAskClear:()=>this.setState({ openMenu:null, modal:{ id:it.id, kind:'clear' } }),
+              onAskDelete:()=>this.setState({ openMenu:null, modal:{ id:it.id, kind:'delete' } })
+            };
+          });
+
+          let modal = {};
+          const mi = s.modal && s.items.find(x=>x.id===s.modal.id);
+          if (mi) {
+            const isDelete = s.modal.kind==='delete';
+            const noun = mi.kind==='movies' ? 'movie' : 'series';
+            const fileNoun = mi.kind==='movies' ? this.filesLabel(mi) : mi.episodes+' episode files';
+            modal = {
+              isDelete, isClear:!isDelete, path:mi.path, warnLinked: isDelete && mi.source==='linked',
+              title: isDelete ? 'Delete “'+mi.title+'”?' : 'Clear metadata?',
+              subtitle: isDelete ? 'This removes the '+noun+' from FamilyFlix and deletes its folder from disk. It can’t be undone.' : 'The '+noun+' stays in your library under its folder name, with no details, until you edit it or sync with TMDB.',
+              removed: isDelete ? ['The folder and '+fileNoun, 'Details, poster and artwork', 'Watch history'] : ['Title, year and synopsis', 'Poster and artwork', 'Genres, cast and ratings'],
+              kept: isDelete ? [] : ['The folder and '+fileNoun, 'Watch history'],
+              keptNone: isDelete,
+              confirmLabel: isDelete ? 'Delete folder' : 'Clear metadata',
+              onConfirm:()=>this.confirm(),
+              tileStyle:{ flex:'0 0 auto', width:'44px', height:'44px', borderRadius:'var(--radius-md)', display:'grid', placeItems:'center', background: isDelete?'rgba(201,122,106,.12)':'var(--color-accent-soft)', border:'1px solid '+(isDelete?'rgba(201,122,106,.32)':'var(--color-accent-line)'), color: isDelete?'var(--color-danger)':'var(--color-accent)' },
+              confirmStyle:{ height:'44px', padding:'0 20px', background: isDelete?'var(--color-danger)':'var(--color-accent)', border:'none', borderRadius:'10px', color:'#1a1109', fontFamily:'var(--font-sans)', fontSize:'15px', fontWeight:700, cursor:'pointer' }
+            };
+          }
+          const snackTone = s.snack ? ({ success:'var(--color-success)', info:'var(--color-info)', danger:'var(--color-danger)' })[s.snack.tone] : 'transparent';
+          const noMetaCount = list.filter(i=>i.meta==='none').length;
+
+          return {
+            onBack: this.props.onBack || (()=>this.toast('Back to Settings.', 'info')),
+            tabs, rows, isEmpty: list.length===0,
+            emptyLabel: s.tab==='movies' ? 'No movies in your library.' : 'No series in your library.',
+            summary: list.length+' '+(s.tab==='movies'?(list.length===1?'folder':'folders'):(list.length===1?'folder':'folders'))+(noMetaCount?' · '+noMetaCount+' without metadata':''),
+            menuOpen: !!s.openMenu, closeMenus:()=>this.setState({ openMenu:null }),
+            modalOpen: !!mi, modal, closeModal:()=>this.setState({ modal:null }),
+            onScrim:(e)=>{ if (e.target===e.currentTarget) this.setState({ modal:null }); },
+            hasSnack: !!s.snack, snackText: s.snack ? s.snack.text : '',
+            snackDot:{ flex:'0 0 auto', width:'8px', height:'8px', borderRadius:'50%', background:snackTone }
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

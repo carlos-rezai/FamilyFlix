@@ -1113,7 +1113,7 @@ the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
 at scale + Season art**, step 26, **TMDB ratings**, step 27, **Episode
 stills**, and step 28, **Add and sync**. Step 29, **Audio tracks**, is
-next. Steps 10–15 came out of
+next, then step 30, **Manage library**. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1337,6 +1337,37 @@ section nor an audio picker:
     the player is remembered per title or only for that viewing; and how
     episodes inherit it.
 
+Step 30 came out of using v0.8.0 too: adding a whole show by hand meant
+picking its episodes file by file, and nothing lists what the library holds
+in one place or takes a title out of it completely. It is planned — grill-me,
+a PRD and a prototype revision first; a Claude Design handoff for the overview
+page is in progress:
+
+30. 🔜 **Manage library** — two halves, one step. **Add a show folder**: the
+    series form's Files card takes a folder — a **Show folder** of **Season
+    folders** with episodes in them, or loose tagged episodes at its root —
+    beside _＋ Add episode files_, one **Episode file row** per video, its
+    season read off its folder by `readSeasonFolder` and its number off the
+    **Episode tag**. This reopens design log 11 Q6 (manual pickers only, "do
+    not build it into this form"): Chromium's `webkitdirectory` hands the
+    form a folder's files with relative paths but still no absolute path, so
+    a pick is bytes and is copied, never linked — linking stays **Scan
+    folders**'. **The library overview**: a new Settings sub-page, reached
+    from the Library group, listing every title the library holds — films
+    and series, linked and copied — and a delete that takes a title out of
+    FamilyFlix completely: its rows, its watch state, and every file
+    FamilyFlix holds for it (poster, backdrop, stills, Season posters,
+    subtitles, a copied video). To settle in the grill: what a delete does
+    to a **Linked video** — forgotten, the rule today, or removed from the
+    Library folder, the app's first write that takes something out of one;
+    whether a later **Scan folders** brings a deleted title back, or the
+    title is remembered as excluded; whether a folder pick's subtitles and
+    art are paired to their episodes as the scanner pairs them; what the
+    overview shows per title (kind, Link or Copy, its Library folder, size
+    on disk) and whether it filters, sorts and deletes in bulk; and how it
+    sits beside the ⋯ menus' Delete, which already removes the managed
+    folder best-effort.
+
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
 ### Foundation
@@ -1384,6 +1415,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Link or copy** — every import offers Link (the default) or Copy: a linked title plays from its Library folder, with no second copy and no copy time; the mode kept per title, a linked file never deleted by the app, TMDB art still in managed storage (step 24).
 - ✅ **Review at scale + Season art** — the review grouped by title, filtered by kind, with bulk actions, and fewer rows filed at the source; a single-series Sync's Seasons section picks each season's poster from TMDB's choices, and the series edit takes one from a file (step 25).
 - ✅ **Add and sync** — add a film or a series by its files alone and let TMDB fill the rest: the box on the Movie form's plain add, and a ticked save lands on the title's own Sync, Started on arrival (step 28).
+- 🔜 **Manage library** — a show added by its folder in the series form, season folders and all; and a Settings page listing every title the library holds, linked and copied, with a delete that takes a title and every file FamilyFlix holds for it out of the app completely (step 30).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet over the listed Library folders becomes Movies and Series during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.

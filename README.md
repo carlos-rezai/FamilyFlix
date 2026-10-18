@@ -379,6 +379,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Episode stills — a frame from the file, as fallback | ✅ Done         |
 | Add and sync — add by files, TMDB fills the rest    | ✅ Done         |
 | Audio tracks — English by default, switch in player | 🔜 Planned      |
+| Manage library — show folders, overview, delete     | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -526,6 +527,18 @@ and the player plays whichever comes first. It is planned:
     language when it has it, and the player gets an audio menu to switch
     track mid-film without losing your place, the way VLC's _Audio → Audio
     Track_ does.
+
+Step 30 came out of using v0.8.0 too: adding a whole show by hand means
+picking its episodes one file at a time, and there is no one place to see
+what the library holds or take a title out of it completely. It is planned:
+
+30. 🔜 **Manage library** — in the series form, pick a show's folder instead
+    of its episodes: FamilyFlix reads the season folders inside it and fills
+    in an episode row for every video, numbered for you. And a new page in
+    Settings lists everything in your library, films and series, linked and
+    copied, where you can delete a title for good — it disappears from
+    FamilyFlix along with its posters, stills, subtitles and every other file
+    FamilyFlix keeps for it.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 
