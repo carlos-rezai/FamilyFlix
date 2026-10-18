@@ -44,6 +44,12 @@ export interface PlayerControlsProps {
    * a question a parent has to ask someone.
    */
   hasSubtitles: boolean;
+  /**
+   * Whether the film offers two **Audio tracks** or more. The **Audio picker**
+   * is drawn only then, and absent rather than disabled otherwise — CC's rule
+   * from the other side: a menu of one choice is a question with one answer.
+   */
+  hasAudioTracks: boolean;
   /** Whether the **Subtitle overlay** is showing, which is the pill's face. */
   subtitlesOn: boolean;
   /** Leave the player, back to the film's page. */
@@ -75,11 +81,7 @@ export interface PlayerControlsProps {
    * fullscreen" actually lives.
    */
   onToggleFullscreen: () => void;
-  /**
-   * The offered **Audio tracks**. The **Audio picker** is drawn only for two or
-   * more, and absent rather than disabled for fewer — CC's rule from the other
-   * side: a menu of one choice is a question with one answer.
-   */
+  /** The offered **Audio tracks**, the picker's menu. */
   audioTracks?: AudioTrack[];
   /** The track playing, marked in the picker's menu. */
   audioTrack?: AudioTrack | null;
@@ -132,6 +134,7 @@ export function PlayerControls({
   volume,
   muted,
   hasSubtitles,
+  hasAudioTracks,
   subtitlesOn,
   onBack,
   onTogglePlay,
@@ -201,7 +204,7 @@ export function PlayerControls({
                 onToggleMute={onToggleMute}
               />
               <RowSpacer />
-              {audioTracks.length >= 2 ? (
+              {hasAudioTracks ? (
                 <AudioMenu
                   tracks={audioTracks}
                   playing={audioTrack}

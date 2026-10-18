@@ -209,6 +209,7 @@ export function Player({
   const {
     tracks: audioTracks,
     playing: audioTrack,
+    hasAudioTracks,
     choose: chooseAudio,
     next: nextAudioTrack,
   } = useAudioTracks({
@@ -217,8 +218,6 @@ export function Player({
     choice: audioChoice,
     onChoice: onAudioChoice,
   });
-  // The picker is drawn only for two tracks or more, and so is its key.
-  const hasAudioPicker = audioTracks.length >= 2;
   // An open menu holds the chrome up, as a paused film does.
   const [audioMenuOpen, setAudioMenuOpen] = useState(false);
 
@@ -356,7 +355,7 @@ export function Player({
     onVolumeChange: setVolume,
     onToggleMute: toggleMute,
     onToggleSubtitles: track === null ? null : toggleSubtitles,
-    onNextAudioTrack: hasAudioPicker ? nextAudioTrack : null,
+    onNextAudioTrack: hasAudioTracks ? nextAudioTrack : null,
     onToggleFullscreen: toggleFullscreen,
     onLeave: leave,
   });
@@ -419,6 +418,7 @@ export function Player({
         volume={volume}
         muted={muted}
         hasSubtitles={track !== null}
+        hasAudioTracks={hasAudioTracks}
         subtitlesOn={subtitlesOn}
         onBack={leave}
         onTogglePlay={toggle}

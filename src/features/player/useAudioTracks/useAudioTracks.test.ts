@@ -184,3 +184,23 @@ describe('useAudioTracks — the next track', () => {
     expect(onChoice).not.toHaveBeenCalled();
   });
 });
+
+describe('useAudioTracks — the Audio picker’s rule', () => {
+  it('is no picker for a film with no track to offer', () => {
+    const { result } = renderTracks({ tracks: [] });
+
+    expect(result.current.hasAudioTracks).toBe(false);
+  });
+
+  it('is no picker for a film with one track', () => {
+    const { result } = renderTracks({ tracks: [ENGLISH] });
+
+    expect(result.current.hasAudioTracks).toBe(false);
+  });
+
+  it('is a picker for a film with two tracks', () => {
+    const { result } = renderTracks({ tracks: [ENGLISH, SPANISH] });
+
+    expect(result.current.hasAudioTracks).toBe(true);
+  });
+});

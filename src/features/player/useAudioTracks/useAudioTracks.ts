@@ -26,6 +26,11 @@ export interface AudioTracksState {
   tracks: AudioTrack[];
   /** The track playing, `null` for a film with none to offer. */
   playing: AudioTrack | null;
+  /**
+   * Whether the **Audio picker** is drawn, and its key live: two offered
+   * tracks or more — a menu of one choice is a question with one answer.
+   */
+  hasAudioTracks: boolean;
   /** Play the track pressed in the menu. */
   choose: (track: AudioTrack) => void;
   /** Move to the next track, wrapping from the last to the first. */
@@ -73,5 +78,5 @@ export function useAudioTracks({
     }
   }, [choose]);
 
-  return { tracks, playing, choose, next };
+  return { tracks, playing, hasAudioTracks: tracks.length >= 2, choose, next };
 }

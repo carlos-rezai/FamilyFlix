@@ -53,6 +53,7 @@ function renderControls(
         volume={0.8}
         muted={false}
         hasSubtitles
+        hasAudioTracks={false}
         subtitlesOn={false}
         onBack={onBack}
         onTogglePlay={onTogglePlay}
@@ -199,6 +200,7 @@ describe('PlayerControls — the transport row', () => {
           volume={0.8}
           muted={false}
           hasSubtitles
+          hasAudioTracks={false}
           subtitlesOn={false}
           onBack={vi.fn()}
           onTogglePlay={vi.fn()}
@@ -500,11 +502,11 @@ describe('PlayerControls — the chrome icon button through hover, press and foc
  * 46 — Audio tracks, Phase 5: "the picker" (issue #403).
  *
  * The **Audio picker** joins the transport row's right group as
- * `[Audio] [CC] [Fullscreen]`, on CC's rule from the other side: drawn only for
- * a film with two or more offered **Audio tracks**, and absent rather than
- * disabled for one with fewer — a menu of one choice is a question with one
- * answer. The chrome is handed the tracks, the playing one and what to call,
- * and passes them through; like every other control it is gone while the
+ * `[Audio] [CC] [Fullscreen]`, on CC's rule from the other side: drawn only
+ * when it is handed `hasAudioTracks` — two or more offered **Audio tracks**,
+ * `useAudioTracks`' rule — and absent rather than disabled otherwise. The
+ * chrome is handed the tracks, the playing one and what to call, and passes
+ * them through; like every other control it is gone while the
  * chrome is faded.
  */
 describe('PlayerControls — the Audio picker', () => {
@@ -523,8 +525,9 @@ describe('PlayerControls — the Audio picker', () => {
     path: 'remux',
   };
 
-  it('is absent with fewer than two tracks, and drawn with two', () => {
+  it('is drawn when the film has audio tracks to choose, and absent otherwise', () => {
     const two = renderControls({
+      hasAudioTracks: true,
       audioTracks: [ENGLISH, SPANISH],
       audioTrack: ENGLISH,
     });
@@ -542,6 +545,7 @@ describe('PlayerControls — the Audio picker', () => {
   it('is drawn for a film with two tracks, before the CC pill', () => {
     renderControls({
       hasSubtitles: true,
+      hasAudioTracks: true,
       audioTracks: [ENGLISH, SPANISH],
       audioTrack: ENGLISH,
     });
@@ -557,6 +561,7 @@ describe('PlayerControls — the Audio picker', () => {
   it('sits before fullscreen for a film with no subtitles', () => {
     renderControls({
       hasSubtitles: false,
+      hasAudioTracks: true,
       audioTracks: [ENGLISH, SPANISH],
       audioTrack: ENGLISH,
     });
@@ -572,6 +577,7 @@ describe('PlayerControls — the Audio picker', () => {
   it('opens on the tracks it is handed, the playing one marked, and hands back a choice', () => {
     const onChooseAudio = vi.fn<(choice: AudioTrack) => void>();
     renderControls({
+      hasAudioTracks: true,
       audioTracks: [ENGLISH, SPANISH],
       audioTrack: SPANISH,
       onChooseAudio,
@@ -594,6 +600,7 @@ describe('PlayerControls — the Audio picker', () => {
   it('says when its menu opens and shuts, so the screen can hold the chrome up', () => {
     const onAudioMenuChange = vi.fn<(open: boolean) => void>();
     renderControls({
+      hasAudioTracks: true,
       audioTracks: [ENGLISH, SPANISH],
       audioTrack: ENGLISH,
       onAudioMenuChange,
@@ -609,6 +616,7 @@ describe('PlayerControls — the Audio picker', () => {
   it('is out of reach once the chrome has faded, like every control', () => {
     const shown = renderControls({
       visible: true,
+      hasAudioTracks: true,
       audioTracks: [ENGLISH, SPANISH],
       audioTrack: ENGLISH,
     });
@@ -617,6 +625,7 @@ describe('PlayerControls — the Audio picker', () => {
 
     renderControls({
       visible: false,
+      hasAudioTracks: true,
       audioTracks: [ENGLISH, SPANISH],
       audioTrack: ENGLISH,
     });
