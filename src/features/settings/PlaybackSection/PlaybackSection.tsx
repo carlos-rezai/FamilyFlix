@@ -18,9 +18,9 @@ import {
 import {
   CodecsRow,
   ComingSoon,
+  ItemHeader,
   RowRule,
   RowTitleLine,
-  SubtitlesHeader,
 } from './PlaybackSection.styles';
 
 /**
@@ -56,21 +56,18 @@ export function PlaybackSection() {
   } = useSettings();
   const { capabilities } = useCapabilities();
 
-  const languageOptions: FilterOption[] = LANGUAGE_POOL.map((name) => ({
-    label: name,
-    selected: name === subtitleLanguage,
-    onSelect: () => {
-      void chooseSubtitleLanguage(name);
-    },
-  }));
-
-  const audioOptions: FilterOption[] = LANGUAGE_POOL.map((name) => ({
-    label: name,
-    selected: name === audioLanguage,
-    onSelect: () => {
-      void chooseAudioLanguage(name);
-    },
-  }));
+  /** One pill's options: the **Language pool**, `value` marked, each a choice. */
+  const poolOptions = (
+    value: string | null,
+    choose: (language: string) => Promise<void>
+  ): FilterOption[] =>
+    LANGUAGE_POOL.map((name) => ({
+      label: name,
+      selected: name === value,
+      onSelect: () => {
+        void choose(name);
+      },
+    }));
 
   return (
     <>
@@ -85,10 +82,10 @@ export function PlaybackSection() {
 
         <Divider />
 
-        <SubtitlesHeader>
+        <ItemHeader>
           <ItemTitle>Subtitles</ItemTitle>
           <ItemDesc>How subtitles behave when a movie has them.</ItemDesc>
-        </SubtitlesHeader>
+        </ItemHeader>
 
         <Row>
           <div>
@@ -118,7 +115,7 @@ export function PlaybackSection() {
               label="Preferred subtitle language"
               showLabel={false}
               value={subtitleLanguage}
-              options={languageOptions}
+              options={poolOptions(subtitleLanguage, chooseSubtitleLanguage)}
               menuWidth={200}
             />
           ) : null}
@@ -126,12 +123,12 @@ export function PlaybackSection() {
 
         <Divider />
 
-        <SubtitlesHeader>
+        <ItemHeader>
           <ItemTitle>Audio</ItemTitle>
           <ItemDesc>
             Which language a movie plays in when it has more than one.
           </ItemDesc>
-        </SubtitlesHeader>
+        </ItemHeader>
 
         {audioLanguage !== null ? (
           <Row $last>
@@ -143,7 +140,7 @@ export function PlaybackSection() {
               label="Preferred audio language"
               showLabel={false}
               value={audioLanguage}
-              options={audioOptions}
+              options={poolOptions(audioLanguage, chooseAudioLanguage)}
               menuWidth={200}
             />
           </Row>

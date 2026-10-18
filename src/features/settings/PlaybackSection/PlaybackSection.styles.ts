@@ -11,8 +11,8 @@ export const CodecsRow = styled(NavigationRow)`
   padding: 4px 4px 0;
 `;
 
-/** The Subtitles half's own header: title and lede, 14px over the first row. */
-export const SubtitlesHeader = styled.div`
+/** A Playback-card item's title and lede, 14px over its first row. */
+export const ItemHeader = styled.div`
   margin-bottom: 14px;
 `;
 
