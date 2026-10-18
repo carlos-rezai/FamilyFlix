@@ -494,8 +494,8 @@ describe('PlaybackSection — choosing a language', () => {
  * 46 — Audio tracks, Phase 3 (issue #401): the Audio block, from the revised
  * `page.SettingsPage.dc.html`. Under _Subtitles_, a divider, then **Audio** with
  * its lede, then one row — _Preferred audio language_ over `FilterDropdown`
- * with the pool's seven names. The row is not drawn while the settings read is
- * `null`. A choice is shown at once and posted to
+ * with the pool's seven names. While the settings read is `null` the row draws
+ * its title and lede and leaves only the pill out, as the subtitle row does. A choice is shown at once and posted to
  * `POST /api/settings/audio-language`; a refused save puts it back. No audio
  * on/off toggle is drawn.
  */
@@ -615,18 +615,19 @@ describe('PlaybackSection — the Audio block', () => {
 });
 
 describe('PlaybackSection — the Audio row while the read is null', () => {
-  it('is not drawn until the settings land', () => {
+  it('draws its title but no pill until the settings land', () => {
     answerWith(null);
 
     renderSection();
 
-    expect(screen.queryByText('Preferred audio language')).toBeNull();
+    // The row itself is there; only the value is not yet known.
+    expect(screen.getByText('Preferred audio language')).toBeDefined();
     expect(
       screen.queryByRole('button', { name: /^Preferred audio language: / })
     ).toBeNull();
   });
 
-  it('stays undrawn on a refused read', async () => {
+  it('keeps its title and draws no pill on a refused read', async () => {
     const { read } = answerWith(null);
     renderSection();
 
@@ -640,7 +641,10 @@ describe('PlaybackSection — the Audio row while the read is null', () => {
     );
     await Promise.resolve();
 
-    expect(screen.queryByText('Preferred audio language')).toBeNull();
+    expect(screen.getByText('Preferred audio language')).toBeDefined();
+    expect(
+      screen.queryByRole('button', { name: /^Preferred audio language: / })
+    ).toBeNull();
   });
 });
 

@@ -39,13 +39,13 @@ import {
  * _Preferred subtitle language_ with `FilterDropdown` on the right, the seven
  * names of the **Language pool** as its options and the fetched value as its
  * value. Then a divider and _Audio_ with its lede over _Preferred audio
- * language_, the same dropdown over the **Preferred audio language** — the
- * row undrawn while that read is `null`; no audio on/off toggle.
+ * language_, the same dropdown over the **Preferred audio language**; no audio
+ * on/off toggle.
  *
  * The section owns `useSettings`, and takes only the read of
- * `useCapabilities` — the writes are the Codecs page's. The pill is not drawn
- * while the language is `null` — a refused read shows no default the server
- * never confirmed.
+ * `useCapabilities` — the writes are the Codecs page's. Each pill is not drawn
+ * while its language is `null`, its row's title and lede drawn all the same —
+ * a refused read shows no default the server never confirmed.
  */
 export function PlaybackSection() {
   const {
@@ -130,12 +130,12 @@ export function PlaybackSection() {
           </ItemDesc>
         </ItemHeader>
 
-        {audioLanguage !== null ? (
-          <Row $last>
-            <div>
-              <RowTitle>Preferred audio language</RowTitle>
-              <RowDesc>Which track to play when a movie has several.</RowDesc>
-            </div>
+        <Row $last>
+          <div>
+            <RowTitle>Preferred audio language</RowTitle>
+            <RowDesc>Which track to play when a movie has several.</RowDesc>
+          </div>
+          {audioLanguage !== null ? (
             <FilterDropdown
               label="Preferred audio language"
               showLabel={false}
@@ -143,8 +143,8 @@ export function PlaybackSection() {
               options={poolOptions(audioLanguage, chooseAudioLanguage)}
               menuWidth={200}
             />
-          </Row>
-        ) : null}
+          ) : null}
+        </Row>
       </Card>
     </>
   );
