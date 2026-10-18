@@ -39,7 +39,10 @@ export interface AudioTrack {
   path: Exclude<PlaybackPath, 'cannot-play'>;
 }
 
-/** The playback read's payload: which path, and how long the film runs. */
+/**
+ * The playback read's payload: the path, the length, and the offered **Audio
+ * tracks**.
+ */
 export interface PlaybackRead {
   /** The path of index 0, the one the plain stream URL plays. */
   path: PlaybackPath;

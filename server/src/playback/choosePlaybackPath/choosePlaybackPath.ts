@@ -17,9 +17,9 @@ export interface ComponentAvailability {
 /**
  * The **Playback path** a film takes, and what it takes to run it.
  *
- * Only the two converting paths carry an argv, and the other two carry none at
- * all rather than an empty one: `direct` and `cannot-play` run nothing, and an
- * empty array is a thing to accidentally spawn.
+ * Only the two converting paths carry an argv, and the other three carry none
+ * at all rather than an empty one: `direct`, `cannot-play` and `no-track` run
+ * nothing, and an empty array is a thing to accidentally spawn.
  */
 export type PlaybackDecision =
   | { path: 'direct' }
@@ -219,16 +219,16 @@ function looksNative(file: string): boolean {
  *
  * The order of the answers is the order they matter in:
  *
- * 0. An **Audio track index** the file does not have is `no-track`.
- * 1. A file nothing read is decided from its name — an MP4 goes out untouched,
+ * 1. An **Audio track index** the file does not have is `no-track`.
+ * 2. A file nothing read is decided from its name — an MP4 goes out untouched,
  *    because a partial setup is not a dead app, and anything else is refused
  *    rather than sent as bytes no browser can read.
- * 2. A file Chromium already reads is **Direct play**, component or no
+ * 3. A file Chromium already reads is **Direct play**, component or no
  *    component: the cheapest path there is, and the only one that seeks by
  *    byte range.
- * 3. With no component, everything left is `cannot-play`. The policy answers
+ * 4. With no component, everything left is `cannot-play`. The policy answers
  *    from what is installed now, never from what the probe implies once was.
- * 4. Otherwise only the container is wrong — **Remux**, `-c copy` — or a codec
+ * 5. Otherwise only the container is wrong — **Remux**, `-c copy` — or a codec
  *    is, which is a **Transcode**. The difference is two hours of a pinned CPU
  *    on a film that only needed rewrapping.
  */

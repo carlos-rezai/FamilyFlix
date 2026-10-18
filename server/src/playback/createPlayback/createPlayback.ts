@@ -86,7 +86,8 @@ export interface Playback {
 
   /**
    * What the player is told before a byte arrives: which path the film takes,
-   * and how long it runs. `null` when the file will not say how long it is,
+   * how long it runs, and the **Audio tracks** it offers, each with its own
+   * path. `null` when the file will not say how long it is,
    * which is the one thing the read exists to answer.
    *
    * It takes an **already-resolved** absolute file rather than a stored path,
