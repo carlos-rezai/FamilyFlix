@@ -63,6 +63,10 @@ function renderControls(
         onToggleMute={onToggleMute}
         onToggleSubtitles={onToggleSubtitles}
         onToggleFullscreen={onToggleFullscreen}
+        audioTracks={[]}
+        audioTrack={null}
+        onChooseAudio={vi.fn()}
+        onAudioMenuChange={vi.fn()}
         {...overrides}
       />
     </ThemeProvider>
@@ -210,6 +214,10 @@ describe('PlayerControls — the transport row', () => {
           onToggleMute={vi.fn()}
           onToggleSubtitles={vi.fn()}
           onToggleFullscreen={vi.fn()}
+          audioTracks={[]}
+          audioTrack={null}
+          onChooseAudio={vi.fn()}
+          onAudioMenuChange={vi.fn()}
         />
       </ThemeProvider>
     );

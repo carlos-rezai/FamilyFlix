@@ -50,7 +50,12 @@ function renderKeys(overrides: Partial<Keys> = {}) {
     onLeave: vi.fn(),
   };
   const view = renderHook((props: Keys) => usePlayerKeys(props), {
-    initialProps: { volume: VOLUME, ...handlers, ...overrides } as Keys,
+    initialProps: {
+      volume: VOLUME,
+      onNextAudioTrack: null,
+      ...handlers,
+      ...overrides,
+    } as Keys,
   });
 
   return { ...view, ...handlers };
@@ -168,6 +173,7 @@ describe('usePlayerKeys', () => {
       onVolumeChange: view.onVolumeChange,
       onToggleMute: view.onToggleMute,
       onToggleSubtitles: view.onToggleSubtitles,
+      onNextAudioTrack: null,
       onToggleFullscreen: view.onToggleFullscreen,
       onLeave: view.onLeave,
     });

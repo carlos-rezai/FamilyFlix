@@ -57,9 +57,9 @@ interface PlayerProps {
    * The **Audio choice** the surface holds for the sitting: the language of
    * the track last picked by hand, read ahead of the household's.
    */
-  audioChoice?: string | null;
+  audioChoice: string | null;
   /** Told of every pick made by hand, so the surface can carry it on. */
-  onAudioChoice?: (language: string | null) => void;
+  onAudioChoice: (language: string | null) => void;
 }
 
 /**

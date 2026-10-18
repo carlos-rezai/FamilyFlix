@@ -82,13 +82,13 @@ export interface PlayerControlsProps {
    */
   onToggleFullscreen: () => void;
   /** The offered **Audio tracks**, the picker's menu. */
-  audioTracks?: AudioTrack[];
+  audioTracks: AudioTrack[];
   /** The track playing, marked in the picker's menu. */
-  audioTrack?: AudioTrack | null;
+  audioTrack: AudioTrack | null;
   /** A track chosen in the picker's menu. */
-  onChooseAudio?: (track: AudioTrack) => void;
+  onChooseAudio: (track: AudioTrack) => void;
   /** Told when the picker's menu opens or shuts, so the screen can hold the chrome up. */
-  onAudioMenuChange?: (open: boolean) => void;
+  onAudioMenuChange: (open: boolean) => void;
 }
 
 /**
@@ -144,10 +144,10 @@ export function PlayerControls({
   onToggleMute,
   onToggleSubtitles,
   onToggleFullscreen,
-  audioTracks = [],
-  audioTrack = null,
-  onChooseAudio = () => undefined,
-  onAudioMenuChange = () => undefined,
+  audioTracks,
+  audioTrack,
+  onChooseAudio,
+  onAudioMenuChange,
 }: PlayerControlsProps) {
   return (
     <>

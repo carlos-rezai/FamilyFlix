@@ -28,9 +28,9 @@ export interface PlayerKeys {
   /**
    * Move to the next **Audio track**, wrapping — A. `null` while the **Audio
    * picker** is not drawn, a film with fewer than two tracks, so the key is
-   * absent exactly as the button is. Optional, for a caller with no picker.
+   * absent exactly as the button is.
    */
-  onNextAudioTrack?: (() => void) | null;
+  onNextAudioTrack: (() => void) | null;
   /** Fill the screen, or come back out of it — F. */
   onToggleFullscreen: () => void;
   /** Leave the player, back to the film's page — Escape. */
