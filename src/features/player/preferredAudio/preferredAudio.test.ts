@@ -8,8 +8,8 @@ import { preferredAudio } from './preferredAudio';
  * 46 — Audio tracks, Phase 4: "the opening" (issue #402).
  *
  * Which of a file's offered **Audio tracks** the player opens on —
- * `preferredSubtitle`'s twin. The first track in the preferred language,
- * compared without case; else the track the file marks default; else the
+ * `preferredSubtitle`'s twin. The track the **Audio choice** speaks; else the
+ * first track in the preferred language, compared without case; else the track the file marks default; else the
  * first; `null` for a file with none to offer.
  *
  * The tracks arrive in index order, labelled by the server, so a match is read
@@ -112,6 +112,34 @@ describe('preferredAudio — no track in the preferred language', () => {
     const untagged = audio({ index: 0, language: null, label: 'Track 1' });
 
     expect(preferredAudio([untagged, SPANISH], 'German')).toEqual(untagged);
+  });
+});
+
+describe('preferredAudio — the Audio choice ahead of the preference', () => {
+  it('opens on the track the choice speaks, over the preference', () => {
+    expect(
+      preferredAudio([ENGLISH, SPANISH, FRENCH], 'English', 'French')
+    ).toEqual(FRENCH);
+  });
+
+  it('falls to the preference, not the file default, when no track speaks the choice', () => {
+    const defaultFrench = { ...FRENCH, fileDefault: true };
+
+    expect(
+      preferredAudio([ENGLISH, SPANISH, defaultFrench], 'Spanish', 'German')
+    ).toEqual(SPANISH);
+  });
+
+  it('reads a null choice as no choice', () => {
+    expect(preferredAudio([ENGLISH, SPANISH], 'Spanish', null)).toEqual(
+      SPANISH
+    );
+  });
+
+  it('treats a choice differing only in case as the track’s language', () => {
+    expect(preferredAudio([ENGLISH, SPANISH], 'English', 'spanish')).toEqual(
+      SPANISH
+    );
   });
 });
 
