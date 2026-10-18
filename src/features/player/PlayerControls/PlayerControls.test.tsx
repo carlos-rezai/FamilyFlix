@@ -5,6 +5,8 @@ import { readFileSync } from 'node:fs';
 
 import { PlayerControls } from './PlayerControls';
 import { theme } from '@/styles/theme';
+import type { AudioTrack } from '@/types';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { ChromeIconButton } from './PlayerControls.styles';
 import {
   normCss,
@@ -491,5 +493,134 @@ describe('PlayerControls — the chrome icon button through hover, press and foc
     expect(resolvedStyle(button, { focusVisible: true })['box-shadow']).toBe(
       normCss(`0 0 0 3px ${theme.colors.focusRing}`)
     );
+  });
+});
+
+/**
+ * 46 — Audio tracks, Phase 5: "the picker" (issue #403).
+ *
+ * The **Audio picker** joins the transport row's right group as
+ * `[Audio] [CC] [Fullscreen]`, on CC's rule from the other side: drawn only for
+ * a film with two or more offered **Audio tracks**, and absent rather than
+ * disabled for one with fewer — a menu of one choice is a question with one
+ * answer. The chrome is handed the tracks, the playing one and what to call,
+ * and passes them through; like every other control it is gone while the
+ * chrome is faded.
+ */
+describe('PlayerControls — the Audio picker', () => {
+  const ENGLISH: AudioTrack = {
+    index: 0,
+    language: 'English',
+    label: 'English',
+    fileDefault: true,
+    path: 'direct',
+  };
+  const SPANISH: AudioTrack = {
+    index: 1,
+    language: 'Spanish',
+    label: 'Spanish',
+    fileDefault: false,
+    path: 'remux',
+  };
+
+  it('is absent with fewer than two tracks, and drawn with two', () => {
+    const two = renderControls({
+      audioTracks: [ENGLISH, SPANISH],
+      audioTrack: ENGLISH,
+    });
+    expect(screen.getByRole('button', { name: 'Audio' })).toBeDefined();
+    two.unmount();
+
+    const one = renderControls({ audioTracks: [ENGLISH], audioTrack: ENGLISH });
+    expect(screen.queryByRole('button', { name: 'Audio' })).toBeNull();
+    one.unmount();
+
+    renderControls({ audioTracks: [], audioTrack: null });
+    expect(screen.queryByRole('button', { name: 'Audio' })).toBeNull();
+  });
+
+  it('is drawn for a film with two tracks, before the CC pill', () => {
+    renderControls({
+      hasSubtitles: true,
+      audioTracks: [ENGLISH, SPANISH],
+      audioTrack: ENGLISH,
+    });
+
+    const audio = screen.getByRole('button', { name: 'Audio' });
+    const captions = screen.getByRole('button', { name: 'Subtitles' });
+    const fullscreen = screen.getByRole('button', { name: 'Fullscreen' });
+
+    expect(comesBefore(audio, captions)).toBe(true);
+    expect(comesBefore(captions, fullscreen)).toBe(true);
+  });
+
+  it('sits before fullscreen for a film with no subtitles', () => {
+    renderControls({
+      hasSubtitles: false,
+      audioTracks: [ENGLISH, SPANISH],
+      audioTrack: ENGLISH,
+    });
+
+    expect(
+      comesBefore(
+        screen.getByRole('button', { name: 'Audio' }),
+        screen.getByRole('button', { name: 'Fullscreen' })
+      )
+    ).toBe(true);
+  });
+
+  it('opens on the tracks it is handed, the playing one marked, and hands back a choice', () => {
+    const onChooseAudio = vi.fn<(choice: AudioTrack) => void>();
+    renderControls({
+      audioTracks: [ENGLISH, SPANISH],
+      audioTrack: SPANISH,
+      onChooseAudio,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Audio' }));
+    const items = screen.getAllByRole('menuitem');
+
+    expect(items.map((item) => item.textContent)).toEqual([
+      'English',
+      'Spanish',
+    ]);
+    expect(items[1]?.getAttribute('aria-current')).toBe('true');
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'English' }));
+
+    expect(onChooseAudio).toHaveBeenCalledWith(ENGLISH);
+  });
+
+  it('says when its menu opens and shuts, so the screen can hold the chrome up', () => {
+    const onAudioMenuChange = vi.fn<(open: boolean) => void>();
+    renderControls({
+      audioTracks: [ENGLISH, SPANISH],
+      audioTrack: ENGLISH,
+      onAudioMenuChange,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Audio' }));
+    expect(onAudioMenuChange).toHaveBeenLastCalledWith(true);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onAudioMenuChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it('is out of reach once the chrome has faded, like every control', () => {
+    const shown = renderControls({
+      visible: true,
+      audioTracks: [ENGLISH, SPANISH],
+      audioTrack: ENGLISH,
+    });
+    expect(screen.getByRole('button', { name: 'Audio' })).toBeDefined();
+    shown.unmount();
+
+    renderControls({
+      visible: false,
+      audioTracks: [ENGLISH, SPANISH],
+      audioTrack: ENGLISH,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Audio' })).toBeNull();
   });
 });

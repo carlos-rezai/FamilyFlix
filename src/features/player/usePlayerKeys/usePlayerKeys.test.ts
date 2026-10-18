@@ -321,3 +321,61 @@ describe('usePlayerKeys — where it must stay out of the way', () => {
     expect(calls(handlers)).toEqual([]);
   });
 });
+
+/**
+ * 46 — Audio tracks, Phase 5: "the picker" (issue #403).
+ *
+ * A moves to the next **Audio track**, wrapping — the **Audio picker**'s own
+ * `next` handler, handed here as CC's toggle is. And on CC's rule: `null` while
+ * the picker is not drawn, a film with fewer than two tracks, so the key is
+ * absent exactly as the button is.
+ */
+describe('usePlayerKeys — the next audio track', () => {
+  it('moves to the next track on a', () => {
+    const onNextAudioTrack = vi.fn();
+    renderKeys({ onNextAudioTrack });
+
+    press('a');
+
+    expect(onNextAudioTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it('moves to the next track on A, with Shift held', () => {
+    const onNextAudioTrack = vi.fn();
+    renderKeys({ onNextAudioTrack });
+
+    press('A', { shiftKey: true });
+
+    expect(onNextAudioTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it('does nothing on a while the picker is not drawn, and moves once it is', () => {
+    const { rerender, ...handlers } = renderKeys({ onNextAudioTrack: null });
+
+    expect(() => press('a')).not.toThrow();
+    expect(() => press('A')).not.toThrow();
+    expect(calls(handlers)).toEqual([]);
+
+    const onNextAudioTrack = vi.fn();
+    rerender({ volume: VOLUME, ...handlers, onNextAudioTrack } as Keys);
+    press('a');
+
+    expect(onNextAudioTrack).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls the handler it was handed last, as the picker comes and goes', () => {
+    const first = vi.fn();
+    const later = vi.fn();
+    const { rerender, ...handlers } = renderKeys({ onNextAudioTrack: first });
+
+    rerender({
+      volume: VOLUME,
+      ...handlers,
+      onNextAudioTrack: later,
+    } as Keys);
+    press('a');
+
+    expect(first).not.toHaveBeenCalled();
+    expect(later).toHaveBeenCalledTimes(1);
+  });
+});

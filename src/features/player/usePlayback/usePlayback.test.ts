@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { usePlayback } from './usePlayback';
@@ -807,5 +807,190 @@ describe('usePlayback — the audio track it opens on', () => {
     expect(queryOf(result.current.src).get('a')).toBe('1');
     expect(result.current.position).toBe(1800);
     expect(video.currentTime).toBe(0);
+  });
+});
+
+/**
+ * 46 — Audio tracks, Phase 5: "the picker" (issue #403).
+ *
+ * A switch of **Audio track** mid-film, handed to the hook as a new
+ * `audioTrack`. It keeps the **Absolute position** either way:
+ *
+ * - onto a **streaming** path it is `anchorStream(absolute())` with the new
+ *   `a` — the source re-pointed at the second the film is at;
+ * - onto **direct** it drops the **Stream offset** and winds `currentTime` to
+ *   the position once the element has metadata — not before, when the element
+ *   has nothing to wind.
+ *
+ * The buffering circle is the only feedback while the new source loads, and a
+ * paused film stays paused.
+ */
+describe('usePlayback — switching audio track mid-film', () => {
+  stubMediaElement();
+
+  const ENGLISH: AudioTrack = {
+    index: 0,
+    language: 'English',
+    label: 'English',
+    fileDefault: true,
+    path: 'direct',
+  };
+  const SPANISH: AudioTrack = {
+    index: 1,
+    language: 'Spanish',
+    label: 'Spanish',
+    fileDefault: false,
+    path: 'remux',
+  };
+  const COMMENTARY: AudioTrack = {
+    index: 2,
+    language: null,
+    label: 'Commentary',
+    fileDefault: false,
+    path: 'transcode',
+  };
+
+  /** A native MP4 with three tracks: only index 0 plays direct. */
+  const NATIVE: PlaybackRead = {
+    path: 'direct',
+    durationSeconds: 6832.5,
+    audioTracks: [ENGLISH, SPANISH, COMMENTARY],
+  };
+
+  function queryOf(src: string): URLSearchParams {
+    return new URLSearchParams(src.includes('?') ? src.split('?')[1] : '');
+  }
+
+  function renderSwitchable(audioTrack: AudioTrack) {
+    const video = document.createElement('video');
+    const ref = { current: video };
+    const view = renderHook(
+      ({ track }: { track: AudioTrack }) =>
+        usePlayback({
+          videoRef: ref,
+          read: NATIVE,
+          startAt: 0,
+          streamSrc: STREAM,
+          audioTrack: track,
+        }),
+      { initialProps: { track: audioTrack } }
+    );
+    return { video, ...view };
+  }
+
+  it('re-points a direct film at its position with the new a, onto a streaming track', async () => {
+    const { video, result, rerender } = renderSwitchable(ENGLISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    video.currentTime = 1234;
+    emit(video, 'timeupdate');
+
+    rerender({ track: SPANISH });
+
+    const query = queryOf(result.current.src);
+    expect(result.current.src.split('?')[0]).toBe(STREAM);
+    expect(query.get('t')).toBe('1234');
+    expect(query.get('a')).toBe('1');
+    expect(result.current.position).toBe(1234);
+
+    // And a seek after it re-points again, still on the chosen track.
+    act(() => result.current.seek(2000));
+    const after = queryOf(result.current.src);
+    expect(after.get('t')).toBe('2000');
+    expect(after.get('a')).toBe('1');
+  });
+
+  it('re-points a streaming film at its Absolute position, offset and element time together', async () => {
+    const { video, result, rerender } = renderSwitchable(SPANISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.seek(1200));
+    video.currentTime = 30;
+    emit(video, 'timeupdate');
+    expect(result.current.position).toBe(1230);
+
+    rerender({ track: COMMENTARY });
+
+    const query = queryOf(result.current.src);
+    expect(query.get('t')).toBe('1230');
+    expect(query.get('a')).toBe('2');
+    expect(result.current.position).toBe(1230);
+  });
+
+  it('drops the offset onto the first track of a native file, and writes no a', async () => {
+    const { video, result, rerender } = renderSwitchable(SPANISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.seek(1200));
+    video.currentTime = 30;
+    emit(video, 'timeupdate');
+
+    rerender({ track: ENGLISH });
+
+    expect(result.current.src).toBe(STREAM);
+    expect(result.current.position).toBe(1230);
+  });
+
+  it('winds the element to the position once its metadata lands, onto direct', async () => {
+    const { video, result, rerender } = renderSwitchable(SPANISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.seek(1200));
+    video.currentTime = 30;
+    emit(video, 'timeupdate');
+
+    rerender({ track: ENGLISH });
+    // The new source starts at its own beginning, as a browser's load does.
+    video.currentTime = 0;
+    emit(video, 'loadedmetadata');
+
+    expect(video.currentTime).toBe(1230);
+    expect(result.current.position).toBe(1230);
+  });
+
+  it('seeks by winding the element after a switch onto direct, re-pointing nothing', async () => {
+    const { video, result, rerender } = renderSwitchable(SPANISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.seek(1200));
+
+    rerender({ track: ENGLISH });
+    video.currentTime = 0;
+    emit(video, 'loadedmetadata');
+    act(() => result.current.seek(2000));
+
+    expect(result.current.src).toBe(STREAM);
+    expect(video.currentTime).toBe(2000);
+    expect(result.current.position).toBe(2000);
+  });
+
+  it('shows the buffering circle while the new track loads, until it plays', async () => {
+    const { video, result, rerender } = renderSwitchable(ENGLISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    expect(result.current.buffering).toBe(false);
+
+    rerender({ track: SPANISH });
+
+    expect(result.current.buffering).toBe(true);
+
+    emit(video, 'playing');
+
+    expect(result.current.buffering).toBe(false);
+  });
+
+  it('keeps a paused film paused across a switch onto direct, wound and done buffering', async () => {
+    const { video, result, rerender } = renderSwitchable(SPANISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+    act(() => result.current.seek(1200));
+    act(() => result.current.toggle());
+    expect(result.current.playing).toBe(false);
+    const play = vi.spyOn(video, 'play');
+
+    rerender({ track: ENGLISH });
+    video.currentTime = 0;
+    emit(video, 'loadedmetadata');
+    emit(video, 'loadeddata');
+    emit(video, 'canplay');
+
+    expect(play).not.toHaveBeenCalled();
+    expect(video.paused).toBe(true);
+    expect(result.current.playing).toBe(false);
+    expect(video.currentTime).toBe(1200);
+    expect(result.current.buffering).toBe(false);
   });
 });
