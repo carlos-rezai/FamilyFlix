@@ -11,6 +11,100 @@ Newest entry first.
 
 ---
 
+## 2026-10-18 — Audio tracks — the refactor (issue 405)
+
+Fifteen commits against `docs/refactor-plans/46-audio-tracks-refactor.md`, one
+per plan commit, the initiative's closing round. **9923 tests pass across 593
+files**, against 9915 across 593 at the end of the build (`6993626`): eight
+new cases, one `audioTracks` row, four `preferredAudio` rows and three
+`useAudioTracks` rows, and no new suite. `tsc -b --force` is clean. `eslint
+src server electron` reports one error and 99 warnings, the count the Add and
+sync round left: the two `no-useless-concat` warnings the build added to the
+settings suite are gone. Every file this round touched is lint-clean. The
+build's `ENOTEMPTY` teardown flake did not recur in any of this round's full
+runs.
+
+### What shipped
+
+Log 46's slices: the prototype revision (398), then one RED and one GREEN
+each, 399 to 404. The server switches the track: `probe` reads every audio
+stream, `choosePlaybackPath` maps the picture and the chosen voice
+(`-map 0:V:0? -map 0:a:N?`), and the stream route reads `?a=` beside `?t=`.
+**Direct play** is index 0's alone. One **Playback read** carries every
+offered **Audio track** with its own path. Settings → Playback's _Audio_
+section holds the **Preferred audio language**, English by default, a fourth
+`settings` key off the renamed **Language pool**. The player waits for the
+settings read, opens on the choice, then the preference, then the file's
+default, then the first, and the **Audio picker** before CC (with `a`)
+switches mid-film at the **Absolute position**. The **Audio choice** lasts
+the sitting on `PlayerScreen`. No migration.
+
+### What each group changed
+
+- **Group 1, the server's per-track path, once** (`f48bfb8`–`031bbc2`).
+  `audioTracks` takes the policy's own answer and declines `no-track` as it
+  declines `cannot-play`. `decisionFor` is `createPlayback`'s one call of
+  `choosePlaybackPath`: `decide` reads the slot, probes once and asks it, and
+  `read` asks it per track over that probe. The caller's fold and `decide`'s
+  `availability` went. The domain's docblocks name three argv-less paths and
+  the offered tracks, and the policy's answers are numbered from 1.
+- **Group 2, the opening rule, once** (`4000b59`–`ab73f74`).
+  `preferredAudio(tracks, language?, choice?)` is the whole opening rule, both
+  matches through one `spokenIn`; a choice no track speaks falls to the
+  preference, the glossary's order and the code's behaviour, not the PRD's
+  `choice ?? preference`. `useAudioTracks` decides only that a hand's pick
+  holds. The track switch in `usePlayback` reads `absolute()`,
+  `anchorStream` and `anchorElement`.
+- **Group 3, the picker's rule, once** (`5de4a71`–`a297e2a`).
+  `useAudioTracks` answers `hasAudioTracks`; `Player` hands it to
+  `PlayerControls` beside `hasSubtitles` and nulls the `a` key on the same
+  fact. Every audio prop is required, as its siblings are. Besides the two
+  harnesses and the one direct render, one key-suite case changed: it spells
+  every prop of a rerender by hand, so it names `onNextAudioTrack: null`. No
+  assertion changed.
+- **Group 4, the Settings side** (`26f5347`–`a9b476b`). `useSettings`' two
+  choose functions are one private `useHeldLanguage(save)`, `useHeldFlag`'s
+  twin. `PlaybackSection` builds both pills through one `poolOptions`, and
+  `SubtitlesHeader` is `ItemHeader`. The one visible change, a `fix:`: the
+  _Preferred audio language_ row draws its title and lede while the read is
+  out, leaving only the pill undrawn, as the subtitle row does and as the
+  PRD's user story 8 asked.
+- **Group 5, the tests** (`1121ca2`). The pool guard joins its halves from an
+  array, so it lints clean and still does not name the old names.
+- **Group 6, the docs** (`5acc9e8`, `5ed5f38`, and this commit). The
+  docblocks caught up with three opening reads, a preference that has a
+  source, and a pool both preferences choose from. CLAUDE.md, the README and
+  the glossary know the initiative shipped, and step 29 is ✅.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: `ProbedAudio.isDefault` beside
+`AudioTrack.fileDefault`, `AudioMenu`'s `[role='menu']` selector, the four
+settings routes' copied bodies, the switch in the render phase, the Package
+smoke's multi-track MP4 check, and everything log 46 ruled out.
+`useAudioTracks`' own `choice` and `onChoice` options stay optional: the plan
+made `Player`'s required, not the hook's. `useHeldLanguage` is private to
+`useSettings`, not a shared hook.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **The sandbox teardown flake.** `sandboxRoot`'s `afterEach` `rmSync` can
+  hit `ENOTEMPTY` on Windows under a full parallel run, seen once in
+  `routes.enrichment.test.ts` at `6993626`. A `maxRetries` on that `rmSync`
+  is likely the whole fix.
+- **The follow-ups from the Add and sync entry** are unchanged by this
+  initiative: `useQueryParamWriter` to `hooks/`, and the lint error in
+  `EnrichmentReview.test.tsx`.
+
+### The initiative
+
+**Audio tracks is done**: the prototype revision (398), the six slices
+(399–404) and this round (405). Issue 397 is closed with it.
+
+---
+
 ## 2026-10-17 — Add and sync — the refactor (issue 396)
 
 Twelve commits against `docs/refactor-plans/45-add-and-sync-refactor.md`, one
