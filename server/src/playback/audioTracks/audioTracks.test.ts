@@ -141,6 +141,15 @@ describe('audioTracks — which tracks are offered', () => {
     expect(tracks.map((t) => t.label)).toEqual(['English', 'German']);
   });
 
+  it('drops a track the file does not have, as it drops one that cannot play', () => {
+    const tracks = audioTracks(
+      probeWith([stream({ language: 'eng' }), stream({ language: 'fre' })]),
+      (index) => (index === 1 ? 'no-track' : 'remux')
+    );
+
+    expect(tracks.map((t) => t.index)).toEqual([0]);
+  });
+
   it('offers nothing for a file nothing could probe', () => {
     expect(audioTracks(null, remuxEverywhere)).toEqual([]);
   });

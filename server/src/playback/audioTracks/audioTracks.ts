@@ -1,5 +1,6 @@
-import type { AudioTrack, PlaybackPath } from '@/types';
+import type { AudioTrack } from '@/types';
 
+import type { PlaybackDecision } from '../choosePlaybackPath/choosePlaybackPath';
 import type { MediaProbe, ProbedAudio } from '../probe/probe';
 import { trackLanguage } from '../trackLanguage/trackLanguage';
 
@@ -23,13 +24,13 @@ function audioTrackLabel(
 
 /**
  * A probe and each **Audio track index**'s **Playback path** → the offered
- * **Audio tracks**, labelled, in index order. A track whose path would be
- * `cannot-play` is not offered; a file nothing probed, or with no audio,
- * offers none. Two labels that would collide each take ` · Track N`.
+ * **Audio tracks**, labelled, in index order. A track nothing can play, or
+ * one the file does not have, is not offered; a file nothing probed, or with
+ * no audio, offers none. Two labels that would collide each take ` · Track N`.
  */
 export function audioTracks(
   probe: MediaProbe | null,
-  pathOf: (index: number) => PlaybackPath
+  pathOf: (index: number) => PlaybackDecision['path']
 ): AudioTrack[] {
   if (probe === null) {
     return [];
@@ -37,7 +38,7 @@ export function audioTracks(
 
   const offered = probe.audioStreams.flatMap((stream, index) => {
     const path = pathOf(index);
-    if (path === 'cannot-play') {
+    if (path === 'cannot-play' || path === 'no-track') {
       return [];
     }
     const language = trackLanguage(stream.language);
