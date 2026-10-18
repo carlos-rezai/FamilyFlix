@@ -31,7 +31,10 @@ export interface OpeningReads {
    * episode, its series, its next — and absent for a movie, or until it lands.
    */
   episode?: EpisodeRead;
-  /** The **Playback read** — the path the film takes and how long it runs. */
+  /**
+   * The **Playback read** — the path the film takes, how long it runs, and
+   * the **Audio tracks** it offers.
+   */
   playback: PlaybackRead | null;
   /**
    * The household's **Settings** — the third opening read, the **Preferred
@@ -60,11 +63,12 @@ export interface OpeningReads {
 }
 
 /**
- * The two reads the **Player** opens with, made together and reported as one.
+ * The three reads the **Player** opens with — the record, the **Playback
+ * read** and the **Settings** — made together and reported as one.
  *
  * They are one hook because they are one moment: the screen has nothing to draw
- * until both have answered, and every caller wants all four of these or none of
- * them. `Promise.all` rather than two awaits, so the slower of the two is the
+ * until all three have settled, and every caller wants all of these or none of
+ * them. `Promise.all` rather than three awaits, so the slowest of them is the
  * wait rather than the sum.
  *
  * **A film with no file is not an error.** The playback read answers 404 for
@@ -98,7 +102,7 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
         : fetchMovie(id).then((read) => ({ movie: read, episode: undefined }));
 
     // A file missing and a folder out of reach are answers, so they settle
-    // the pair rather than failing it: the record is still reported beside.
+    // the reads rather than failing them: the record is still reported beside.
     const read = fetchPlayback({ kind, id });
 
     // Which track the element is pointed at waits on the household's
@@ -127,7 +131,7 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
       // for it arrives with the transcoding paths. Until then the screen keeps
       // its backdrop rather than falling over.
       .catch(() => undefined)
-      // Whichever of the three ways the pair settled — answered, 404, or gone
+      // Whichever of the three ways the reads settled — answered, 404, or gone
       // wrong — there is no longer an answer coming, and the screen may stop
       // waiting on one.
       .finally(() => {

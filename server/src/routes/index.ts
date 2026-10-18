@@ -1822,8 +1822,9 @@ export function createApiRouter(
   });
 
   // The household's settings, the default already applied by the repository,
-  // so no client has to know what it is. Read by the Settings hub's
-  // _Preferred language_ pill and by the player when it picks a track.
+  // so no client has to know what it is. Read by the Playback card's two
+  // pills, _Preferred subtitle language_ and _Preferred audio language_, and
+  // by the player's opening read, which picks its audio and subtitle tracks.
   router.get('/settings', (_req: Request, res: Response) => {
     const settings: Settings = storage.settings();
     res.json(settings);

@@ -6,10 +6,12 @@
  */
 
 /**
- * The **Language pool** a subtitle may be filed under, in the order the
- * prototype's dropdown draws it. Spelled once, here, and read by three places
- * that must not drift: the **Movie form**'s Subtitle row, the scanner's
- * language tags, and the Settings hub's _Preferred language_ pill. The
+ * The **Language pool**: what a subtitle may be filed under, and what both the
+ * **Preferred subtitle language** and the **Preferred audio language** are
+ * chosen from, in the order the prototype's dropdowns draw it. Spelled once,
+ * here, and read by the places that must not drift: the **Movie form**'s
+ * Subtitle row, the scanner's language tags, and the Playback card's two
+ * pills, _Preferred subtitle language_ and _Preferred audio language_. The
  * `MOVIE_SORTS` precedent: an `as const` list its own union is derived from.
  *
  * A display vocabulary, not a constraint — a stored language is any string,
@@ -46,8 +48,9 @@ export const DEFAULT_TMDB_RATINGS = true;
 
 /**
  * What `GET /api/settings` answers: every preference the household keeps, the
- * default already applied. `subtitleLanguage` is a string rather than a
- * {@link PoolLanguage} because the pool is a vocabulary, not a constraint.
+ * default already applied. `subtitleLanguage` and `audioLanguage` are strings
+ * rather than {@link PoolLanguage}s because the pool is a vocabulary, not a
+ * constraint.
  */
 export interface Settings {
   /** Which track the player uses whenever subtitles are shown. */

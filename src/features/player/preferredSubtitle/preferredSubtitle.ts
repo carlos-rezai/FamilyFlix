@@ -11,11 +11,9 @@ import type { Subtitle } from '@/types';
  * correct, so the answer is a pure function of the rows and the preference, and
  * never of the order the rows happened to arrive in.
  *
- * The preference itself has no source yet — the Settings default-language
- * dropdown is a later initiative — so it is optional and every call today omits
- * it. It is here rather than added later because the fallback is the
- * interesting half, and it only reads as a fallback if there is something to
- * fall back from.
+ * The preference arrives from the opening settings read — the **Preferred
+ * subtitle language** — and is optional because a refused read is no
+ * preference, not English. `preferredAudio` is its twin.
  *
  * `null` for a film with no subtitle files, which is what the CC button not
  * being drawn at all is decided from.
@@ -28,8 +26,8 @@ export function preferredSubtitle(
   // whose rows came back sorted and fail on the next one.
   const byPosition = [...subtitles].sort((a, b) => a.position - b.position);
 
-  // The rows are whatever the importer wrote and a preference is whatever a
-  // dropdown will later hand over, so `EN` and `en` are one language.
+  // The rows are whatever the importer wrote and a preference is whatever the
+  // Settings dropdown handed over, so `EN` and `en` are one language.
   const spoken = language?.toLowerCase();
   const inLanguage = spoken
     ? byPosition.find((track) => track.language.toLowerCase() === spoken)
