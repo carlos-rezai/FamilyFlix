@@ -185,7 +185,7 @@
       class Component extends DCLogic {
         rawMovies = [
           {id:1,title:'The Lantern Keeper',year:2019,genres:['Drama','Family'],runtime:112,st:'watched',prog:0,g1:'#3a2d1f',g2:'#7a5226',syn:'A lighthouse keeper on a fading coast takes in a runaway girl, and the two slowly rebuild a family out of the wreckage of the season. As winter closes the harbor and the supply boats stop coming, they learn that the light they tend is the only thing keeping either of them from drifting out to sea. Told across a single long winter, the film follows their wary, deepening companionship as old griefs surface and the storms outside mirror the ones within. When a wrecked sailor washes ashore with news from the girl\u2019s past, the fragile peace they\u2019ve built is tested, and the keeper must decide whether holding on means letting go. A quiet, tender story about the families we choose when the ones we were given have gone dark.',added:1},
-          {id:2,title:'Salt and Cedar',year:2021,genres:['Drama','Romance'],runtime:124,st:'progress',prog:38,g1:'#243a36',g2:'#5e7a6a',syn:'Two strangers share a long ferry crossing and discover their lives have quietly circled one another for twenty years.',added:6},
+          {id:2,title:'Salt and Cedar',year:2021,genres:['Drama','Romance'],runtime:124,st:'progress',prog:38,audio:[{language:'Spanish',label:'Spanish'},{language:'English',label:'English'}],g1:'#243a36',g2:'#5e7a6a',syn:'Two strangers share a long ferry crossing and discover their lives have quietly circled one another for twenty years.',added:6},
           {id:3,title:'Northwind',year:2018,genres:['Adventure','Drama'],runtime:118,st:'unwatched',prog:0,g1:'#1f3040',g2:'#436a86',syn:'A salvage crew chases a derelict ship through the winter straits, where the weather keeps its own counsel.',added:3},
           {id:4,title:'Paper Moons',year:2020,genres:['Comedy','Family'],runtime:98,st:'watched',prog:0,g1:'#43321f',g2:'#bd853f',syn:'A retired carnival magician and his granddaughter take one last, gloriously ramshackle show on the road.',added:9},
           {id:5,title:'The Glasshouse',year:2022,genres:['Thriller','Drama'],runtime:131,st:'progress',prog:12,g1:'#1f2433',g2:'#4a4f6e',syn:'An architect returns to the modernist house she built for a client who has since vanished without a trace.',added:14},
@@ -277,7 +277,7 @@
           fRating:0, fRatingHover:null,
           openDrop:null, gearOpen:false, editMenuOpen:false, overrides:{}, favorites:[4,12,16],
           genreView:null, genreSearch:'', detailReturn:'browse',
-          playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true, playNotice:null,
+          playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true, playNotice:null, audioTrack:0, audioMenuOpen:false,
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, subLangOpen:null,
           addContext:null, resolveId:null,
@@ -286,7 +286,7 @@
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
           seriesMenuOpen:false, seriesDeleteOpen:false, seriesDeleting:false, enSingleKind:'movie', fFound:[], fFoundPick:0,
-          settingsSubAuto:false, settingsSubLang:'English', settingsUltrawide:false,
+          settingsSubAuto:false, settingsSubLang:'English', settingsAudioLang:'English', settingsUltrawide:false,
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
             {id:2,name:'AAC Audio',exts:['.mp4','.m4a'],kind:'built-in',size:'—'},
@@ -317,7 +317,7 @@
               const dur=this.durationOf(); const patch={};
               if(s.playing && s.currentTime<dur) patch.currentTime=Math.min(dur,s.currentTime+0.25);
               // Chrome never idles away behind a notice — Back stays reachable.
-              if(s.playing && !s.playNotice && Date.now()-this.lastMove>3000 && s.controlsVisible) patch.controlsVisible=false;
+              if(s.playing && !s.playNotice && !s.audioMenuOpen && Date.now()-this.lastMove>3000 && s.controlsVisible) patch.controlsVisible=false;
               if(s.playingEp && s.playing && dur>0 && s.currentTime>=dur-0.3){ this.playNextEpisode(); return; }
               if(Object.keys(patch).length) this.setState(patch);
             } else if(s.screen==='enrich' && s.enStep==='running'){
@@ -438,6 +438,7 @@
         uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
         removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
+        setAudioLang(v){ this.setState({settingsAudioLang:v,openDrop:null}); }
         toggleSubAuto(){ this.setState(s=>({settingsSubAuto:!s.settingsSubAuto})); }
         toggleUltrawide(){ this.setState(s=>({settingsUltrawide:!s.settingsUltrawide})); }
 
@@ -508,7 +509,7 @@
           this.setState({fTitle:x.title,fYear:x.ye?(x.ys===x.ye?String(x.ys):x.ys+'\u2013'+x.ye):(x.ys+'\u2013'),fDirector:x.creator,fCast:x.cast.join(', '),fDescription:x.syn,fGenres:[...x.genres],
             fPoster:'poster.jpg',fVideo:'',fSubs:[],fKind:'series',fEpisodes:eps,fSeasonPosters:Object.fromEntries(Object.keys(x.seasonPosters||{}).map(n=>[n,'S'+String(n).padStart(2,'0')+'-poster.jpg'])),fRating:x.rating,fRatingHover:null,screen:'add',seriesMenuOpen:false,addContext:'seriesEdit',resolveId:null}); }
         enrichSeries(){ const x=this.seriesById(this.state.seriesId); if(!x) return; this.setState({screen:'enrich',enReturn:'series',enStep:'setup',enSingleTitle:x.title,enSingleKind:'series',enSeriesId:x.id,enSeasonPicks:{},enScope:'single',seriesMenuOpen:false}); }
-        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); const opensBuffering = !broken || broken==='could-not-start'; this.setState({screen:'player',playingEp:null,currentTime:resume,playing:false,controlsVisible:true,subsOn:true,playNotice:opensBuffering?'buffering':broken}); if(opensBuffering) this._bufferTimer=setTimeout(()=>this.setState(broken?{playNotice:broken}:{playNotice:null,playing:true}), 1100); }
+        playMovie(){ const m=this.cur(); if(!m)return; const resume=this.eff(m)==='progress'? m.runtime*60*m.prog/100 : 0; this.lastMove=Date.now(); const broken=this.playability[m.id]||null; clearTimeout(this._bufferTimer); const opensBuffering = !broken || broken==='could-not-start'; const tracks=m.audio||[]; const pref=tracks.findIndex(t=>t.language&&t.language.toLowerCase()===this.state.settingsAudioLang.toLowerCase()); this.setState({screen:'player',playingEp:null,currentTime:resume,playing:false,controlsVisible:true,subsOn:true,audioTrack:pref>=0?pref:0,audioMenuOpen:false,playNotice:opensBuffering?'buffering':broken}); if(opensBuffering) this._bufferTimer=setTimeout(()=>this.setState(broken?{playNotice:broken}:{playNotice:null,playing:true}), 1100); }
 
         // ---- player ----
         onPlayerMove(){ this.lastMove=Date.now(); if(!this.state.controlsVisible) this.setState({controlsVisible:true}); }
@@ -517,7 +518,11 @@
         skipFwd(){ this.lastMove=Date.now(); this.setState(s=>({currentTime:Math.min(this.durationOf(),s.currentTime+10),controlsVisible:true})); }
         toggleMute(){ this.setState(s=>({muted:!s.muted})); }
         toggleSubs(){ this.setState(s=>({subsOn:!s.subsOn})); }
-        exitPlayer(){ clearTimeout(this._bufferTimer); if(this.state.playingEp){ this.setState({screen:'season',playing:false,playingEp:null,playNotice:null}); return; } this.setState({screen:'detail',playing:false,playNotice:null}); }
+        toggleAudioMenu(){ this.lastMove=Date.now(); this.setState(s=>({audioMenuOpen:!s.audioMenuOpen,controlsVisible:true})); }
+        // A switch keeps the position and the play/pause state: the buffering circle while the stream restarts on the chosen track, then on from where it was.
+        chooseAudio(i){ this.lastMove=Date.now(); if(i===this.state.audioTrack){ this.setState({audioMenuOpen:false}); return; } const wasPlaying=this.state.playing; clearTimeout(this._bufferTimer);
+          this.setState({audioTrack:i,audioMenuOpen:false,playing:false,playNotice:'buffering'}); this._bufferTimer=setTimeout(()=>this.setState({playNotice:null,playing:wasPlaying}), 900); }
+        exitPlayer(){ clearTimeout(this._bufferTimer); this.setState({audioMenuOpen:false}); if(this.state.playingEp){ this.setState({screen:'season',playing:false,playingEp:null,playNotice:null}); return; } this.setState({screen:'detail',playing:false,playNotice:null}); }
         onSeekClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=(e.clientX-r.left)/r.width; this.lastMove=Date.now(); this.setState({currentTime:Math.max(0,Math.min(1,p))*this.durationOf(),controlsVisible:true}); }
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
@@ -802,6 +807,12 @@
           const playIcon=React.createElement('svg',{width:24,height:24,viewBox:'0 0 24 24',fill:'#fff'},s.playing?React.createElement('path',{d:'M7 4h4v16H7zM13 4h4v16h-4z'}):React.createElement('path',{d:'M7 5l12 7-12 7z'}));
           const volIcon=React.createElement('svg',{width:22,height:22,viewBox:'0 0 24 24',fill:'none'},React.createElement('path',{d:'M4 9v6h4l5 4V5L8 9H4z',fill:'#fff'}),(s.muted||s.volume<0.05)?React.createElement('path',{d:'M17 9l4 6M21 9l-4 6',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}):React.createElement('path',{d:'M16.5 8.5a5 5 0 010 7',stroke:'#fff',strokeWidth:1.8,strokeLinecap:'round'}));
           const hasSubs = !!(m || s.playingEp);
+          // The Audio picker: the offered tracks, drawn only with two or more.
+          const offeredAudio = (!s.playingEp && m && m.audio) || [];
+          const hasAudioTracks = offeredAudio.length>=2;
+          const audioItemBase={padding:'9px 12px',borderRadius:'8px',cursor:'pointer',transition:'background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out)',fontFamily:'var(--font-sans)',fontSize:'15px',whiteSpace:'nowrap'};
+          const audioTracks = offeredAudio.map((t,i)=>({label:t.label,selected:i===s.audioTrack,onSelect:()=>this.chooseAudio(i),style:{...audioItemBase,color:i===s.audioTrack?'var(--color-accent)':'var(--color-text)',fontWeight:i===s.audioTrack?'600':'400'}}));
+          const audioBtn={display:'grid',placeItems:'center',width:'44px',height:'44px',background:s.audioMenuOpen?'rgba(255,255,255,.16)':'transparent',border:'none',borderRadius:'99px',color:'#fff',cursor:'pointer'};
           const notice = this.noticeCopy[s.playNotice] || {title:'', body:''};
           const pep=s.playingEp;
           const pseries=pep?this.seriesById(pep.sid):null;
@@ -970,6 +981,8 @@
               ultrawideMargins:s.settingsUltrawide, onToggleUltrawide:()=>this.toggleUltrawide(),
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
               subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),
+              audioLang:s.settingsAudioLang, audioLangOpen:s.openDrop==='audioLang', onToggleAudioLang:()=>this.setState(st=>({openDrop:st.openDrop==='audioLang'?null:'audioLang'})),
+              audioLangOptions:['English','Spanish','French','German','Portuguese','Italian','Dutch'].map(l=>({label:l,selected:l===s.settingsAudioLang,onSelect:()=>this.setAudioLang(l)})),
               mediaFolder:'C:\\Users\\Family\\FamilyFlix\\Media',
               reset:{ open:s.resetOpen, onOpen:()=>this.openReset(), onClose:()=>this.closeReset(), stopProp:(e)=>this.stopProp(e),
                 resetting:s.resetting, eraseLabel:s.resetting?'Erasing…':'Erase everything', onErase:()=>this.runReset(),
@@ -995,6 +1008,7 @@
               seekKnob:{position:'absolute',top:'50%',left:pct+'%',width:'14px',height:'14px',borderRadius:'99px',background:'#fff',transform:'translate(-50%,-50%)',boxShadow:'0 1px 4px rgba(0,0,0,.5)'},
               volStyle:{height:'100%',width:volPct+'%',background:'#fff',borderRadius:'99px'},
               playPauseIcon:playIcon, volumeIcon:volIcon, subBtnStyle:subBtn, hasSubs,
+              hasAudioTracks, audioTracks, audioMenuOpen:s.audioMenuOpen, audioBtnStyle:audioBtn, toggleAudioMenu:()=>this.toggleAudioMenu(),
               showNextEp:!!nextEp && !s.autoNextCancelled && dur>0 && (dur-ct)<=15,
               nextCountdown:Math.max(0,Math.ceil(dur-ct)),
               nextEpLabel: nextEp ? ('S'+String(nextEp.season).padStart(2,'0')+'E'+String(nextEp.number).padStart(2,'0')) : '',

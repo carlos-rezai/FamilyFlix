@@ -524,6 +524,75 @@
               </div>
             </div>
             <div style="flex: 1"></div>
+            <!-- The Audio picker: drawn only with two or more offered tracks (CC's rule, absent rather than disabled). Its menu opens upward over the bottom bar, the playing track marked as mol.FilterDropdown marks its value; while open it holds the chrome up. -->
+            <sc-if
+              value="{{ p.hasAudioTracks }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <div style="position: relative">
+                <button
+                  onClick="{{ p.toggleAudioMenu }}"
+                  title="Audio"
+                  aria-label="Audio"
+                  style="{{ p.audioBtnStyle }}"
+                  style-hover="background:rgba(255,255,255,.12)"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M5 5h14a2 2 0 012 2v8a2 2 0 01-2 2h-7l-4.5 3.5V17H5a2 2 0 01-2-2V7a2 2 0 012-2z"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linejoin="round"
+                    />
+                    <path
+                      d="M8 10h8M8 13h5"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    />
+                  </svg>
+                </button>
+                <sc-if
+                  value="{{ p.audioMenuOpen }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div
+                    role="menu"
+                    style="
+                      position: absolute;
+                      bottom: 54px;
+                      right: 0;
+                      min-width: 220px;
+                      max-height: 340px;
+                      overflow-y: auto;
+                      background: var(--color-surface-2);
+                      border: 1px solid var(--color-border);
+                      border-radius: var(--radius-md);
+                      padding: 6px;
+                      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+                      animation: ffPop 0.14s ease;
+                      z-index: 50;
+                    "
+                  >
+                    <sc-for
+                      list="{{ p.audioTracks }}"
+                      as="t"
+                      hint-placeholder-count="2"
+                    >
+                      <div
+                        role="menuitemradio"
+                        aria-checked="{{ t.selected }}"
+                        onClick="{{ t.onSelect }}"
+                        style="{{ t.style }}"
+                        style-hover="background:var(--color-surface-3)"
+                      >
+                        {{ t.label }}
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-if>
             <sc-if value="{{ p.hasSubs }}" hint-placeholder-val="{{ false }}">
               <button onClick="{{ p.toggleSubs }}" style="{{ p.subBtnStyle }}">
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">

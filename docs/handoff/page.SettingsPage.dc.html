@@ -372,7 +372,7 @@
                     color: var(--color-text);
                   "
                 >
-                  Preferred language
+                  Preferred subtitle language
                 </div>
                 <div
                   style="
@@ -391,6 +391,79 @@
                 options="{{ settings.subLangOptions }}"
                 open="{{ settings.subLangOpen }}"
                 on-toggle="{{ settings.onToggleSubLang }}"
+                menu-width="200"
+                hint-size="160px,46px"
+              ></dc-import>
+            </div>
+
+            <div
+              style="
+                height: 1px;
+                background: var(--color-border-soft);
+                margin: 22px 0;
+              "
+            ></div>
+
+            <div style="margin-bottom: 14px">
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 16px;
+                  font-weight: 600;
+                  color: var(--color-text);
+                "
+              >
+                Audio
+              </div>
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  color: var(--color-text-faint);
+                  margin-top: 2px;
+                "
+              >
+                Which language a movie plays in when it has more than one.
+              </div>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 12px 0 2px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: var(--color-text);
+                  "
+                >
+                  Preferred audio language
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                  "
+                >
+                  Which track to play when a movie has several.
+                </div>
+              </div>
+              <dc-import
+                name="mol.FilterDropdown"
+                value="{{ settings.audioLang }}"
+                options="{{ settings.audioLangOptions }}"
+                open="{{ settings.audioLangOpen }}"
+                on-toggle="{{ settings.onToggleAudioLang }}"
                 menu-width="200"
                 hint-size="160px,46px"
               ></dc-import>
