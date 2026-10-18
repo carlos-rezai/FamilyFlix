@@ -6,7 +6,7 @@ import { ThemeProvider } from 'styled-components';
 import { MovieFormFiles } from './MovieFormFiles';
 import { theme } from '@/styles/theme';
 import {
-  SUBTITLE_LANGUAGES,
+  LANGUAGE_POOL as SHARED_LANGUAGE_POOL,
   type MovieFormFile,
   type MovieFormSubtitle,
 } from '@/types';
@@ -380,14 +380,14 @@ describe('MovieFormFiles — the subtitle rows', () => {
 
   it('offers the seven names off the shared tuple, so the three cannot drift', () => {
     // 15 — Settings hub, Phase 2 (issue #144), story 70: the languages spelled
-    // once. `SUBTITLE_LANGUAGES` in the shared types is what this row, the
+    // once. `LANGUAGE_POOL` in the shared types is what this row, the
     // scanner's tags and the Settings hub's Preferred language pill all read.
     renderFiles({ subtitles: [attached('s1', EN_SRT)] });
 
     fireEvent.click(languageOf('lantern.en.srt'));
 
-    expect(openLanguages()).toEqual([...SUBTITLE_LANGUAGES]);
-    expect(SUBTITLE_LANGUAGES).toHaveLength(7);
+    expect(openLanguages()).toEqual([...SHARED_LANGUAGE_POOL]);
+    expect(SHARED_LANGUAGE_POOL).toHaveLength(7);
   });
 
   it('reports a language change against the row it happened on', () => {

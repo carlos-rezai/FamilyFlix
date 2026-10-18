@@ -1,7 +1,7 @@
 import { FileField, SubtitleRow } from '@/components';
 import { FilePicker, ImageIcon, VideoIcon } from '@/primitives';
 import {
-  SUBTITLE_LANGUAGES,
+  LANGUAGE_POOL,
   type MovieFormFile,
   type MovieFormSubtitle,
 } from '@/types';
@@ -137,7 +137,7 @@ export function MovieFormFiles({
               key={subtitle.key}
               filename={subtitle.file.filename}
               language={subtitle.language}
-              languages={SUBTITLE_LANGUAGES}
+              languages={LANGUAGE_POOL}
               onLanguageChange={(language) =>
                 onChangeSubtitleLanguage(subtitle.key, language)
               }

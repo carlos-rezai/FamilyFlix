@@ -5,7 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { PlaybackSection } from './PlaybackSection';
 import {
-  SUBTITLE_LANGUAGES,
+  LANGUAGE_POOL,
   type PlaybackCapabilities,
   type Settings,
 } from '@/types';
@@ -357,7 +357,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
 
     fireEvent.click(pill);
 
-    expect(openLanguages()).toEqual([...SUBTITLE_LANGUAGES]);
+    expect(openLanguages()).toEqual([...LANGUAGE_POOL]);
     expect(openLanguages()).toEqual([
       'English',
       'Spanish',

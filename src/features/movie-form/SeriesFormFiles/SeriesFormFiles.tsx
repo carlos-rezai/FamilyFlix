@@ -1,7 +1,7 @@
 import { EpisodeFileRow, FileField, SubtitleRow } from '@/components';
 import { FilePicker, ImageIcon } from '@/primitives';
 import {
-  SUBTITLE_LANGUAGES,
+  LANGUAGE_POOL,
   type EpisodeFormRow,
   type MovieFormFile,
   type SeasonPosterSlot,
@@ -203,7 +203,7 @@ export function SeriesFormFiles({
                   key={subtitle.key}
                   filename={subtitle.file.filename}
                   language={subtitle.language}
-                  languages={SUBTITLE_LANGUAGES}
+                  languages={LANGUAGE_POOL}
                   onLanguageChange={(language) =>
                     onChangeEpisodeSubtitleLanguage(
                       episode.key,

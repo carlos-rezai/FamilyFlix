@@ -1,16 +1,16 @@
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
-  SUBTITLE_LANGUAGES,
-  type SubtitleLanguage,
+  LANGUAGE_POOL,
+  type PoolLanguage,
 } from '@/types';
 
 /**
  * The tags a subtitle filename spells each of the **Language pool**'s names
  * by: the ISO 639-1 and 639-2 codes. The English name itself is a tag too,
  * added below off the tuple rather than spelled here, so the seven names are
- * `SUBTITLE_LANGUAGES`' and this map cannot name an eighth or miss one.
+ * `LANGUAGE_POOL`' and this map cannot name an eighth or miss one.
  */
-const CODES: Record<SubtitleLanguage, readonly string[]> = {
+const CODES: Record<PoolLanguage, readonly string[]> = {
   English: ['en', 'eng'],
   Spanish: ['es', 'spa'],
   French: ['fr', 'fre', 'fra'],
@@ -21,8 +21,8 @@ const CODES: Record<SubtitleLanguage, readonly string[]> = {
 };
 
 /** Each language of the pool with every tag that spells it. */
-const LANGUAGE_TAGS: [language: SubtitleLanguage, tags: string[]][] =
-  SUBTITLE_LANGUAGES.map((language) => [
+const LANGUAGE_TAGS: [language: PoolLanguage, tags: string[]][] =
+  LANGUAGE_POOL.map((language) => [
     language,
     [...CODES[language], language.toLowerCase()],
   ]);

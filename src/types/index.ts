@@ -30,8 +30,9 @@ export {
   SHEET_FIELDS,
 } from './import';
 export {
-  SUBTITLE_LANGUAGES,
+  LANGUAGE_POOL,
   DEFAULT_SUBTITLE_LANGUAGE,
+  DEFAULT_AUDIO_LANGUAGE,
   DEFAULT_ULTRAWIDE_MARGINS,
   DEFAULT_TMDB_RATINGS,
 } from './settings';
@@ -114,7 +115,7 @@ export type {
   StartExport,
   ExportResult,
 } from './export';
-export type { SubtitleLanguage, Settings, StorageReport } from './settings';
+export type { PoolLanguage, Settings, StorageReport } from './settings';
 export type {
   EnrichField,
   EnrichScope,

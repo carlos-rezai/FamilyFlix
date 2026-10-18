@@ -1,6 +1,6 @@
 import { FilterDropdown } from '@/components';
 import { MicrochipIcon, Toggle } from '@/primitives';
-import { SUBTITLE_LANGUAGES, type FilterOption } from '@/types';
+import { LANGUAGE_POOL, type FilterOption } from '@/types';
 
 import { codecSummary } from '../codecView/codecView';
 import { useCapabilities } from '../useCapabilities/useCapabilities';
@@ -48,7 +48,7 @@ export function PlaybackSection() {
   const { subtitleLanguage, chooseSubtitleLanguage } = useSettings();
   const { capabilities } = useCapabilities();
 
-  const languageOptions: FilterOption[] = SUBTITLE_LANGUAGES.map((name) => ({
+  const languageOptions: FilterOption[] = LANGUAGE_POOL.map((name) => ({
     label: name,
     selected: name === subtitleLanguage,
     onSelect: () => {

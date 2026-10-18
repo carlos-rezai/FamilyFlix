@@ -15,7 +15,7 @@
  * A display vocabulary, not a constraint — a stored language is any string,
  * and neither the repository nor the route checks membership.
  */
-export const SUBTITLE_LANGUAGES = [
+export const LANGUAGE_POOL = [
   'English',
   'Spanish',
   'French',
@@ -25,15 +25,18 @@ export const SUBTITLE_LANGUAGES = [
   'Dutch',
 ] as const;
 
-/** One of the names in {@link SUBTITLE_LANGUAGES}. */
-export type SubtitleLanguage = (typeof SUBTITLE_LANGUAGES)[number];
+/** One of the names in {@link LANGUAGE_POOL}. */
+export type PoolLanguage = (typeof LANGUAGE_POOL)[number];
 
 /**
  * The language a fresh library prefers, and the one an untagged subtitle is
  * filed under. Applied by the server when the row is absent, so no client has
  * to know what it is.
  */
-export const DEFAULT_SUBTITLE_LANGUAGE: SubtitleLanguage = 'English';
+export const DEFAULT_SUBTITLE_LANGUAGE: PoolLanguage = 'English';
+
+/** The **Preferred audio language** a fresh library opens a title on. */
+export const DEFAULT_AUDIO_LANGUAGE: PoolLanguage = 'English';
 
 /** **Ultrawide margins** until the household turns it on: off. */
 export const DEFAULT_ULTRAWIDE_MARGINS = false;
@@ -44,7 +47,7 @@ export const DEFAULT_TMDB_RATINGS = true;
 /**
  * What `GET /api/settings` answers: every preference the household keeps, the
  * default already applied. `subtitleLanguage` is a string rather than a
- * {@link SubtitleLanguage} because the pool is a vocabulary, not a constraint.
+ * {@link PoolLanguage} because the pool is a vocabulary, not a constraint.
  */
 export interface Settings {
   /** Which track the player uses whenever subtitles are shown. */

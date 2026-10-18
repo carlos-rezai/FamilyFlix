@@ -10,7 +10,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { detectSubtitleLanguage } from './detectSubtitleLanguage';
-import { DEFAULT_SUBTITLE_LANGUAGE, SUBTITLE_LANGUAGES } from '@/types';
+import { DEFAULT_SUBTITLE_LANGUAGE, LANGUAGE_POOL } from '@/types';
 
 /** The seven names, each with the tags a filename spells them by. */
 const TAGS: [language: string, tags: string[]][] = [
@@ -81,13 +81,13 @@ describe('detectSubtitleLanguage — the English fallback', () => {
 });
 
 // 15 — Settings hub, Phase 2 (issue #144), story 70: the languages spelled
-// once. The scanner's `LANGUAGE_TAGS` read the shared `SUBTITLE_LANGUAGES`
+// once. The scanner's `LANGUAGE_TAGS` read the shared `LANGUAGE_POOL`
 // tuple instead of spelling their own seven names, so the form's row, the
 // Settings hub's Preferred language pill and this cannot drift — and the
 // scanner still detects every language it detected.
 describe('detectSubtitleLanguage — the shared tuple', () => {
   it('detects every language in the tuple from its own name as the tag', () => {
-    for (const language of SUBTITLE_LANGUAGES) {
+    for (const language of LANGUAGE_POOL) {
       expect(
         detectSubtitleLanguage(`die-hard.${language.toLowerCase()}.srt`)
       ).toBe(language);
@@ -95,7 +95,7 @@ describe('detectSubtitleLanguage — the shared tuple', () => {
   });
 
   it('answers a name that is in the tuple, whatever the tag', () => {
-    const names: readonly string[] = SUBTITLE_LANGUAGES;
+    const names: readonly string[] = LANGUAGE_POOL;
     for (const [, tags] of TAGS) {
       for (const tag of tags) {
         expect(names).toContain(detectSubtitleLanguage(`die-hard.${tag}.srt`));
@@ -104,7 +104,7 @@ describe('detectSubtitleLanguage — the shared tuple', () => {
   });
 
   it('spells the same seven the tuple does — no eighth name, none missing', () => {
-    expect(TAGS.map(([language]) => language)).toEqual([...SUBTITLE_LANGUAGES]);
+    expect(TAGS.map(([language]) => language)).toEqual([...LANGUAGE_POOL]);
   });
 
   it('falls back to the shared default', () => {

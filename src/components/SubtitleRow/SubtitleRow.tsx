@@ -20,7 +20,7 @@ export interface SubtitleRowProps {
    * The **Language pool** the list offers, in the order it should appear — a
    * display vocabulary, not an entity: nothing on either end of the wire maps
    * a name here to a locale. Read and never written, so the shared
-   * `SUBTITLE_LANGUAGES` tuple is handed through as it is.
+   * `LANGUAGE_POOL` tuple is handed through as it is.
    */
   languages: readonly string[];
   /** Reports the language that was chosen — the name itself, never an index. */
