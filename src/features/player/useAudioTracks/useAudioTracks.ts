@@ -9,6 +9,11 @@ export interface AudioTracksOptions {
   /** The **Preferred audio language**, the track the film opens on. */
   language?: string;
   /**
+   * The **Audio choice** carried from an earlier player in the sitting — read
+   * ahead of `language`, but only where a track speaks it; else the usual rule.
+   */
+  choice?: string | null;
+  /**
    * Told of every pick made by hand — a press or the `a` key — as the **Audio
    * choice**: the track's language, `null` for a track with none. Never told of
    * the track the film opens on, which nobody picked.
@@ -36,6 +41,7 @@ export interface AudioTracksState {
 export function useAudioTracks({
   tracks,
   language,
+  choice,
   onChoice,
 }: AudioTracksOptions): AudioTracksState {
   const [picked, setPicked] = useState<number | null>(null);
@@ -44,7 +50,12 @@ export function useAudioTracks({
     picked === null
       ? undefined
       : tracks.find((track) => track.index === picked);
-  const playing = fromPick ?? preferredAudio(tracks, language);
+  const carried = choice
+    ? tracks.find(
+        (track) => track.language?.toLowerCase() === choice.toLowerCase()
+      )
+    : undefined;
+  const playing = fromPick ?? carried ?? preferredAudio(tracks, language);
 
   const latest = useRef({ tracks, playing, onChoice });
   latest.current = { tracks, playing, onChoice };

@@ -53,6 +53,13 @@ interface PlayerProps {
    * which outlives it, so the next episode plays on still in fullscreen.
    */
   surfaceRef: RefObject<HTMLElement | null>;
+  /**
+   * The **Audio choice** the surface holds for the sitting: the language of
+   * the track last picked by hand, read ahead of the household's.
+   */
+  audioChoice?: string | null;
+  /** Told of every pick made by hand, so the surface can carry it on. */
+  onAudioChoice?: (language: string | null) => void;
 }
 
 /**
@@ -166,7 +173,12 @@ function noticeFor(
  * is handed the very handler its button is handed, so a key and a button cannot
  * drift apart.
  */
-export function Player({ playable, surfaceRef }: PlayerProps) {
+export function Player({
+  playable,
+  surfaceRef,
+  audioChoice,
+  onAudioChoice,
+}: PlayerProps) {
   const { kind, id } = playable;
   // The element is held in state rather than in a plain ref, because it arrives
   // late: the guard below keeps it off the screen until the reads have settled,
@@ -202,6 +214,8 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
   } = useAudioTracks({
     tracks: playback?.audioTracks ?? [],
     language: settings?.audioLanguage,
+    choice: audioChoice,
+    onChoice: onAudioChoice,
   });
   // The picker is drawn only for two tracks or more, and so is its key.
   const hasAudioPicker = audioTracks.length >= 2;

@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 
 import type { Playable } from '@/types';
 import { Player } from '../Player/Player';
@@ -20,9 +20,15 @@ interface PlayerScreenProps {
  * so the route changing its `:id` keeps it — and a run of episodes watched in
  * fullscreen stays there. Leaving the player unmounts it, and fullscreen ends
  * with it, as before.
+ *
+ * It holds the **Audio choice** for the same reason: the language of the track
+ * last picked by hand, handed to each player it keys so the next episode opens
+ * on its own track in that language. Leaving the player forgets it; it is
+ * never persisted and never posted.
  */
 export function PlayerScreen({ playable }: PlayerScreenProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
+  const [audioChoice, setAudioChoice] = useState<string | null>(null);
 
   return (
     <Surface ref={surfaceRef}>
@@ -30,6 +36,8 @@ export function PlayerScreen({ playable }: PlayerScreenProps) {
         key={`${playable.kind}:${playable.id}`}
         playable={playable}
         surfaceRef={surfaceRef}
+        audioChoice={audioChoice}
+        onAudioChoice={setAudioChoice}
       />
     </Surface>
   );
