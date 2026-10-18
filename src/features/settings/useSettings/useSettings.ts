@@ -21,10 +21,48 @@ export interface SettingsState {
   chooseAudioLanguage(language: string): Promise<void>;
 }
 
+/** One held language preference: its value, what lands it, and its setter. */
+interface HeldLanguage {
+  /** `null` until the read lands, the stored value after. */
+  value: string | null;
+  /** The read's answer, taken as it is. */
+  land: (value: string) => void;
+  /** Shown at once, posted, the echo kept, put back on refusal. Never rejects. */
+  set: (language: string) => Promise<void>;
+}
+
+/**
+ * The bargain both languages keep, written once over the save it is handed —
+ * `useHeldFlag`'s twin over a string: shown at once, posted, the echo kept,
+ * the previous value put back on a refusal, never rejecting. The two differ
+ * only in the route they post to.
+ */
+function useHeldLanguage(
+  save: (language: string) => Promise<string>
+): HeldLanguage {
+  const [value, setValue] = useState<string | null>(null);
+
+  const set = useCallback(
+    async (language: string): Promise<void> => {
+      const previous = value;
+      setValue(language);
+
+      try {
+        setValue(await save(language));
+      } catch {
+        setValue(previous);
+      }
+    },
+    [value, save]
+  );
+
+  return { value, land: setValue, set };
+}
+
 /**
  * The household's **Preferred subtitle language** and **Preferred audio
  * language**, read once on mount off the shared `fetchSettings` — the two
- * fields of its answer this hook keeps.
+ * fields of its answer this hook keeps, one read landing both.
  * **Ultrawide margins** rides the same read and is
  * `DisplayPreferenceProvider`'s to hold (log 27 Q13), so no screen holds a
  * copy that never updates.
@@ -33,14 +71,15 @@ export interface SettingsState {
  * read on the Settings page repeats: no skeleton, no error face, no snackbar.
  * A refused read shows no default the server never confirmed.
  *
- * `chooseSubtitleLanguage` is the detail page's bargain in two lines: set the
- * value on screen, post, take the echo, and put the previous value back on
- * rejection. Two lines inside the hook rather than `useOptimisticEdit`, which
+ * Each `choose…` is one bargain, `useHeldLanguage`'s, over its own save — the
+ * detail page's bargain in a few lines rather than `useOptimisticEdit`, which
  * edits a movie.
  */
 export function useSettings(): SettingsState {
-  const [subtitleLanguage, setSubtitleLanguage] = useState<string | null>(null);
-  const [audioLanguage, setAudioLanguage] = useState<string | null>(null);
+  const subtitle = useHeldLanguage(saveSubtitleLanguage);
+  const audio = useHeldLanguage(saveAudioLanguage);
+  const { land: landSubtitle } = subtitle;
+  const { land: landAudio } = audio;
 
   useEffect(() => {
     let wanted = true;
@@ -48,8 +87,8 @@ export function useSettings(): SettingsState {
     fetchSettings().then(
       (landed) => {
         if (wanted) {
-          setSubtitleLanguage(landed.subtitleLanguage);
-          setAudioLanguage(landed.audioLanguage);
+          landSubtitle(landed.subtitleLanguage);
+          landAudio(landed.audioLanguage);
         }
       },
       () => undefined
@@ -58,40 +97,12 @@ export function useSettings(): SettingsState {
     return () => {
       wanted = false;
     };
-  }, []);
-
-  const chooseSubtitleLanguage = useCallback(
-    async (language: string): Promise<void> => {
-      const previous = subtitleLanguage;
-      setSubtitleLanguage(language);
-
-      try {
-        setSubtitleLanguage(await saveSubtitleLanguage(language));
-      } catch {
-        setSubtitleLanguage(previous);
-      }
-    },
-    [subtitleLanguage]
-  );
-
-  const chooseAudioLanguage = useCallback(
-    async (language: string): Promise<void> => {
-      const previous = audioLanguage;
-      setAudioLanguage(language);
-
-      try {
-        setAudioLanguage(await saveAudioLanguage(language));
-      } catch {
-        setAudioLanguage(previous);
-      }
-    },
-    [audioLanguage]
-  );
+  }, [landSubtitle, landAudio]);
 
   return {
-    subtitleLanguage,
-    chooseSubtitleLanguage,
-    audioLanguage,
-    chooseAudioLanguage,
+    subtitleLanguage: subtitle.value,
+    chooseSubtitleLanguage: subtitle.set,
+    audioLanguage: audio.value,
+    chooseAudioLanguage: audio.set,
   };
 }
