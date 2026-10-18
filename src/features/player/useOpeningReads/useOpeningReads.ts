@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react';
 
 import { fetchMovie } from '@/api/fetchMovie/fetchMovie';
-import type { EpisodeRead, Movie, PlaybackRead, Playable } from '@/types';
+import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
+import type {
+  EpisodeRead,
+  Movie,
+  PlaybackRead,
+  Playable,
+  Settings,
+} from '@/types';
 
 import { fetchEpisode, fetchPlayback } from '../api/api';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
@@ -27,6 +34,12 @@ export interface OpeningReads {
   /** The **Playback read** — the path the film takes and how long it runs. */
   playback: PlaybackRead | null;
   /**
+   * The household's **Settings** — the third opening read, the **Preferred
+   * audio language** and **Preferred subtitle language** among them — or
+   * `null` until it lands, and for good when it is refused: no preference.
+   */
+  settings: Settings | null;
+  /**
    * Why there is nothing to play, or `null`: `missing-file`, the read's `404`
    * — no file behind the row — or `unreachable`, its `503` — the film's
    * **Library folder** out of reach, never a missing file. Each is its own
@@ -34,7 +47,7 @@ export interface OpeningReads {
    */
   unavailable: Unavailable | null;
   /**
-   * Whether both reads have **settled** — however they settled.
+   * Whether all three reads have **settled** — however they settled.
    *
    * Not "the reads have values": a read that went wrong leaves `playback` null
    * for good, which is the very null it holds before the read lands, so a
@@ -66,6 +79,7 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
   const [movie, setMovie] = useState<Movie | null>(null);
   const [episode, setEpisode] = useState<EpisodeRead | undefined>(undefined);
   const [playback, setPlayback] = useState<PlaybackRead | null>(null);
+  const [settings, setSettings] = useState<Settings | null>(null);
   const [unavailable, setUnavailable] = useState<Unavailable | null>(null);
   const [opened, setOpened] = useState(false);
 
@@ -87,11 +101,17 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
     // the pair rather than failing it: the record is still reported beside.
     const read = fetchPlayback({ kind, id });
 
-    void Promise.all([record, read])
-      .then(([records, answer]) => {
+    // Which track the element is pointed at waits on the household's
+    // preference, so the open waits on this read too — but a refusal is no
+    // preference, never a reason the film will not open.
+    const preference = fetchSettings().catch(() => null);
+
+    void Promise.all([record, read, preference])
+      .then(([records, answer, household]) => {
         if (cancelled) {
           return;
         }
+        setSettings(household);
         setMovie(records.movie);
         setEpisode(records.episode);
         setPlayback(answer.kind === 'read' ? answer.read : null);
@@ -121,5 +141,5 @@ export function useOpeningReads({ kind, id }: Playable): OpeningReads {
     };
   }, [kind, id]);
 
-  return { movie, episode, playback, unavailable, opened };
+  return { movie, episode, playback, settings, unavailable, opened };
 }

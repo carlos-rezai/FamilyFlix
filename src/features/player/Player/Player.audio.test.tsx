@@ -186,16 +186,15 @@ function answerWith({
 
 function makeRead(): EpisodeRead {
   return {
-    episode: makeEpisode({
+    episode: {
+      ...makeEpisode(2, 4),
       id: EPISODE_ID,
       seriesId: 'harbor',
-      season: 2,
-      number: 4,
       title: 'The Auction',
       videoPath: 'harbor-vine-2019/season-02/S02E04.mkv',
       watched: false,
       resumePositionSeconds: 0,
-    }),
+    },
     series: { id: 'harbor', title: 'Harbor & Vine' },
     next: null,
   };

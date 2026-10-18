@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import type { Cue, Playable, Subtitle } from '@/types';
-import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
 
 import { fetchSubtitleCues } from '../api/api';
 import { cueAt } from '../cueAt/cueAt';
@@ -30,6 +29,11 @@ export interface SubtitlesOptions {
   subtitles: Subtitle[];
   /** The **Absolute position**, which is what a **Cue** is chosen against. */
   position: number;
+  /**
+   * The **Preferred subtitle language**, off the player's opening settings
+   * read — `undefined` while it has not landed, and for a read refused.
+   */
+  language?: string;
 }
 
 /** The **Cue list** held for the session, stamped with the row it belongs to. */
@@ -47,12 +51,11 @@ interface HeldCues {
  * deterministic answer `preferredSubtitle` gives from the household's
  * **Preferred subtitle language** then track order.
  *
- * **The preference is read once per open, and never waited for.** The settings
- * go out through the shared `fetchSettings` when the film opens; until they
- * land, and if they never do — refused, unreachable — the track is the first
- * in track order, exactly as before there was a preference to read. A
- * preference changed mid-film applies to the next film rather than switching
- * tracks under the family, which is what reading it once buys.
+ * **The preference is handed in, never fetched here.** The player's opening
+ * read is the one `GET /api/settings` an open makes; without a preference —
+ * refused, unreachable — the track is the first in track order. A preference
+ * changed mid-film applies to the next film rather than switching tracks
+ * under the family, because the opening read is made once per open.
  *
  * **They start off on every film.** The prototype's `playMovie()` sets
  * `subsOn: true`; we ship them off, and that is a recorded divergence rather
@@ -77,30 +80,14 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
     playable: { kind, id },
     subtitles,
     position,
+    language,
   } = options;
   const [subtitlesOn, setSubtitlesOn] = useState(false);
   const [cues, setCues] = useState<HeldCues | null>(null);
-  const [language, setLanguage] = useState<string | undefined>(undefined);
 
   const track = preferredSubtitle(subtitles, language);
 
   const toggleSubtitles = useCallback(() => setSubtitlesOn((on) => !on), []);
-
-  // Once per open: a preference changed mid-film is the next film's.
-  useEffect(() => {
-    let cancelled = false;
-    void fetchSettings()
-      .then((settings) => {
-        if (!cancelled) {
-          setLanguage(settings.subtitleLanguage);
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [kind, id]);
 
   useEffect(() => {
     if (!subtitlesOn || track === null || cues?.trackId === track.id) {

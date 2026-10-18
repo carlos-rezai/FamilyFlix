@@ -13,6 +13,7 @@ import {
 } from '@/utils';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
+import { preferredAudio } from '../preferredAudio/preferredAudio';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
 import { SubtitleOverlay } from '../SubtitleOverlay/SubtitleOverlay';
 import { UpNextCard } from '../UpNextCard/UpNextCard';
@@ -176,10 +177,9 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
   const [picture, setPicture] = useState<HTMLVideoElement | null>(null);
   const videoRef = useMemo(() => ({ current: picture }), [picture]);
 
-  // The two reads the screen opens with.
-  const { movie, episode, playback, unavailable, opened } = useOpeningReads(
-    useMemo(() => ({ kind, id }), [kind, id])
-  );
+  // The three reads the screen opens with.
+  const { movie, episode, playback, settings, unavailable, opened } =
+    useOpeningReads(useMemo(() => ({ kind, id }), [kind, id]));
   // What is playing, whichever kind it is: the watch state and the tracks are
   // the same trio on a movie and an episode.
   const record = movie ?? episode?.episode ?? null;
@@ -189,6 +189,14 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
   // the database, so it does not travel with a backup of the library to a
   // machine whose speakers are nothing like this one's.
   const [startVolume] = useState(readVolumePreference);
+
+  // The track the film opens on: the household's language, else the file's
+  // default, else the first. Nothing is pointed until the settings read has
+  // settled, so this is decided before the element is given a source.
+  const audioTrack = preferredAudio(
+    playback?.audioTracks ?? [],
+    settings?.audioLanguage
+  );
 
   const {
     src,
@@ -211,6 +219,7 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
     startAt: openAt(record),
     streamSrc: streamUrl(playable),
     startVolume,
+    audioTrack,
   });
 
   // Remember where the volume was left, however it was changed — the keyboard,
@@ -260,6 +269,7 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
     playable,
     subtitles: record?.subtitles ?? [],
     position,
+    language: settings?.subtitleLanguage,
   });
 
   // A film this build cannot decode. The read answered 200 — the file is right

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { RefObject } from 'react';
 
-import type { PlaybackRead } from '@/types';
+import type { AudioTrack, PlaybackRead } from '@/types';
 import type { VolumePreference } from '../volumePreference/volumePreference';
 
 /**
@@ -46,6 +46,14 @@ export interface PlaybackOptions {
    * it arrives from outside and reaches the element exactly once.
    */
   startVolume?: VolumePreference;
+  /**
+   * The **Audio track** the film opens on, `preferredAudio`'s answer. Its
+   * **Playback path** is the one the film takes — index 1 of a native MP4 is
+   * a **Remux** though the read says `direct` for index 0 — and its index
+   * rides the source as `?a=` when it is not nought. `null`, or absent, is a
+   * file with no track to offer, which plays on the read's path.
+   */
+  audioTrack?: AudioTrack | null;
 }
 
 /** Everything the screen above knows about the film that is running. */
@@ -141,6 +149,7 @@ export function usePlayback({
   startAt,
   streamSrc,
   startVolume,
+  audioTrack = null,
 }: PlaybackOptions): PlaybackState {
   const [playing, setPlaying] = useState(false);
   const [elementTime, setElementTime] = useState(0);
@@ -164,7 +173,8 @@ export function usePlayback({
    * direct play: neither has a stream to re-point, and the element they would
    * re-point is not on the screen.
    */
-  const streaming = read?.path === 'remux' || read?.path === 'transcode';
+  const path = audioTrack?.path ?? read?.path;
+  const streaming = path === 'remux' || path === 'transcode';
 
   /**
    * The two halves of the **Absolute position**, kept as refs beside their
@@ -425,10 +435,21 @@ export function usePlayback({
     setMutedState(video.muted);
   }, [videoRef]);
 
+  // Nought is nothing to say rather than `?t=0` or `?a=0`: the fresh open on
+  // the first track is the commonest thing this URL is, and it should read as
+  // the plain one.
+  const query = new URLSearchParams();
+  if (offset > 0) {
+    query.set('t', String(offset));
+  }
+  const trackIndex = audioTrack?.index ?? 0;
+  if (trackIndex !== 0) {
+    query.set('a', String(trackIndex));
+  }
+  const search = query.toString();
+
   return {
-    // Nought is nothing to say rather than `?t=0`: the fresh open is the
-    // commonest thing this URL is, and it should read as the plain one.
-    src: offset > 0 ? `${streamSrc}?t=${offset}` : streamSrc,
+    src: search === '' ? streamSrc : `${streamSrc}?${search}`,
     playing,
     // The **Absolute position**: seconds into the film, which on a stream path
     // is where the conversion started plus how far into it the element is.
