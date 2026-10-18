@@ -35,8 +35,9 @@ export interface AudioTracksState {
 /**
  * The **Audio picker**'s state: the offered tracks, the one playing, and the
  * two ways a hand picks another. Until a pick, the playing track is
- * `preferredAudio`'s answer for the language handed — so tracks that arrive
- * late still open on the preferred one; after a pick, the pick holds.
+ * `preferredAudio`'s answer for the choice and the language handed — so
+ * tracks that arrive late still open on the right one; after a pick, the pick
+ * holds, which is the one thing decided here.
  */
 export function useAudioTracks({
   tracks,
@@ -50,12 +51,7 @@ export function useAudioTracks({
     picked === null
       ? undefined
       : tracks.find((track) => track.index === picked);
-  const carried = choice
-    ? tracks.find(
-        (track) => track.language?.toLowerCase() === choice.toLowerCase()
-      )
-    : undefined;
-  const playing = fromPick ?? carried ?? preferredAudio(tracks, language);
+  const playing = fromPick ?? preferredAudio(tracks, language, choice);
 
   const latest = useRef({ tracks, playing, onChoice });
   latest.current = { tracks, playing, onChoice };
