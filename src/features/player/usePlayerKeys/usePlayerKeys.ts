@@ -25,6 +25,12 @@ export interface PlayerKeys {
    * rather than a handler that is not there being called.
    */
   onToggleSubtitles: (() => void) | null;
+  /**
+   * Move to the next **Audio track**, wrapping — A. `null` while the **Audio
+   * picker** is not drawn, a film with fewer than two tracks, so the key is
+   * absent exactly as the button is. Optional, for a caller with no picker.
+   */
+  onNextAudioTrack?: (() => void) | null;
   /** Fill the screen, or come back out of it — F. */
   onToggleFullscreen: () => void;
   /** Leave the player, back to the film's page — Escape. */
@@ -51,6 +57,15 @@ function isTyping(target: EventTarget | null): boolean {
     target.isContentEditable ||
     target.closest('[contenteditable="true"]') !== null
   );
+}
+
+/**
+ * Whether the press belongs to an open menu — the Audio picker's — whose own
+ * keys walk it, choose from it and shut it. Escape there shuts the menu rather
+ * than leaving the player, and an arrow walks the rows rather than the volume.
+ */
+function isInMenu(target: EventTarget | null): boolean {
+  return target instanceof Element && target.closest('[role="menu"]') !== null;
 }
 
 /** Whether the press is the browser's own shortcut rather than a film control. */
@@ -86,7 +101,11 @@ export function usePlayerKeys(keys: PlayerKeys): void {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (isBrowserShortcut(event) || isTyping(event.target)) {
+      if (
+        isBrowserShortcut(event) ||
+        isTyping(event.target) ||
+        isInMenu(event.target)
+      ) {
         return;
       }
 
@@ -97,6 +116,7 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         onVolumeChange,
         onToggleMute,
         onToggleSubtitles,
+        onNextAudioTrack,
         onToggleFullscreen,
         onLeave,
       } = latest.current;
@@ -136,6 +156,10 @@ export function usePlayerKeys(keys: PlayerKeys): void {
         case 'c':
         case 'C':
           onToggleSubtitles?.();
+          return;
+        case 'a':
+        case 'A':
+          onNextAudioTrack?.();
           return;
         case 'f':
         case 'F':

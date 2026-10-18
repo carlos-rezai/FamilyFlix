@@ -214,6 +214,58 @@ export function usePlayback({
     [anchorElement]
   );
 
+  /**
+   * A switch of **Audio track** mid-film, handed in as a new `audioTrack`. The
+   * source is re-pointed in the same render the track changes in — the new `a`
+   * and the new **Stream offset** reach the element together, as one load,
+   * rather than a load at the old second followed by another at the right one.
+   *
+   * Onto a stream path it is the film restarted at its **Absolute position**
+   * with the new track. Onto **Direct play** the offset is dropped and the
+   * element is wound to the position once it has metadata — before then there
+   * is nothing in it to wind. Either way the buffering circle is the feedback,
+   * and a running film is started again once its new source is set, since a
+   * browser's load leaves an element paused.
+   *
+   * Only a change on an element already bound counts: before the element
+   * exists the track is the one the film opens on, not a switch.
+   */
+  const trackIndex = audioTrack?.index ?? 0;
+  const [sourceIndex, setSourceIndex] = useState(trackIndex);
+  const windTo = useRef<number | null>(null);
+  const resumeAfterSwitch = useRef<boolean | null>(null);
+
+  if (trackIndex !== sourceIndex) {
+    setSourceIndex(trackIndex);
+    if (videoRef.current !== null) {
+      const at = offsetRef.current + elementTimeRef.current;
+      if (streaming) {
+        windTo.current = null;
+        offsetRef.current = at;
+        setOffset(at);
+        elementTimeRef.current = 0;
+        setElementTime(0);
+      } else {
+        windTo.current = at;
+        offsetRef.current = 0;
+        setOffset(0);
+        elementTimeRef.current = at;
+        setElementTime(at);
+      }
+      setBuffering(true);
+      resumeAfterSwitch.current = playing;
+    }
+  }
+
+  useEffect(() => {
+    const resume = resumeAfterSwitch.current;
+    resumeAfterSwitch.current = null;
+    const video = videoRef.current;
+    if (resume === true && video !== null && video.paused) {
+      void video.play().catch(() => undefined);
+    }
+  }, [videoRef, sourceIndex]);
+
   useEffect(() => {
     const video = videoRef.current;
     if (video === null) {
@@ -226,8 +278,30 @@ export function usePlayback({
     };
     const onPause = () => setPlaying(false);
     const onTimeUpdate = () => {
+      // A direct source still loading after a switch is at its own nought,
+      // not at the second the film is at — that arrives with the wind below.
+      if (windTo.current !== null) {
+        return;
+      }
       elementTimeRef.current = video.currentTime;
       setElementTime(video.currentTime);
+    };
+    const onLoadedMetadata = () => {
+      const at = windTo.current;
+      if (at === null) {
+        return;
+      }
+      windTo.current = null;
+      video.currentTime = at;
+      elementTimeRef.current = at;
+      setElementTime(at);
+    };
+    // A paused film whose new source has come in is ready, not getting ready:
+    // no `playing` is coming to take the circle away.
+    const onCanPlay = () => {
+      if (video.paused) {
+        setBuffering(false);
+      }
     };
     const onWaiting = () => setBuffering(true);
     // The film is not getting ready any more, and no further event is coming to
@@ -255,6 +329,8 @@ export function usePlayback({
     video.addEventListener('play', onPlay);
     video.addEventListener('pause', onPause);
     video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('loadedmetadata', onLoadedMetadata);
+    video.addEventListener('canplay', onCanPlay);
     video.addEventListener('waiting', onWaiting);
     video.addEventListener('error', onError);
     video.addEventListener('playing', onPlaying);
@@ -270,6 +346,8 @@ export function usePlayback({
       video.removeEventListener('play', onPlay);
       video.removeEventListener('pause', onPause);
       video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('loadedmetadata', onLoadedMetadata);
+      video.removeEventListener('canplay', onCanPlay);
       video.removeEventListener('waiting', onWaiting);
       video.removeEventListener('error', onError);
       video.removeEventListener('playing', onPlaying);
@@ -384,6 +462,11 @@ export function usePlayback({
         return landing;
       }
 
+      // A direct source still loading after a switch winds to the new second
+      // once its metadata lands, not to the one the switch was made at.
+      if (windTo.current !== null) {
+        windTo.current = landing;
+      }
       const video = videoRef.current;
       if (video !== null) {
         video.currentTime = landing;
@@ -442,7 +525,6 @@ export function usePlayback({
   if (offset > 0) {
     query.set('t', String(offset));
   }
-  const trackIndex = audioTrack?.index ?? 0;
   if (trackIndex !== 0) {
     query.set('a', String(trackIndex));
   }

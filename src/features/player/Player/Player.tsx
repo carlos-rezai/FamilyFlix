@@ -13,10 +13,10 @@ import {
 } from '@/utils';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
-import { preferredAudio } from '../preferredAudio/preferredAudio';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
 import { SubtitleOverlay } from '../SubtitleOverlay/SubtitleOverlay';
 import { UpNextCard } from '../UpNextCard/UpNextCard';
+import { useAudioTracks } from '../useAudioTracks/useAudioTracks';
 import { useControlsVisibility } from '../useControlsVisibility/useControlsVisibility';
 import { useFullscreen } from '../useFullscreen/useFullscreen';
 import {
@@ -190,13 +190,23 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
   // machine whose speakers are nothing like this one's.
   const [startVolume] = useState(readVolumePreference);
 
-  // The track the film opens on: the household's language, else the file's
-  // default, else the first. Nothing is pointed until the settings read has
-  // settled, so this is decided before the element is given a source.
-  const audioTrack = preferredAudio(
-    playback?.audioTracks ?? [],
-    settings?.audioLanguage
-  );
+  // The track playing: the household's language, else the file's default,
+  // else the first, until a hand picks another off the **Audio picker**.
+  // Nothing is pointed until the settings read has settled, so the opening
+  // track is decided before the element is given a source.
+  const {
+    tracks: audioTracks,
+    playing: audioTrack,
+    choose: chooseAudio,
+    next: nextAudioTrack,
+  } = useAudioTracks({
+    tracks: playback?.audioTracks ?? [],
+    language: settings?.audioLanguage,
+  });
+  // The picker is drawn only for two tracks or more, and so is its key.
+  const hasAudioPicker = audioTracks.length >= 2;
+  // An open menu holds the chrome up, as a paused film does.
+  const [audioMenuOpen, setAudioMenuOpen] = useState(false);
 
   const {
     src,
@@ -282,7 +292,7 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
   // about playback: a paused film is someone deciding, and a notice's only way
   // out is the Back pill inside the chrome.
   const { visible, onMouseMove } = useControlsVisibility(
-    playing && notice === null
+    playing && notice === null && !audioMenuOpen
   );
 
   // The one **Back rule**, not a navigate of this screen's own: a **History
@@ -332,6 +342,7 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
     onVolumeChange: setVolume,
     onToggleMute: toggleMute,
     onToggleSubtitles: track === null ? null : toggleSubtitles,
+    onNextAudioTrack: hasAudioPicker ? nextAudioTrack : null,
     onToggleFullscreen: toggleFullscreen,
     onLeave: leave,
   });
@@ -403,6 +414,10 @@ export function Player({ playable, surfaceRef }: PlayerProps) {
         onToggleMute={toggleMute}
         onToggleSubtitles={toggleSubtitles}
         onToggleFullscreen={toggleFullscreen}
+        audioTracks={audioTracks}
+        audioTrack={audioTrack}
+        onChooseAudio={chooseAudio}
+        onAudioMenuChange={setAudioMenuOpen}
       />
     </Stage>
   );

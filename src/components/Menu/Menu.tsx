@@ -33,6 +33,12 @@ export interface MenuProps {
   children: ReactNode;
   /** Set by `styled(Menu)`, which is how a caller places the slot. */
   className?: string;
+  /**
+   * Told each time the panel opens or shuts, however it shut. For a caller
+   * whose surroundings must answer an open menu — the player's chrome, held up
+   * while the Audio picker is open.
+   */
+  onOpenChange?: (open: boolean) => void;
 }
 
 /**
@@ -197,8 +203,15 @@ export function MenuItem({
  * come back to it) and the two ARIA attributes that say what it opens and
  * whether it is open.
  */
-export function Menu({ trigger, children, className }: MenuProps) {
+export function Menu({
+  trigger,
+  children,
+  className,
+  onOpenChange,
+}: MenuProps) {
   const [open, setOpen] = useState(false);
+  const onOpenChangeRef = useRef(onOpenChange);
+  onOpenChangeRef.current = onOpenChange;
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const slotRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -209,6 +222,12 @@ export function Menu({ trigger, children, className }: MenuProps) {
     // is marked by then.
     setActiveIndex(null);
     triggerRef.current?.focus();
+    onOpenChangeRef.current?.(false);
+  }, []);
+
+  const openPanel = useCallback(() => {
+    setOpen(true);
+    onOpenChangeRef.current?.(true);
   }, []);
 
   const setActive = useCallback((index: number) => setActiveIndex(index), []);
@@ -269,7 +288,7 @@ export function Menu({ trigger, children, className }: MenuProps) {
         ref: triggerRef,
         'aria-haspopup': 'menu',
         'aria-expanded': open,
-        onClick: () => (open ? close() : setOpen(true)),
+        onClick: () => (open ? close() : openPanel()),
       })}
       {open ? (
         <CloseContext.Provider value={close}>

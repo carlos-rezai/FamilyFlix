@@ -7,7 +7,9 @@ import {
   SkipForwardIcon,
   SubtitlesIcon,
 } from '@/primitives';
+import type { AudioTrack } from '@/types';
 
+import { AudioMenu } from '../AudioMenu/AudioMenu';
 import { PlayerScrubber } from '../PlayerScrubber/PlayerScrubber';
 import { VolumeSlider } from '../VolumeSlider/VolumeSlider';
 import {
@@ -73,6 +75,18 @@ export interface PlayerControlsProps {
    * fullscreen" actually lives.
    */
   onToggleFullscreen: () => void;
+  /**
+   * The offered **Audio tracks**. The **Audio picker** is drawn only for two or
+   * more, and absent rather than disabled for fewer — CC's rule from the other
+   * side: a menu of one choice is a question with one answer.
+   */
+  audioTracks?: AudioTrack[];
+  /** The track playing, marked in the picker's menu. */
+  audioTrack?: AudioTrack | null;
+  /** A track chosen in the picker's menu. */
+  onChooseAudio?: (track: AudioTrack) => void;
+  /** Told when the picker's menu opens or shuts, so the screen can hold the chrome up. */
+  onAudioMenuChange?: (open: boolean) => void;
 }
 
 /**
@@ -127,6 +141,10 @@ export function PlayerControls({
   onToggleMute,
   onToggleSubtitles,
   onToggleFullscreen,
+  audioTracks = [],
+  audioTrack = null,
+  onChooseAudio = () => undefined,
+  onAudioMenuChange = () => undefined,
 }: PlayerControlsProps) {
   return (
     <>
@@ -183,6 +201,14 @@ export function PlayerControls({
                 onToggleMute={onToggleMute}
               />
               <RowSpacer />
+              {audioTracks.length >= 2 ? (
+                <AudioMenu
+                  tracks={audioTracks}
+                  playing={audioTrack}
+                  onChoose={onChooseAudio}
+                  onOpenChange={onAudioMenuChange}
+                />
+              ) : null}
               {hasSubtitles ? (
                 <SubtitleButton
                   type="button"
