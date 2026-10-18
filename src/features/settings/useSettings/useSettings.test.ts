@@ -51,6 +51,7 @@ const WRITE_ROUTE = '/api/settings/subtitle-language';
 
 const ENGLISH: Settings = {
   subtitleLanguage: 'English',
+  audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
 };
@@ -131,6 +132,7 @@ describe('useSettings — the read', () => {
       read.settle(
         okResponse({
           subtitleLanguage: 'Spanish',
+          audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
         })
@@ -146,6 +148,7 @@ describe('useSettings — the read', () => {
     fetchMock.mockResolvedValue(
       okResponse({
         subtitleLanguage: 'Spanish',
+        audioLanguage: 'English',
         ultrawideMargins: true,
         tmdbRatings: true,
       })
@@ -153,6 +156,7 @@ describe('useSettings — the read', () => {
 
     const { result } = await renderLanded({
       subtitleLanguage: 'Spanish',
+      audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
     });
@@ -244,11 +248,13 @@ describe('useSettings — chooseSubtitleLanguage', () => {
   it('puts the previous value back when the route refuses', async () => {
     const write = settledReadHeldWrite({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
     const { result } = await renderLanded({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -299,5 +305,157 @@ describe('useSettings — chooseSubtitleLanguage', () => {
     expect(
       fetchMock.mock.calls.filter(([input]) => String(input) === SETTINGS_ROUTE)
     ).toHaveLength(1);
+  });
+});
+
+/**
+ * 46 — Audio tracks, Phase 3 (issue #401): the **Preferred audio language**.
+ *
+ * `useSettings()` gains `audioLanguage` off the same one read — `null` until it
+ * lands, `null` still if it never does — and `chooseAudioLanguage`, the subtitle
+ * language's bargain: shown at once, posted to
+ * `POST /api/settings/audio-language`, the echo kept, put back on refusal,
+ * never rejecting.
+ */
+const AUDIO_ROUTE = '/api/settings/audio-language';
+
+/** The audio posts issued so far, as the values their bodies carried. */
+function postedAudioValues(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) =>
+        String(input) === AUDIO_ROUTE && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+const FRENCH_AUDIO: Settings = {
+  subtitleLanguage: 'English',
+  audioLanguage: 'French',
+  ultrawideMargins: false,
+  tmdbRatings: true,
+};
+
+describe('useSettings — audioLanguage, the read', () => {
+  it('holds null until the read lands', () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+
+    const { result } = renderHook(() => useSettings());
+
+    expect(result.current.audioLanguage).toBeNull();
+  });
+
+  it('hands over the audio language once it lands', async () => {
+    fetchMock.mockResolvedValue(okResponse(FRENCH_AUDIO));
+
+    const { result } = renderHook(() => useSettings());
+
+    await waitFor(() => expect(result.current.audioLanguage).toBe('French'));
+  });
+
+  it('keeps null when the route refuses', async () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+    const { result } = renderHook(() => useSettings());
+
+    await act(async () => {
+      read.settle(serverErrorResponse());
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.audioLanguage).toBeNull();
+  });
+});
+
+describe('useSettings — chooseAudioLanguage', () => {
+  it('shows the new value at once, before the post has answered', async () => {
+    settledReadHeldWrite(FRENCH_AUDIO);
+    const { result } = await renderLanded(FRENCH_AUDIO);
+
+    act(() => {
+      void result.current.chooseAudioLanguage('Spanish');
+    });
+
+    expect(result.current.audioLanguage).toBe('Spanish');
+  });
+
+  it('posts the value to the audio-language route, and not the subtitle one', async () => {
+    settledReadHeldWrite(FRENCH_AUDIO);
+    const { result } = await renderLanded(FRENCH_AUDIO);
+
+    act(() => {
+      void result.current.chooseAudioLanguage('Spanish');
+    });
+
+    await waitFor(() => expect(postedAudioValues()).toEqual(['Spanish']));
+    expect(postedValues()).toEqual([]);
+  });
+
+  it('keeps the echo rather than what was sent — the route stored it', async () => {
+    const write = settledReadHeldWrite(FRENCH_AUDIO);
+    const { result } = await renderLanded(FRENCH_AUDIO);
+
+    await act(async () => {
+      const chosen = result.current.chooseAudioLanguage('spanish');
+      write.settle(okResponse({ value: 'Spanish' }));
+      await chosen;
+    });
+
+    expect(result.current.audioLanguage).toBe('Spanish');
+  });
+
+  it('leaves the subtitle language as it was', async () => {
+    const write = settledReadHeldWrite(FRENCH_AUDIO);
+    const { result } = await renderLanded(FRENCH_AUDIO);
+
+    await act(async () => {
+      const chosen = result.current.chooseAudioLanguage('Spanish');
+      write.settle(okResponse({ value: 'Spanish' }));
+      await chosen;
+    });
+
+    expect(result.current.subtitleLanguage).toBe('English');
+  });
+
+  it('puts the previous value back when the route refuses', async () => {
+    const write = settledReadHeldWrite(FRENCH_AUDIO);
+    const { result } = await renderLanded(FRENCH_AUDIO);
+
+    await act(async () => {
+      const chosen = result.current.chooseAudioLanguage('Spanish');
+      write.settle(serverErrorResponse());
+      await chosen;
+    });
+
+    expect(result.current.audioLanguage).toBe('French');
+  });
+
+  it('puts the previous value back when the request itself fails', async () => {
+    const write = settledReadHeldWrite(FRENCH_AUDIO);
+    const { result } = await renderLanded(FRENCH_AUDIO);
+
+    await act(async () => {
+      const chosen = result.current.chooseAudioLanguage('Spanish');
+      write.refuse(new Error('offline'));
+      await chosen;
+    });
+
+    expect(result.current.audioLanguage).toBe('French');
+  });
+
+  it('does not reject on a refusal — the screen has no error face to show', async () => {
+    const write = settledReadHeldWrite(FRENCH_AUDIO);
+    const { result } = await renderLanded(FRENCH_AUDIO);
+
+    await act(async () => {
+      const chosen = result.current.chooseAudioLanguage('Spanish');
+      write.settle(serverErrorResponse());
+      await expect(chosen).resolves.toBeUndefined();
+    });
   });
 });

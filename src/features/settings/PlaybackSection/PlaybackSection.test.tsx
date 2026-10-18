@@ -28,7 +28,7 @@ import {
  * with its lede; _Turn on automatically_ beside a **Coming soon** pill over
  * a `Toggle` drawn `checked={false} disabled` — it stores nothing and presses
  * to nothing, auto-on staying 🧭 exactly as log 10 decided; a rule; and
- * _Preferred language_ with `FilterDropdown` on the right, the seven names of
+ * _Preferred subtitle language_ with `FilterDropdown` on the right, the seven names of
  * the **Language pool** as its options and the fetched value as its value.
  * The section owns `useSettings`; the pill is not drawn while the settings
  * are `null` — a refused read shows no default the server never confirmed.
@@ -60,6 +60,7 @@ const REPORT: PlaybackCapabilities = {
 const CAPABILITIES_ROUTE = '/api/playback/capabilities';
 const SETTINGS_ROUTE = '/api/settings';
 const WRITE_ROUTE = '/api/settings/subtitle-language';
+const AUDIO_ROUTE = '/api/settings/audio-language';
 
 /** A request that answers only when the test says so. */
 function held() {
@@ -84,12 +85,14 @@ function held() {
 function answerWith(
   settings: Settings | null = {
     subtitleLanguage: 'English',
+    audioLanguage: 'English',
     ultrawideMargins: false,
     tmdbRatings: true,
   }
 ) {
   const read = held();
   const write = held();
+  const audioWrite = held();
   fetchMock.mockImplementation((input, init) => {
     const url = String(input);
     if (url === CAPABILITIES_ROUTE) {
@@ -103,9 +106,12 @@ function answerWith(
     if (url === WRITE_ROUTE && init?.method === 'POST') {
       return write.pending;
     }
+    if (url === AUDIO_ROUTE && init?.method === 'POST') {
+      return audioWrite.pending;
+    }
     return Promise.reject(new Error(`unexpected request: ${url}`));
   });
-  return { read, write };
+  return { read, write, audioWrite };
 }
 
 /** The posts issued so far, as the values their bodies carried. */
@@ -147,13 +153,15 @@ const SUBTITLES_LEDE = 'How subtitles behave when a movie has them.';
 const AUTO_ON_DESC = 'Show subtitles by default when a movie has them.';
 const LANGUAGE_DESC = 'Which track to use whenever subtitles are shown.';
 
-/** The _Preferred language_ pill, by the value it shows — or `null`. */
+/** The _Preferred subtitle language_ pill, by the value it shows — or `null`. */
 const languagePill = (value: string) =>
-  screen.queryByRole('button', { name: `Preferred language: ${value}` });
+  screen.queryByRole('button', {
+    name: `Preferred subtitle language: ${value}`,
+  });
 
-/** Any _Preferred language_ pill at all — or `null`. */
+/** Any _Preferred subtitle language_ pill at all — or `null`. */
 const anyLanguagePill = () =>
-  screen.queryByRole('button', { name: /^Preferred language: / });
+  screen.queryByRole('button', { name: /^Preferred subtitle language: / });
 
 /** The pill, landed with `value`. */
 const pillLanded = async (value: string) => {
@@ -253,17 +261,17 @@ describe('PlaybackSection — Turn on automatically', () => {
     const rule = rules(container).find(
       (candidate) =>
         comesBefore(screen.getByText(AUTO_ON_DESC), candidate) &&
-        comesBefore(candidate, screen.getByText('Preferred language'))
+        comesBefore(candidate, screen.getByText('Preferred subtitle language'))
     );
     expect(rule).toBeDefined();
   });
 });
 
-describe('PlaybackSection — Preferred language, the row', () => {
+describe('PlaybackSection — Preferred subtitle language, the row', () => {
   it('names the row, in 15px at weight 500, with its description', () => {
     renderSection();
 
-    const title = screen.getByText('Preferred language');
+    const title = screen.getByText('Preferred subtitle language');
     const style = getComputedStyle(title);
     expect(style.fontSize).toBe('15px');
     expect(style.fontWeight).toBe('500');
@@ -276,13 +284,13 @@ describe('PlaybackSection — Preferred language, the row', () => {
     expect(
       comesBefore(
         screen.getByText('Turn on automatically'),
-        screen.getByText('Preferred language')
+        screen.getByText('Preferred subtitle language')
       )
     ).toBe(true);
   });
 });
 
-describe('PlaybackSection — Preferred language, the pill', () => {
+describe('PlaybackSection — Preferred subtitle language, the pill', () => {
   it('is absent until the settings land', () => {
     answerWith(null);
 
@@ -290,7 +298,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
 
     expect(anyLanguagePill()).toBeNull();
     // The row itself is there; only the value is not yet known.
-    expect(screen.getByText('Preferred language')).toBeDefined();
+    expect(screen.getByText('Preferred subtitle language')).toBeDefined();
   });
 
   it('stays absent on a refused read — no default the server never confirmed', async () => {
@@ -320,6 +328,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   it('shows the fetched value once the settings land', async () => {
     answerWith({
       subtitleLanguage: 'Spanish',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -330,9 +339,10 @@ describe('PlaybackSection — Preferred language, the pill', () => {
     expect(pill.textContent).toContain('Spanish');
   });
 
-  it('is named Preferred language, with no caption on screen', async () => {
+  it('is named Preferred subtitle language, with no caption on screen', async () => {
     answerWith({
       subtitleLanguage: 'Spanish',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -340,7 +350,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
     renderSection();
 
     const pill = await pillLanded('Spanish');
-    expect(pill.textContent).not.toContain('Preferred language');
+    expect(pill.textContent).not.toContain('Preferred subtitle language');
   });
 
   it('offers no list until it is pressed', async () => {
@@ -381,6 +391,7 @@ describe('PlaybackSection — Preferred language, the pill', () => {
   it('marks the fetched value as the current option', async () => {
     answerWith({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -476,5 +487,227 @@ describe('PlaybackSection — choosing a language', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Spanish' }));
 
     expect(openLanguages()).toEqual([]);
+  });
+});
+
+/**
+ * 46 — Audio tracks, Phase 3 (issue #401): the Audio block, from the revised
+ * `page.SettingsPage.dc.html`. Under _Subtitles_, a divider, then **Audio** with
+ * its lede, then one row — _Preferred audio language_ over `FilterDropdown`
+ * with the pool's seven names. The row is not drawn while the settings read is
+ * `null`. A choice is shown at once and posted to
+ * `POST /api/settings/audio-language`; a refused save puts it back. No audio
+ * on/off toggle is drawn.
+ */
+const AUDIO_LEDE = 'Which language a movie plays in when it has more than one.';
+const AUDIO_DESC = 'Which track to play when a movie has several.';
+
+/** The _Preferred audio language_ pill, by the value it shows — or `null`. */
+const audioPill = (value: string) =>
+  screen.queryByRole('button', { name: `Preferred audio language: ${value}` });
+
+/** The audio pill, landed with `value`. */
+const audioPillLanded = async (value: string) => {
+  await waitFor(() => expect(audioPill(value)).not.toBeNull());
+  return audioPill(value) as HTMLElement;
+};
+
+/** The audio posts issued so far, as the values their bodies carried. */
+function postedAudioValues(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) =>
+        String(input) === AUDIO_ROUTE && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+describe('PlaybackSection — the Audio block', () => {
+  it('titles the block Audio, in 16px at weight 600, with its lede', async () => {
+    renderSection();
+    await audioPillLanded('English');
+
+    const title = screen.getByText('Audio');
+    const style = getComputedStyle(title);
+    expect(style.fontSize).toBe('16px');
+    expect(style.fontWeight).toBe('600');
+    expect(comesBefore(title, screen.getByText(AUDIO_LEDE))).toBe(true);
+  });
+
+  it('names the row Preferred audio language, in 15px at weight 500, with its description', async () => {
+    renderSection();
+    await audioPillLanded('English');
+
+    const title = screen.getByText('Preferred audio language');
+    const style = getComputedStyle(title);
+    expect(style.fontSize).toBe('15px');
+    expect(style.fontWeight).toBe('500');
+    expect(comesBefore(title, screen.getByText(AUDIO_DESC))).toBe(true);
+  });
+
+  it('sits under Subtitles, behind a divider', async () => {
+    const { container } = renderSection();
+    await audioPillLanded('English');
+
+    expect(
+      comesBefore(screen.getByText(LANGUAGE_DESC), screen.getByText('Audio'))
+    ).toBe(true);
+    expect(
+      comesBefore(screen.getByText(AUDIO_LEDE), screen.getByText(AUDIO_DESC))
+    ).toBe(true);
+    const divider = rules(container).find(
+      (candidate) =>
+        comesBefore(screen.getByText(LANGUAGE_DESC), candidate) &&
+        comesBefore(candidate, screen.getByText('Audio'))
+    );
+    expect(divider).toBeDefined();
+  });
+
+  it('shows the fetched audio language, not the subtitle one', async () => {
+    answerWith({
+      subtitleLanguage: 'Spanish',
+      audioLanguage: 'German',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+    });
+
+    renderSection();
+
+    const pill = await audioPillLanded('German');
+    expect(pill.textContent).toContain('German');
+    expect(pill.textContent).not.toContain('Preferred audio language');
+  });
+
+  it('offers the seven names of the pool, in its order, at 200px', async () => {
+    renderSection();
+
+    fireEvent.click(await audioPillLanded('English'));
+
+    expect(openLanguages()).toEqual([...LANGUAGE_POOL]);
+    expect(getComputedStyle(screen.getByRole('menu')).minWidth).toBe('200px');
+  });
+
+  it('marks the fetched value as the current option', async () => {
+    answerWith({
+      subtitleLanguage: 'English',
+      audioLanguage: 'Dutch',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+    });
+    renderSection();
+
+    fireEvent.click(await audioPillLanded('Dutch'));
+
+    const current = screen
+      .getAllByRole('menuitem')
+      .filter((row) => row.getAttribute('aria-current') === 'true');
+    expect(current.map((row) => row.textContent)).toEqual(['Dutch']);
+  });
+
+  it('draws no audio on/off toggle — the one switch is auto-on’s', async () => {
+    renderSection();
+    await audioPillLanded('English');
+
+    expect(screen.getAllByRole('switch')).toEqual([autoOnSwitch()]);
+  });
+});
+
+describe('PlaybackSection — the Audio row while the read is null', () => {
+  it('is not drawn until the settings land', () => {
+    answerWith(null);
+
+    renderSection();
+
+    expect(screen.queryByText('Preferred audio language')).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: /^Preferred audio language: / })
+    ).toBeNull();
+  });
+
+  it('stays undrawn on a refused read', async () => {
+    const { read } = answerWith(null);
+    renderSection();
+
+    read.settle(serverErrorResponse());
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.filter(
+          ([input]) => String(input) === SETTINGS_ROUTE
+        )
+      ).toHaveLength(1)
+    );
+    await Promise.resolve();
+
+    expect(screen.queryByText('Preferred audio language')).toBeNull();
+  });
+});
+
+describe('PlaybackSection — choosing an audio language', () => {
+  it('shows the choice at once, before the write has answered', async () => {
+    renderSection();
+    fireEvent.click(await audioPillLanded('English'));
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'French' }));
+
+    expect(audioPill('French')).not.toBeNull();
+    expect(audioPill('English')).toBeNull();
+  });
+
+  it('posts the choice to the audio-language route, and nothing to the subtitle one', async () => {
+    renderSection();
+    fireEvent.click(await audioPillLanded('English'));
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'French' }));
+
+    await waitFor(() => expect(postedAudioValues()).toEqual(['French']));
+    expect(postedValues()).toEqual([]);
+  });
+
+  it('leaves the subtitle pill as it was', async () => {
+    renderSection();
+    await pillLanded('English');
+    fireEvent.click(await audioPillLanded('English'));
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'French' }));
+
+    expect(languagePill('English')).not.toBeNull();
+  });
+
+  it('keeps the choice once the route echoes it', async () => {
+    const { audioWrite } = answerWith();
+    renderSection();
+    fireEvent.click(await audioPillLanded('English'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'French' }));
+
+    audioWrite.settle(okResponse({ value: 'French' }));
+
+    await waitFor(() => expect(postedAudioValues()).toEqual(['French']));
+    await waitFor(() => expect(audioPill('French')).not.toBeNull());
+  });
+
+  it('puts the dropdown back when the route refuses', async () => {
+    const { audioWrite } = answerWith();
+    renderSection();
+    fireEvent.click(await audioPillLanded('English'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'French' }));
+    expect(audioPill('French')).not.toBeNull();
+
+    audioWrite.settle(serverErrorResponse());
+
+    await waitFor(() => expect(audioPill('English')).not.toBeNull());
+    expect(audioPill('French')).toBeNull();
+  });
+
+  it('puts the dropdown back when the request itself fails', async () => {
+    const { audioWrite } = answerWith();
+    renderSection();
+    fireEvent.click(await audioPillLanded('English'));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'French' }));
+
+    audioWrite.refuse(new Error('offline'));
+
+    await waitFor(() => expect(audioPill('English')).not.toBeNull());
   });
 });

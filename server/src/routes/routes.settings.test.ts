@@ -379,6 +379,7 @@ describe('GET /api/settings', () => {
 
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -391,6 +392,7 @@ describe('GET /api/settings', () => {
 
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -416,6 +418,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(storage.settings().subtitleLanguage).toBe('Spanish');
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Spanish',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -430,6 +433,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(response.status).toBe(200);
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'German',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -445,6 +449,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await response.json()).toEqual({ value: 'Spanish' });
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Spanish',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -459,6 +464,7 @@ describe('POST /api/settings/subtitle-language', () => {
     expect(await response.json()).toEqual({ value: 'Japanese' });
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'Japanese',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -517,6 +523,7 @@ describe('GET /api/settings — ultrawideMargins', () => {
 
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+      audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
     });
@@ -559,6 +566,7 @@ describe('POST /api/settings/ultrawide-margins', () => {
 
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
     });
@@ -627,6 +635,7 @@ describe('GET /api/settings — tmdbRatings', () => {
 
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -685,6 +694,7 @@ describe('POST /api/settings/tmdb-ratings', () => {
 
     expect(await readSettings(baseUrl)).toEqual({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: false,
     });
@@ -727,6 +737,113 @@ describe('POST /api/settings/tmdb-ratings', () => {
       expect(storage.settings().tmdbRatings).toBe(stored);
     }
   );
+});
+
+// 46 — Audio tracks, Phase 3 (issue #401): the **Preferred audio language**,
+// the fourth preference. `GET /api/settings` answers exactly four fields, and
+// `POST /api/settings/audio-language { value }` is a **Single-signal write**
+// answering `200 { value }` — the subtitle language's twin: `400` for a
+// missing, empty or non-string value, a name outside the pool accepted.
+
+/** The write, with whatever body the test wants on the wire. */
+const postAudioLanguage = (baseUrl: string, body: unknown) =>
+  fetch(`${baseUrl}/api/settings/audio-language`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+describe('GET /api/settings — audioLanguage', () => {
+  it('answers English when no row is stored', async () => {
+    const { baseUrl } = freshApi();
+
+    expect((await readSettings(baseUrl)).audioLanguage).toBe('English');
+  });
+
+  it('answers the stored value when the row is there', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setAudioLanguage('German');
+
+    expect((await readSettings(baseUrl)).audioLanguage).toBe('German');
+  });
+
+  it('answers exactly the four preferences, in order', async () => {
+    const { baseUrl } = freshApi();
+
+    expect(Object.keys(await readSettings(baseUrl))).toEqual([
+      'subtitleLanguage',
+      'audioLanguage',
+      'ultrawideMargins',
+      'tmdbRatings',
+    ]);
+  });
+});
+
+describe('POST /api/settings/audio-language', () => {
+  it('echoes the value it stored', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postAudioLanguage(baseUrl, { value: 'Spanish' });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({ value: 'Spanish' });
+  });
+
+  it('persists — the repository and the read route both answer it', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    await postAudioLanguage(baseUrl, { value: 'Spanish' });
+
+    expect(storage.settings().audioLanguage).toBe('Spanish');
+    expect((await readSettings(baseUrl)).audioLanguage).toBe('Spanish');
+  });
+
+  it('accepts a value outside the pool — a vocabulary, not a constraint', async () => {
+    const { baseUrl } = freshApi();
+
+    const response = await postAudioLanguage(baseUrl, { value: 'Japanese' });
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ value: 'Japanese' });
+    expect((await readSettings(baseUrl)).audioLanguage).toBe('Japanese');
+  });
+
+  it('leaves the other three preferences as they were', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setSubtitleLanguage('French');
+    storage.setUltrawideMargins(true);
+    storage.setTmdbRatings(false);
+
+    await postAudioLanguage(baseUrl, { value: 'Dutch' });
+
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: 'French',
+      audioLanguage: 'Dutch',
+      ultrawideMargins: true,
+      tmdbRatings: false,
+    });
+  });
+
+  it.each([
+    ['a missing value', {}],
+    ['an empty value', { value: '' }],
+    ['a number', { value: 3 }],
+    ['a boolean', { value: true }],
+    ['a null', { value: null }],
+    ['an object', { value: { name: 'Spanish' } }],
+  ])('answers 400 with an error for %s, storing nothing', async (_, body) => {
+    const { storage, baseUrl } = freshApi();
+    storage.setAudioLanguage('French');
+
+    const response = await postAudioLanguage(baseUrl, body);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: unknown };
+    expect(typeof payload.error).toBe('string');
+    expect((payload.error as string).length).toBeGreaterThan(0);
+    expect(storage.settings().audioLanguage).toBe('French');
+  });
 });
 
 // --- the storage report ----------------------------------------------------------

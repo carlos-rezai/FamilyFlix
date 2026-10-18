@@ -67,6 +67,7 @@ describe('library: settings() — the default applied', () => {
 
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'English',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -79,6 +80,7 @@ describe('library: settings() — the default applied', () => {
     expect(settings.subtitleLanguage).toBe(DEFAULT_SUBTITLE_LANGUAGE);
     expect(Object.keys(settings)).toEqual([
       'subtitleLanguage',
+      'audioLanguage',
       'ultrawideMargins',
       'tmdbRatings',
     ]);
@@ -101,6 +103,7 @@ describe('library: setSubtitleLanguage — the upsert', () => {
 
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'Spanish',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -152,6 +155,7 @@ describe('library: setSubtitleLanguage — the upsert', () => {
 
     expect(second.settings()).toEqual({
       subtitleLanguage: 'Portuguese',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -197,6 +201,7 @@ describe('library: tmdbKey / setTmdbKey — the TMDB key', () => {
 
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -259,6 +264,7 @@ describe('library: enrichmentLastSyncedAt — when the library last synced', () 
 
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     });
@@ -374,6 +380,7 @@ describe('library: ultrawideMargins / setUltrawideMargins — the frame preferen
 
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'German',
+      audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
     });
@@ -480,6 +487,7 @@ describe('library: tmdbRatings / setTmdbRatings — the TMDB ratings preference'
 
     expect(storage.settings()).toEqual({
       subtitleLanguage: 'French',
+      audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: false,
     });
@@ -557,5 +565,103 @@ describe('library: the Language pool — renamed for audio beside subtitles', ()
       );
 
     expect(readers).toEqual([]);
+  });
+});
+
+// 46 — Audio tracks, Phase 3 (issue #401): the **Preferred audio language**.
+// A fourth preference under the key `audio-language`, read through `valueOf`
+// with `DEFAULT_AUDIO_LANGUAGE` applied when the row is absent, and written by
+// `setAudioLanguage()`, an upsert. The pool is a vocabulary, not a constraint.
+describe('library: audioLanguage / setAudioLanguage — the audio preference', () => {
+  /** A migrated in-memory handle and the repository over it. */
+  function repositoryOverRawDb() {
+    const db = track(openDatabase(':memory:'));
+    return { db, repository: createSettings(db) };
+  }
+
+  it('answers English on a fresh database — the shared default', () => {
+    const storage = freshStorage();
+
+    expect(storage.settings().audioLanguage).toBe('English');
+    expect(storage.settings().audioLanguage).toBe(DEFAULT_AUDIO_LANGUAGE);
+  });
+
+  it('does not write the default down when it is read', () => {
+    const { db, repository } = repositoryOverRawDb();
+
+    expect(repository.settings().audioLanguage).toBe('English');
+
+    const rows = db
+      .prepare('SELECT COUNT(*) AS count FROM settings WHERE key = ?')
+      .get('audio-language') as { count: number };
+    expect(rows.count).toBe(0);
+  });
+
+  it("stores the language under 'audio-language' and reads it back", () => {
+    const { db, repository } = repositoryOverRawDb();
+
+    repository.setAudioLanguage('French');
+
+    expect(repository.settings().audioLanguage).toBe('French');
+    expect(
+      (
+        db
+          .prepare('SELECT value FROM settings WHERE key = ?')
+          .get('audio-language') as { value: string } | undefined
+      )?.value
+    ).toBe('French');
+  });
+
+  it('replaces the language already held rather than refusing the key', () => {
+    const storage = freshStorage();
+    storage.setAudioLanguage('Spanish');
+
+    storage.setAudioLanguage('Dutch');
+
+    expect(storage.settings().audioLanguage).toBe('Dutch');
+  });
+
+  it('keeps a language outside the pool as it was given', () => {
+    const storage = freshStorage();
+
+    storage.setAudioLanguage('Japanese');
+
+    expect(storage.settings().audioLanguage).toBe('Japanese');
+  });
+
+  it('leaves the other three preferences untouched, and is untouched by them', () => {
+    const storage = freshStorage();
+    storage.setAudioLanguage('German');
+
+    storage.setSubtitleLanguage('Italian');
+    storage.setUltrawideMargins(true);
+    storage.setTmdbRatings(false);
+
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'Italian',
+      audioLanguage: 'German',
+      ultrawideMargins: true,
+      tmdbRatings: false,
+    });
+  });
+
+  it('survives closing and reopening the database — it is in the backup', () => {
+    const path = tempDbPath();
+    const first = track(createSqliteStorage(path));
+    first.setAudioLanguage('Portuguese');
+    first.close();
+
+    const second = track(createSqliteStorage(path));
+
+    expect(second.settings().audioLanguage).toBe('Portuguese');
+  });
+
+  it('returns to English after a Factory reset', () => {
+    const storage = freshStorage();
+    storage.setAudioLanguage('Spanish');
+
+    storage.reset();
+
+    expect(storage.settings().audioLanguage).toBe('English');
   });
 });
