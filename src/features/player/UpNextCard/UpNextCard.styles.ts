@@ -4,14 +4,14 @@ import { controlStates } from '@/styles/interactionStates/interactionStates';
 
 /**
  * The **Up next card**, the `showNextEp` block of `feat.PlayerControls.dc.html`:
- * 372px of dark glass, 28px from the right and 150px up, over the chrome.
+ * 440px of dark glass, 28px from the right and 150px up, over the chrome.
  */
 export const Card = styled.div`
   position: absolute;
   right: 28px;
   bottom: 150px;
   z-index: 40;
-  width: 372px;
+  width: 440px;
   display: flex;
   gap: 14px;
   padding: 14px;
@@ -23,12 +23,17 @@ export const Card = styled.div`
   animation: ffPop ${({ theme }) => theme.motion.durBase} ease;
 `;
 
-/** The next episode's 16:9 thumbnail: its **Still** over its id's gradient. */
+/**
+ * The next episode's 16:9 thumbnail: its **Still** over its id's gradient.
+ * Centred, not stretched: a row's stretch would size it to the text column and
+ * override the ratio. At 200px it is about as tall as that column.
+ */
 export const Thumb = styled.div<{ $g1: string; $g2: string }>`
   position: relative;
   overflow: hidden;
   flex: 0 0 auto;
-  width: 104px;
+  width: 200px;
+  align-self: center;
   aspect-ratio: 16 / 9;
   border-radius: 7px;
   background: linear-gradient(

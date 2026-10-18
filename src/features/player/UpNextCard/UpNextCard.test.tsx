@@ -14,8 +14,8 @@ import {
  * (issue #196).
  *
  * The **Up next card**, drawn 1:1 from the `showNextEp` block of
- * `feat.PlayerControls.dc.html`: 372px wide, 28px from the right and 150px up,
- * on `ffPop`; a 104px 16:9 thumbnail beside _Up next · in 12s_, the next
+ * `feat.PlayerControls.dc.html`: 440px wide, 28px from the right and 150px up,
+ * on `ffPop`; a 200px 16:9 thumbnail, centred, beside _Up next · in 12s_, the next
  * episode's code and its title, then _Play now_ and _Cancel_.
  *
  * Presentational: it is told the **Next episode** and the seconds left, and
@@ -56,22 +56,22 @@ const cancel = () => screen.getByRole('button', { name: 'Cancel' });
 /** The card: the nearest ancestor of the label drawn at the card's width. */
 function card(): HTMLElement {
   let node: HTMLElement | null = label();
-  while (node !== null && getComputedStyle(node).width !== '372px') {
+  while (node !== null && getComputedStyle(node).width !== '440px') {
     node = node.parentElement;
   }
   if (node === null) {
-    throw new Error('no 372px card around the label');
+    throw new Error('no 440px card around the label');
   }
   return node;
 }
 
-/** The thumbnail: the one element in the card drawn 104px wide. */
+/** The thumbnail: the one element in the card drawn 200px wide. */
 function thumbnail(): HTMLElement {
   const found = Array.from(card().querySelectorAll<HTMLElement>('*')).find(
-    (node) => getComputedStyle(node).width === '104px'
+    (node) => getComputedStyle(node).width === '200px'
   );
   if (found === undefined) {
-    throw new Error('the card drew no 104px thumbnail');
+    throw new Error('the card drew no 200px thumbnail');
   }
   return found;
 }
@@ -129,7 +129,7 @@ describe('UpNextCard — the two presses', () => {
 });
 
 describe('UpNextCard — drawn as its prototype', () => {
-  it('is 372px wide, 28px from the right and 150px up, over the chrome', () => {
+  it('is 440px wide, 28px from the right and 150px up, over the chrome', () => {
     renderCard();
 
     const drawn = getComputedStyle(card());
@@ -158,12 +158,13 @@ describe('UpNextCard — drawn as its prototype', () => {
     );
   });
 
-  it('draws a 104px 16:9 thumbnail on the 7px radius', () => {
+  it('draws a 200px 16:9 thumbnail on the 7px radius, centred rather than stretched', () => {
     renderCard();
 
     const drawn = getComputedStyle(thumbnail());
     expect(drawn.borderRadius).toBe('7px');
     expect(normCss(drawn.aspectRatio)).toBe('16/9');
+    expect(drawn.alignSelf).toBe('center');
   });
 
   it('draws the next episode’s still over its gradient, clipped to the thumbnail', () => {
