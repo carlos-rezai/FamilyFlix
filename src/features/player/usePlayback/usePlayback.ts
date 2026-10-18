@@ -220,9 +220,10 @@ export function usePlayback({
    * and the new **Stream offset** reach the element together, as one load,
    * rather than a load at the old second followed by another at the right one.
    *
-   * Onto a stream path it is the film restarted at its **Absolute position**
-   * with the new track. Onto **Direct play** the offset is dropped and the
-   * element is wound to the position once it has metadata — before then there
+   * Onto a stream path it is `anchorStream(absolute())` with the new `a`: the
+   * film restarted at its **Absolute position** with the new track. Onto
+   * **Direct play** it is `anchorStream(0)` and `anchorElement` at that
+   * second, the element wound there once it has metadata — before then there
    * is nothing in it to wind. Either way the buffering circle is the feedback,
    * and a running film is started again once its new source is set, since a
    * browser's load leaves an element paused.
@@ -238,19 +239,14 @@ export function usePlayback({
   if (trackIndex !== sourceIndex) {
     setSourceIndex(trackIndex);
     if (videoRef.current !== null) {
-      const at = offsetRef.current + elementTimeRef.current;
+      const at = absolute();
       if (streaming) {
         windTo.current = null;
-        offsetRef.current = at;
-        setOffset(at);
-        elementTimeRef.current = 0;
-        setElementTime(0);
+        anchorStream(at);
       } else {
         windTo.current = at;
-        offsetRef.current = 0;
-        setOffset(0);
-        elementTimeRef.current = at;
-        setElementTime(at);
+        anchorStream(0);
+        anchorElement(at);
       }
       setBuffering(true);
       resumeAfterSwitch.current = playing;
