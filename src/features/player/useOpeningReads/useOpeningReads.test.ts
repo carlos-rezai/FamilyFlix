@@ -27,7 +27,11 @@ import { useOpeningReads } from './useOpeningReads';
 
 const MOVIE: Movie = makeMovie({ id: 'm1', title: 'Northwind' });
 
-const DIRECT: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
+const DIRECT: PlaybackRead = {
+  path: 'direct',
+  durationSeconds: 6832.5,
+  audioTracks: [],
+};
 
 let fetchMock: ReturnType<
   typeof vi.fn<

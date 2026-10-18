@@ -98,7 +98,9 @@ describe('probe — the streams', () => {
     expect(probe('ffprobe', 'film.avi', output)).toEqual({
       container: 'avi',
       videoCodec: 'h264',
-      audioCodec: 'aac',
+      audioStreams: [
+        { codec: 'aac', language: null, title: null, isDefault: false },
+      ],
       durationSeconds: 6832.5,
     });
   });
@@ -112,7 +114,9 @@ describe('probe — the streams', () => {
       ])
     );
 
-    expect(probe('ffprobe', 'film.mkv', output)?.audioCodec).toBe('aac');
+    expect(probe('ffprobe', 'film.mkv', output)?.audioStreams[0]?.codec).toBe(
+      'aac'
+    );
   });
 
   it('answers null for a stream the file does not have', () => {
@@ -120,7 +124,7 @@ describe('probe — the streams', () => {
     // is not the same as an audio track nothing can read.
     const output = printing(ffprobeJson('avi', [H264]));
 
-    expect(probe('ffprobe', 'film.avi', output)?.audioCodec).toBeNull();
+    expect(probe('ffprobe', 'film.avi', output)?.audioStreams).toEqual([]);
   });
 
   it('skips a stream that will not say what codec it is', () => {
@@ -131,7 +135,7 @@ describe('probe — the streams', () => {
     const answer = probe('ffprobe', 'film.avi', output);
 
     expect(answer?.videoCodec).toBeNull();
-    expect(answer?.audioCodec).toBeNull();
+    expect(answer?.audioStreams[0]?.codec).toBeNull();
   });
 
   it('reads a file with no streams listed at all', () => {
@@ -140,7 +144,7 @@ describe('probe — the streams', () => {
     expect(probe('ffprobe', 'film.avi', output)).toEqual({
       container: 'avi',
       videoCodec: null,
-      audioCodec: null,
+      audioStreams: [],
       durationSeconds: 0,
     });
   });

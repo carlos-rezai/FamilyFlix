@@ -25,7 +25,11 @@ import {
 /** The film every leaf addresses, unless it is asking about the encoding. */
 const MOVIE: Playable = { kind: 'movie', id: 'm1' };
 
-const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
+const DIRECT_PLAY: PlaybackRead = {
+  path: 'direct',
+  durationSeconds: 6832.5,
+  audioTracks: [],
+};
 
 let fetchMock: ReturnType<
   typeof vi.fn<

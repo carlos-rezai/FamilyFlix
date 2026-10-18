@@ -23,6 +23,7 @@ import type {
   PlaybackProcess,
 } from '../ffmpegComponent/ffmpegComponent';
 import { FRAME_POINT, frameArgs } from '../frameArgs/frameArgs';
+import { audioTracks } from '../audioTracks/audioTracks';
 import { mediaDuration } from '../mediaDuration/mediaDuration';
 import { readableFolderSync } from '../../media/readableFolder/readableFolder';
 import { linkedVideoPath } from '../linkedVideoPath/linkedVideoPath';
@@ -57,7 +58,8 @@ export type StreamPlan =
   | { path: 'direct' }
   | { path: 'converted'; conversion: PlaybackProcess }
   | { path: 'cannot-play' }
-  | { path: 'past-end' };
+  | { path: 'past-end' }
+  | { path: 'no-track' };
 
 /**
  * What the API layer can ask the playback domain for.
@@ -143,8 +145,11 @@ export interface Playback {
    * no frames, and never exits on its own. The film's very last second is not
    * past it — a **Scrubber** dragged to the far end asks for exactly the
    * duration, and refusing that would break the commonest scrub there is.
+   *
+   * `audioTrack` is the **Audio track index**, 0 when none is named; an index
+   * the file lacks is `no-track`, with nothing spawned.
    */
-  stream(file: string, offsetSeconds?: number): StreamPlan;
+  stream(file: string, offsetSeconds?: number, audioTrack?: number): StreamPlan;
 
   /**
    * The absolute file behind a **Subtitle**'s stored path, or `null` when there
@@ -337,17 +342,20 @@ export function createPlayback(
    * file and from whatever the slot holds now, which is what lets a film that
    * could not be played this morning play this afternoon.
    */
-  const decide = (file: string, offsetSeconds = 0) => {
+  const decide = (file: string, offsetSeconds = 0, audioTrack = 0) => {
     const component = slot.current();
     const probe = component === null ? null : component.probe(file);
+    const availability = availabilityOf(component);
     return {
       component,
       probe,
+      availability,
       decision: choosePlaybackPath({
         file,
         probe,
-        component: availabilityOf(component),
+        component: availability,
         offsetSeconds,
+        audioTrack,
       }),
     };
   };
@@ -407,21 +415,44 @@ export function createPlayback(
   return {
     videoFile,
     read: (file) => {
-      const { probe, decision } = decide(file);
+      const { probe, availability, decision } = decide(file);
       const durationSeconds = lengthOf(file, probe);
 
       // A film whose length nothing can determine is a film that cannot be
       // played, not a film that plays with a scrubber drawn to nowhere: the
       // duration is what a seek clamps against and what the finish threshold is
       // a percentage of, so a player handed nought has nothing to work from.
-      return decision.path === 'cannot-play' || durationSeconds <= 0
-        ? { path: 'cannot-play', durationSeconds: 0 }
-        : { path: decision.path, durationSeconds };
+      if (
+        decision.path === 'cannot-play' ||
+        decision.path === 'no-track' ||
+        durationSeconds <= 0
+      ) {
+        return { path: 'cannot-play', durationSeconds: 0, audioTracks: [] };
+      }
+
+      // Each track's own path, from the one probe: what choosing it would take.
+      const tracks = audioTracks(probe, (audioTrack) => {
+        const { path } = choosePlaybackPath({
+          file,
+          probe,
+          component: availability,
+          audioTrack,
+        });
+        return path === 'no-track' ? 'cannot-play' : path;
+      });
+      return { path: decision.path, durationSeconds, audioTracks: tracks };
     },
     duration: (file) => durationOf(file, slot.current()),
-    stream: (file, offsetSeconds = 0) => {
-      const { component, probe, decision } = decide(file, offsetSeconds);
+    stream: (file, offsetSeconds = 0, audioTrack = 0) => {
+      const { component, probe, decision } = decide(
+        file,
+        offsetSeconds,
+        audioTrack
+      );
 
+      if (decision.path === 'no-track') {
+        return { path: 'no-track' };
+      }
       if (decision.path === 'direct') {
         return { path: 'direct' };
       }

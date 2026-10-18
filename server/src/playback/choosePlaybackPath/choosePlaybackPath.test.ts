@@ -47,7 +47,9 @@ function probeOf(partial: Partial<MediaProbe> = {}): MediaProbe {
   return {
     container: 'mp4',
     videoCodec: 'h264',
-    audioCodec: 'aac',
+    audioStreams: [
+      { codec: 'aac', language: null, title: null, isDefault: false },
+    ],
     durationSeconds: 5391.2,
     ...partial,
   };
@@ -69,10 +71,10 @@ function choose(
  * pass for the wrong reason.
  */
 function argvOf(decision: PlaybackDecision): string[] {
-  if (decision.path === 'direct' || decision.path === 'cannot-play') {
-    throw new Error(`${decision.path} runs nothing, so it has no argv`);
+  if (decision.path === 'remux' || decision.path === 'transcode') {
+    return decision.args;
   }
-  return decision.args;
+  throw new Error(`${decision.path} runs nothing, so it has no argv`);
 }
 
 describe('choosePlaybackPath — a file Chromium already reads', () => {
@@ -94,7 +96,13 @@ describe('choosePlaybackPath — only the container is wrong', () => {
     // and a transcode of the same film would pin a CPU for two hours.
     const decision = choose(
       MKV,
-      probeOf({ container: 'matroska', videoCodec: 'h264', audioCodec: 'aac' })
+      probeOf({
+        container: 'matroska',
+        videoCodec: 'h264',
+        audioStreams: [
+          { codec: 'aac', language: null, title: null, isDefault: false },
+        ],
+      })
     );
 
     expect(decision.path).toBe('remux');
@@ -142,7 +150,14 @@ describe('choosePlaybackPath — a codec the browser cannot decode', () => {
   it('re-encodes AC-3 audio inside a container Chromium reads perfectly well', () => {
     // The row that stops the policy being about containers: the file is an MP4,
     // the picture is fine, and the family would get a silent film.
-    const decision = choose(MP4, probeOf({ audioCodec: 'ac3' }));
+    const decision = choose(
+      MP4,
+      probeOf({
+        audioStreams: [
+          { codec: 'ac3', language: null, title: null, isDefault: false },
+        ],
+      })
+    );
 
     expect(decision.path).toBe('transcode');
   });
@@ -150,7 +165,12 @@ describe('choosePlaybackPath — a codec the browser cannot decode', () => {
   it('re-encodes DTS audio for the same reason', () => {
     const decision = choose(
       MKV,
-      probeOf({ container: 'matroska', audioCodec: 'dts' })
+      probeOf({
+        container: 'matroska',
+        audioStreams: [
+          { codec: 'dts', language: null, title: null, isDefault: false },
+        ],
+      })
     );
 
     expect(decision.path).toBe('transcode');
@@ -159,7 +179,13 @@ describe('choosePlaybackPath — a codec the browser cannot decode', () => {
   it('re-encodes an AVI of XviD, which is wrong on both counts', () => {
     const decision = choose(
       AVI,
-      probeOf({ container: 'avi', videoCodec: 'mpeg4', audioCodec: 'mp3' })
+      probeOf({
+        container: 'avi',
+        videoCodec: 'mpeg4',
+        audioStreams: [
+          { codec: 'mp3', language: null, title: null, isDefault: false },
+        ],
+      })
     );
 
     expect(decision.path).toBe('transcode');

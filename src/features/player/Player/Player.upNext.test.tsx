@@ -45,7 +45,11 @@ import { stubFullscreen } from '@/test-support/stubFullscreen/stubFullscreen';
  */
 
 /** 44 minutes, as the file itself says. */
-const FORTY_FOUR: PlaybackRead = { path: 'direct', durationSeconds: 2640 };
+const FORTY_FOUR: PlaybackRead = {
+  path: 'direct',
+  durationSeconds: 2640,
+  audioTracks: [],
+};
 
 function makeEpisode(overrides: Partial<Episode>): Episode {
   return {
@@ -336,7 +340,7 @@ describe('Player — Play now', () => {
   it('marks this episode watched', async () => {
     // A 200-second file, so 15 seconds left is short of the 95% finish and
     // the watched write can only be Play now's.
-    answerWith(RUN, { path: 'direct', durationSeconds: 200 });
+    answerWith(RUN, { path: 'direct', durationSeconds: 200, audioTracks: [] });
     const { video } = await playing('e24');
     moveTo(video, 186);
 

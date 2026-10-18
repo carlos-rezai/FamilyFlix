@@ -24,11 +24,29 @@
  */
 export type PlaybackPath = 'direct' | 'remux' | 'transcode' | 'cannot-play';
 
+/**
+ * One **Audio track** the playback read offers: its **Audio track index** (a
+ * place among the file's audio streams), its language named in English or
+ * `null`, the label the picker draws, whether the file marks it default, and
+ * the **Playback path** choosing it would take — never `cannot-play`, because
+ * a track nothing can play is not offered.
+ */
+export interface AudioTrack {
+  index: number;
+  language: string | null;
+  label: string;
+  fileDefault: boolean;
+  path: Exclude<PlaybackPath, 'cannot-play'>;
+}
+
 /** The playback read's payload: which path, and how long the film runs. */
 export interface PlaybackRead {
+  /** The path of index 0, the one the plain stream URL plays. */
   path: PlaybackPath;
   /** The film's length in seconds, read from the file rather than the record. */
   durationSeconds: number;
+  /** The offered **Audio tracks**, in index order. */
+  audioTracks: AudioTrack[];
 }
 
 /**

@@ -67,7 +67,11 @@ const NORTHWIND: Movie = makeMovie({
 });
 
 /** What the file says it runs to, which is not what the record says. */
-const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
+const DIRECT_PLAY: PlaybackRead = {
+  path: 'direct',
+  durationSeconds: 6832.5,
+  audioTracks: [],
+};
 
 /**
  * A film that arrived in a container this build cannot convert — the read
@@ -77,6 +81,7 @@ const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
 const CANNOT_PLAY: PlaybackRead = {
   path: 'cannot-play',
   durationSeconds: 5391.2,
+  audioTracks: [],
 };
 
 const BUFFERING = 'Getting this film ready…';
@@ -90,7 +95,11 @@ const COULD_NOT_START_TITLE = 'This film could not be started';
  * can do is what the browser does when the stream refuses, which is fire
  * `error` at the element.
  */
-const REMUX: PlaybackRead = { path: 'remux', durationSeconds: 5391.2 };
+const REMUX: PlaybackRead = {
+  path: 'remux',
+  durationSeconds: 5391.2,
+  audioTracks: [],
+};
 
 /** The prototype's circle, to the pixel — the one centred element. */
 const CIRCLE_SIZE = '96px';
@@ -1382,7 +1391,11 @@ describe('Player — a settled scrub on a film that is being converted', () => {
   stubMediaElement();
 
   /** The same film, arriving down a live stream rather than off the disk. */
-  const REMUX: PlaybackRead = { path: 'remux', durationSeconds: 6832.5 };
+  const REMUX: PlaybackRead = {
+    path: 'remux',
+    durationSeconds: 6832.5,
+    audioTracks: [],
+  };
 
   const TRACK_LEFT = 100;
   const TRACK_WIDTH = 200;

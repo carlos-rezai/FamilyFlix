@@ -2,6 +2,18 @@ import { spawnSync } from 'node:child_process';
 import { extname } from 'node:path';
 
 /**
+ * One audio stream of a file, in the order the file holds them — its place in
+ * that order is the **Audio track index** `-map 0:a:<index>` reads. `language`
+ * is the raw tag, `title` trimmed, each `null` when absent or empty.
+ */
+export interface ProbedAudio {
+  codec: string | null;
+  language: string | null;
+  title: string | null;
+  isDefault: boolean;
+}
+
+/**
  * What **ffprobe** says a file is — the whole of what the format policy is
  * allowed to know about a film.
  *
@@ -9,15 +21,16 @@ import { extname } from 'node:path';
  * carries it. What the client is told is the **Playback path** that was chosen
  * from it, which is a decision rather than a description.
  *
- * Both codecs are nullable because a stream is allowed to be absent — a film
- * with no audio track has nothing that could fail to decode, which is not the
- * same as having an audio track nothing can read.
+ * The video codec is nullable because a stream is allowed to be absent, and
+ * `audioStreams` empty for a film with no audio — which has nothing that could
+ * fail to decode, not the same as an audio track nothing can read.
  */
 export interface MediaProbe {
   /** The container, normalized: `mp4`, `webm`, `matroska`, `avi`, … */
   container: string;
   videoCodec: string | null;
-  audioCodec: string | null;
+  /** Every audio stream, in file order. */
+  audioStreams: ProbedAudio[];
   /** How long the film runs, in seconds, or `0` when the file will not say. */
   durationSeconds: number;
 }
@@ -68,15 +81,49 @@ function normalizeContainer(formatName: string, file: string): string {
   return names[0] ?? '';
 }
 
-/** The first stream of the given kind, if the file has one. */
-function codecOf(streams: unknown[], kind: string): string | null {
-  for (const entry of streams) {
+/** The streams of the given kind, in file order. */
+function streamsOf(
+  streams: unknown[],
+  kind: string
+): Array<Record<string, unknown>> {
+  return streams.flatMap((entry) => {
     const stream = asRecord(entry);
-    if (stream !== null && asString(stream.codec_type) === kind) {
-      return asString(stream.codec_name);
-    }
-  }
-  return null;
+    return stream !== null && asString(stream.codec_type) === kind
+      ? [stream]
+      : [];
+  });
+}
+
+/** Whether a stream's disposition sets the given flag. */
+function flagged(stream: Record<string, unknown>, flag: string): boolean {
+  return asRecord(stream.disposition)?.[flag] === 1;
+}
+
+/**
+ * The film's own picture codec: the first video stream that is not an
+ * attached cover picture — the stream `-map 0:V:0?` sends.
+ */
+function videoCodecOf(streams: unknown[]): string | null {
+  const picture = streamsOf(streams, 'video').find(
+    (stream) => !flagged(stream, 'attached_pic')
+  );
+  return picture === undefined ? null : asString(picture.codec_name);
+}
+
+/** A tag's value, trimmed, or `null` when absent or blank. */
+function tagOf(stream: Record<string, unknown>, tag: string): string | null {
+  const value = asString(asRecord(stream.tags)?.[tag])?.trim() ?? '';
+  return value === '' ? null : value;
+}
+
+/** Every audio stream, in file order. */
+function audioStreamsOf(streams: unknown[]): ProbedAudio[] {
+  return streamsOf(streams, 'audio').map((stream) => ({
+    codec: asString(stream.codec_name),
+    language: tagOf(stream, 'language'),
+    title: tagOf(stream, 'title'),
+    isDefault: flagged(stream, 'default'),
+  }));
 }
 
 /**
@@ -164,8 +211,8 @@ export function probe(
 
   return {
     container: normalizeContainer(formatName, file),
-    videoCodec: codecOf(streams, 'video'),
-    audioCodec: codecOf(streams, 'audio'),
+    videoCodec: videoCodecOf(streams),
+    audioStreams: audioStreamsOf(streams),
     durationSeconds: Number.isFinite(duration) && duration > 0 ? duration : 0,
   };
 }

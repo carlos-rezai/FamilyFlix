@@ -29,7 +29,11 @@ import { shippingSourcesMatching } from '@/test-support/shippingSources/shipping
  * what a seek clamps against and what the **Scrubber** draws, neither of which
  * has anywhere else to get it from.
  */
-const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 6832.5 };
+const DIRECT_PLAY: PlaybackRead = {
+  path: 'direct',
+  durationSeconds: 6832.5,
+  audioTracks: [],
+};
 
 /**
  * Where the film's bytes come from, before any **Stream offset** is put on it.
@@ -439,7 +443,11 @@ describe('usePlayback — seeking a film that is being converted', () => {
   stubMediaElement();
 
   /** A film whose container alone was wrong: a live stream, started at a `t`. */
-  const REMUX: PlaybackRead = { path: 'remux', durationSeconds: 5391.2 };
+  const REMUX: PlaybackRead = {
+    path: 'remux',
+    durationSeconds: 5391.2,
+    audioTracks: [],
+  };
 
   /**
    * The **Stream offset** a source carries, in seconds — nought for a URL with
@@ -661,7 +669,11 @@ describe('usePlayback — a film the element could not start', () => {
   stubMediaElement();
 
   /** A film arriving down a conversion, which is where this failure lives. */
-  const REMUXED: PlaybackRead = { path: 'remux', durationSeconds: 5391.2 };
+  const REMUXED: PlaybackRead = {
+    path: 'remux',
+    durationSeconds: 5391.2,
+    audioTracks: [],
+  };
 
   it('reports the failure the element reported', async () => {
     const { video, result } = renderPlayback();

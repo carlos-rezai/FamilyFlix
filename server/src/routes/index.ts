@@ -500,6 +500,22 @@ function streamOffset(value: unknown): number | null {
   return Number.isFinite(seconds) && seconds >= 0 ? seconds : null;
 }
 
+/**
+ * The **Audio track index** a stream URL carries — 0 for a URL with no `?a=`,
+ * and `null` for an `a` that is not a non-negative integer.
+ */
+function audioTrackQuery(value: unknown): number | null {
+  if (value === undefined) {
+    return 0;
+  }
+  const raw = queryString(value);
+  if (raw === undefined || !/^\d+$/.test(raw)) {
+    return null;
+  }
+  const index = Number(raw);
+  return Number.isSafeInteger(index) ? index : null;
+}
+
 /** What each refused TMDB key answers with. */
 const KEY_REFUSALS: Record<
   Exclude<SaveKeyOutcome['kind'], 'saved'>,
@@ -2322,6 +2338,16 @@ export function createApiRouter(
         return;
       }
 
+      // `?a=` is the **Audio track index**, read before the path is chosen as
+      // `t` is; absent means 0, so a plain URL plays exactly as it did.
+      const audioTrack = audioTrackQuery(req.query.a);
+      if (audioTrack === null) {
+        res
+          .status(400)
+          .json({ error: 'Query a must be an audio track number, from 0' });
+        return;
+      }
+
       const playable = playableOr404(id, res);
       if (!playable) {
         return;
@@ -2332,7 +2358,12 @@ export function createApiRouter(
         return;
       }
 
-      const plan = playback.stream(file, offsetSeconds);
+      const plan = playback.stream(file, offsetSeconds, audioTrack);
+
+      if (plan.path === 'no-track') {
+        res.status(404).json({ error: `No audio track ${audioTrack}: ${id}` });
+        return;
+      }
 
       if (plan.path === 'cannot-play') {
         res

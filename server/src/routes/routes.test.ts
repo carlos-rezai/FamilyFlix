@@ -2898,7 +2898,9 @@ const MKV_BYTES = Buffer.from(
 const REMUXABLE: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
-  audioCodec: 'aac',
+  audioStreams: [
+    { codec: 'aac', language: null, title: null, isDefault: false },
+  ],
   durationSeconds: 5391.2,
 };
 
@@ -2906,7 +2908,9 @@ const REMUXABLE: MediaProbe = {
 const TRANSCODABLE: MediaProbe = {
   container: 'matroska',
   videoCodec: 'hevc',
-  audioCodec: 'ac3',
+  audioStreams: [
+    { codec: 'ac3', language: null, title: null, isDefault: false },
+  ],
   durationSeconds: 4102.5,
 };
 
@@ -2914,7 +2918,9 @@ const TRANSCODABLE: MediaProbe = {
 const NATIVE: MediaProbe = {
   container: 'mp4',
   videoCodec: 'h264',
-  audioCodec: 'aac',
+  audioStreams: [
+    { codec: 'aac', language: null, title: null, isDefault: false },
+  ],
   durationSeconds: 6832.5,
 };
 
@@ -4544,6 +4550,7 @@ describe('POST /api/movies — the added movie plays', () => {
     expect(await response.json()).toEqual({
       path: 'direct',
       durationSeconds: FIXTURE_DURATION_SECONDS,
+      audioTracks: [],
     });
   });
 

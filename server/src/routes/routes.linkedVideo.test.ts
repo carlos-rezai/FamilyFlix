@@ -68,7 +68,9 @@ afterEach(async () => {
 const REMUXABLE: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
-  audioCodec: 'aac',
+  audioStreams: [
+    { codec: 'aac', language: null, title: null, isDefault: false },
+  ],
   durationSeconds: 5391.2,
 };
 

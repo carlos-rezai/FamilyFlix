@@ -69,7 +69,9 @@ import { createPlayback } from './createPlayback';
 const MATROSKA: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
-  audioCodec: 'ac3',
+  audioStreams: [
+    { codec: 'ac3', language: null, title: null, isDefault: false },
+  ],
   durationSeconds: 4102.5,
 };
 
@@ -77,7 +79,9 @@ const MATROSKA: MediaProbe = {
 const NATIVE: MediaProbe = {
   container: 'mp4',
   videoCodec: 'h264',
-  audioCodec: 'aac',
+  audioStreams: [
+    { codec: 'aac', language: null, title: null, isDefault: false },
+  ],
   durationSeconds: 6832.5,
 };
 
@@ -203,6 +207,15 @@ describe('createPlayback — the read, and a length that is not there', () => {
     ).toEqual({
       path: 'transcode',
       durationSeconds: 4102.5,
+      audioTracks: [
+        {
+          index: 0,
+          language: null,
+          label: 'Track 1',
+          fileDefault: false,
+          path: 'transcode',
+        },
+      ],
     });
   });
 
@@ -219,6 +232,7 @@ describe('createPlayback — the read, and a length that is not there', () => {
     ).toEqual({
       path: 'cannot-play',
       durationSeconds: 0,
+      audioTracks: [],
     });
   });
 
@@ -232,6 +246,7 @@ describe('createPlayback — the read, and a length that is not there', () => {
     ).toEqual({
       path: 'cannot-play',
       durationSeconds: 0,
+      audioTracks: [],
     });
   });
 
@@ -248,6 +263,7 @@ describe('createPlayback — the read, and a length that is not there', () => {
     ).toEqual({
       path: 'direct',
       durationSeconds: 6832.5,
+      audioTracks: [],
     });
   });
 
@@ -564,6 +580,7 @@ describe('createPlayback — deciding over the slot at the time of the call', ()
     expect(playback.read(file)).toEqual({
       path: 'cannot-play',
       durationSeconds: 0,
+      audioTracks: [],
     });
 
     slot.put(fakeComponent(MATROSKA));
@@ -571,6 +588,15 @@ describe('createPlayback — deciding over the slot at the time of the call', ()
     expect(playback.read(file)).toEqual({
       path: 'transcode',
       durationSeconds: 4102.5,
+      audioTracks: [
+        {
+          index: 0,
+          language: null,
+          label: 'Track 1',
+          fileDefault: false,
+          path: 'transcode',
+        },
+      ],
     });
   });
 

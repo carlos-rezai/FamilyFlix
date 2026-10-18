@@ -25,7 +25,8 @@ export type PlaybackDecision =
   | { path: 'direct' }
   | { path: 'remux'; args: string[] }
   | { path: 'transcode'; args: string[] }
-  | { path: 'cannot-play' };
+  | { path: 'cannot-play' }
+  | { path: 'no-track' };
 
 export interface PlaybackChoice {
   /** The film being decided about — absolute, and already containment-checked. */
@@ -44,6 +45,12 @@ export interface PlaybackChoice {
    * nothing at all rather than for `-ss 0`.
    */
   offsetSeconds?: number;
+  /**
+   * The **Audio track index** to play — a place among the probe's audio
+   * streams, 0 when none is named. The path is decided over that stream's
+   * codec, and an index the probe does not hold is `no-track`.
+   */
+  audioTrack?: number;
 }
 
 /** Containers Chromium demuxes on its own. */
@@ -93,14 +100,33 @@ function inputArgs(file: string, offsetSeconds: number): string[] {
   return ['-hide_banner', '-loglevel', 'error', ...seek, '-i', file];
 }
 
+/**
+ * The one picture — `V` skips a cover picture — and the one voice; each `?`
+ * lets a file without one still play. Mapping is also what keeps a subtitle
+ * or data stream an MP4 cannot hold out of the output.
+ */
+function mapArgs(audioTrack: number): string[] {
+  return ['-map', '0:V:0?', '-map', `0:a:${audioTrack}?`];
+}
+
 /** Everything after them: a fragmented MP4, down the pipe. */
 function outputArgs(): string[] {
   return ['-movflags', FRAGMENTED_MP4, '-f', 'mp4', 'pipe:1'];
 }
 
 /** Rewrap the streams without touching them — I/O-bound, and nothing is lost. */
-function remuxArgs(file: string, offsetSeconds: number): string[] {
-  return [...inputArgs(file, offsetSeconds), '-c', 'copy', ...outputArgs()];
+function remuxArgs(
+  file: string,
+  offsetSeconds: number,
+  audioTrack: number
+): string[] {
+  return [
+    ...inputArgs(file, offsetSeconds),
+    ...mapArgs(audioTrack),
+    '-c',
+    'copy',
+    ...outputArgs(),
+  ];
 }
 
 /**
@@ -115,7 +141,8 @@ function remuxArgs(file: string, offsetSeconds: number): string[] {
 function transcodeArgs(
   file: string,
   hardwareEncoder: string | null,
-  offsetSeconds: number
+  offsetSeconds: number,
+  audioTrack: number
 ): string[] {
   const video =
     hardwareEncoder === null
@@ -125,6 +152,7 @@ function transcodeArgs(
 
   return [
     ...inputArgs(file, offsetSeconds),
+    ...mapArgs(audioTrack),
     ...video,
     ...pixels,
     '-c:a',
@@ -142,17 +170,35 @@ function readable(codec: string | null, native: string[]): boolean {
   return codec === null || native.includes(codec);
 }
 
-/** Whether the streams inside the file are ones Chromium reads. */
-function codecsAreNative(probe: MediaProbe): boolean {
+/**
+ * Whether the picture and the chosen voice are streams Chromium reads. A file
+ * with no audio at all has no voice that could fail to decode.
+ */
+function codecsAreNative(probe: MediaProbe, audioTrack: number): boolean {
   return (
     readable(probe.videoCodec, NATIVE_VIDEO_CODECS) &&
-    readable(probe.audioCodec, NATIVE_AUDIO_CODECS)
+    readable(probe.audioStreams[audioTrack]?.codec ?? null, NATIVE_AUDIO_CODECS)
   );
 }
 
-/** Whether the file needs no help at all: right container, right codecs. */
-function needsNothing(probe: MediaProbe): boolean {
-  return NATIVE_CONTAINERS.includes(probe.container) && codecsAreNative(probe);
+/**
+ * Whether the file needs no help at all: right container, right codecs, and
+ * its first voice — the one the element plays.
+ */
+function needsNothing(probe: MediaProbe, audioTrack: number): boolean {
+  return (
+    audioTrack === 0 &&
+    NATIVE_CONTAINERS.includes(probe.container) &&
+    codecsAreNative(probe, audioTrack)
+  );
+}
+
+/**
+ * Whether the file has the chosen voice. Index 0 always is — a file with no
+ * audio, or one nothing probed, plays its first track or none.
+ */
+function hasTrack(probe: MediaProbe | null, audioTrack: number): boolean {
+  return audioTrack === 0 || audioTrack < (probe?.audioStreams.length ?? 0);
 }
 
 /** The name's claim, for the case where there is no better one. */
@@ -171,8 +217,9 @@ function looksNative(file: string): boolean {
  * component**'s availability arrives as a value rather than as a question about
  * this machine, and **nothing else in `playback/` decides a path**.
  *
- * The order of the four answers is the order they matter in:
+ * The order of the answers is the order they matter in:
  *
+ * 0. An **Audio track index** the file does not have is `no-track`.
  * 1. A file nothing read is decided from its name — an MP4 goes out untouched,
  *    because a partial setup is not a dead app, and anything else is refused
  *    rather than sent as bytes no browser can read.
@@ -190,12 +237,17 @@ export function choosePlaybackPath({
   probe,
   component,
   offsetSeconds = 0,
+  audioTrack = 0,
 }: PlaybackChoice): PlaybackDecision {
+  if (!hasTrack(probe, audioTrack)) {
+    return { path: 'no-track' };
+  }
+
   if (probe === null) {
     return looksNative(file) ? { path: 'direct' } : { path: 'cannot-play' };
   }
 
-  if (needsNothing(probe)) {
+  if (needsNothing(probe, audioTrack)) {
     return { path: 'direct' };
   }
 
@@ -203,10 +255,15 @@ export function choosePlaybackPath({
     return { path: 'cannot-play' };
   }
 
-  return codecsAreNative(probe)
-    ? { path: 'remux', args: remuxArgs(file, offsetSeconds) }
+  return codecsAreNative(probe, audioTrack)
+    ? { path: 'remux', args: remuxArgs(file, offsetSeconds, audioTrack) }
     : {
         path: 'transcode',
-        args: transcodeArgs(file, component.hardwareEncoder, offsetSeconds),
+        args: transcodeArgs(
+          file,
+          component.hardwareEncoder,
+          offsetSeconds,
+          audioTrack
+        ),
       };
 }

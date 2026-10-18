@@ -74,6 +74,7 @@ export type { NewSubtitle, NewMovie, MoviePatch } from './write';
 export type {
   PlaybackPath,
   PlaybackRead,
+  AudioTrack,
   Cue,
   CodecKind,
   CodecSupport,

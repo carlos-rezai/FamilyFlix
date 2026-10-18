@@ -58,7 +58,9 @@ interface ScriptedComponent extends PlaybackComponent {
 const MATROSKA: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
-  audioCodec: 'ac3',
+  audioStreams: [
+    { codec: 'ac3', language: null, title: null, isDefault: false },
+  ],
   durationSeconds: 4102.5,
 };
 

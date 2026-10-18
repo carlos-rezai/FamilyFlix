@@ -53,7 +53,11 @@ const EPISODE_ID = 'e24';
 const PLAYABLE: Playable = { kind: 'episode', id: EPISODE_ID };
 
 /** 44 minutes, as the file itself says. */
-const DIRECT_PLAY: PlaybackRead = { path: 'direct', durationSeconds: 2640 };
+const DIRECT_PLAY: PlaybackRead = {
+  path: 'direct',
+  durationSeconds: 2640,
+  audioTracks: [],
+};
 
 const MISSING_TITLE = 'This film’s file is missing';
 
