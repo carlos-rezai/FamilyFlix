@@ -378,7 +378,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | TMDB ratings — fetched stars until the family rates | ✅ Done         |
 | Episode stills — a frame from the file, as fallback | ✅ Done         |
 | Add and sync — add by files, TMDB fills the rest    | ✅ Done         |
-| Audio tracks — English by default, switch in player | 🔜 Planned      |
+| Audio tracks — English by default, switch in player | ✅ Done         |
 | Manage library — show folders, overview, delete     | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
@@ -519,14 +519,15 @@ field TMDB already knows. It is done (design log 45):
     lands on the title's page.
 
 Step 29 came out of using v0.8.0: some films carry several audio languages,
-and the player plays whichever comes first. It is planned:
+and the player played whichever came first. It is done (design log 46):
 
-29. 🔜 **Audio tracks** — Settings → Playback gains an _Audio_ section beside
+29. ✅ **Audio tracks** — Settings → Playback has an _Audio_ section beside
     Subtitles, where you choose the household's preferred audio language —
     English by default. A film with several audio tracks opens on that
-    language when it has it, and the player gets an audio menu to switch
-    track mid-film without losing your place, the way VLC's _Audio → Audio
-    Track_ does.
+    language when it has it, and the player has an _Audio_ menu beside CC
+    (or the `A` key) to switch track mid-film without losing your place, the
+    way VLC's _Audio → Audio Track_ does. A language picked there carries on
+    to the next episode for the rest of the evening.
 
 Step 30 came out of using v0.8.0 too: adding a whole show by hand means
 picking its episodes one file at a time, and there is no one place to see

@@ -144,7 +144,7 @@ familyflix/
 │ │ └── rendererRouter/ ← `mountRenderer`: the built renderer beside `/api` under `RENDERER_CSP` and `index.html` for any other GET, `/api` passed on before the policy is set; nothing mounted when `FAMILYFLIX_RENDERER_PATH` is unset
 │ ├── library/ ← movie CRUD, SQLite queries, watch-state + resume-position logic
 │ │ ├── browse/ ← the browse home's and the Genre page's filters and **Sort orders**; `shownRatingSql(alias, tmdbRatings)`, the **Shown rating** spelled once in SQL, and `highestRatedSql` beside it, _Highest rated_'s body — the series browse reads both; the preference read per query through an injected `tmdbRatings()`
-│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()`, `setUltrawideMargins()` and `setTmdbRatings()` as upserts over the three preference keys, `subtitle-language`, `ultrawide-margins` and `tmdb-ratings` — the two flags through one `flagOf(key, fallback)` and one `setFlag(key, on)`; and two keys beside the preferences, never among them — `tmdb-api-key` and `enrichment-last-synced-at` — every one read through one `valueOf(key)`
+│ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()`, `setAudioLanguage()`, `setUltrawideMargins()` and `setTmdbRatings()` as upserts over the four preference keys, `subtitle-language`, `audio-language`, `ultrawide-margins` and `tmdb-ratings` — the two flags through one `flagOf(key, fallback)` and one `setFlag(key, on)`; and two keys beside the preferences, never among them — `tmdb-api-key` and `enrichment-last-synced-at` — every one read through one `valueOf(key)`
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`, and the **Sync gap** — what _Only what's missing_ syncs — once as `syncGap`
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from — an outcome, `removed` / `not-found` / `in-use` with the count of titles a **Linked video** plays from there, the count and the delete in one transaction
 │ │ ├── parentFolder/ ← pure: a Stored path some directories up — the **Media folder** a row written without one is given; shipping adds name theirs
@@ -184,12 +184,14 @@ familyflix/
 │ │ ├── componentSlot/ ← the Component slot: `createComponentSlot(slotDir, env, { verify, rename })` — `current/` read ahead of everything, `incoming/` and `previous/` swept on startup, `receive()`/`take`/`install()`/`discard()`, `remove()`, and the Component swap's three renames with the In-use refusal off the first one that fails like a lock. Outcomes are values, never throws: four install refusals, three remove
 │ │ ├── componentBinary/ ← pure: a filename → `ffmpeg` / `ffprobe` / null — this feature's security boundary, the way `fileKinds` is media's; the binary's own word, optionally a `-` and whatever the build called itself, optionally `.exe`
 │ │ ├── verifyComponent/ ← the Verified component: run the staged pair before anything moves
-│ │ ├── probe/ ← ffprobe wrapper → MediaProbe (container, codecs, duration)
+│ │ ├── probe/ ← ffprobe wrapper → MediaProbe (container, the video codec, `audioStreams` — each audio stream's codec, language, title and default flag, an attached cover picture skipped — duration)
 │ │ ├── mediaDuration/ ← an MP4’s own moov/mvhd, so a direct play needs no component
-│ │ ├── choosePlaybackPath/ ← pure: MediaProbe → direct / remux / transcode / cannot-play + argv
+│ │ ├── choosePlaybackPath/ ← pure: MediaProbe and an **Audio track index** → direct / remux / transcode / cannot-play / no-track + argv; both converting paths map the picture and the chosen voice, `-map 0:V:0? -map 0:a:N?`, and **Direct play** is index 0's alone
+│ │ ├── trackLanguage/ ← pure: a stream's language tag → its base language named in English (`pt-BR` is Portuguese), `null` for no tag, `und` / `mul` / `zxx` / `mis` and a tag it cannot name; never throws
+│ │ ├── audioTracks/ ← pure: a probe and each index's path → the offered **Audio tracks**, labelled — language · title, `Track N` with neither, two colliding labels each numbered — a track nothing can play, or one the file lacks, not offered
 │ │ ├── frameArgs/ ← pure: `FRAME_POINT`, the **Frame point** (a third of the duration), and `frameArgs(file, atSeconds)`, the one picture's argv — input seeking, one JPEG to stdout, no temp file
 │ │ ├── linkedVideoPath/ ← the linked boundary: `linkedVideoPath(folderPath, videoPath)`, a **Linked video**'s row → its file — video kinds only, then `mediaFilePath`'s containment — and `spellLinkedVideo(folderPath, file)`, its writer, the `episodeTag` pairing
-│ │ ├── createPlayback/ ← the injected domain: `createPlayback(mediaPath, slot, libraryFolderPath)` — `videoFile(StoredVideo) → VideoFile` (`file` / `missing` / `unreachable`, a Library folder's reach read afresh on every call), read, stream, subtitleFile, cues, capabilities, receiveComponent, removeComponent, and `frame(StoredVideo, signal)` — a **Frame still** at the **Frame point** within the 20 s **Frame budget**, or `null`, never rejecting. It takes the slot rather than a component and reads it per request, so the next press of Play decides over whatever is live with nothing cached to clear
+│ │ ├── createPlayback/ ← the injected domain: `createPlayback(mediaPath, slot, libraryFolderPath)` — `videoFile(StoredVideo) → VideoFile` (`file` / `missing` / `unreachable`, a Library folder's reach read afresh on every call), read (the path, the length and each offered **Audio track** with its own path, off one probe — `decisionFor`, the domain's one call of the policy, asked per track), stream (an `audioTrack` beside the offset, `no-track` for one the file lacks), subtitleFile, cues, capabilities, receiveComponent, removeComponent, and `frame(StoredVideo, signal)` — a **Frame still** at the **Frame point** within the 20 s **Frame budget**, or `null`, never rejecting. It takes the slot rather than a component and reads it per request, so the next press of Play decides over whatever is live with nothing cached to clear
 │ │ ├── ffmpegComponent/ ← the injected seam: what this machine can be asked to do — probe, spawn, the hardware encoder — the first listed one a trial encode shows this machine can run, else software — and `decoders()`, the raw `ffmpeg -decoders` listing (the encoders and decoders listings and the trial, `runs`, behind it)
 │ │ ├── mediaFilePath/ ← the under-media-root check between a stored string and an open file
 │ │ ├── derivedRuntime/ ← a Playback and a stored path → the runtime minutes off the bytes, never throwing; the form’s save and the importer both ask it
@@ -246,7 +248,7 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
-│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — the FAB's two — ArrowUpIcon, PlusIcon — and enrichment's five — BangRingIcon, SyncIcon, DatabaseIcon, TableIcon, LandscapeIcon — named for what they draw, …), `currentColor`, sized by the caller
+│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — the FAB's two — ArrowUpIcon, PlusIcon — enrichment's five — BangRingIcon, SyncIcon, DatabaseIcon, TableIcon, LandscapeIcon — and the Audio picker's SpeechBubbleIcon, named for what they draw, …), `currentColor`, sized by the caller
 │ │ ├── Artwork/ ← a title's art over its **Gradient fallback**: the url a background layer over the gradient, so a file that fails to load shows it; a size container; `poster` on a **Poster surface** draws the **Default poster** — the `aria-hidden` Wordmark centred at `11cqmin` — when there is no url
 │ │ ├── Wordmark/ ← _Family_ in the text ink, _Flix_ in the accent, serif 700, sized by its parent's `font-size`: the header's logo, the About card's brand row and the Default poster, each placing it through `styled(Wordmark)`
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
@@ -305,25 +307,28 @@ familyflix/
 │ │ │ ├── DeleteSeriesDialog/ useDeleteSeries/ ← the movie's Delete dialog worded for a series, _its N episodes_ in the singular at one; `{ deleting, deleteSeries }`, onto the Series tab once the series is gone
 │ │ │ └── api/ ← saveSeasonWatched, saveSeriesWatched, deleteSeries (one caller each)
 │ │ ├── player/ ← built-in video player, subtitle handling, resume position — for any **Playable**, a movie or an episode
-│ │ │ ├── PlayerScreen/ ← the **Fullscreen surface**: the unkeyed surface fullscreen is asked of, around the `Player` keyed on its **Playable**, so the next episode plays on still in fullscreen
+│ │ │ ├── PlayerScreen/ ← the **Fullscreen surface**: the unkeyed surface fullscreen is asked of, around the `Player` keyed on its **Playable**, so the next episode plays on still in fullscreen; and the **Audio choice** for the sitting, carried into the next episode
 │ │ │ ├── Player/ ← the organism: owns the hooks, renders the rest
-│ │ │ ├── PlayerControls/ ← the top and bottom chrome bars
+│ │ │ ├── PlayerControls/ ← the top and bottom chrome bars; the Audio picker drawn on `hasAudioTracks`, beside CC's `hasSubtitles`
+│ │ │ ├── AudioMenu/ ← the **Audio picker**: the round 44px _Audio_ button before CC, and its upward menu on `Menu`, one item per offered track by its label, the playing one marked
 │ │ │ ├── PlayerScrubber/ ← the seek bar
 │ │ │ ├── VolumeSlider/ ← the volume bar (shares logic with the scrubber, not pixels)
 │ │ │ ├── SubtitleOverlay/ ← the styled cue box, ours rather than ::cue
 │ │ │ ├── PlayerNotice/ ← buffering / missing-file / cannot-play, in the play circle
 │ │ │ ├── UpNextCard/ ← the Up next card: the next episode, the countdown, _Play now_ and _Cancel_
-│ │ │ ├── usePlayback/ ← element state ↔ React state, offset re-anchoring
-│ │ │ ├── useSubtitles/ ← which track (the Preferred subtitle language read through fetchSettings once per open, then track order), the box, the line on it; the Cue list held against the row it came from
+│ │ │ ├── usePlayback/ ← element state ↔ React state, offset re-anchoring, and an Audio track switch — `anchorStream(absolute())` with the new `a`, or onto Direct play the element wound to the position
+│ │ │ ├── useSubtitles/ ← which track (the Preferred subtitle language handed in off the opening settings read, then track order), the box, the line on it; the Cue list held against the row it came from
 │ │ │ ├── useWatchReporter/ ← tick, coalesce, finish
 │ │ │ ├── useUpNext/ ← the Up next rules: the 15-second window, _Play now_, _Cancel_ for this episode, and what the end of the file does
-│ │ │ ├── useOpeningReads/ ← the record and the Playback read, together
+│ │ │ ├── useOpeningReads/ ← the record, the Playback read and the Settings, together — the element pointed only once all three have settled, a refused settings read no preference
+│ │ │ ├── useAudioTracks/ ← the Audio picker's state: the offered tracks, the one playing — `preferredAudio`'s answer until a hand picks — `hasAudioTracks` (two or more), `choose` and `next` (the `a` key), each pick by hand reported as the **Audio choice**
 │ │ │ ├── useControlsVisibility/ ← 3s idle, hidden cursor
-│ │ │ ├── usePlayerKeys/ ← the keyboard map, onto the buttons’ own handlers
+│ │ │ ├── usePlayerKeys/ ← the keyboard map, onto the buttons’ own handlers — `a` the next Audio track, `null` while the picker is not drawn, as C is for CC
 │ │ │ ├── useFullscreen/ ← the whole surface up, never the bare element
 │ │ │ ├── useDragScalar/ ← a pointer over a track → a 0–1 scalar
 │ │ │ ├── cueAt/ ← pure: the line covering a position
 │ │ │ ├── preferredSubtitle/ ← pure: default language, then track order
+│ │ │ ├── preferredAudio/ ← pure: its twin — the **Audio choice** where a track speaks it, then the **Preferred audio language**, then the file's default, then the first
 │ │ │ ├── volumePreference/ ← the level and mute, in localStorage
 │ │ │ └── api/ ← fetchPlayback, fetchSubtitleCues, saveResume, fetchEpisode — each addressed by a Playable
 │ │ ├── enrichment/ ← the Enrichment flow at `/enrich`: a Sync with TMDB in its three scopes, ImportFlow's sibling
@@ -375,7 +380,7 @@ familyflix/
 │ │ │ ├── SettingsHeader/ ← Back, the heading, the lede — the Library group's ＋ Add a title row is the one door to the form
 │ │ │ ├── LibrarySection/ ← the Library group: Add a title, Library folders and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
-│ │ │ ├── PlaybackSection/ ← the Playback card: the Codecs row — the Codec summary as its line, pushing `/settings/codecs` — the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred language over FilterDropdown, shown at once and put back on refusal
+│ │ │ ├── PlaybackSection/ ← the Playback card: the Codecs row — the Codec summary as its line, pushing `/settings/codecs` — the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred subtitle language over FilterDropdown, shown at once and put back on refusal; then Audio, Preferred audio language over the same dropdown — each pill undrawn while its read is `null`, its row drawn
 │ │ │ ├── DisplaySection/ ← the Display card: the _Ultrawide margins_ row and its Toggle, reading and writing through `useDisplayPreference()`
 │ │ │ ├── NavigationRow/ ← one Settings row that goes somewhere: a button whose accent tile holds a glyph, then a label, its line and a chevron, pushing its destination — the Codecs row and _Sync metadata & posters_, written twice and extracted once, kept here because both callers are Settings groups; placed by its caller through `styled(NavigationRow)`, `LoadMessage`'s precedent
 │ │ │ ├── CodecManager/ ← the Codecs page's screen: owns useCapabilities and its own maintainer header (Back onto Settings, **Codecs**, the lede), then the Playback component group — the Component row, then the drop zone — then the Formats group, the Codec summary over one CodecRow per catalogued codec; the ✕ passed only when the report says the component is removable
@@ -392,8 +397,8 @@ familyflix/
 │ │ │ ├── AboutSection/ ← the About card: the brand row, the App version in mono, the tagline, under the Software update row; the last card, so no group gap
 │ │ │ ├── useCapabilities/ ← the read on mount, plus the two writes that change it: `{ capabilities, upload, installComponent, removeComponent }`. Neither write rejects, and neither re-fetches — both routes echo the report after the write, and that echo is the redraw
 │ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
-│ │ │ ├── useSettings/ ← the read half the same, holding the **Preferred subtitle language** alone — Ultrawide margins is `DisplayPreferenceProvider`'s; `chooseSubtitleLanguage` flips the pill first and puts it back if the save refuses, never rejecting
-│ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, saveTmdbKey (never rejecting: saved, refused or unreachable), fetchStorageReport, factoryReset (`reset` on a `204`, `refused` with the route’s sentence on a `409`, rejecting otherwise) (one caller each)
+│ │ │ ├── useSettings/ ← the read half the same, holding the **Preferred subtitle language** and the **Preferred audio language** — Ultrawide margins is `DisplayPreferenceProvider`'s; each `choose…` one bargain, `useHeldLanguage`'s, `useHeldFlag`'s twin: the pill flipped first and put back if the save refuses, never rejecting
+│ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, saveAudioLanguage, saveTmdbKey (never rejecting: saved, refused or unreachable), fetchStorageReport, factoryReset (`reset` on a `204`, `refused` with the route’s sentence on a `409`, rejecting otherwise) (one caller each)
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
@@ -408,7 +413,7 @@ familyflix/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
 │ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands; and `useKeyStored`, whether a TMDB key is stored — `false` until it lands and for a failed read — the `EnrichCheckCard` hint's one read on Import setup, the Library folders page and the Movie form
-│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `SUBTITLE_LANGUAGES`, SubtitleLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, `DEFAULT_TMDB_RATINGS`, Settings (`subtitleLanguage`, `ultrawideMargins`, `tmdbRatings`), StorageReport; playback.ts: CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s, and `RatingSource`, whose a **Shown rating** is; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `LANGUAGE_POOL`, PoolLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_AUDIO_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, `DEFAULT_TMDB_RATINGS`, Settings (`subtitleLanguage`, `audioLanguage`, `ultrawideMargins`, `tmdbRatings`), StorageReport; playback.ts: PlaybackPath, AudioTrack, PlaybackRead (its `audioTracks`), CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s, and `RatingSource`, whose a **Shown rating** is; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -475,8 +480,8 @@ the record the detail page reads; and `saveWatched` did when the player began
 marking a film watched at the finish threshold that the detail page's toggle
 already set by hand; and `dismissProblem` did, because the Review step's Skip
 and the Movie form's Skip this one both send the same `DELETE`; and
-`fetchSettings` did, because the Settings hub's _Preferred language_ pill and
-the player's `useSubtitles` both read the same household preference; and
+`fetchSettings` did, because the Settings hub's two language pills and the
+player's opening read both read the same household preferences; and
 `saveSeriesFavorite` did, because the Series tab's card and the series page
 both save the same series heart; and `saveEpisodeWatched` did, because the
 season page's box and the player's _Play now_ both mark the same episode; and
@@ -764,14 +769,20 @@ number on the page is a read the app can truthfully answer now:
   nothing uploaded to take back, `409` in the upload's own words, `500`
   the same. Both echo the whole report, so the screen redraws from the
   echo rather than reading again.
-- `GET /api/settings` → `{ subtitleLanguage, ultrawideMargins, tmdbRatings }`,
+- `GET /api/settings` → `{ subtitleLanguage, audioLanguage, ultrawideMargins,
+tmdbRatings }`,
   every default applied, and `POST /api/settings/subtitle-language { value }` →
   `{ value }`, a **Single-signal write** on the favorite / watched / rating
   precedent;
   `400` for a missing, empty or non-string value. Membership in the
   **Language pool** is not checked — a vocabulary, not a constraint. The
-  player's `useSubtitles` reads the same preference through the shared
-  `fetchSettings` once per open.
+  player's opening read, `useOpeningReads`, reads the same preference through
+  the shared `fetchSettings` once per open and hands it to `useSubtitles`.
+- `POST /api/settings/audio-language { value }` → `{ value }`, the
+  **Preferred audio language** — the subtitle language's twin, the same
+  **Single-signal write** and the same `400`; `English` until set. The
+  player's opening read waits for it before the element is pointed, and
+  `preferredAudio` opens a title on it.
 - `POST /api/settings/ultrawide-margins { value }` → `{ value }`, the same
   **Single-signal write**; `400` for anything but a boolean. **Ultrawide
   margins** is held app-wide by `DisplayPreferenceProvider` in `App/`, not by
@@ -1112,8 +1123,8 @@ second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
 at scale + Season art**, step 26, **TMDB ratings**, step 27, **Episode
-stills**, and step 28, **Add and sync**. Step 29, **Audio tracks**, is
-next, then step 30, **Manage library**. Steps 10–15 came out of
+stills**, step 28, **Add and sync**, and step 29, **Audio tracks**. Step
+30, **Manage library**, is next. Steps 10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1317,25 +1328,30 @@ field TMDB already knows. It is done (design log 45):
     Resolve, a background Sync, a year off the filename, a remembered tick.
 
 Step 29 came out of using v0.8.0: some films carry several audio languages,
-and the player plays whichever is first. It is planned — grill-me, a PRD and
-a prototype revision first, since `docs/handoff/` draws neither an Audio
-section nor an audio picker:
+and the player played whichever came first. It is done (design log 46):
 
-29. 🔜 **Audio tracks** — Settings → Playback gains an _Audio_ section
-    beside Subtitles: a **Preferred audio language**, **English by default**,
-    a household preference in the `settings` table beside the **Preferred
-    subtitle language** (`GET /api/settings`, a **Single-signal write**),
-    chosen off the **Language pool** over FilterDropdown. The player opens a
-    title on the track in that language, else the file's default, else its
-    first, and its controls gain an audio picker — as VLC's _Audio → Audio
-    Track_ — to switch track mid-film, keeping the position. To settle in the
-    grill: Chromium's `audioTracks` is off by default, so a switch is most
-    likely the server's own remux or transcode mapping the chosen stream
-    (`-map 0:a:N`) and re-anchoring the offset, a multi-track MP4 leaving
-    direct play for it; `probe` learning each audio stream's language and
-    title; what a track with no language tag is called; whether a choice in
-    the player is remembered per title or only for that viewing; and how
-    episodes inherit it.
+29. ✅ **Audio tracks** — the server switches the track. `probe` reads every
+    audio stream's codec, language, title and default flag (`audioStreams`, a
+    cover picture skipped), and `choosePlaybackPath` maps the picture and the
+    chosen voice, `-map 0:V:0? -map 0:a:N?`; the stream route reads the
+    **Audio track index** as `?a=` beside `?t=`, an index the file lacks a
+    `404` (`no-track`). **Direct play** only on index 0: any other track
+    remuxes or transcodes. One **Playback read** carries every offered
+    **Audio track** — its language named in English by `trackLanguage`, its
+    label (`Track N` with neither), the file's default and its own path; a
+    track nothing can play is not offered. Settings → Playback's _Audio_
+    section holds the **Preferred audio language**, English by default, a
+    fourth `settings` key (`audio-language`, a **Single-signal write**) off
+    the **Language pool**, renamed from `SUBTITLE_LANGUAGES`. The player waits
+    for the settings read before it points the element, and opens on
+    `preferredAudio`'s answer — the **Audio choice** where a track speaks it,
+    then the preference, then the file's default, then the first. The
+    **Audio picker**, drawn for two tracks or more before CC with `a` to
+    cycle, switches mid-film at the **Absolute position**, a paused film
+    staying paused. The Audio choice lasts the sitting on `PlayerScreen`,
+    carried into _Play now_'s next episode. No migration. Not this step: a
+    subtitle picker, a per-title memory, audio in the form or the importer,
+    new pool languages, Chromium's `audioTracks`.
 
 Step 30 came out of using v0.8.0 too: adding a whole show by hand meant
 picking its episodes file by file, and nothing lists what the library holds
@@ -1400,7 +1416,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Built-in video player** — local playback, subtitle tracks, transport controls.
 - ✅ **Watch tracking** — watched / in-progress / unwatched states and resume position.
 - ✅ **Episode playback** — the player unchanged for movies; for an episode the title reads `Show · S02E04 · Episode title`, and an **Up next** card appears in the last 15 s with a countdown, Play now and Cancel — auto-play next is the player's only addition. No skip-intro, no in-player episode list.
-- 🔜 **Audio tracks** — a film with several audio languages opens on the household's Preferred audio language (English by default), and the player's controls carry an audio picker to switch track mid-film, as VLC does (step 29).
+- ✅ **Audio tracks** — a film with several audio languages opens on the household's Preferred audio language (English by default), and the player's Audio picker, before CC with `a` to cycle, switches track mid-film without losing the place — the server remuxing or transcoding the chosen track; the choice lasts the sitting, episodes included (step 29).
 
 ### Maintainer tools
 
@@ -1430,7 +1446,7 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Codec manager — view installed codecs** — the Codec report off the component the player uses: one row per catalogued format, Built-in or Installed.
 - ✅ **Codec manager — add a playback component** — the Component drop zone under the rows and the ✕ on the Component row: a pair dropped is staged, verified and sworn into the Component slot, and the next press of Play converts with it.
 - ✅ **Subtitle preferences** — the household's Preferred subtitle language, kept in the library's database and honoured by the player; the Auto-on toggle built but disabled until shipped.
-- 🔜 **Audio preferences** — an _Audio_ section on the Playback card: the household's Preferred audio language, English by default, kept beside the subtitle language and honoured by the player (step 29).
+- ✅ **Audio preferences** — an _Audio_ section on the Playback card: the household's Preferred audio language, English by default, kept beside the subtitle language and honoured by the player (step 29).
 - ✅ **Storage** — the managed media folder's location and space used, agreeing with Explorer; _Change…_ is the Roadmap's **Move the media folder**.
 - ✅ **Network group** — a fifth Settings group, between Display and Storage, the one place FamilyFlix goes online: _The Movie Database (TMDB)_ with a status pill, the lede ("Nothing is sent about your household, just movie titles to look up posters and synopses"), the API-key field in mono with _Test connection_ beside it, and the _Sync metadata & posters_ row that opens the Enrichment flow.
 - ✅ **Software update** — the About card's first row: an Update offer downloaded at launch from GitHub Releases, Update now, and Check for updates; closing the app installs it. Designed in `17-software-update`, shipped as v0.2.0.
