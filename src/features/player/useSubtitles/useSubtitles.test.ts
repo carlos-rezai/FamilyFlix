@@ -2,10 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import type { Cue, Settings, Subtitle } from '@/types';
-import {
-  okResponse,
-  serverErrorResponse,
-} from '@/test-support/fakeResponse/fakeResponse';
+import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 import { useSubtitles } from './useSubtitles';
 
@@ -113,14 +110,23 @@ async function settled(): Promise<void> {
   });
 }
 
-/** The hook, over a film's rows, at a position the test can move. */
-function renderSubtitles(subtitles: Subtitle[] = [ENGLISH], position = 0) {
+/**
+ * The hook, over a film's rows, at a position the test can move, under the
+ * **Preferred subtitle language** the player's opening read handed it —
+ * `undefined` for a read that was refused, or has not landed.
+ */
+function renderSubtitles(
+  subtitles: Subtitle[] = [ENGLISH],
+  position = 0,
+  language: string | undefined = undefined
+) {
   return renderHook(
     ({ at }) =>
       useSubtitles({
         playable: { kind: 'movie', id: 'm1' },
         subtitles,
         position: at,
+        language,
       }),
     { initialProps: { at: position } }
   );
@@ -281,40 +287,24 @@ describe('useSubtitles — a fetch that goes wrong', () => {
   });
 });
 
+/**
+ * 46 — Audio tracks, Phase 4: "the opening" (issue #402).
+ *
+ * The settings read moved into `useOpeningReads`, the player's third opening
+ * read, so one open makes one `GET /api/settings`. The hook is handed the
+ * **Preferred subtitle language** from it and asks for nothing of its own.
+ * What the preference does is unchanged from issue #145: it chooses; nobody
+ * picks; track order when there is none.
+ */
 describe('useSubtitles — the Preferred subtitle language', () => {
-  it('opens on the Spanish row when the household prefers Spanish', async () => {
-    settingsAnswer = () =>
-      Promise.resolve(
-        okResponse({
-          subtitleLanguage: 'Spanish',
-          audioLanguage: 'English',
-          ultrawideMargins: false,
-          tmdbRatings: true,
-        })
-      );
-    const { result } = renderSubtitles([ENGLISH, SPANISH]);
+  it('opens on the Spanish row when the household prefers Spanish', () => {
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 0, 'Spanish');
 
-    await waitFor(() => {
-      expect(result.current.track).toEqual(SPANISH);
-    });
+    expect(result.current.track).toEqual(SPANISH);
   });
 
   it('shows the Spanish cues when CC is pressed', async () => {
-    // The dropdown on Settings changes what pressing CC shows — which is the
-    // cue list of the chosen row, not the first one.
-    settingsAnswer = () =>
-      Promise.resolve(
-        okResponse({
-          subtitleLanguage: 'Spanish',
-          audioLanguage: 'English',
-          ultrawideMargins: false,
-          tmdbRatings: true,
-        })
-      );
-    const { result } = renderSubtitles([ENGLISH, SPANISH], 2);
-    await waitFor(() => {
-      expect(result.current.track).toEqual(SPANISH);
-    });
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 2, 'Spanish');
 
     act(() => result.current.toggleSubtitles());
 
@@ -325,58 +315,30 @@ describe('useSubtitles — the Preferred subtitle language', () => {
   });
 
   it('opens on the first track when no row is in the preferred language', async () => {
-    // A preference never hides subtitles that exist.
-    settingsAnswer = () =>
-      Promise.resolve(
-        okResponse({
-          subtitleLanguage: 'Spanish',
-          audioLanguage: 'English',
-          ultrawideMargins: false,
-          tmdbRatings: true,
-        })
-      );
-    const { result } = renderSubtitles([SWEDISH, ENGLISH]);
+    // A preference never hides subtitles that exist. English sits last here,
+    // so a language from anywhere but the option would show.
+    const englishLast: Subtitle = { ...ENGLISH, position: 9 };
+    const { result } = renderSubtitles([englishLast, SWEDISH], 0, 'Spanish');
     await settled();
 
-    expect(settingsRequests()).toHaveLength(1);
-    expect(result.current.track).toEqual(ENGLISH);
+    expect(result.current.track).toEqual(SWEDISH);
   });
 
-  it('treats Spanish and spanish as one language', async () => {
-    // A track the importer tagged in another case still counts.
-    settingsAnswer = () =>
-      Promise.resolve(
-        okResponse({
-          subtitleLanguage: 'Spanish',
-          audioLanguage: 'English',
-          ultrawideMargins: false,
-          tmdbRatings: true,
-        })
-      );
+  it('treats Spanish and spanish as one language', () => {
     const taggedLower: Subtitle = { ...SPANISH, language: 'spanish' };
-    const { result } = renderSubtitles([ENGLISH, taggedLower]);
+    const { result } = renderSubtitles([ENGLISH, taggedLower], 0, 'Spanish');
 
-    await waitFor(() => {
-      expect(result.current.track).toEqual(taggedLower);
-    });
+    expect(result.current.track).toEqual(taggedLower);
   });
 
-  it('is track order before the settings land, and the film does not wait', () => {
-    // The read goes out on open; the film opens on it landing or not.
-    settingsAnswer = () => new Promise<Response>(() => undefined);
-    const { result } = renderSubtitles([SPANISH, ENGLISH]);
-
-    expect(settingsRequests()).toHaveLength(1);
-    expect(result.current.track).toEqual(ENGLISH);
-  });
-
-  it('is track order when the read is refused, and CC still works', async () => {
-    settingsAnswer = () => Promise.resolve(serverErrorResponse());
-    const { result } = renderSubtitles([SPANISH, ENGLISH], 2);
+  it('is track order with no preference, and CC still works', async () => {
+    // The opening read was refused: no preference — not English — and the
+    // film plays on.
+    const englishLast: Subtitle = { ...ENGLISH, position: 9 };
+    const { result } = renderSubtitles([englishLast, SWEDISH], 2, undefined);
     await settled();
 
-    expect(settingsRequests()).toHaveLength(1);
-    expect(result.current.track).toEqual(ENGLISH);
+    expect(result.current.track).toEqual(SWEDISH);
 
     act(() => result.current.toggleSubtitles());
 
@@ -385,61 +347,19 @@ describe('useSubtitles — the Preferred subtitle language', () => {
     });
   });
 
-  it('is track order when the settings route is unreachable', async () => {
-    // The player behaves exactly as it does now: no delay, no throw, no box
-    // that was not asked for.
-    settingsAnswer = () => Promise.reject(new Error('offline'));
-    const { result } = renderSubtitles([SPANISH, ENGLISH]);
+  it('makes no settings read of its own', async () => {
+    // The player's opening read is the one `GET /api/settings` an open makes.
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 2, 'Spanish');
+    act(() => result.current.toggleSubtitles());
     await settled();
 
-    expect(settingsRequests()).toHaveLength(1);
-    expect(result.current.track).toEqual(ENGLISH);
-    expect(result.current.subtitlesOn).toBe(false);
+    expect(settingsRequests()).toEqual([]);
   });
 
-  it('does not re-choose the track when the preference changes mid-film', async () => {
-    settingsAnswer = () =>
-      Promise.resolve(
-        okResponse({
-          subtitleLanguage: 'Spanish',
-          audioLanguage: 'English',
-          ultrawideMargins: false,
-          tmdbRatings: true,
-        })
-      );
-    const { result, rerender, unmount } = renderSubtitles(
-      [ENGLISH, SWEDISH, SPANISH],
-      2
-    );
-    await waitFor(() => {
-      expect(result.current.track).toEqual(SPANISH);
-    });
-
-    // The household changes its mind while the film plays: a seek, the box
-    // pressed on and off — nothing about the film asks again.
-    settingsAnswer = () =>
-      Promise.resolve(
-        okResponse({
-          subtitleLanguage: 'Swedish',
-          audioLanguage: 'English',
-          ultrawideMargins: false,
-          tmdbRatings: true,
-        })
-      );
-    rerender({ at: 40 });
-    act(() => result.current.toggleSubtitles());
-    act(() => result.current.toggleSubtitles());
+  it('makes no settings read of its own without a preference either', async () => {
+    renderSubtitles([ENGLISH, SPANISH], 0, undefined);
     await settled();
 
-    expect(result.current.track).toEqual(SPANISH);
-    expect(settingsRequests()).toHaveLength(1);
-
-    // The next film opens on the new preference.
-    unmount();
-    const next = renderSubtitles([ENGLISH, SWEDISH, SPANISH]);
-
-    await waitFor(() => {
-      expect(next.result.current.track).toEqual(SWEDISH);
-    });
+    expect(settingsRequests()).toEqual([]);
   });
 });

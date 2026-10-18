@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
-import type { Movie, PlaybackRead } from '@/types';
+import type { Movie, PlaybackRead, Settings } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   notFoundResponse,
@@ -51,11 +51,28 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-/** Answer each of the two endpoints with what the test says it says. */
-function serve(movie: Response, playback: Response) {
-  fetchMock.mockImplementation((input) =>
-    Promise.resolve(String(input).endsWith('/playback') ? playback : movie)
-  );
+/** What `GET /api/settings` answers on a fresh database. */
+const DEFAULT_SETTINGS: Settings = {
+  subtitleLanguage: 'English',
+  audioLanguage: 'English',
+  ultrawideMargins: false,
+  tmdbRatings: true,
+};
+
+/** Answer each of the three endpoints with what the test says it says. */
+function serve(
+  movie: Response,
+  playback: Response,
+  settings: () => Promise<Response> = () =>
+    Promise.resolve(okResponse(DEFAULT_SETTINGS))
+) {
+  fetchMock.mockImplementation((input) => {
+    const url = String(input);
+    if (url === '/api/settings') {
+      return settings();
+    }
+    return Promise.resolve(url.endsWith('/playback') ? playback : movie);
+  });
 }
 
 describe('useOpeningReads — both reads, as one moment', () => {
@@ -69,6 +86,7 @@ describe('useOpeningReads — both reads, as one moment', () => {
     expect(result.current).toEqual({
       movie: null,
       playback: null,
+      settings: null,
       unavailable: null,
       opened: false,
     });
@@ -105,7 +123,8 @@ describe('useOpeningReads — both reads, as one moment', () => {
     });
 
     const asked = fetchMock.mock.calls.map(([input]) => String(input));
-    expect(asked).toHaveLength(2);
+    expect(asked).toHaveLength(3);
+    expect(asked.filter((url) => url === '/api/settings')).toHaveLength(1);
     expect(asked.some((url) => url.endsWith('/api/movies/m1'))).toBe(true);
     expect(asked.some((url) => url.endsWith('/api/movies/m1/playback'))).toBe(
       true
@@ -205,7 +224,7 @@ describe('useOpeningReads — a read that went wrong', () => {
     );
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
     });
     expect(result.current.unavailable).toBeNull();
     expect(result.current.playback).toBeNull();
@@ -221,7 +240,7 @@ describe('useOpeningReads — a read that went wrong', () => {
     );
 
     await waitFor(() => {
-      expect(fetchMock).toHaveBeenCalledTimes(2);
+      expect(fetchMock).toHaveBeenCalledTimes(3);
     });
     expect(result.current.movie).toBeNull();
     expect(result.current.playback).toBeNull();
@@ -337,5 +356,138 @@ describe('useOpeningReads — leaving before the answer arrives', () => {
 
     await Promise.resolve();
     expect(result.current.playback).toBeNull();
+  });
+});
+
+/**
+ * 46 — Audio tracks, Phase 4: "the opening" (issue #402).
+ *
+ * The household's settings become the third opening read. The **Preferred
+ * audio language** decides which track the element is pointed at, so the
+ * element may not be pointed until that read has **settled** — landed or
+ * refused. A refusal is no preference, and the film still opens. The
+ * subtitles take their language from the same read, so an open asks for the
+ * settings once.
+ */
+describe('useOpeningReads — the household’s settings', () => {
+  const SPANISH_HOUSEHOLD: Settings = {
+    ...DEFAULT_SETTINGS,
+    subtitleLanguage: 'Spanish',
+    audioLanguage: 'Spanish',
+  };
+
+  it('reports the settings beside the record and the playback read', async () => {
+    serve(okResponse(MOVIE), okResponse(DIRECT), () =>
+      Promise.resolve(okResponse(SPANISH_HOUSEHOLD))
+    );
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.settings).toEqual(SPANISH_HOUSEHOLD);
+    expect(result.current.movie).toEqual(MOVIE);
+    expect(result.current.playback).toEqual(DIRECT);
+  });
+
+  it('asks for the settings once per open', async () => {
+    serve(okResponse(MOVIE), okResponse(DIRECT));
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+
+    const asked = fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter((url) => url === '/api/settings');
+    expect(asked).toHaveLength(1);
+  });
+
+  it('is not open while the settings read is still coming', async () => {
+    // The record and the playback read have both answered; the settings have
+    // not. Nothing may be pointed yet — which track to point at is still
+    // unknown.
+    let answer: (value: Response) => void = () => undefined;
+    serve(
+      okResponse(MOVIE),
+      okResponse(DIRECT),
+      () =>
+        new Promise<Response>((resolve) => {
+          answer = resolve;
+        })
+    );
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+
+    expect(result.current.opened).toBe(false);
+
+    answer(okResponse(SPANISH_HOUSEHOLD));
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.settings).toEqual(SPANISH_HOUSEHOLD);
+  });
+
+  it('still opens when the settings read is refused, with no preference', async () => {
+    serve(okResponse(MOVIE), okResponse(DIRECT), () =>
+      Promise.resolve(serverErrorResponse())
+    );
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.settings).toBeNull();
+    // A refused preference takes nothing else with it.
+    expect(result.current.movie).toEqual(MOVIE);
+    expect(result.current.playback).toEqual(DIRECT);
+    expect(result.current.unavailable).toBeNull();
+  });
+
+  it('still opens when the settings route cannot be reached', async () => {
+    serve(okResponse(MOVIE), okResponse(DIRECT), () =>
+      Promise.reject(new Error('offline'))
+    );
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'movie', id: 'm1' })
+    );
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.settings).toBeNull();
+    expect(result.current.playback).toEqual(DIRECT);
+  });
+
+  it('reads the settings for an episode too', async () => {
+    serve(
+      okResponse({ episode: null, series: null, next: null }),
+      okResponse(DIRECT),
+      () => Promise.resolve(okResponse(SPANISH_HOUSEHOLD))
+    );
+
+    const { result } = renderHook(() =>
+      useOpeningReads({ kind: 'episode', id: 'e1' })
+    );
+
+    await waitFor(() => {
+      expect(result.current.opened).toBe(true);
+    });
+    expect(result.current.settings).toEqual(SPANISH_HOUSEHOLD);
   });
 });

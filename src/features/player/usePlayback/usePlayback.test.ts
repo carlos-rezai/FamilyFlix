@@ -3,7 +3,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { usePlayback } from './usePlayback';
 import type { VolumePreference } from '../volumePreference/volumePreference';
-import type { PlaybackRead } from '@/types';
+import type { AudioTrack, PlaybackRead } from '@/types';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 import { shippingSourcesMatching } from '@/test-support/shippingSources/shippingSources';
 
@@ -45,7 +45,8 @@ const STREAM = '/api/movies/m1/stream';
 function renderPlayback(
   read: PlaybackRead = DIRECT_PLAY,
   startAt = 0,
-  startVolume?: VolumePreference
+  startVolume?: VolumePreference,
+  audioTrack: AudioTrack | null = null
 ) {
   const video = document.createElement('video');
   const ref = { current: video };
@@ -56,6 +57,7 @@ function renderPlayback(
       startAt,
       streamSrc: STREAM,
       startVolume,
+      audioTrack,
     })
   );
   return { video, ...view };
@@ -721,5 +723,89 @@ describe('usePlayback — a film the element could not start', () => {
 
     expect(result.current.failed).toBe(true);
     expect(result.current.position).toBeCloseTo(3600);
+  });
+});
+
+/**
+ * 46 — Audio tracks, Phase 4: "the opening" (issue #402).
+ *
+ * The hook is handed the **Audio track** the player opens on. Its path is the
+ * track's own — index 1 of a native MP4 is a **Remux** though the read says
+ * `direct` for index 0 — and the source carries `?a=` only when the index is
+ * not nought, so a single-track film's URL is the one it has always been.
+ * `null` is a file with no track to offer, which plays on the read's path.
+ */
+describe('usePlayback — the audio track it opens on', () => {
+  stubMediaElement();
+
+  /** A native MP4: index 0 plays direct, index 1 is remuxed to map it. */
+  const ENGLISH_FIRST: PlaybackRead = {
+    path: 'direct',
+    durationSeconds: 6832.5,
+    audioTracks: [
+      {
+        index: 0,
+        language: 'English',
+        label: 'English',
+        fileDefault: true,
+        path: 'direct',
+      },
+      {
+        index: 1,
+        language: 'Spanish',
+        label: 'Spanish',
+        fileDefault: false,
+        path: 'remux',
+      },
+    ],
+  };
+  const [, SPANISH] = ENGLISH_FIRST.audioTracks;
+
+  /** The query a source carries, read as parameters rather than spelled. */
+  function queryOf(src: string): URLSearchParams {
+    return new URLSearchParams(src.includes('?') ? src.split('?')[1] : '');
+  }
+
+  it('carries the index as a = for any other track', async () => {
+    const { result } = renderPlayback(ENGLISH_FIRST, 0, undefined, SPANISH);
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    expect(result.current.src).toBe(`${STREAM}?a=1`);
+  });
+
+  it('plays on the track’s own path, not the read’s', async () => {
+    // Index 1 is a remux, so a seek re-points the stream — still on track 1 —
+    // rather than winding an element that holds no such track.
+    const { video, result } = renderPlayback(
+      ENGLISH_FIRST,
+      0,
+      undefined,
+      SPANISH
+    );
+    await waitFor(() => expect(result.current.playing).toBe(true));
+
+    act(() => result.current.seek(1200));
+
+    const query = queryOf(result.current.src);
+    expect(query.get('t')).toBe('1200');
+    expect(query.get('a')).toBe('1');
+    expect(video.currentTime).toBe(0);
+    expect(result.current.position).toBe(1200);
+  });
+
+  it('resumes at the saved position on the chosen track', async () => {
+    const { video, result } = renderPlayback(
+      ENGLISH_FIRST,
+      1800,
+      undefined,
+      SPANISH
+    );
+
+    await waitFor(() =>
+      expect(queryOf(result.current.src).get('t')).toBe('1800')
+    );
+    expect(queryOf(result.current.src).get('a')).toBe('1');
+    expect(result.current.position).toBe(1800);
+    expect(video.currentTime).toBe(0);
   });
 });
