@@ -27,6 +27,7 @@ const REPORT: PlaybackCapabilities = {
 /** The household's settings the Playback card's Subtitles half reads. */
 const SETTINGS: Settings = {
   subtitleLanguage: 'English',
+  audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
 };
@@ -191,7 +192,7 @@ describe('SettingsPage', () => {
     ).toBe(true);
     expect(
       comesBefore(
-        screen.getByText('Preferred language'),
+        screen.getByText('Preferred subtitle language'),
         screen.getByText('Storage')
       )
     ).toBe(true);
@@ -292,16 +293,16 @@ describe('SettingsPage', () => {
     expect(screen.queryByText(/software update/i)).toBeNull();
     expect(screen.queryByText(/up to date/i)).toBeNull();
     expect(screen.queryByRole('button', { name: /update/i })).toBeNull();
-    // Back, the "Add a title" row, Import, Export — and the Preferred language
-    // pill once the settings land, and the Codecs row; Network adds Test connection and Sync
+    // Back, the "Add a title" row, Import, Export — and the Preferred subtitle
+    // and audio language pills once the settings land (issue #401), and the Codecs row; Network adds Test connection and Sync
     // metadata & posters; About adds none; Library folders (issue #268) adds
     // one; and Storage adds Reset… (issue #299).
     await waitFor(() =>
       expect(
-        screen.getByRole('button', { name: /^Preferred language: / })
+        screen.getByRole('button', { name: /^Preferred subtitle language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(10);
+    expect(screen.getAllByRole('button')).toHaveLength(11);
     // Six Group headings, and only six — Display joined in log 27.
     const groupHeadings = [
       'Library',

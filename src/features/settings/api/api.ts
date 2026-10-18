@@ -165,6 +165,17 @@ export function saveSubtitleLanguage(language: string): Promise<string> {
   return postValue(SUBTITLE_LANGUAGE_ENDPOINT, language, isLanguageEcho);
 }
 
+/** Where the **Preferred audio language** is written. */
+const AUDIO_LANGUAGE_ENDPOINT = '/api/settings/audio-language';
+
+/**
+ * Store the **Preferred audio language** — the subtitle language's twin, a
+ * Single-signal write resolving with the stored echo, rejecting on a refusal.
+ */
+export function saveAudioLanguage(language: string): Promise<string> {
+  return postValue(AUDIO_LANGUAGE_ENDPOINT, language, isLanguageEcho);
+}
+
 /**
  * Where the maintainer's TMDB key is tested and saved in one. Its read,
  * `fetchTmdbKey`, lives in `src/api/` because the Import flow asks for it too.

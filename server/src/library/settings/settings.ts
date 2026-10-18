@@ -1,5 +1,6 @@
 import type { SqliteDatabase } from '../../db';
 import {
+  DEFAULT_AUDIO_LANGUAGE,
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
@@ -8,6 +9,8 @@ import {
 
 /** The household's preferred subtitle language. */
 const SUBTITLE_LANGUAGE_KEY = 'subtitle-language';
+/** The household's **Preferred audio language**. */
+const AUDIO_LANGUAGE_KEY = 'audio-language';
 /** Whether the household keeps the Content frame on — `'1'` / `'0'`. */
 const ULTRAWIDE_MARGINS_KEY = 'ultrawide-margins';
 /** Whether an unrated title draws its TMDB score — `'1'` / `'0'`. */
@@ -25,6 +28,7 @@ const LAST_SYNCED_KEY = 'enrichment-last-synced-at';
 export interface SettingsRepository {
   settings(): Settings;
   setSubtitleLanguage(language: string): void;
+  setAudioLanguage(language: string): void;
   setUltrawideMargins(on: boolean): void;
   setTmdbRatings(on: boolean): void;
   tmdbKey(): string | null;
@@ -64,6 +68,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     return {
       subtitleLanguage:
         valueOf(SUBTITLE_LANGUAGE_KEY) ?? DEFAULT_SUBTITLE_LANGUAGE,
+      audioLanguage: valueOf(AUDIO_LANGUAGE_KEY) ?? DEFAULT_AUDIO_LANGUAGE,
       ultrawideMargins: flagOf(
         ULTRAWIDE_MARGINS_KEY,
         DEFAULT_ULTRAWIDE_MARGINS
@@ -82,6 +87,10 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
 
   function setSubtitleLanguage(language: string): void {
     upsertValue.run(SUBTITLE_LANGUAGE_KEY, language);
+  }
+
+  function setAudioLanguage(language: string): void {
+    upsertValue.run(AUDIO_LANGUAGE_KEY, language);
   }
 
   function tmdbKey(): string | null {
@@ -103,6 +112,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
   return {
     settings,
     setSubtitleLanguage,
+    setAudioLanguage,
     setUltrawideMargins,
     setTmdbRatings,
     tmdbKey,

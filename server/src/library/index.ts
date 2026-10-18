@@ -269,6 +269,11 @@ export interface LibraryStorage {
    */
   setSubtitleLanguage(language: string): void;
   /**
+   * Store the **Preferred audio language** — the subtitle language's twin: an
+   * upsert, membership in the **Language pool** not checked.
+   */
+  setAudioLanguage(language: string): void;
+  /**
    * Store **Ultrawide margins** — an upsert, so the second write replaces the
    * first. `settings()` reads it back with the default, off, applied.
    */
@@ -473,6 +478,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setRating: curation.setRating,
     settings: settingsRepository.settings,
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
+    setAudioLanguage: settingsRepository.setAudioLanguage,
     setUltrawideMargins: settingsRepository.setUltrawideMargins,
     setTmdbRatings: settingsRepository.setTmdbRatings,
     tmdbKey: settingsRepository.tmdbKey,

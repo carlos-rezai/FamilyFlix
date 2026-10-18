@@ -263,6 +263,7 @@ describe('GET /api/settings — not widened', () => {
 
     expect(Object.keys(body)).toEqual([
       'subtitleLanguage',
+      'audioLanguage',
       'ultrawideMargins',
       'tmdbRatings',
     ]);

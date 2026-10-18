@@ -1848,6 +1848,19 @@ export function createApiRouter(
     res.json({ value });
   });
 
+  // The **Preferred audio language** — the subtitle language's twin, the same
+  // Single-signal write under the same rules.
+  router.post('/settings/audio-language', (req: Request, res: Response) => {
+    const { value } = req.body as { value?: unknown };
+    if (typeof value !== 'string' || value.length === 0) {
+      res.status(400).json({ error: 'Body must be { value: string }' });
+      return;
+    }
+
+    storage.setAudioLanguage(value);
+    res.json({ value });
+  });
+
   // **Ultrawide margins** — the subtitle language's sibling, the same
   // Single-signal write. A valid body is exactly a boolean: the string
   // "true", 1 and null are refused rather than coerced, so a loose client

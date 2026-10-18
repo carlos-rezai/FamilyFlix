@@ -52,6 +52,8 @@ export const DEFAULT_TMDB_RATINGS = true;
 export interface Settings {
   /** Which track the player uses whenever subtitles are shown. */
   subtitleLanguage: string;
+  /** Which audio track the player opens a title on, when it has several. */
+  audioLanguage: string;
   /** Whether every screen but the player sits in the centred **Content frame**. */
   ultrawideMargins: boolean;
   /** Whether an unrated title draws its TMDB score as its stars. */

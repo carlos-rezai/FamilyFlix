@@ -50,6 +50,7 @@ function onlyRequest() {
 
 const SETTINGS: Settings = {
   subtitleLanguage: 'Spanish',
+  audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
 };

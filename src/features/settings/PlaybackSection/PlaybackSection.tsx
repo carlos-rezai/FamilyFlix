@@ -36,8 +36,11 @@ import {
  * its lede; _Turn on automatically_ beside a **Coming soon** pill over a
  * `Toggle` drawn off and disabled — it stores nothing and presses to nothing,
  * auto-on staying on the roadmap exactly as log 10 decided; a rule; and
- * _Preferred language_ with `FilterDropdown` on the right, the seven names of
- * the **Language pool** as its options and the fetched value as its value.
+ * _Preferred subtitle language_ with `FilterDropdown` on the right, the seven
+ * names of the **Language pool** as its options and the fetched value as its
+ * value. Then a divider and _Audio_ with its lede over _Preferred audio
+ * language_, the same dropdown over the **Preferred audio language** — the
+ * row undrawn while that read is `null`; no audio on/off toggle.
  *
  * The section owns `useSettings`, and takes only the read of
  * `useCapabilities` — the writes are the Codecs page's. The pill is not drawn
@@ -45,7 +48,12 @@ import {
  * never confirmed.
  */
 export function PlaybackSection() {
-  const { subtitleLanguage, chooseSubtitleLanguage } = useSettings();
+  const {
+    subtitleLanguage,
+    chooseSubtitleLanguage,
+    audioLanguage,
+    chooseAudioLanguage,
+  } = useSettings();
   const { capabilities } = useCapabilities();
 
   const languageOptions: FilterOption[] = LANGUAGE_POOL.map((name) => ({
@@ -53,6 +61,14 @@ export function PlaybackSection() {
     selected: name === subtitleLanguage,
     onSelect: () => {
       void chooseSubtitleLanguage(name);
+    },
+  }));
+
+  const audioOptions: FilterOption[] = LANGUAGE_POOL.map((name) => ({
+    label: name,
+    selected: name === audioLanguage,
+    onSelect: () => {
+      void chooseAudioLanguage(name);
     },
   }));
 
@@ -94,12 +110,12 @@ export function PlaybackSection() {
 
         <Row $last>
           <div>
-            <RowTitle>Preferred language</RowTitle>
+            <RowTitle>Preferred subtitle language</RowTitle>
             <RowDesc>Which track to use whenever subtitles are shown.</RowDesc>
           </div>
           {subtitleLanguage !== null ? (
             <FilterDropdown
-              label="Preferred language"
+              label="Preferred subtitle language"
               showLabel={false}
               value={subtitleLanguage}
               options={languageOptions}
@@ -107,6 +123,31 @@ export function PlaybackSection() {
             />
           ) : null}
         </Row>
+
+        <Divider />
+
+        <SubtitlesHeader>
+          <ItemTitle>Audio</ItemTitle>
+          <ItemDesc>
+            Which language a movie plays in when it has more than one.
+          </ItemDesc>
+        </SubtitlesHeader>
+
+        {audioLanguage !== null ? (
+          <Row $last>
+            <div>
+              <RowTitle>Preferred audio language</RowTitle>
+              <RowDesc>Which track to play when a movie has several.</RowDesc>
+            </div>
+            <FilterDropdown
+              label="Preferred audio language"
+              showLabel={false}
+              value={audioLanguage}
+              options={audioOptions}
+              menuWidth={200}
+            />
+          </Row>
+        ) : null}
       </Card>
     </>
   );

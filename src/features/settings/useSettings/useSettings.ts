@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
-import { saveSubtitleLanguage } from '../api/api';
+import { saveAudioLanguage, saveSubtitleLanguage } from '../api/api';
 
 export interface SettingsState {
   /**
@@ -15,11 +15,16 @@ export interface SettingsState {
    * screen has no error face to show.
    */
   chooseSubtitleLanguage(language: string): Promise<void>;
+  /** The **Preferred audio language**, read and held as the subtitle one is. */
+  audioLanguage: string | null;
+  /** Choose the preferred audio language — the subtitle language's bargain. */
+  chooseAudioLanguage(language: string): Promise<void>;
 }
 
 /**
- * The household's **Preferred subtitle language**, read once on mount off the
- * shared `fetchSettings` — the one field of its answer this hook keeps.
+ * The household's **Preferred subtitle language** and **Preferred audio
+ * language**, read once on mount off the shared `fetchSettings` — the two
+ * fields of its answer this hook keeps.
  * **Ultrawide margins** rides the same read and is
  * `DisplayPreferenceProvider`'s to hold (log 27 Q13), so no screen holds a
  * copy that never updates.
@@ -35,6 +40,7 @@ export interface SettingsState {
  */
 export function useSettings(): SettingsState {
   const [subtitleLanguage, setSubtitleLanguage] = useState<string | null>(null);
+  const [audioLanguage, setAudioLanguage] = useState<string | null>(null);
 
   useEffect(() => {
     let wanted = true;
@@ -43,6 +49,7 @@ export function useSettings(): SettingsState {
       (landed) => {
         if (wanted) {
           setSubtitleLanguage(landed.subtitleLanguage);
+          setAudioLanguage(landed.audioLanguage);
         }
       },
       () => undefined
@@ -67,5 +74,24 @@ export function useSettings(): SettingsState {
     [subtitleLanguage]
   );
 
-  return { subtitleLanguage, chooseSubtitleLanguage };
+  const chooseAudioLanguage = useCallback(
+    async (language: string): Promise<void> => {
+      const previous = audioLanguage;
+      setAudioLanguage(language);
+
+      try {
+        setAudioLanguage(await saveAudioLanguage(language));
+      } catch {
+        setAudioLanguage(previous);
+      }
+    },
+    [audioLanguage]
+  );
+
+  return {
+    subtitleLanguage,
+    chooseSubtitleLanguage,
+    audioLanguage,
+    chooseAudioLanguage,
+  };
 }

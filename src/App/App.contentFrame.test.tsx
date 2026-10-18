@@ -53,6 +53,7 @@ let landRead: (settings: Settings) => void = () => undefined;
 beforeEach(() => {
   settingsRead = {
     subtitleLanguage: 'English',
+    audioLanguage: 'English',
     ultrawideMargins: true,
     tmdbRatings: true,
   };
@@ -167,6 +168,7 @@ describe('App — the Content frame on a framed route', () => {
     await act(async () => {
       landRead({
         subtitleLanguage: 'English',
+        audioLanguage: 'English',
         ultrawideMargins: true,
         tmdbRatings: true,
       });
@@ -284,6 +286,7 @@ describe('App — the Toggle on /settings', () => {
   it('re-frames the page at once when pressed, with no navigation', async () => {
     settingsRead = {
       subtitleLanguage: 'English',
+      audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
     };

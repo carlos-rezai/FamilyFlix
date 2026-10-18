@@ -50,11 +50,13 @@ const WRITE_ROUTE = '/api/settings/ultrawide-margins';
 
 const OFF: Settings = {
   subtitleLanguage: 'English',
+  audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
 };
 const ON: Settings = {
   subtitleLanguage: 'English',
+  audioLanguage: 'English',
   ultrawideMargins: true,
   tmdbRatings: true,
 };
@@ -285,11 +287,13 @@ const TMDB_ROUTE = '/api/settings/tmdb-ratings';
 
 const RATINGS_ON: Settings = {
   subtitleLanguage: 'English',
+  audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
 };
 const RATINGS_OFF: Settings = {
   subtitleLanguage: 'English',
+  audioLanguage: 'English',
   ultrawideMargins: true,
   tmdbRatings: false,
 };

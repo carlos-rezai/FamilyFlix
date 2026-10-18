@@ -61,6 +61,7 @@ const CUES: Cue[] = [
 /** What `GET /api/settings` answers on a fresh database. */
 const DEFAULT_SETTINGS: Settings = {
   subtitleLanguage: 'English',
+  audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
 };
@@ -286,6 +287,7 @@ describe('useSubtitles — the Preferred subtitle language', () => {
       Promise.resolve(
         okResponse({
           subtitleLanguage: 'Spanish',
+          audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
         })
@@ -304,6 +306,7 @@ describe('useSubtitles — the Preferred subtitle language', () => {
       Promise.resolve(
         okResponse({
           subtitleLanguage: 'Spanish',
+          audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
         })
@@ -327,6 +330,7 @@ describe('useSubtitles — the Preferred subtitle language', () => {
       Promise.resolve(
         okResponse({
           subtitleLanguage: 'Spanish',
+          audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
         })
@@ -344,6 +348,7 @@ describe('useSubtitles — the Preferred subtitle language', () => {
       Promise.resolve(
         okResponse({
           subtitleLanguage: 'Spanish',
+          audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
         })
@@ -397,6 +402,7 @@ describe('useSubtitles — the Preferred subtitle language', () => {
       Promise.resolve(
         okResponse({
           subtitleLanguage: 'Spanish',
+          audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
         })
@@ -415,6 +421,7 @@ describe('useSubtitles — the Preferred subtitle language', () => {
       Promise.resolve(
         okResponse({
           subtitleLanguage: 'Swedish',
+          audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
         })

@@ -82,7 +82,9 @@ beforeEach(() => {
       return answerCapabilities();
     }
     if (path === '/api/settings') {
-      return Promise.resolve(okResponse({ subtitleLanguage: 'English' }));
+      return Promise.resolve(
+        okResponse({ subtitleLanguage: 'English', audioLanguage: 'English' })
+      );
     }
     return Promise.reject(new Error(`unexpected request: ${path}`));
   });
@@ -231,10 +233,12 @@ describe('PlaybackSection — pressing the Codecs row', () => {
 });
 
 describe('PlaybackSection — the Subtitles half under the row', () => {
-  it('draws the divider, Subtitles, the Coming soon toggle and Preferred language after the row', async () => {
+  it('draws the divider, Subtitles, the Coming soon toggle and Preferred subtitle language after the row', async () => {
     const { container } = renderSection();
     await lineLanded();
-    await screen.findByRole('button', { name: 'Preferred language: English' });
+    await screen.findByRole('button', {
+      name: 'Preferred subtitle language: English',
+    });
 
     const row = codecsRow();
     const divider = Array.from(container.querySelectorAll('div')).find(
@@ -259,7 +263,7 @@ describe('PlaybackSection — the Subtitles half under the row', () => {
     expect(
       comesBefore(
         screen.getByText('Coming soon'),
-        screen.getByText('Preferred language')
+        screen.getByText('Preferred subtitle language')
       )
     ).toBe(true);
     expect(screen.getAllByText('Playback')).toHaveLength(1);
