@@ -549,10 +549,12 @@ describe('library: the Language pool — renamed for audio beside subtitles', ()
   });
 
   it('leaves no code, shipping or test, naming the old list or its union', () => {
-    // Spelled in halves so this suite does not name them itself.
-    const pattern = new RegExp(
-      `\\b(?:${'SUBTITLE_' + 'LANGUAGES'}|${'Subtitle' + 'Language'})\\b`
-    );
+    // Joined from halves so this suite does not name them itself.
+    const names = [
+      ['SUBTITLE_', 'LANGUAGES'],
+      ['Subtitle', 'Language'],
+    ].map((halves) => halves.join(''));
+    const pattern = new RegExp(`\\b(?:${names.join('|')})\\b`);
     const sources = (root: string): string[] =>
       readdirSync(root, { recursive: true, encoding: 'utf8' })
         .map((entry) => `${root}/${entry}`.replace(/\\/g, '/'))
