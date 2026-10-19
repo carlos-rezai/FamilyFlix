@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
+import { MemoryRouter } from 'react-router-dom';
 
 import { TitleRow } from './TitleRow';
 import type { LibraryTitle } from '@/types';
@@ -27,9 +28,12 @@ const DANGER = 'rgb(201, 122, 106)';
 
 function renderRow(title: LibraryTitle) {
   return render(
-    <ThemeProvider theme={theme}>
-      <TitleRow title={title} />
-    </ThemeProvider>
+    <MemoryRouter>
+      <ThemeProvider theme={theme}>
+        <TitleRow title={title} />
+        <p>somewhere else on the page</p>
+      </ThemeProvider>
+    </MemoryRouter>
   );
 }
 
@@ -136,5 +140,136 @@ describe('TitleRow — a show', () => {
     renderRow(makeLibrarySeries({ linkedFiles: 'videos' }));
 
     expect(screen.getByText('Linked')).toBeDefined();
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 2: "Edit details and Sync with TMDB" (issue
+ * #408).
+ *
+ * Each Title row gains _Edit ▾_: a secondary sm `Button` with a trailing
+ * chevron (`aria-hidden`, so the control is named _Edit_), the
+ * `FilterDropdown` trigger's shape, over `Menu`. It holds two items, each with
+ * its `hint` line: _Edit details_ (_Change the title, year and poster by
+ * hand_) and _Sync with TMDB_ (_Fetch details and artwork again_). Where each
+ * goes is asserted in `ManageLibrary`'s suite, under a router with a probe;
+ * here, the menu itself — its items, and that it is keyboard-operable and
+ * closes on Escape and an outside press, handing focus back.
+ */
+
+const EDIT_HINT = 'Change the title, year and poster by hand';
+const SYNC_HINT = 'Fetch details and artwork again';
+
+const editTrigger = () => screen.getByRole('button', { name: 'Edit' });
+const editItem = () => screen.queryByRole('menuitem', { name: 'Edit details' });
+const syncItem = () =>
+  screen.queryByRole('menuitem', { name: 'Sync with TMDB' });
+
+/** Opened the way a keyboard user opens it: focus the trigger, then act. */
+function openEdit() {
+  const control = editTrigger();
+  control.focus();
+  fireEvent.click(control);
+  return control;
+}
+
+describe('TitleRow — Edit ▾', () => {
+  it('draws Edit as a menu trigger, shut', () => {
+    renderRow(makeLibraryMovie());
+
+    const control = editTrigger();
+    expect(control.getAttribute('aria-haspopup')).toBe('menu');
+    expect(control.getAttribute('aria-expanded')).toBe('false');
+    expect(editItem()).toBeNull();
+  });
+
+  it('draws a chevron on the trigger, kept out of its name', () => {
+    renderRow(makeLibraryMovie());
+
+    // The exact name is the assertion: "Edit", not "Edit ▾".
+    expect(
+      editTrigger().querySelector('svg, [aria-hidden="true"]')
+    ).not.toBeNull();
+  });
+
+  it('opens on Edit details then Sync with TMDB, in that order', () => {
+    renderRow(makeLibraryMovie());
+    openEdit();
+
+    const items = screen.getAllByRole('menuitem');
+    expect(items).toHaveLength(2);
+    expect(items[0]).toBe(editItem());
+    expect(items[1]).toBe(syncItem());
+  });
+
+  it('draws each item’s hint as its description', () => {
+    renderRow(makeLibraryMovie());
+    openEdit();
+
+    expect(
+      screen.getByRole('menuitem', {
+        name: 'Edit details',
+        description: EDIT_HINT,
+      })
+    ).toBeDefined();
+    expect(
+      screen.getByRole('menuitem', {
+        name: 'Sync with TMDB',
+        description: SYNC_HINT,
+      })
+    ).toBeDefined();
+  });
+
+  it('holds the same two items for a show', () => {
+    renderRow(makeLibrarySeries());
+    openEdit();
+
+    expect(editItem()).not.toBeNull();
+    expect(syncItem()).not.toBeNull();
+  });
+});
+
+describe('TitleRow — Edit ▾ by keyboard', () => {
+  it('puts focus on Edit details as it opens', () => {
+    renderRow(makeLibraryMovie());
+    openEdit();
+
+    expect(document.activeElement).toBe(editItem());
+  });
+
+  it('walks to Sync with TMDB on ArrowDown, and wraps back', () => {
+    renderRow(makeLibraryMovie());
+    openEdit();
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, {
+      key: 'ArrowDown',
+    });
+    expect(document.activeElement).toBe(syncItem());
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, {
+      key: 'ArrowDown',
+    });
+    expect(document.activeElement).toBe(editItem());
+  });
+
+  it('closes on Escape and gives focus back to Edit', () => {
+    renderRow(makeLibraryMovie());
+    const control = openEdit();
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+
+    expect(editItem()).toBeNull();
+    expect(control.getAttribute('aria-expanded')).toBe('false');
+    expect(document.activeElement).toBe(control);
+  });
+
+  it('closes on a press outside it and gives focus back to Edit', () => {
+    renderRow(makeLibraryMovie());
+    const control = openEdit();
+
+    fireEvent.pointerDown(screen.getByText('somewhere else on the page'));
+
+    expect(editItem()).toBeNull();
+    expect(document.activeElement).toBe(control);
   });
 });

@@ -12,7 +12,12 @@ import {
   navigationType,
   pathname,
   search,
+  url,
 } from '@/test-support/LocationProbe/LocationProbe';
+import { enrichPath } from '@/utils/enrichPath/enrichPath';
+import { movieFormPath } from '@/utils/movieFormPath/movieFormPath';
+import { moviePath } from '@/utils/moviePath/moviePath';
+import { seriesPath } from '@/utils/seriesPath/seriesPath';
 import {
   okResponse,
   serverErrorResponse,
@@ -329,5 +334,187 @@ describe('ManageLibrary — the list', () => {
 
     expect(screen.queryByText('No movies in your library.')).toBeNull();
     expect(screen.queryByText('No series in your library.')).toBeNull();
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 2: "Edit details and Sync with TMDB" (issue
+ * #408).
+ *
+ * A Title row's _Edit ▾_ menu, seen from the page, under a router whose other
+ * screens are stand-ins and a probe with its own Back:
+ *
+ * - _Edit details_ pushes the **Movie form**'s edit — `movieFormPath({ movie
+ *   })` for a film, `movieFormPath({ series })` for a show — so the form's
+ *   Back, and its save (both `useGoBack` over a **History step**), return to
+ *   the overview.
+ * - _Sync with TMDB_ pushes the title's page, then `enrichPath({ movie |
+ *   series: id, start: true })`: log 45's leaving with a push where the add
+ *   replaces, so Back from the flow lands on the title and Back again on the
+ *   overview. The flow is **Started on arrival** under its own rules (no key,
+ *   offline, a busy Sync, a Waiting run) — `EnrichmentFlow`'s suite holds
+ *   those over this very URL, so nothing here re-runs them.
+ */
+
+function renderWithScreens(
+  history: string[] = ['/', '/settings', '/settings/library']
+) {
+  return render(
+    <MemoryRouter initialEntries={history} initialIndex={history.length - 1}>
+      <ThemeProvider theme={theme}>
+        <Routes>
+          <Route path="/settings" element={<p>the settings hub</p>} />
+          <Route path="/settings/library" element={<ManageLibrary />} />
+          <Route path="/add" element={<p>the movie form</p>} />
+          <Route path="/movie/:id" element={<p>the movie page</p>} />
+          <Route path="/series/:id" element={<p>the series page</p>} />
+          <Route path="/enrich" element={<p>the enrichment flow</p>} />
+        </Routes>
+        <LocationProbe withBack />
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+}
+
+/** The probe's own Back, once the page (and its header's Back) is gone. */
+const probeBack = () =>
+  fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+/** Open the Edit ▾ menu on the `index`th row of the tab, in drawn order. */
+function openEditOn(index: number) {
+  const control = screen.getAllByRole('button', { name: 'Edit' })[index];
+  control.focus();
+  fireEvent.click(control);
+}
+
+const choose = (name: string) =>
+  fireEvent.click(screen.getByRole('menuitem', { name }));
+
+describe('ManageLibrary — Edit details', () => {
+  it('draws one Edit ▾ per row', async () => {
+    serve();
+    renderWithScreens();
+    await loaded();
+
+    expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(3);
+  });
+
+  it('pushes the Movie form’s edit for a film', async () => {
+    serve();
+    renderWithScreens();
+    await loaded();
+
+    openEditOn(1);
+    choose('Edit details');
+
+    expect(url()).toBe(movieFormPath({ movie: 'm2' }));
+    expect(url()).toBe('/add?movie=m2');
+    expect(navigationType()).toBe('PUSH');
+    expect(screen.getByText('the movie form')).toBeDefined();
+  });
+
+  it('pushes the Movie form’s series edit for a show', async () => {
+    serve();
+    renderWithScreens(['/settings', '/settings/library?tab=series']);
+    await loaded();
+
+    openEditOn(0);
+    choose('Edit details');
+
+    expect(url()).toBe(movieFormPath({ series: 's1' }));
+    expect(url()).toBe('/add?series=s1');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('returns to the overview on a step back from the form', async () => {
+    serve();
+    renderWithScreens();
+    await loaded();
+
+    openEditOn(0);
+    choose('Edit details');
+    probeBack();
+
+    expect(url()).toBe('/settings/library');
+    expect(navigationType()).toBe('POP');
+    await loaded();
+  });
+
+  it('returns to the series tab on a step back from a series edit', async () => {
+    serve();
+    renderWithScreens(['/settings', '/settings/library?tab=series']);
+    await loaded();
+
+    openEditOn(1);
+    choose('Edit details');
+    probeBack();
+
+    expect(url()).toBe('/settings/library?tab=series');
+    await loaded();
+    expect(screen.getByText('Wanderers')).toBeDefined();
+  });
+});
+
+describe('ManageLibrary — Sync with TMDB', () => {
+  it('pushes the film’s page, then the flow started on arrival', async () => {
+    serve();
+    renderWithScreens();
+    await loaded();
+
+    openEditOn(0);
+    choose('Sync with TMDB');
+
+    expect(url()).toBe(enrichPath({ movie: 'm1', start: true }));
+    expect(url()).toBe('/enrich?movie=m1&start=1');
+    expect(navigationType()).toBe('PUSH');
+    expect(screen.getByText('the enrichment flow')).toBeDefined();
+  });
+
+  it('pushes the show’s page, then the flow started on arrival', async () => {
+    serve();
+    renderWithScreens(['/settings', '/settings/library?tab=series']);
+    await loaded();
+
+    openEditOn(1);
+    choose('Sync with TMDB');
+
+    expect(url()).toBe(enrichPath({ series: 's2', start: true }));
+    expect(url()).toBe('/enrich?series=s2&start=1');
+    expect(navigationType()).toBe('PUSH');
+  });
+
+  it('leaves the film’s page behind the flow, and the overview behind it', async () => {
+    serve();
+    renderWithScreens();
+    await loaded();
+
+    openEditOn(2);
+    choose('Sync with TMDB');
+
+    probeBack();
+    expect(url()).toBe(moviePath('m3'));
+    expect(navigationType()).toBe('POP');
+    expect(screen.getByText('the movie page')).toBeDefined();
+
+    probeBack();
+    expect(url()).toBe('/settings/library');
+    await loaded();
+  });
+
+  it('leaves the show’s page behind the flow, and the overview behind it', async () => {
+    serve();
+    renderWithScreens(['/settings', '/settings/library?tab=series']);
+    await loaded();
+
+    openEditOn(0);
+    choose('Sync with TMDB');
+
+    probeBack();
+    expect(url()).toBe(seriesPath('s1'));
+    expect(screen.getByText('the series page')).toBeDefined();
+
+    probeBack();
+    expect(url()).toBe('/settings/library?tab=series');
+    await loaded();
   });
 });

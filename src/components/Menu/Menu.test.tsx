@@ -4,6 +4,7 @@ import { ThemeProvider } from 'styled-components';
 
 import { Menu, MenuItem } from '@/components';
 import { theme } from '@/styles/theme';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 /**
  * A menu with one item, opened by a plain button. The trigger is deliberately
@@ -526,6 +527,99 @@ describe('Menu — activating the row focus is on', () => {
     fireEvent.click(document.activeElement as HTMLElement);
 
     expect(onSelect).toHaveBeenCalledWith('Second');
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 2 (issue #408): the optional `hint` on a
+ * `MenuItem` — a second line under the label, as the **Title row**'s _Edit ▾_
+ * menu draws _Edit details_ over _Change the title, year and poster by hand_
+ * (`page.ManageLibraryPage.dc.html`): 12px in the faint ink, under the label.
+ * The label alone stays the row's accessible name, the glyph and count's
+ * precedent; the hint is its accessible description. A row without a hint is
+ * drawn exactly as before.
+ */
+function renderHintMenu(onSelect: () => void = () => undefined) {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Menu trigger={(props) => <button {...props}>Options</button>}>
+        <MenuItem
+          glyph="✎"
+          hint="Change the title, year and poster by hand"
+          onSelect={onSelect}
+        >
+          Edit details
+        </MenuItem>
+        <MenuItem onSelect={() => undefined}>Plain row</MenuItem>
+      </Menu>
+    </ThemeProvider>
+  );
+}
+
+const HINT = 'Change the title, year and poster by hand';
+
+describe('MenuItem — the hint line', () => {
+  it('draws the hint when given', () => {
+    renderHintMenu();
+    openMenu();
+
+    expect(screen.getByText(HINT)).toBeDefined();
+    expect(row('Edit details').textContent).toContain(HINT);
+  });
+
+  it('draws the hint under the label', () => {
+    renderHintMenu();
+    openMenu();
+
+    const label = screen.getByText('Edit details');
+    const hint = screen.getByText(HINT);
+    expect(label).not.toBe(hint);
+    expect(comesBefore(label, hint)).toBe(true);
+    expect(getComputedStyle(hint).display).toBe('block');
+  });
+
+  it('draws the hint at 12px in the faint ink', () => {
+    renderHintMenu();
+    openMenu();
+
+    const hint = screen.getByText(HINT);
+    expect(getComputedStyle(hint).fontSize).toBe('12px');
+    // #857a68, the `textFaint` token, as jsdom reports it.
+    expect(getComputedStyle(hint).color).toBe('rgb(133, 122, 104)');
+  });
+
+  it('keeps the hint out of the accessible name, as its description', () => {
+    renderHintMenu();
+    openMenu();
+
+    // The exact-name query is the assertion: it stops matching if the hint
+    // joins the name.
+    expect(
+      screen.getByRole('menuitem', { name: 'Edit details', description: HINT })
+    ).toBeDefined();
+  });
+
+  it('leaves a row without a hint unchanged', () => {
+    renderHintMenu();
+    openMenu();
+
+    expect(row('Edit details').textContent).toContain(HINT);
+    const plain = row('Plain row');
+    expect(plain.textContent).toBe('Plain row');
+    expect(plain.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('still shuts the menu and reports when a hinted row is used', () => {
+    const onSelect = vi.fn();
+    renderHintMenu(onSelect);
+    const control = openMenu();
+    expect(row('Edit details').textContent).toContain(HINT);
+
+    fireEvent.click(row('Edit details'));
+
+    expect(onSelect).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
     expect(document.activeElement).toBe(control);
   });
