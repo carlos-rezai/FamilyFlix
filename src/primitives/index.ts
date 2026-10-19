@@ -28,6 +28,7 @@ export { ChevronLeftIcon } from './Icon/ChevronLeftIcon';
 export { ChevronRightIcon } from './Icon/ChevronRightIcon';
 export { PlayIcon } from './Icon/PlayIcon';
 export { PauseIcon } from './Icon/PauseIcon';
+export { BinIcon } from './Icon/BinIcon';
 export { MoreIcon } from './Icon/MoreIcon';
 export { CheckIcon } from './Icon/CheckIcon';
 export { SearchIcon } from './Icon/SearchIcon';

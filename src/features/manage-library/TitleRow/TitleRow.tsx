@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 import { Menu, MenuItem } from '@/components';
-import { FolderIcon } from '@/primitives';
+import { BinIcon, FolderIcon, IconButton, MoreIcon } from '@/primitives';
 import type { LibraryTitle } from '@/types';
 import { enrichPath, movieFormPath, moviePath, seriesPath } from '@/utils';
 import { titleRowView } from '../titleRowView/titleRowView';
@@ -27,6 +27,8 @@ import {
 export interface TitleRowProps {
   /** The title the row draws. */
   title: LibraryTitle;
+  /** _Clear details_ in the ⋯ menu, handing the title over to be confirmed. */
+  onClear: (title: LibraryTitle) => void;
 }
 
 /**
@@ -36,9 +38,10 @@ export interface TitleRowProps {
  * Library folder can't be read, the line in danger. Its words are
  * `titleRowView`'s. At its right edge, _Edit ▾_: _Edit details_ pushes the
  * **Movie form**'s edit, _Sync with TMDB_ the title's page and then its Sync,
- * **Started on arrival**.
+ * **Started on arrival**. After it, ⋯: _Clear details_, disabled while the
+ * **Details state** is `none`, since there is nothing to clear.
  */
-export function TitleRow({ title }: TitleRowProps) {
+export function TitleRow({ title, onClear }: TitleRowProps) {
   const view = titleRowView(title);
   const navigate = useNavigate();
   const isMovie = title.kind === 'movie';
@@ -108,6 +111,26 @@ export function TitleRow({ title }: TitleRowProps) {
             onSelect={sync}
           >
             Sync with TMDB
+          </MenuItem>
+        </Menu>
+        <Menu
+          trigger={(props) => (
+            <IconButton
+              {...props}
+              label={`More actions for “${title.title}”`}
+              size={36}
+              variant="ghost"
+            >
+              <MoreIcon size={18} />
+            </IconButton>
+          )}
+        >
+          <MenuItem
+            glyph={<BinIcon size={16} />}
+            disabled={title.details === 'none'}
+            onSelect={() => onClear(title)}
+          >
+            Clear details
           </MenuItem>
         </Menu>
       </Actions>

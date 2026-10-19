@@ -1,4 +1,7 @@
-import type { LibraryTitles } from '@/types';
+import type { LibraryTitle, LibraryTitles } from '@/types';
+
+type LibraryMovieTitle = Extract<LibraryTitle, { kind: 'movie' }>;
+type LibrarySeriesTitle = Extract<LibraryTitle, { kind: 'series' }>;
 
 const TITLES_ENDPOINT = '/api/library-titles';
 
@@ -14,4 +17,31 @@ export async function fetchLibraryTitles(): Promise<LibraryTitles> {
   }
 
   return (await response.json()) as LibraryTitles;
+}
+
+async function postClear<T extends LibraryTitle>(
+  route: 'movies' | 'series',
+  id: string
+): Promise<T> {
+  const endpoint = `/api/${route}/${encodeURIComponent(id)}/clear-details`;
+  const response = await fetch(endpoint, { method: 'POST' });
+
+  if (!response.ok) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as T;
+}
+
+/**
+ * **Clear details** on a film: the `200`'s **Library title**, the echo the
+ * row redraws from. Anything else rejects; the hook turns that into `false`.
+ */
+export function clearMovieDetails(id: string): Promise<LibraryMovieTitle> {
+  return postClear<LibraryMovieTitle>('movies', id);
+}
+
+/** **Clear details** on a series — `clearMovieDetails`' twin. */
+export function clearSeriesDetails(id: string): Promise<LibrarySeriesTitle> {
+  return postClear<LibrarySeriesTitle>('series', id);
 }

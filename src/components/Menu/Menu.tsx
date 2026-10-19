@@ -125,6 +125,13 @@ export interface MenuItemProps {
    * row's accessible name; the hint is its accessible description.
    */
   hint?: string;
+  /**
+   * A row that cannot be used now — the ⋯ menu's _Clear details_ on a title
+   * with no details. `aria-disabled` rather than `disabled`, the Toggle's
+   * precedent: the roving focus still walks onto it, while a press neither
+   * reports nor shuts the menu.
+   */
+  disabled?: boolean;
   /** What the item does. The menu is already closing by the time this runs. */
   onSelect: () => void;
 }
@@ -150,6 +157,7 @@ export function MenuItem({
   trailing,
   danger = false,
   hint,
+  disabled = false,
   onSelect,
 }: MenuItemProps) {
   const id = useId();
@@ -185,10 +193,15 @@ export function MenuItem({
       $selected={selected}
       $danger={danger}
       $hinted={hint !== undefined}
+      $disabled={disabled}
+      aria-disabled={disabled ? 'true' : undefined}
       aria-current={selected ? 'true' : undefined}
       aria-labelledby={hint === undefined ? undefined : `${id}-label`}
       aria-describedby={hint === undefined ? undefined : `${id}-hint`}
       onClick={() => {
+        if (disabled) {
+          return;
+        }
         // Close first: closing returns focus to the trigger, and a navigation
         // that ran first would be handing focus back on a page that has gone.
         close();

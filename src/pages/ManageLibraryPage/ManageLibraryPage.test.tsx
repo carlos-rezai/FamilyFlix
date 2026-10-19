@@ -4,6 +4,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import ManageLibraryPage from './ManageLibraryPage';
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { theme } from '@/styles/theme';
 import {
   LocationProbe,
@@ -38,12 +39,14 @@ function renderPage(
   return render(
     <MemoryRouter initialEntries={history} initialIndex={history.length - 1}>
       <ThemeProvider theme={theme}>
-        <Routes>
-          <Route path="/" element={<p>the browse home</p>} />
-          <Route path="/settings" element={<p>the settings hub</p>} />
-          <Route path="/settings/library" element={<ManageLibraryPage />} />
-        </Routes>
-        <LocationProbe />
+        <SnackbarProvider>
+          <Routes>
+            <Route path="/" element={<p>the browse home</p>} />
+            <Route path="/settings" element={<p>the settings hub</p>} />
+            <Route path="/settings/library" element={<ManageLibraryPage />} />
+          </Routes>
+          <LocationProbe />
+        </SnackbarProvider>
       </ThemeProvider>
     </MemoryRouter>
   );

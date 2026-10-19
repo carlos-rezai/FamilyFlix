@@ -2015,6 +2015,35 @@ export function createApiRouter(
     res.json(await libraryTitleList(storage, mediaPath));
   });
 
+  // **Clear details**: `200` with the redrawn **Library title**, the row the
+  // list read would draw now, and `404` for an id that kind does not hold.
+  // **Row first, then bytes, best-effort**: the clear commits, then each
+  // Stored path it let go is removed, `removeFile` swallowing its own failure.
+  const clearDetailsRoute =
+    (kind: 'movies' | 'series') =>
+    async (req: Request<{ id: string }>, res: Response) => {
+      const id = req.params.id;
+      const letGo =
+        kind === 'movies'
+          ? storage.clearMovieDetails(id)
+          : storage.clearSeriesDetails(id);
+      if (letGo === null) {
+        res
+          .status(404)
+          .json({
+            error: `No ${kind === 'movies' ? 'movie' : 'series'} ${id}`,
+          });
+        return;
+      }
+      for (const path of letGo) {
+        media.removeFile(path);
+      }
+      const list = await libraryTitleList(storage, mediaPath);
+      res.json(list[kind].find((title) => title.id === id));
+    };
+  router.post('/movies/:id/clear-details', clearDetailsRoute('movies'));
+  router.post('/series/:id/clear-details', clearDetailsRoute('series'));
+
   // Add one folder: `201` with it, `400` for no path, a relative one or one
   // that is not a readable directory, `409` for a folder that is, is inside
   // or holds one already listed. Every refusal is one sentence.

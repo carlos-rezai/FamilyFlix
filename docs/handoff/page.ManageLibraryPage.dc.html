@@ -531,7 +531,7 @@
                                 stroke-width="1.8"
                                 stroke-linecap="round"
                               ></path></svg
-                            >Clear metadata
+                            >Clear details
                           </button>
                           <div
                             style="
@@ -609,6 +609,7 @@
           >
             <div
               role="dialog"
+              tabindex="-1"
               aria-modal="true"
               aria-labelledby="ml-modal-title"
               style="
@@ -755,7 +756,7 @@
                         margin-bottom: 8px;
                       "
                     >
-                      Removed
+                      What goes
                     </div>
                     <sc-for
                       list="{{ modal.removed }}"
@@ -789,7 +790,7 @@
                         margin-bottom: 8px;
                       "
                     >
-                      Kept
+                      What stays
                     </div>
                     <sc-for
                       list="{{ modal.kept }}"
@@ -872,6 +873,13 @@
                   "
                 >
                   <button
+                    onClick="{{ modal.onConfirm }}"
+                    style="{{ modal.confirmStyle }}"
+                    style-active="transform:scale(.98);transition-duration:60ms"
+                  >
+                    {{ modal.confirmLabel }}
+                  </button>
+                  <button
                     onClick="{{ closeModal }}"
                     style="
                       height: 44px;
@@ -890,13 +898,6 @@
                     style-active="transform:scale(.98);transition-duration:60ms"
                   >
                     Cancel
-                  </button>
-                  <button
-                    onClick="{{ modal.onConfirm }}"
-                    style="{{ modal.confirmStyle }}"
-                    style-active="transform:scale(.98);transition-duration:60ms"
-                  >
-                    {{ modal.confirmLabel }}
                   </button>
                 </div>
               </div>
@@ -972,14 +973,19 @@
           else this.toast('Opens the '+(it.kind==='movies'?'movie':'series')+' form for “'+it.title+'”.', 'info');
         }
         confirm(){
-          const m = this.state.modal; if (!m) return;
+          const m = this.state.modal; if (!m || m.busy) return;
           const it = this.state.items.find(x=>x.id===m.id); if (!it) return this.setState({ modal:null });
           if (m.kind==='delete') {
             this.setState(s=>({ modal:null, items:s.items.filter(x=>x.id!==it.id) }));
             this.toast('“'+it.title+'” and its folder were deleted.', 'danger');
           } else {
-            this.setState(s=>({ modal:null, items:s.items.map(x=>x.id===it.id?{ ...x, meta:'none' }:x) }));
-            this.toast('Metadata cleared for '+this.folderName(it.path)+'.', 'info');
+            // Log 47 Q13: Clearing… in flight, then the row redrawn from the
+            // echo and the success notice.
+            this.setState({ modal:{ ...m, busy:true } });
+            setTimeout(()=>{
+              this.setState(s=>({ modal:null, items:s.items.map(x=>x.id===it.id?{ ...x, meta:'none', year:null }:x) }));
+              this.toast('Details cleared for “'+it.title+'”.', 'success');
+            }, 700);
           }
         }
 
@@ -1030,12 +1036,13 @@
             const fileNoun = mi.kind==='movies' ? this.filesLabel(mi) : mi.episodes+' episode files';
             modal = {
               isDelete, isClear:!isDelete, path:mi.path, warnLinked: isDelete && mi.source==='linked',
-              title: isDelete ? 'Delete “'+mi.title+'”?' : 'Clear metadata?',
-              subtitle: isDelete ? 'This removes the '+noun+' from FamilyFlix and deletes its folder from disk. It can’t be undone.' : 'The '+noun+' stays in your library under its folder name, with no details, until you edit it or sync with TMDB.',
-              removed: isDelete ? ['The folder and '+fileNoun, 'Details, poster and artwork', 'Watch history'] : ['Title, year and synopsis', 'Poster and artwork', 'Genres, cast and ratings'],
-              kept: isDelete ? [] : ['The folder and '+fileNoun, 'Watch history'],
+              // Log 47 Q13: the Clear dialog's words and lists.
+              title: isDelete ? 'Delete “'+mi.title+'”?' : 'Clear details?',
+              subtitle: isDelete ? 'This removes the '+noun+' from FamilyFlix and deletes its folder from disk. It can’t be undone.' : 'The '+noun+' stays in your library under its title, with no details, until you edit it or sync it with TMDB.',
+              removed: isDelete ? ['The folder and '+fileNoun, 'Details, poster and artwork', 'Watch history'] : ['Year, synopsis, credits and genres', 'Poster, backdrop and artwork', 'Its TMDB match and score'],
+              kept: isDelete ? [] : ['Its title and files', 'Watch history, rating and heart'],
               keptNone: isDelete,
-              confirmLabel: isDelete ? 'Delete folder' : 'Clear metadata',
+              confirmLabel: isDelete ? 'Delete folder' : (s.modal.busy ? 'Clearing…' : 'Clear details'),
               onConfirm:()=>this.confirm(),
               tileStyle:{ flex:'0 0 auto', width:'44px', height:'44px', borderRadius:'var(--radius-md)', display:'grid', placeItems:'center', background: isDelete?'rgba(201,122,106,.12)':'var(--color-accent-soft)', border:'1px solid '+(isDelete?'rgba(201,122,106,.32)':'var(--color-accent-line)'), color: isDelete?'var(--color-danger)':'var(--color-accent)' },
               confirmStyle:{ height:'44px', padding:'0 20px', background: isDelete?'var(--color-danger)':'var(--color-accent)', border:'none', borderRadius:'10px', color:'#1a1109', fontFamily:'var(--font-sans)', fontSize:'15px', fontWeight:700, cursor:'pointer' }

@@ -424,6 +424,16 @@ export interface LibraryStorage {
    */
   libraryTitles(): StoredLibraryTitles;
   /**
+   * **Clear details** on a film, one transaction — the **Stored paths** it
+   * let go, or `null` for an id not held as a film.
+   */
+  clearMovieDetails(id: string): string[] | null;
+  /**
+   * **Clear details** on a series, one transaction — the **Stored paths** it
+   * let go, or `null` for an id not held as a series.
+   */
+  clearSeriesDetails(id: string): string[] | null;
+  /**
    * **Factory reset**'s erase: every row of every table but the **Genre
    * pool**, in one transaction — all or nothing. The same kind of seam
    * {@link close} is, so the router never reaches `db/` itself.
@@ -519,6 +529,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addLibraryFolder: folders.addLibraryFolder,
     removeLibraryFolder: folders.removeLibraryFolder,
     libraryTitles: titles.libraryTitles,
+    clearMovieDetails: titles.clearMovieDetails,
+    clearSeriesDetails: titles.clearSeriesDetails,
     reset() {
       resetDatabase(db);
     },

@@ -44,6 +44,7 @@ export const Item = styled.button<{
   $selected: boolean;
   $danger: boolean;
   $hinted: boolean;
+  $disabled: boolean;
 }>`
   display: flex;
   /* A hinted row's glyph sits by its label, the first of two lines. */
@@ -71,6 +72,20 @@ export const Item = styled.button<{
     background: ${({ theme, $danger }) =>
       $danger ? 'rgba(201, 122, 106, 0.12)' : theme.colors.surface3};
   }
+
+  /* A disabled row, the handoff's Clear details at no details: faded, no
+     hover, no pointer. */
+  ${({ $disabled }) =>
+    $disabled
+      ? `
+    opacity: 0.4;
+    cursor: default;
+
+    &:hover {
+      background: transparent;
+    }
+  `
+      : ''}
 `;
 
 /** The item's leading glyph — decorative, so it stays out of the item's name. */

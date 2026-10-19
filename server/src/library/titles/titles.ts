@@ -108,6 +108,19 @@ interface LinkedEpisodeRow {
 export interface Titles {
   /** Every title's raw facts, films and series apart, each A–Z by title. */
   libraryTitles(): StoredLibraryTitles;
+  /**
+   * **Clear details** on a film, in one transaction: its match, every field a
+   * Sync writes but the runtime, its genres and its art emptied. Answers the
+   * **Stored paths** let go, or `null` for an id not held as a film.
+   */
+  clearMovieDetails(id: string): string[] | null;
+  /**
+   * **Clear details** on a series, in one transaction: the film's columns,
+   * the end year, every **Season poster**, and each episode's title, air
+   * date, **Still** and **Still source**. Answers the **Stored paths** let
+   * go, or `null` for an id not held as a series.
+   */
+  clearSeriesDetails(id: string): string[] | null;
 }
 
 const factsOf = (row: TitleRow, linkedVideos: LinkedVideo[]) => ({
@@ -171,5 +184,84 @@ export function createTitles(db: SqliteDatabase): Titles {
     return { movies, series };
   }
 
-  return { libraryTitles };
+  const movieArt = db.prepare(
+    'SELECT poster_path, backdrop_path FROM movies WHERE id = ?'
+  );
+  const clearMovie = db.prepare(
+    `UPDATE movies SET tmdb_id = NULL, year = NULL, synopsis = NULL,
+       director = NULL, cast = NULL, original_title = NULL, tmdb_score = NULL,
+       poster_path = NULL, backdrop_path = NULL, updated_at = ?
+     WHERE id = ?`
+  );
+  const clearMovieGenres = db.prepare(
+    'DELETE FROM movie_genres WHERE movie_id = ?'
+  );
+  const seriesArt = db.prepare(
+    'SELECT poster_path, backdrop_path FROM series WHERE id = ?'
+  );
+  const seasonPosterPaths = db.prepare(
+    'SELECT poster_path FROM season_posters WHERE series_id = ?'
+  );
+  const stillPaths = db.prepare(
+    `SELECT still_path FROM episodes
+     WHERE series_id = ? AND still_path IS NOT NULL`
+  );
+  const clearSeries = db.prepare(
+    `UPDATE series SET tmdb_id = NULL, year = NULL, end_year = NULL,
+       synopsis = NULL, creator = NULL, cast = NULL, original_title = NULL,
+       tmdb_score = NULL, poster_path = NULL, backdrop_path = NULL,
+       updated_at = ?
+     WHERE id = ?`
+  );
+  const clearSeriesGenres = db.prepare(
+    'DELETE FROM series_genres WHERE series_id = ?'
+  );
+  const clearSeasonPosters = db.prepare(
+    'DELETE FROM season_posters WHERE series_id = ?'
+  );
+  const clearEpisodes = db.prepare(
+    `UPDATE episodes SET title = NULL, air_date = NULL, still_path = NULL,
+       still_source = NULL, updated_at = ?
+     WHERE series_id = ?`
+  );
+
+  interface ArtRow {
+    poster_path: string | null;
+    backdrop_path: string | null;
+  }
+  const artOf = (row: ArtRow) =>
+    [row.poster_path, row.backdrop_path].filter(
+      (path): path is string => path !== null && path !== ''
+    );
+
+  const clearMovieDetails = db.transaction((id: string): string[] | null => {
+    const row = movieArt.get(id) as ArtRow | undefined;
+    if (row === undefined) {
+      return null;
+    }
+    clearMovie.run(new Date().toISOString(), id);
+    clearMovieGenres.run(id);
+    return artOf(row);
+  });
+
+  const clearSeriesDetails = db.transaction((id: string): string[] | null => {
+    const row = seriesArt.get(id) as ArtRow | undefined;
+    if (row === undefined) {
+      return null;
+    }
+    const seasons = (
+      seasonPosterPaths.all(id) as { poster_path: string }[]
+    ).map((season) => season.poster_path);
+    const stills = (stillPaths.all(id) as { still_path: string }[]).map(
+      (episode) => episode.still_path
+    );
+    const now = new Date().toISOString();
+    clearSeries.run(now, id);
+    clearSeriesGenres.run(id);
+    clearSeasonPosters.run(id);
+    clearEpisodes.run(now, id);
+    return [...artOf(row), ...seasons, ...stills].filter((path) => path !== '');
+  });
+
+  return { libraryTitles, clearMovieDetails, clearSeriesDetails };
 }
