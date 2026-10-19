@@ -26,6 +26,7 @@ import { movieFormPath } from '@/utils/movieFormPath/movieFormPath';
 import { moviePath } from '@/utils/moviePath/moviePath';
 import { seriesPath } from '@/utils/seriesPath/seriesPath';
 import {
+  noContentResponse,
   notFoundResponse,
   okResponse,
   serverErrorResponse,
@@ -763,5 +764,192 @@ describe('ManageLibrary — Clear details', () => {
     );
     expect(within(rowOf('Coco')).getByText('Synced with TMDB')).toBeDefined();
     expect(screen.queryByText('Details cleared for “Coco”.')).toBeNull();
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 4: "delete a copied title" (issue #410).
+ *
+ * A copied row's ⋯ → _Delete…_ opens the **Delete dialog** over that title;
+ * its confirm sends the title's delete over the unchanged route, reads
+ * _Deleting…_ while it runs, and on the `204` closes, takes the row off the
+ * list — the tab's count and the summary following at once, with no re-read
+ * — and shows the `success` notice _“Coco” was deleted._ through
+ * `useSnackbar()`. Cancel sends nothing; a failed delete leaves the row and
+ * shows no notice.
+ */
+
+const deleteDialog = (title = 'Coco') =>
+  screen.queryByRole('dialog', { name: `Delete “${title}”?` });
+
+function openDeleteOn(title: string) {
+  const more = screen.getByRole('button', {
+    name: `More actions for “${title}”`,
+  });
+  more.focus();
+  fireEvent.click(more);
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Delete…' }));
+}
+
+const confirmDelete = (title = 'Coco') =>
+  fireEvent.click(
+    within(deleteDialog(title) as HTMLElement).getByRole('button', {
+      name: /^Delet/,
+    })
+  );
+
+const listReads = () =>
+  fetchMock.mock.calls.filter(
+    ([input]) => String(input) === '/api/library-titles'
+  );
+
+describe('ManageLibrary — Delete…', () => {
+  it('opens the Delete dialog over the title, its path in it', async () => {
+    serve();
+    renderPage();
+    await loaded();
+
+    openDeleteOn('Coco');
+
+    const dialog = deleteDialog();
+    expect(dialog).not.toBeNull();
+    expect(
+      within(dialog as HTMLElement).getByText(LIBRARY.movies[0]!.path)
+    ).toBeDefined();
+  });
+
+  it('sends nothing and closes on Cancel', async () => {
+    serve();
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+
+    fireEvent.click(
+      within(deleteDialog() as HTMLElement).getByRole('button', {
+        name: 'Cancel',
+      })
+    );
+
+    expect(deleteDialog()).toBeNull();
+    expect(writes()).toEqual([]);
+  });
+
+  it('sends a film’s delete over its unchanged route, asking nothing new', async () => {
+    serveWith(() => Promise.resolve(noContentResponse()));
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+
+    confirmDelete();
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    const [input, init] = writes()[0]!;
+    expect(String(input)).toBe('/api/movies/m1');
+    expect(init?.method?.toUpperCase()).toBe('DELETE');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('sends a show’s delete on the series tab', async () => {
+    serveWith(() => Promise.resolve(noContentResponse()));
+    renderPage(['/', '/settings', '/settings/library?tab=series']);
+    await loaded();
+    openDeleteOn('Bluey');
+
+    confirmDelete('Bluey');
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(String(writes()[0]?.[0])).toBe('/api/series/s1');
+  });
+
+  it('reads Deleting… and is inert while the delete runs', async () => {
+    const held = heldClear();
+    serveWith(() => held.pending);
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+
+    confirmDelete();
+
+    const button = await within(deleteDialog() as HTMLElement).findByRole(
+      'button',
+      { name: 'Deleting…' }
+    );
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    held.settle(noContentResponse());
+    await waitFor(() => expect(deleteDialog()).toBeNull());
+  });
+
+  it('closes, and takes the row off the list', async () => {
+    serveWith(() => Promise.resolve(noContentResponse()));
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+
+    confirmDelete();
+
+    await waitFor(() => expect(deleteDialog()).toBeNull());
+    expect(screen.queryByText('Coco')).toBeNull();
+    expect(screen.getByText('Heat')).toBeDefined();
+    expect(screen.getByText('Up')).toBeDefined();
+  });
+
+  it('updates the tab’s count and the summary without a re-read', async () => {
+    serveWith(() => Promise.resolve(noContentResponse()));
+    renderPage();
+    await loaded();
+    openDeleteOn('Heat');
+
+    confirmDelete('Heat');
+
+    await waitFor(() => expect(tab(/^Movies 2$/)).toBeDefined());
+    expect(tab(/^Series 2$/)).toBeDefined();
+    expect(screen.getByText('2 movies')).toBeDefined();
+    expect(screen.queryByText(/without details/)).toBeNull();
+    expect(listReads()).toHaveLength(1);
+  });
+
+  it('updates the series tab’s count after a show’s delete', async () => {
+    serveWith(() => Promise.resolve(noContentResponse()));
+    renderPage(['/', '/settings', '/settings/library?tab=series']);
+    await loaded();
+    openDeleteOn('Bluey');
+
+    confirmDelete('Bluey');
+
+    await waitFor(() => expect(tab(/^Series 1$/)).toBeDefined());
+    expect(tab(/^Movies 3$/)).toBeDefined();
+    expect(screen.getByText('1 series')).toBeDefined();
+    expect(screen.queryByText('Bluey')).toBeNull();
+  });
+
+  it('shows the success notice, naming the title', async () => {
+    serveWith(() => Promise.resolve(noContentResponse()));
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+
+    confirmDelete();
+
+    expect(await screen.findByText('“Coco” was deleted.')).toBeDefined();
+  });
+
+  it('leaves the row, and shows no notice, on a failed delete', async () => {
+    serveWith(() => Promise.resolve(serverErrorResponse()));
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+
+    confirmDelete();
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    await waitFor(() =>
+      expect(
+        within(deleteDialog() as HTMLElement).getByRole('button', {
+          name: 'Delete movie',
+        })
+      ).toBeDefined()
+    );
+    expect(within(rowOf('Coco')).getByText('Synced with TMDB')).toBeDefined();
+    expect(screen.queryByText('“Coco” was deleted.')).toBeNull();
   });
 });

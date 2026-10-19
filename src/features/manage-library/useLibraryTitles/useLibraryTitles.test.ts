@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useLibraryTitles } from './useLibraryTitles';
 import type { LibraryTitles } from '@/types';
 import {
+  noContentResponse,
   notFoundResponse,
   okResponse,
   serverErrorResponse,
@@ -225,6 +226,117 @@ describe('useLibraryTitles — clearDetails', () => {
       });
 
       expect(cleared).toBe(false);
+      expect(result.current.titles).toEqual(LISTED);
+    }
+  );
+});
+
+/**
+ * 47 — Manage library, Phase 4: "delete a copied title" (issue #410).
+ *
+ * `deleteTitle(title)` sends the title's delete over the unchanged route —
+ * `DELETE /api/movies/:id` or `/api/series/:id`, through the shared
+ * `deleteMovie` / `deleteSeries` — and on `deleted` takes that row off its
+ * list with no re-read, so the tab's count and the summary follow at once.
+ * It never rejects: `true` once the row is gone, `false` for anything else,
+ * the list as it was.
+ */
+describe('useLibraryTitles — deleteTitle', () => {
+  const writesOf = () =>
+    fetchMock.mock.calls.filter(
+      ([input]) => String(input) !== '/api/library-titles'
+    );
+
+  it('sends a film’s delete to the movie route, with no body', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(noContentResponse())
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+
+    expect(writesOf()).toHaveLength(1);
+    const [input, init] = writesOf()[0]!;
+    expect(String(input)).toBe('/api/movies/m1');
+    expect(init?.method?.toUpperCase()).toBe('DELETE');
+    expect(init?.body).toBeUndefined();
+  });
+
+  it('sends a show’s delete to the series route', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(noContentResponse())
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.series[0]!));
+
+    expect(String(writesOf()[0]?.[0])).toBe('/api/series/s1');
+  });
+
+  it('takes the film’s row off its list, the others kept in order', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(noContentResponse())
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+
+    expect(result.current.titles?.movies).toEqual([
+      LISTED.movies[0],
+      LISTED.movies[2],
+    ]);
+    expect(result.current.titles?.series).toEqual(LISTED.series);
+  });
+
+  it('takes the show’s row off its list', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(noContentResponse())
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.series[0]!));
+
+    expect(result.current.titles?.series).toEqual([]);
+    expect(result.current.titles?.movies).toEqual(LISTED.movies);
+  });
+
+  it('reads the list only once, the delete redrawn without a re-read', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(noContentResponse())
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+
+    expect(
+      fetchMock.mock.calls.filter(
+        ([input]) => String(input) === '/api/library-titles'
+      )
+    ).toHaveLength(1);
+  });
+
+  it('resolves true once the row is gone', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(noContentResponse())
+    );
+
+    let deleted: boolean | undefined;
+    await act(async () => {
+      deleted = await result.current.deleteTitle(LISTED.movies[1]!);
+    });
+
+    expect(deleted).toBe(true);
+  });
+
+  it.each([
+    ['a server error', () => Promise.resolve(serverErrorResponse())],
+    ['a network failure', () => Promise.reject(new TypeError('offline'))],
+  ])(
+    'never rejects on %s: false, and the list as it was',
+    async (_, answer) => {
+      const { result } = await loadedHook(answer);
+
+      let deleted: boolean | undefined;
+      await act(async () => {
+        deleted = await result.current.deleteTitle(LISTED.movies[1]!);
+      });
+
+      expect(deleted).toBe(false);
       expect(result.current.titles).toEqual(LISTED);
     }
   );

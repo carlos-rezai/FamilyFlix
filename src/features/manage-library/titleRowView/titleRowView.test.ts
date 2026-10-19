@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { titleRowView } from './titleRowView';
+import { deleteView, titleRowView } from './titleRowView';
 import {
   makeLibraryMovie,
   makeLibrarySeries,
@@ -133,4 +133,98 @@ describe('titleRowView — the unreachable line', () => {
       ).toBeNull();
     }
   );
+});
+
+/**
+ * 47 — Manage library, Phase 4: "delete a copied title" (issue #410).
+ *
+ * `deleteView`, pure: a copied **Library title** → the **Delete dialog**'s
+ * words (log 47 Q12), spelled once beside the row's:
+ *
+ * - `heading` — _Delete “Coco”?_;
+ * - `subtitle` — _This takes the movie out of FamilyFlix. It can’t be undone
+ *   from here._, _the series_ for a show;
+ * - `goes` — _Its details, poster and artwork_; _Its watch history, rating
+ *   and heart_; _FamilyFlix’s copy of its video and subtitles_;
+ * - `stays` — with an original in a Library folder, _Your original in its
+ *   library folder — Scan folders would bring it back_; without, _Nothing_;
+ * - `confirm` — _Delete movie_ / _Delete series_.
+ */
+const COPIED_GOES = [
+  'Its details, poster and artwork',
+  'Its watch history, rating and heart',
+  'FamilyFlix’s copy of its video and subtitles',
+];
+const ORIGINAL_STAYS = [
+  'Your original in its library folder — Scan folders would bring it back',
+];
+
+describe('deleteView — the heading and subtitle', () => {
+  it('names the title in the heading', () => {
+    expect(deleteView(makeLibraryMovie({ title: 'Coco' })).heading).toBe(
+      'Delete “Coco”?'
+    );
+  });
+
+  it('says the movie leaves FamilyFlix and can’t be undone from here', () => {
+    expect(deleteView(makeLibraryMovie()).subtitle).toBe(
+      'This takes the movie out of FamilyFlix. It can’t be undone from here.'
+    );
+  });
+
+  it('says the series, for a show', () => {
+    expect(deleteView(makeLibrarySeries({ title: 'Bluey' }))).toMatchObject({
+      heading: 'Delete “Bluey”?',
+      subtitle:
+        'This takes the series out of FamilyFlix. It can’t be undone from here.',
+    });
+  });
+});
+
+describe('deleteView — What goes', () => {
+  it('lists a copied film’s details, history and FamilyFlix’s copy', () => {
+    expect(deleteView(makeLibraryMovie()).goes).toEqual(COPIED_GOES);
+  });
+
+  it('lists the same for a copied show', () => {
+    expect(deleteView(makeLibrarySeries()).goes).toEqual(COPIED_GOES);
+  });
+
+  it('lists the same whether or not there is an original', () => {
+    expect(
+      deleteView(makeLibraryMovie({ originalPath: 'E:\\Movies\\Coco (2017)' }))
+        .goes
+    ).toEqual(COPIED_GOES);
+  });
+});
+
+describe('deleteView — What stays', () => {
+  it('keeps the original in its Library folder, which a scan would bring back', () => {
+    expect(
+      deleteView(makeLibraryMovie({ originalPath: 'E:\\Movies\\Coco (2017)' }))
+        .stays
+    ).toEqual(ORIGINAL_STAYS);
+  });
+
+  it('keeps a show’s original the same way', () => {
+    expect(
+      deleteView(makeLibrarySeries({ originalPath: 'E:\\Series\\Bluey' })).stays
+    ).toEqual(ORIGINAL_STAYS);
+  });
+
+  it('keeps Nothing for a title added by hand, with no original', () => {
+    expect(deleteView(makeLibraryMovie({ originalPath: null })).stays).toEqual([
+      'Nothing',
+    ]);
+  });
+});
+
+describe('deleteView — the confirm', () => {
+  it('reads Delete movie for a film', () => {
+    expect(deleteView(makeLibraryMovie()).confirm).toBe('Delete movie');
+  });
+
+  it('reads Delete series for a show', () => {
+    expect(deleteView(makeLibrarySeries()).confirm).toBe('Delete series');
+  });
 });

@@ -1,11 +1,12 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import { TitleRow } from './TitleRow';
 import type { LibraryTitle } from '@/types';
 import { theme } from '@/styles/theme';
+import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
   makeLibraryMovie,
   makeLibrarySeries,
@@ -28,12 +29,13 @@ const DANGER = 'rgb(201, 122, 106)';
 
 function renderRow(
   title: LibraryTitle,
-  onClear: (title: LibraryTitle) => void = () => undefined
+  onClear: (title: LibraryTitle) => void = () => undefined,
+  onDelete: (title: LibraryTitle) => void = () => undefined
 ) {
   return render(
     <MemoryRouter>
       <ThemeProvider theme={theme}>
-        <TitleRow title={title} onClear={onClear} />
+        <TitleRow title={title} onClear={onClear} onDelete={onDelete} />
         <p>somewhere else on the page</p>
       </ThemeProvider>
     </MemoryRouter>
@@ -388,4 +390,83 @@ describe('TitleRow — ⋯', () => {
 
     expect(clearItem().getAttribute('aria-disabled')).toBe('true');
   });
+});
+
+/**
+ * 47 — Manage library, Phase 4: "delete a copied title" (issue #410).
+ *
+ * The ⋯ menu gains _Delete…_ as its **Danger row** — danger ink, after
+ * _Clear details_ and below a divider (`role="separator"`). A press hands the
+ * title to the organism, which opens the **Delete dialog**. A linked title's
+ * row is not offered _Delete…_ until the linked delete ships.
+ */
+
+const deleteItem = () => screen.queryByRole('menuitem', { name: 'Delete…' });
+
+describe('TitleRow — Delete…', () => {
+  it('offers Delete… after Clear details, below a divider', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco', linkedFiles: null }));
+    openMore();
+
+    const menu = screen.getByRole('menu');
+    const divider = within(menu).getByRole('separator');
+    const remove = deleteItem();
+    expect(remove).not.toBeNull();
+    expect(
+      screen.getAllByRole('menuitem').map((item) => item.textContent)
+    ).toEqual(['Clear details', 'Delete…']);
+    expect(comesBefore(clearItem(), divider)).toBe(true);
+    expect(comesBefore(divider, remove as HTMLElement)).toBe(true);
+  });
+
+  it('draws Delete… as the danger row', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco' }));
+    openMore();
+
+    expect(getComputedStyle(deleteItem() as HTMLElement).color).toBe(DANGER);
+  });
+
+  it('hands a copied film over on Delete…, and shuts the menu', () => {
+    const onDelete = vi.fn();
+    const onClear = vi.fn();
+    const title = makeLibraryMovie({ title: 'Coco' });
+    renderRow(title, onClear, onDelete);
+    const control = openMore();
+
+    fireEvent.click(deleteItem() as HTMLElement);
+
+    expect(onDelete).toHaveBeenCalledWith(title);
+    expect(onClear).not.toHaveBeenCalled();
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+
+  it('hands a copied show over on Delete…', () => {
+    const onDelete = vi.fn();
+    const title = makeLibrarySeries({ title: 'Bluey' });
+    renderRow(title, undefined, onDelete);
+    openMore('Bluey');
+
+    fireEvent.click(deleteItem() as HTMLElement);
+
+    expect(onDelete).toHaveBeenCalledWith(title);
+  });
+
+  it('leaves Delete… live at none, where Clear details is not', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco', details: 'none' }));
+    openMore();
+
+    expect(deleteItem()?.getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it.each(['folder', 'videos', 'unreachable'] as const)(
+    'offers no Delete… for a linked title (%s)',
+    (linkedFiles) => {
+      renderRow(makeLibraryMovie({ title: 'Coco', linkedFiles }));
+      openMore();
+
+      expect(deleteItem()).toBeNull();
+      expect(clearItem()).toBeDefined();
+    }
+  );
 });
