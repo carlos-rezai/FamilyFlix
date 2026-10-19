@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { basename, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -10,7 +10,12 @@ import type {
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
-import type { LibraryStorage, SeriesUpdate } from '../library';
+import type {
+  LibraryStorage,
+  SeriesUpdate,
+  StoredLibraryMovie,
+  StoredLibrarySeries,
+} from '../library';
 import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
@@ -34,6 +39,7 @@ import {
   type ExportRefusal,
 } from '../import-export/writeExport/writeExport';
 import type { Media } from '../media/createMedia/createMedia';
+import { linkedFiles } from '../media/linkedFiles/linkedFiles';
 import { readableFolder } from '../media/readableFolder/readableFolder';
 import { spaceUsed } from '../media/spaceUsed/spaceUsed';
 import { componentBinary } from '../playback/componentBinary/componentBinary';
@@ -85,6 +91,7 @@ import {
   type GenreQuery,
   type LibraryFolder,
   type LibraryQuery,
+  type LibraryTitles,
   type Movie,
   type MovieSort,
   type NewEpisode,
@@ -663,6 +670,104 @@ const RESET_REFUSALS: Record<
     error: 'Could not erase the library',
   },
 };
+
+/**
+ * The **Manage library page**'s read: the stored facts made absolute — a
+ * linked title's Source folder (a Collection folder film's video), else its
+ * Media folder; a copied title's original in a Library folder — and each
+ * title's **Linked files** off `media/linkedFiles`, every Library folder's
+ * reach read afresh, once per folder.
+ */
+async function libraryTitleList(
+  storage: LibraryStorage,
+  mediaPath: string
+): Promise<LibraryTitles> {
+  const folders = new Map(
+    await Promise.all(
+      storage.libraryFolders().map(
+        async (folder) =>
+          [
+            folder.id,
+            {
+              path: folder.path,
+              reachable: (await readableFolder(folder.path)) === 'readable',
+            },
+          ] as const
+      )
+    )
+  );
+  const { movies, series } = storage.libraryTitles();
+
+  const videosOf = (title: StoredLibraryMovie | StoredLibrarySeries) =>
+    title.linkedVideos.flatMap(({ folderId, videoPath }) => {
+      const folder = folders.get(folderId);
+      return folder === undefined ? [] : [join(folder.path, videoPath)];
+    });
+  const linked = new Map<string, string[]>(
+    [...movies, ...series].map((title) => [title.id, videosOf(title)])
+  );
+  const allVideos = [...linked.values()].flat();
+
+  function placed(
+    title: StoredLibraryMovie | StoredLibrarySeries,
+    allLinked: boolean,
+    sourceFile: string | null
+  ) {
+    const videos = linked.get(title.id) ?? [];
+    const folderId =
+      title.libraryFolderId ?? title.linkedVideos[0]?.folderId ?? null;
+    const libraryFolder =
+      folderId === null ? null : (folders.get(folderId) ?? null);
+    const sourceFolder =
+      libraryFolder === null || title.sourceFolder === null
+        ? null
+        : join(libraryFolder.path, title.sourceFolder);
+    const managed = resolve(mediaPath, title.mediaFolder ?? '');
+    const answer = linkedFiles({
+      videos,
+      allLinked,
+      sourceFolder,
+      libraryFolder,
+      others: allVideos.filter((video) => !videos.includes(video)),
+    });
+    const linkedPath =
+      sourceFolder === null
+        ? videos[0] === undefined
+          ? managed
+          : dirname(videos[0])
+        : sourceFile === null
+          ? sourceFolder
+          : join(sourceFolder, sourceFile);
+    return {
+      id: title.id,
+      title: title.title,
+      year: title.year,
+      path: answer === null ? managed : linkedPath,
+      linkedFiles: answer?.kind ?? null,
+      originalPath: answer === null ? sourceFolder : null,
+      details: title.details,
+    };
+  }
+
+  return {
+    movies: movies.map((movie) => ({
+      kind: 'movie' as const,
+      ...placed(movie, movie.linkedVideos.length > 0, movie.sourceFile),
+      files: movie.files,
+    })),
+    series: series.map((show) => ({
+      kind: 'series' as const,
+      ...placed(
+        show,
+        show.episodes > 0 && show.linkedVideos.length === show.episodes,
+        null
+      ),
+      endYear: show.endYear,
+      seasons: show.seasons,
+      episodes: show.episodes,
+    })),
+  };
+}
 
 /**
  * Mount the JSON API over a {@link LibraryStorage}. Handlers stay thin — parse
@@ -1902,6 +2007,12 @@ export function createApiRouter(
       }))
     );
     res.json(folders);
+  });
+
+  // The **Manage library page**'s one read for both tabs: every title A–Z,
+  // its paths absolute and its **Linked files** read against the disk now.
+  router.get('/library-titles', async (_req: Request, res: Response) => {
+    res.json(await libraryTitleList(storage, mediaPath));
   });
 
   // Add one folder: `201` with it, `400` for no path, a relative one or one

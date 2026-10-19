@@ -133,6 +133,16 @@
           ></dc-import>
         </sc-if>
 
+        <!-- ============================= MANAGE LIBRARY (design log 47) ============================= -->
+        <sc-if value="{{ isManage }}" hint-placeholder-val="{{ false }}">
+          <dc-import
+            name="page.ManageLibraryPage"
+            on-back="{{ onManageBack }}"
+            style="position: absolute; inset: 0"
+            hint-size="100%,100%"
+          ></dc-import>
+        </sc-if>
+
         <!-- ============================= EXPORT MODAL (feat.ExportModal) ============================= -->
         <sc-if value="{{ exportOpen }}" hint-placeholder-val="{{ false }}">
           <dc-import
@@ -405,6 +415,7 @@
         goImport(){ this.setState({screen:'import',gearOpen:false,impStep:'setup',impProgress:0,impSource:'sheet',impMode:'link'}); }
         goSettings(){ this.setState({screen:'settings',gearOpen:false,openDrop:null}); }
         goCodecs(){ this.setState({screen:'codecs',gearOpen:false,openDrop:null}); }
+        goManage(){ this.setState({screen:'manage',gearOpen:false,openDrop:null}); }
         goFolders(){ this.setState({screen:'folders',gearOpen:false,openDrop:null,folderTyped:'',folderRefusal:null,folderRemoveRefusal:null,impMode:'link'}); }
         // Library folders: the route's refusals, simulated — case-blind, by whole path segments.
         folderClash(path){
@@ -895,7 +906,7 @@
             }; });
 
           return {
-            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isCodecs:s.screen==='codecs', isFolders:s.screen==='folders', isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
+            rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isCodecs:s.screen==='codecs', isFolders:s.screen==='folders', isManage:s.screen==='manage', onManageBack:()=>this.goSettings(), isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
             snackbars: s.snackbars.map(n=>({ ...n, onDismiss:()=>this.dismissSnack(n.id) })), hasSnackbars: s.snackbars.length>0,
             goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
             genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
@@ -973,6 +984,7 @@
               libraryActions:[
                 {key:'add',glyph:'＋',label:'Add a title',desc:'A movie or a series, with its files.',onClick:()=>this.goAdd()},
                 {key:'folders',glyph:'📁',label:'Library folders',desc:'The folders your movies and series are kept in.',onClick:()=>this.goFolders()},
+                {key:'manage',glyph:'☰',label:'Manage library',desc:'Edit, clear or delete any title in your library.',onClick:()=>this.goManage()},
                 {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>this.goImport()},
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],

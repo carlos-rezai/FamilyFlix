@@ -56,9 +56,16 @@ import {
 } from './series/write/write';
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
+import { createTitles, type StoredLibraryTitles } from './titles/titles';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
+export type {
+  LinkedVideo,
+  StoredLibraryMovie,
+  StoredLibrarySeries,
+  StoredLibraryTitles,
+} from './titles/titles';
 export type {
   EpisodeEdit,
   SeriesEdit,
@@ -411,6 +418,12 @@ export interface LibraryStorage {
    */
   removeLibraryFolder(id: string): FolderRemoval;
   /**
+   * The **Manage library page**'s raw facts: every film and every series, each
+   * list A–Z by title, with its **Details state**, its counts, its Library,
+   * Source and Media folders as recorded, and its linked videos.
+   */
+  libraryTitles(): StoredLibraryTitles;
+  /**
    * **Factory reset**'s erase: every row of every table but the **Genre
    * pool**, in one transaction — all or nothing. The same kind of seam
    * {@link close} is, so the router never reaches `db/` itself.
@@ -445,6 +458,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const seriesWrite = createSeriesWrite(db, seriesReader);
   const seriesCuration = createSeriesCuration(db);
   const seriesWatch = createSeriesWatch(db);
+  const titles = createTitles(db);
 
   return {
     addMovie: write.addMovie,
@@ -504,6 +518,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     libraryFolders: folders.libraryFolders,
     addLibraryFolder: folders.addLibraryFolder,
     removeLibraryFolder: folders.removeLibraryFolder,
+    libraryTitles: titles.libraryTitles,
     reset() {
       resetDatabase(db);
     },

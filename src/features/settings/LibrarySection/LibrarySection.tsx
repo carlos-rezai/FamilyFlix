@@ -9,12 +9,12 @@ import { Rows } from './LibrarySection.styles';
 /**
  * The Settings hub's **Library section**, from `page.SettingsPage.dc.html`:
  * the `Library` group heading over the `＋ Add a title`, `📁 Library
- * folders`, `⇪ Import from spreadsheet` and `⬇ Export to CSV` rows — the
- * third's label kept as drawn, though the dialog it opens offers Excel too.
+ * folders`, `☰ Manage library`, `⇪ Import from spreadsheet` and `⬇ Export to
+ * CSV` rows — the fourth's label kept as drawn, though the dialog it opens offers Excel too.
  *
  * Like `SettingsHeader`, the section owns where its rows lead: the maintainer
  * surface's only doors are here, and a page is composition only. The first
- * two are routes; the third is an overlay — the section holds whether the
+ * four are routes; the fifth is an overlay — the section holds whether the
  * **Export dialog** is open and mounts it beside its rows, so closing it
  * leaves the page where it was, scroll and all, with focus back on the row.
  * The app's first import of one feature's organism by another: a section
@@ -43,6 +43,12 @@ export function LibrarySection() {
           label="Library folders"
           desc="The folders your movies and series are kept in."
           onClick={() => navigate('/settings/folders')}
+        />
+        <ActionRow
+          glyph="☰"
+          label="Manage library"
+          desc="Edit, clear or delete any title in your library."
+          onClick={() => navigate('/settings/library')}
         />
         <ActionRow
           glyph="⇪"

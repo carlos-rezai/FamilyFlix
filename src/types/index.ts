@@ -150,3 +150,10 @@ export type {
   FilterOption,
 } from './viewModels';
 export type { LibraryFolder } from './libraryFolders';
+export { DETAILS_STATES } from './libraryTitles';
+export type {
+  DetailsState,
+  LinkedFiles,
+  LibraryTitle,
+  LibraryTitles,
+} from './libraryTitles';

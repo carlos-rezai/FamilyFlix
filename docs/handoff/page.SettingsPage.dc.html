@@ -84,13 +84,15 @@
               margin-bottom: 32px;
             "
           >
-            <!-- Four rows: Add a title, Library folders (📁 — "The folders your
+            <!-- Five rows: Add a title, Library folders (📁 — "The folders your
                  movies and series are kept in.", onto /settings/folders),
+                 Manage library (☰ — "Edit, clear or delete any title in your
+                 library.", onto /settings/library, design log 47 Q4),
                  Import from spreadsheet, Export to CSV -->
             <sc-for
               list="{{ settings.libraryActions }}"
               as="a"
-              hint-placeholder-count="4"
+              hint-placeholder-count="5"
             >
               <button
                 onClick="{{ a.onClick }}"

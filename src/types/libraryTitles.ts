@@ -1,0 +1,50 @@
+/**
+ * A title's **Details state**, the Title row's dot: `synced` — a TMDB match
+ * held; `none` — nothing a Sync fills held; `own` — anything else.
+ */
+export const DETAILS_STATES = ['synced', 'own', 'none'] as const;
+
+export type DetailsState = (typeof DETAILS_STATES)[number];
+
+/**
+ * A title's **Linked files**, what a Delete would move to the Recycle Bin:
+ * its Source folder whole, its linked videos alone, or nothing while its
+ * Library folder can't be read. A copied title has none — `null`.
+ */
+export type LinkedFiles = 'folder' | 'videos' | 'unreachable';
+
+/** What both kinds of **Library title** carry. */
+interface LibraryTitleBase {
+  id: string;
+  title: string;
+  year: number | null;
+  /**
+   * Absolute: a linked title's Source folder (a Collection folder film's
+   * video), else its Media folder.
+   */
+  path: string;
+  /** `null` for a copied title. */
+  linkedFiles: LinkedFiles | null;
+  /** A copied title's Source folder in a Library folder, absolute; else `null`. */
+  originalPath: string | null;
+  details: DetailsState;
+}
+
+/**
+ * One **Library title** as `GET /api/library-titles` answers it — a film with
+ * its file count, or a show with its Year range and counts.
+ */
+export type LibraryTitle =
+  | (LibraryTitleBase & { kind: 'movie'; files: number })
+  | (LibraryTitleBase & {
+      kind: 'series';
+      endYear: number | null;
+      seasons: number;
+      episodes: number;
+    });
+
+/** The **Manage library page**'s one read: both tabs, each A–Z. */
+export interface LibraryTitles {
+  movies: Extract<LibraryTitle, { kind: 'movie' }>[];
+  series: Extract<LibraryTitle, { kind: 'series' }>[];
+}

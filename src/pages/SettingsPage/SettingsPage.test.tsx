@@ -176,8 +176,9 @@ describe('SettingsPage', () => {
     // connection; and Phase 3 (issue #206) one more, Sync metadata & posters.
     // 30 — Library folders (issue #268): the Library group adds one, Library
     // folders. 37 — Factory reset (issue #299): the Storage card adds one,
-    // Reset….
-    expect(screen.getAllByRole('button')).toHaveLength(9);
+    // Reset…. 47 — Manage library (issue #407): the Library group adds one,
+    // Manage library.
+    expect(screen.getAllByRole('button')).toHaveLength(10);
   });
 
   it('composes the Storage section under the Playback section', () => {
@@ -296,13 +297,14 @@ describe('SettingsPage', () => {
     // Back, the "Add a title" row, Import, Export — and the Preferred subtitle
     // and audio language pills once the settings land (issue #401), and the Codecs row; Network adds Test connection and Sync
     // metadata & posters; About adds none; Library folders (issue #268) adds
-    // one; and Storage adds Reset… (issue #299).
+    // one; Storage adds Reset… (issue #299); and Manage library (issue #407)
+    // adds one.
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /^Preferred subtitle language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(11);
+    expect(screen.getAllByRole('button')).toHaveLength(12);
     // Six Group headings, and only six — Display joined in log 27.
     const groupHeadings = [
       'Library',

@@ -13,6 +13,7 @@ import GenrePage from '@/pages/GenrePage/GenrePage';
 import SettingsPage from '@/pages/SettingsPage/SettingsPage';
 import CodecsPage from '@/pages/CodecsPage/CodecsPage';
 import LibraryFoldersPage from '@/pages/LibraryFoldersPage/LibraryFoldersPage';
+import ManageLibraryPage from '@/pages/ManageLibraryPage/ManageLibraryPage';
 import ImportPage from '@/pages/ImportPage/ImportPage';
 import EnrichmentPage from '@/pages/EnrichmentPage/EnrichmentPage';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
@@ -36,7 +37,8 @@ import { SoftwareUpdateNotice } from '@/features/software-update/SoftwareUpdateN
  * the series page at `/series/:id` and the season page at
  * `/series/:id/season/:n`, the Settings hub at `/settings` and the **Codecs
  * page** at `/settings/codecs`, the **Library folders page** at
- * `/settings/folders`, the bulk importer at `/import` and the TMDB
+ * `/settings/folders`, the **Manage library page** at `/settings/library`,
+ * the bulk importer at `/import` and the TMDB
  * **Sync** at `/enrich`. The URLs were the stable part all along — each
  * screen landed behind the link already pointed at it, without any link
  * changing, which is how every link in the app could be honest before the
@@ -73,6 +75,7 @@ export default function App() {
                 path="/settings/folders"
                 element={<LibraryFoldersPage />}
               />
+              <Route path="/settings/library" element={<ManageLibraryPage />} />
               <Route path="/import" element={<ImportPage />} />
               <Route path="/enrich" element={<EnrichmentPage />} />
             </Route>
