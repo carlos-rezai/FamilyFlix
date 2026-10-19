@@ -42,6 +42,10 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
  * 30 — Library folders, Phase 1 (issue #268) adds a fourth row, second:
  * 📁 _Library folders_, with the line _The folders your movies and series are
  * kept in._, pushing the **Library folders page** at `/settings/folders`.
+ *
+ * 47 — Manage library, Phase 1 (issue #407) adds a fifth row, third: ☰
+ * _Manage library_, with the line _Edit, clear or delete any title in your
+ * library._, pushing the **Manage library page** at `/settings/library`.
  */
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -74,6 +78,10 @@ function renderSection() {
             path="/settings/folders"
             element={<p>the library folders page</p>}
           />
+          <Route
+            path="/settings/library"
+            element={<p>the manage library page</p>}
+          />
         </Routes>
         <LocationProbe />
       </ThemeProvider>
@@ -84,6 +92,7 @@ function renderSection() {
 const addRow = () => screen.getByRole('button', { name: /add a title/i });
 const foldersRow = () =>
   screen.getByRole('button', { name: /library folders/i });
+const manageRow = () => screen.getByRole('button', { name: /manage library/i });
 const importRow = () =>
   screen.getByRole('button', { name: /import from spreadsheet/i });
 const exportRow = () => screen.getByRole('button', { name: /export to csv/i });
@@ -114,12 +123,13 @@ describe('LibrarySection', () => {
     expect(getComputedStyle(heading).textTransform).toBe('uppercase');
   });
 
-  it('draws exactly four rows: Add a title, Library folders, Import from spreadsheet, Export to CSV', () => {
+  it('draws exactly five rows: Add a title, Library folders, Manage library, Import from spreadsheet, Export to CSV', () => {
     renderSection();
 
-    expect(screen.getAllByRole('button')).toHaveLength(4);
+    expect(screen.getAllByRole('button')).toHaveLength(5);
     expect(comesBefore(addRow(), foldersRow())).toBe(true);
-    expect(comesBefore(foldersRow(), importRow())).toBe(true);
+    expect(comesBefore(foldersRow(), manageRow())).toBe(true);
+    expect(comesBefore(manageRow(), importRow())).toBe(true);
     expect(comesBefore(importRow(), exportRow())).toBe(true);
   });
 
@@ -184,6 +194,25 @@ describe('LibrarySection', () => {
     expect(screen.getByText('the library folders page')).toBeDefined();
   });
 
+  it('draws the Manage library row third, with its glyph and its line', () => {
+    renderSection();
+
+    expect(screen.getAllByRole('button')[2]).toBe(manageRow());
+    expect(screen.getByText('☰')).toBeDefined();
+    expect(
+      screen.getByText('Edit, clear or delete any title in your library.')
+    ).toBeDefined();
+  });
+
+  it('pushes the Manage library page from Manage library', () => {
+    renderSection();
+
+    fireEvent.click(manageRow());
+
+    expect(pathname()).toBe('/settings/library');
+    expect(screen.getByText('the manage library page')).toBeDefined();
+  });
+
   it('lands on the import flow from Import from spreadsheet', () => {
     renderSection();
 
@@ -230,7 +259,7 @@ describe('LibrarySection — the Export row', () => {
 
     expect(exportDialog()).toBeNull();
     expect(pathname()).toBe('/settings');
-    expect(screen.getAllByRole('button')).toHaveLength(4);
+    expect(screen.getAllByRole('button')).toHaveLength(5);
   });
 
   it('closes from the ✕', () => {

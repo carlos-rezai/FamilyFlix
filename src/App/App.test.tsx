@@ -1186,6 +1186,35 @@ describe('App — the Codecs page', () => {
 });
 
 /**
+ * 47 — Manage library, Phase 1 (issue #407): `/settings/library`, the hub's
+ * third nested route, a literal in the route table beside the other two. The
+ * list read is a request this table's stub refuses, so the page stays blank
+ * under its header — **Blank until it lands**.
+ */
+describe('App — the Manage library page', () => {
+  it('renders the Manage library screen at /settings/library', async () => {
+    renderApp('/settings/library');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Manage library' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/settings/library');
+  });
+
+  it('lands a cold-opened Manage library page’s Back on Settings', async () => {
+    renderApp('/settings/library');
+    await screen.findByRole('heading', { level: 1, name: 'Manage library' });
+
+    await pressBack();
+
+    expect(pathname()).toBe('/settings');
+    expect(
+      await screen.findByRole('heading', { name: 'Settings' })
+    ).toBeDefined();
+  });
+});
+
+/**
  * 26 — Codecs page, Phase 2 (issue #245): the round trip. Settings reads the
  * report on mount for the **Codecs row**'s line; the **Codecs page** reads it
  * again for itself. An upload on the page, then Back, re-mounts Settings,
