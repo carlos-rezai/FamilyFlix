@@ -1,9 +1,16 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { ManageLibrary } from './ManageLibrary';
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import type { LibraryTitles } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
@@ -19,6 +26,7 @@ import { movieFormPath } from '@/utils/movieFormPath/movieFormPath';
 import { moviePath } from '@/utils/moviePath/moviePath';
 import { seriesPath } from '@/utils/seriesPath/seriesPath';
 import {
+  notFoundResponse,
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -83,12 +91,14 @@ function renderPage(
   return render(
     <MemoryRouter initialEntries={history} initialIndex={history.length - 1}>
       <ThemeProvider theme={theme}>
-        <Routes>
-          <Route path="/" element={<p>the browse home</p>} />
-          <Route path="/settings" element={<p>the settings hub</p>} />
-          <Route path="/settings/library" element={<ManageLibrary />} />
-        </Routes>
-        <LocationProbe />
+        <SnackbarProvider>
+          <Routes>
+            <Route path="/" element={<p>the browse home</p>} />
+            <Route path="/settings" element={<p>the settings hub</p>} />
+            <Route path="/settings/library" element={<ManageLibrary />} />
+          </Routes>
+          <LocationProbe />
+        </SnackbarProvider>
       </ThemeProvider>
     </MemoryRouter>
   );
@@ -362,15 +372,17 @@ function renderWithScreens(
   return render(
     <MemoryRouter initialEntries={history} initialIndex={history.length - 1}>
       <ThemeProvider theme={theme}>
-        <Routes>
-          <Route path="/settings" element={<p>the settings hub</p>} />
-          <Route path="/settings/library" element={<ManageLibrary />} />
-          <Route path="/add" element={<p>the movie form</p>} />
-          <Route path="/movie/:id" element={<p>the movie page</p>} />
-          <Route path="/series/:id" element={<p>the series page</p>} />
-          <Route path="/enrich" element={<p>the enrichment flow</p>} />
-        </Routes>
-        <LocationProbe withBack />
+        <SnackbarProvider>
+          <Routes>
+            <Route path="/settings" element={<p>the settings hub</p>} />
+            <Route path="/settings/library" element={<ManageLibrary />} />
+            <Route path="/add" element={<p>the movie form</p>} />
+            <Route path="/movie/:id" element={<p>the movie page</p>} />
+            <Route path="/series/:id" element={<p>the series page</p>} />
+            <Route path="/enrich" element={<p>the enrichment flow</p>} />
+          </Routes>
+          <LocationProbe withBack />
+        </SnackbarProvider>
       </ThemeProvider>
     </MemoryRouter>
   );
@@ -516,5 +528,240 @@ describe('ManageLibrary — Sync with TMDB', () => {
     probeBack();
     expect(url()).toBe('/settings/library?tab=series');
     await loaded();
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 3: "Clear details" (issue #409).
+ *
+ * A row's ⋯ → _Clear details_ opens the **Clear dialog** over that title;
+ * _Clear details_ in it posts the clear for the title's kind, reads
+ * _Clearing…_ while it runs, and on the `200` closes, redraws the row from
+ * the echo — its dot _No details_ — and shows the `success` notice _Details
+ * cleared for “Coco”._ through `useSnackbar()`. Cancel sends nothing. A
+ * refused clear leaves the row as it was and shows no notice.
+ *
+ * The wire is a stubbed `fetch`: the list read, then the clear held or
+ * answered as each test says.
+ */
+
+const CLEARED_COCO = makeLibraryMovie({
+  id: 'm1',
+  title: 'Coco',
+  year: null,
+  details: 'none',
+});
+const CLEARED_BLUEY = makeLibrarySeries({
+  id: 's1',
+  title: 'Bluey',
+  year: null,
+  details: 'none',
+});
+
+/** A clear answered only when the test says so. */
+function heldClear() {
+  let settle: (response: Response) => void = () => undefined;
+  const pending = new Promise<Response>((resolve) => {
+    settle = resolve;
+  });
+  return { pending, settle: (response: Response) => settle(response) };
+}
+
+/** The list read answered with LIBRARY, every write by `answer`. */
+function serveWith(answer: () => Promise<Response>) {
+  fetchMock.mockImplementation((input) =>
+    String(input) === '/api/library-titles'
+      ? Promise.resolve(okResponse(LIBRARY))
+      : answer()
+  );
+}
+
+const writes = () =>
+  fetchMock.mock.calls.filter(
+    ([input]) => String(input) !== '/api/library-titles'
+  );
+
+/** The Title row drawing `title`: the nearest ancestor holding its ⋯. */
+function rowOf(title: string): HTMLElement {
+  const more = screen.getByRole('button', {
+    name: `More actions for “${title}”`,
+  });
+  let node: HTMLElement | null = more.parentElement;
+  while (node !== null && !node.textContent?.includes(title)) {
+    node = node.parentElement;
+  }
+  if (node === null) {
+    throw new Error(`no row for ${title}`);
+  }
+  return node;
+}
+
+const clearDialog = () =>
+  screen.queryByRole('dialog', { name: 'Clear details?' });
+
+function openClearOn(title: string) {
+  const more = screen.getByRole('button', {
+    name: `More actions for “${title}”`,
+  });
+  more.focus();
+  fireEvent.click(more);
+  fireEvent.click(screen.getByRole('menuitem', { name: 'Clear details' }));
+}
+
+const confirmClear = () =>
+  fireEvent.click(
+    within(clearDialog() as HTMLElement).getByRole('button', {
+      name: /^Clear/,
+    })
+  );
+
+describe('ManageLibrary — Clear details', () => {
+  it('draws one ⋯ per row', async () => {
+    serve();
+    renderPage();
+    await loaded();
+
+    expect(
+      screen.getAllByRole('button', { name: /^More actions for/ })
+    ).toHaveLength(3);
+  });
+
+  it('opens the Clear dialog over the title, its path in it', async () => {
+    serve();
+    renderPage();
+    await loaded();
+
+    openClearOn('Coco');
+
+    const dialog = clearDialog();
+    expect(dialog).not.toBeNull();
+    expect(
+      within(dialog as HTMLElement).getByText(LIBRARY.movies[0]!.path)
+    ).toBeDefined();
+  });
+
+  it('sends nothing and closes on Cancel', async () => {
+    serve();
+    renderPage();
+    await loaded();
+    openClearOn('Coco');
+
+    fireEvent.click(
+      within(clearDialog() as HTMLElement).getByRole('button', {
+        name: 'Cancel',
+      })
+    );
+
+    expect(clearDialog()).toBeNull();
+    expect(writes()).toEqual([]);
+  });
+
+  it('posts a film’s clear on Clear details', async () => {
+    serveWith(() => Promise.resolve(okResponse(CLEARED_COCO)));
+    renderPage();
+    await loaded();
+    openClearOn('Coco');
+
+    confirmClear();
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(String(writes()[0]?.[0])).toBe('/api/movies/m1/clear-details');
+    expect(writes()[0]?.[1]?.method).toBe('POST');
+  });
+
+  it('posts a show’s clear on the series tab', async () => {
+    serveWith(() => Promise.resolve(okResponse(CLEARED_BLUEY)));
+    renderPage(['/', '/settings', '/settings/library?tab=series']);
+    await loaded();
+    openClearOn('Bluey');
+
+    confirmClear();
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    expect(String(writes()[0]?.[0])).toBe('/api/series/s1/clear-details');
+  });
+
+  it('reads Clearing… and is inert while the clear runs', async () => {
+    const clear = heldClear();
+    serveWith(() => clear.pending);
+    renderPage();
+    await loaded();
+    openClearOn('Coco');
+
+    confirmClear();
+
+    const button = await within(clearDialog() as HTMLElement).findByRole(
+      'button',
+      { name: 'Clearing…' }
+    );
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    clear.settle(okResponse(CLEARED_COCO));
+    await waitFor(() => expect(clearDialog()).toBeNull());
+  });
+
+  it('closes, and redraws the row from the echo', async () => {
+    serveWith(() => Promise.resolve(okResponse(CLEARED_COCO)));
+    renderPage();
+    await loaded();
+    expect(within(rowOf('Coco')).getByText('Synced with TMDB')).toBeDefined();
+    openClearOn('Coco');
+
+    confirmClear();
+
+    await waitFor(() => expect(clearDialog()).toBeNull());
+    expect(within(rowOf('Coco')).getByText('No details')).toBeDefined();
+    expect(within(rowOf('Coco')).queryByText('Synced with TMDB')).toBeNull();
+  });
+
+  it('shows the success notice, naming the title', async () => {
+    serveWith(() => Promise.resolve(okResponse(CLEARED_COCO)));
+    renderPage();
+    await loaded();
+    openClearOn('Coco');
+
+    confirmClear();
+
+    expect(
+      await screen.findByText('Details cleared for “Coco”.')
+    ).toBeDefined();
+  });
+
+  it('disables the cleared row’s Clear details after the redraw', async () => {
+    serveWith(() => Promise.resolve(okResponse(CLEARED_COCO)));
+    renderPage();
+    await loaded();
+    openClearOn('Coco');
+    confirmClear();
+    await waitFor(() => expect(clearDialog()).toBeNull());
+
+    fireEvent.click(
+      screen.getByRole('button', { name: 'More actions for “Coco”' })
+    );
+
+    expect(
+      screen
+        .getByRole('menuitem', { name: 'Clear details' })
+        .getAttribute('aria-disabled')
+    ).toBe('true');
+  });
+
+  it('leaves the row as it was, and shows no notice, on a refused clear', async () => {
+    serveWith(() => Promise.resolve(notFoundResponse()));
+    renderPage();
+    await loaded();
+    openClearOn('Coco');
+
+    confirmClear();
+
+    await waitFor(() => expect(writes()).toHaveLength(1));
+    await waitFor(() =>
+      expect(
+        within(clearDialog() as HTMLElement).getByRole('button', {
+          name: 'Clear details',
+        })
+      ).toBeDefined()
+    );
+    expect(within(rowOf('Coco')).getByText('Synced with TMDB')).toBeDefined();
+    expect(screen.queryByText('Details cleared for “Coco”.')).toBeNull();
   });
 });

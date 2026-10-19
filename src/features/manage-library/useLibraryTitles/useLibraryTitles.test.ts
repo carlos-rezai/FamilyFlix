@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useLibraryTitles } from './useLibraryTitles';
 import type { LibraryTitles } from '@/types';
 import {
+  notFoundResponse,
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -92,4 +93,139 @@ describe('useLibraryTitles — the read', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(result.current.titles).toBeNull();
   });
+});
+
+/**
+ * 47 — Manage library, Phase 3: "Clear details" (issue #409).
+ *
+ * `clearDetails(title)` posts the clear for the title's kind — `POST
+ * /api/movies/:id/clear-details` or `/series/` — and on the `200` replaces
+ * that row in its list with the echo, in place. It never rejects: it resolves
+ * `true` once the row is redrawn and `false` for anything else, the list left
+ * as it was.
+ */
+const CLEARED_MOVIE = makeLibraryMovie({
+  id: 'm1',
+  title: 'Coco',
+  year: null,
+  details: 'none',
+});
+const CLEARED_SERIES = makeLibrarySeries({
+  id: 's1',
+  title: 'Bluey',
+  year: null,
+  details: 'none',
+});
+
+const LISTED: LibraryTitles = {
+  movies: [
+    makeLibraryMovie({ id: 'm0', title: 'Alien', details: 'synced' }),
+    makeLibraryMovie({
+      id: 'm1',
+      title: 'Coco',
+      year: 2017,
+      details: 'synced',
+    }),
+    makeLibraryMovie({ id: 'm2', title: 'Heat', details: 'own' }),
+  ],
+  series: [makeLibrarySeries({ id: 's1', title: 'Bluey', details: 'synced' })],
+};
+
+/** The list read answered, then each write by `answer`. */
+async function loadedHook(answer: () => Promise<Response>) {
+  fetchMock.mockImplementation((input) =>
+    String(input) === '/api/library-titles'
+      ? Promise.resolve(okResponse(LISTED))
+      : answer()
+  );
+  const hook = renderHook(() => useLibraryTitles());
+  await waitFor(() => expect(hook.result.current.titles).not.toBeNull());
+  return hook;
+}
+
+describe('useLibraryTitles — clearDetails', () => {
+  it('posts a film’s clear to the movie route', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(okResponse(CLEARED_MOVIE))
+    );
+
+    await act(() => result.current.clearDetails(LISTED.movies[1]!));
+
+    const write = fetchMock.mock.calls.find(
+      ([input]) => String(input) !== '/api/library-titles'
+    );
+    expect(String(write?.[0])).toBe('/api/movies/m1/clear-details');
+    expect(write?.[1]?.method).toBe('POST');
+  });
+
+  it('posts a show’s clear to the series route', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(okResponse(CLEARED_SERIES))
+    );
+
+    await act(() => result.current.clearDetails(LISTED.series[0]!));
+
+    const write = fetchMock.mock.calls.find(
+      ([input]) => String(input) !== '/api/library-titles'
+    );
+    expect(String(write?.[0])).toBe('/api/series/s1/clear-details');
+  });
+
+  it('replaces the film’s row with the echo, in place', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(okResponse(CLEARED_MOVIE))
+    );
+
+    await act(() => result.current.clearDetails(LISTED.movies[1]!));
+
+    expect(result.current.titles?.movies).toEqual([
+      LISTED.movies[0],
+      CLEARED_MOVIE,
+      LISTED.movies[2],
+    ]);
+    expect(result.current.titles?.series).toEqual(LISTED.series);
+  });
+
+  it('replaces the show’s row with the echo', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(okResponse(CLEARED_SERIES))
+    );
+
+    await act(() => result.current.clearDetails(LISTED.series[0]!));
+
+    expect(result.current.titles?.series).toEqual([CLEARED_SERIES]);
+    expect(result.current.titles?.movies).toEqual(LISTED.movies);
+  });
+
+  it('resolves true once the row is redrawn', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(okResponse(CLEARED_MOVIE))
+    );
+
+    let cleared: boolean | undefined;
+    await act(async () => {
+      cleared = await result.current.clearDetails(LISTED.movies[1]!);
+    });
+
+    expect(cleared).toBe(true);
+  });
+
+  it.each([
+    ['a 404', () => Promise.resolve(notFoundResponse())],
+    ['a server error', () => Promise.resolve(serverErrorResponse())],
+    ['a network failure', () => Promise.reject(new TypeError('offline'))],
+  ])(
+    'never rejects on %s: false, and the list as it was',
+    async (_, answer) => {
+      const { result } = await loadedHook(answer);
+
+      let cleared: boolean | undefined;
+      await act(async () => {
+        cleared = await result.current.clearDetails(LISTED.movies[1]!);
+      });
+
+      expect(cleared).toBe(false);
+      expect(result.current.titles).toEqual(LISTED);
+    }
+  );
 });

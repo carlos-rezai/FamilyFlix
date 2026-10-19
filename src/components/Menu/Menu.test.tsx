@@ -624,3 +624,94 @@ describe('MenuItem — the hint line', () => {
     expect(document.activeElement).toBe(control);
   });
 });
+
+/**
+ * 47 — Manage library, Phase 3 (issue #409): `MenuItem`'s `disabled`, for the
+ * ⋯ menu's _Clear details_ on a title with no details. A disabled row says so
+ * with `aria-disabled` rather than `disabled`, the Toggle's precedent, so it
+ * stays a row the roving focus walks onto — the WAI-ARIA menu pattern keeps a
+ * disabled item focusable — while a press, by pointer or by key, neither
+ * reports nor shuts the menu.
+ */
+function renderDisabledMenu(
+  onSelect: (label: string) => void = () => undefined
+) {
+  return render(
+    <ThemeProvider theme={theme}>
+      <Menu trigger={(props) => <button {...props}>Options</button>}>
+        <MenuItem onSelect={() => onSelect('First')}>First</MenuItem>
+        <MenuItem disabled onSelect={() => onSelect('Second')}>
+          Second
+        </MenuItem>
+        <MenuItem onSelect={() => onSelect('Third')}>Third</MenuItem>
+      </Menu>
+    </ThemeProvider>
+  );
+}
+
+describe('MenuItem — disabled', () => {
+  it('marks a disabled row aria-disabled, and leaves the rest unmarked', () => {
+    renderDisabledMenu();
+    openMenu();
+
+    expect(row('Second').getAttribute('aria-disabled')).toBe('true');
+    expect(row('First').getAttribute('aria-disabled')).toBeNull();
+    expect(row('Third').getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('is not pressable: a click neither reports nor shuts the menu', () => {
+    const onSelect = vi.fn();
+    renderDisabledMenu(onSelect);
+    openMenu();
+
+    fireEvent.click(row('Second'));
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.queryByRole('menu')).not.toBeNull();
+  });
+
+  it('is not pressable from the keyboard either', () => {
+    const onSelect = vi.fn();
+    renderDisabledMenu(onSelect);
+    openMenu();
+    press('ArrowDown');
+    expect(focusedRow()).toBe('Second');
+
+    fireEvent.click(document.activeElement as HTMLElement);
+
+    expect(onSelect).not.toHaveBeenCalled();
+    expect(screen.queryByRole('menu')).not.toBeNull();
+  });
+
+  it('is not skipped by the roving focus: ArrowDown walks onto it', () => {
+    renderDisabledMenu();
+    openMenu();
+
+    press('ArrowDown');
+    expect(focusedRow()).toBe('Second');
+    press('ArrowDown');
+    expect(focusedRow()).toBe('Third');
+  });
+
+  it('holds the tab stop when focus reaches it', () => {
+    renderDisabledMenu();
+    openMenu();
+
+    press('ArrowDown');
+
+    expect(row('Second').getAttribute('tabindex')).toBe('0');
+    expect(row('First').getAttribute('tabindex')).toBe('-1');
+  });
+
+  it('leaves the rows around it pressable', () => {
+    const onSelect = vi.fn();
+    renderDisabledMenu(onSelect);
+    const control = openMenu();
+
+    fireEvent.click(row('Third'));
+
+    expect(onSelect).toHaveBeenCalledWith('Third');
+    expect(screen.queryByRole('menu')).toBeNull();
+    expect(document.activeElement).toBe(control);
+  });
+});

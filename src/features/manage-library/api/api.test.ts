@@ -1,8 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
-import { fetchLibraryTitles } from './api';
+import {
+  clearMovieDetails,
+  clearSeriesDetails,
+  fetchLibraryTitles,
+} from './api';
 import type { LibraryTitles } from '@/types';
 import {
+  notFoundResponse,
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -64,5 +69,59 @@ describe('fetchLibraryTitles', () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
     await expect(fetchLibraryTitles()).rejects.toThrow();
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 3: "Clear details" (issue #409).
+ *
+ * `clearMovieDetails(id)` and `clearSeriesDetails(id)`: `POST
+ * /api/movies/:id/clear-details` and `POST /api/series/:id/clear-details`,
+ * each answering the `200`'s **Library title**, the echo the row redraws
+ * from, and rejecting on anything else — the hook never lets that reach the
+ * page. One caller each, so they live with the feature.
+ */
+describe.each([
+  [
+    'clearMovieDetails',
+    clearMovieDetails,
+    'movies',
+    makeLibraryMovie({ id: 'm 1', details: 'none' }),
+  ],
+  [
+    'clearSeriesDetails',
+    clearSeriesDetails,
+    'series',
+    makeLibrarySeries({ id: 'm 1', details: 'none' }),
+  ],
+] as const)('%s', (_name, clearDetails, route, echo) => {
+  it(`posts to /api/${route}/:id/clear-details, the id encoded`, async () => {
+    fetchMock.mockResolvedValue(okResponse(echo));
+
+    await clearDetails('m 1');
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toBe(
+      `/api/${route}/m%201/clear-details`
+    );
+    expect(fetchMock.mock.calls[0]?.[1]?.method).toBe('POST');
+  });
+
+  it('answers the echoed Library title', async () => {
+    fetchMock.mockResolvedValue(okResponse(echo));
+
+    await expect(clearDetails('m 1')).resolves.toEqual(echo);
+  });
+
+  it('rejects a 404', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse());
+
+    await expect(clearDetails('m 1')).rejects.toThrow();
+  });
+
+  it('rejects a server error', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(clearDetails('m 1')).rejects.toThrow();
   });
 });

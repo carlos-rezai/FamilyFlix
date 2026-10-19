@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
@@ -26,11 +26,14 @@ import {
 
 const DANGER = 'rgb(201, 122, 106)';
 
-function renderRow(title: LibraryTitle) {
+function renderRow(
+  title: LibraryTitle,
+  onClear: (title: LibraryTitle) => void = () => undefined
+) {
   return render(
     <MemoryRouter>
       <ThemeProvider theme={theme}>
-        <TitleRow title={title} />
+        <TitleRow title={title} onClear={onClear} />
         <p>somewhere else on the page</p>
       </ThemeProvider>
     </MemoryRouter>
@@ -271,5 +274,118 @@ describe('TitleRow — Edit ▾ by keyboard', () => {
 
     expect(editItem()).toBeNull();
     expect(document.activeElement).toBe(control);
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 3: "Clear details" (issue #409).
+ *
+ * Each Title row gains ⋯ after _Edit ▾_: a ghost `IconButton` with
+ * `MoreIcon`, named _More actions for “Coco”_, over `Menu`. It holds _Clear
+ * details_, disabled — `MenuItem`'s `disabled` — while the **Details state**
+ * is `none`, since there is nothing to clear. A press hands the title to the
+ * organism, which opens the **Clear dialog**.
+ */
+
+const moreTrigger = (title = 'Coco') =>
+  screen.getByRole('button', { name: `More actions for “${title}”` });
+const clearItem = () => screen.getByRole('menuitem', { name: 'Clear details' });
+
+function openMore(title = 'Coco') {
+  const control = moreTrigger(title);
+  control.focus();
+  fireEvent.click(control);
+  return control;
+}
+
+describe('TitleRow — ⋯', () => {
+  it('draws ⋯ as a menu trigger named for the title, shut', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco' }));
+
+    const control = moreTrigger();
+    expect(control.getAttribute('aria-haspopup')).toBe('menu');
+    expect(control.getAttribute('aria-expanded')).toBe('false');
+    expect(
+      screen.queryByRole('menuitem', { name: 'Clear details' })
+    ).toBeNull();
+  });
+
+  it('draws the more glyph on it', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco' }));
+
+    expect(moreTrigger().querySelector('svg')).not.toBeNull();
+  });
+
+  it('draws ⋯ after Edit', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco' }));
+
+    const edit = editTrigger();
+    const more = moreTrigger();
+    expect(
+      edit.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('names a show’s ⋯ for the show', () => {
+    renderRow(makeLibrarySeries({ title: 'Bluey' }));
+
+    expect(moreTrigger('Bluey')).toBeDefined();
+  });
+
+  it('opens on Clear details', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco', details: 'synced' }));
+    openMore();
+
+    expect(
+      screen.getAllByRole('menuitem').map((item) => item.textContent)
+    ).toContain('Clear details');
+    expect(clearItem()).toBeDefined();
+  });
+
+  it.each(['synced', 'own'] as const)(
+    'hands the title over on Clear details at %s',
+    (details) => {
+      const onClear = vi.fn();
+      const title = makeLibraryMovie({ title: 'Coco', details });
+      renderRow(title, onClear);
+      const control = openMore();
+
+      fireEvent.click(clearItem());
+
+      expect(onClear).toHaveBeenCalledWith(title);
+      expect(screen.queryByRole('menu')).toBeNull();
+      expect(document.activeElement).toBe(control);
+    }
+  );
+
+  it('leaves Clear details live at synced and own', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco', details: 'own' }));
+    openMore();
+
+    expect(clearItem().getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('disables Clear details at none', () => {
+    renderRow(makeLibraryMovie({ title: 'Coco', details: 'none' }));
+    openMore();
+
+    expect(clearItem().getAttribute('aria-disabled')).toBe('true');
+  });
+
+  it('hands nothing over on a press of a disabled Clear details', () => {
+    const onClear = vi.fn();
+    renderRow(makeLibraryMovie({ title: 'Coco', details: 'none' }), onClear);
+    openMore();
+
+    fireEvent.click(clearItem());
+
+    expect(onClear).not.toHaveBeenCalled();
+  });
+
+  it('disables a show’s Clear details at none too', () => {
+    renderRow(makeLibrarySeries({ title: 'Bluey', details: 'none' }));
+    openMore('Bluey');
+
+    expect(clearItem().getAttribute('aria-disabled')).toBe('true');
   });
 });
