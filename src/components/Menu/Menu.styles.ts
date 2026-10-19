@@ -40,9 +40,14 @@ export const Panel = styled.div`
  * the ⋯ menu's Delete row (`page.MoviePage.dc.html`); the tint is written as
  * the token's rgba rather than derived, so it matches the handoff byte for byte.
  */
-export const Item = styled.button<{ $selected: boolean; $danger: boolean }>`
+export const Item = styled.button<{
+  $selected: boolean;
+  $danger: boolean;
+  $hinted: boolean;
+}>`
   display: flex;
-  align-items: center;
+  /* A hinted row's glyph sits by its label, the first of two lines. */
+  align-items: ${({ $hinted }) => ($hinted ? 'flex-start' : 'center')};
   gap: 10px;
   width: 100%;
   padding: 10px 12px;
@@ -84,6 +89,28 @@ export const Trailing = styled.span`
   margin-left: auto;
   padding-left: 12px;
   font-size: 13px;
+  font-weight: 400;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** A hinted row's two lines: the label over its hint. */
+export const Body = styled.span`
+  display: block;
+`;
+
+/** The label of a hinted row — its accessible name. */
+export const Label = styled.span`
+  display: block;
+`;
+
+/**
+ * The hint under the label, 12px in the faint ink — the row's accessible
+ * description (`page.ManageLibraryPage.dc.html`'s Edit ▾ menu).
+ */
+export const Hint = styled.span`
+  display: block;
+  margin-top: 1px;
+  font-size: 12px;
   font-weight: 400;
   color: ${({ theme }) => theme.colors.textFaint};
 `;

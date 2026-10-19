@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useId,
   useRef,
   useState,
   type KeyboardEvent as ReactKeyboardEvent,
@@ -11,7 +12,16 @@ import {
   type Ref,
 } from 'react';
 
-import { Slot, Panel, Item, Glyph, Trailing } from './Menu.styles';
+import {
+  Slot,
+  Panel,
+  Item,
+  Glyph,
+  Trailing,
+  Body,
+  Label,
+  Hint,
+} from './Menu.styles';
 
 /**
  * What the caller must spread onto whatever control opens the menu. Handing
@@ -109,6 +119,12 @@ export interface MenuItemProps {
    * mode — it closes the menu and reports like any other row.
    */
   danger?: boolean;
+  /**
+   * A second line under the label — the **Title row**'s _Edit ▾_ menu's
+   * _Change the title, year and poster by hand_. The label alone stays the
+   * row's accessible name; the hint is its accessible description.
+   */
+  hint?: string;
   /** What the item does. The menu is already closing by the time this runs. */
   onSelect: () => void;
 }
@@ -133,8 +149,10 @@ export function MenuItem({
   selected = false,
   trailing,
   danger = false,
+  hint,
   onSelect,
 }: MenuItemProps) {
+  const id = useId();
   const close = useContext(CloseContext);
   const { index, activeIndex, setActive } = useContext(RovingContext);
   const ref = useRef<HTMLButtonElement>(null);
@@ -166,7 +184,10 @@ export function MenuItem({
       tabIndex={active ? 0 : -1}
       $selected={selected}
       $danger={danger}
+      $hinted={hint !== undefined}
       aria-current={selected ? 'true' : undefined}
+      aria-labelledby={hint === undefined ? undefined : `${id}-label`}
+      aria-describedby={hint === undefined ? undefined : `${id}-hint`}
       onClick={() => {
         // Close first: closing returns focus to the trigger, and a navigation
         // that ran first would be handing focus back on a page that has gone.
@@ -175,7 +196,14 @@ export function MenuItem({
       }}
     >
       {glyph === undefined ? null : <Glyph aria-hidden="true">{glyph}</Glyph>}
-      {children}
+      {hint === undefined ? (
+        children
+      ) : (
+        <Body>
+          <Label id={`${id}-label`}>{children}</Label>
+          <Hint id={`${id}-hint`}>{hint}</Hint>
+        </Body>
+      )}
       {trailing === undefined ? null : (
         <Trailing aria-hidden="true">{trailing}</Trailing>
       )}

@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { controlStates } from '@/styles/interactionStates/interactionStates';
+
 import type { DotTone } from '../titleRowView/titleRowView';
 
 /** The row: tile and text block in a line — the **Folder row**'s furniture. */
@@ -105,4 +107,58 @@ export const Unreachable = styled.div`
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 13px;
   color: ${({ theme }) => theme.colors.danger};
+`;
+
+/**
+ * The row's controls at its right edge. The panel hangs under the 40px
+ * trigger at the handoff's 220px, rather than under the ⋯ corner's 44px.
+ */
+export const Actions = styled.div`
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+
+  [role='menu'] {
+    top: 46px;
+    min-width: 220px;
+  }
+`;
+
+/**
+ * _Edit ▾_: `Button`'s secondary sm face with a trailing chevron, in the
+ * `FilterDropdown` trigger's shape — a trigger of its own, because `Menu` hands
+ * its trigger a ref and the two ARIA attributes, which `Button` does not take.
+ */
+export const EditTrigger = styled.button`
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 40px;
+  padding: 0 14px 0 18px;
+  background: transparent;
+  color: ${({ theme }) => theme.colors.text};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+
+  ${controlStates('scale(.98)')}
+
+  &:hover {
+    background: ${({ theme }) => theme.colors.surface2};
+    border-color: ${({ theme }) => theme.colors.textFaint};
+  }
+
+  &:active {
+    background: ${({ theme }) => theme.colors.surface3};
+  }
+`;
+
+/** The trailing caret. Decorative, so the control is named _Edit_. */
+export const Chevron = styled.span`
+  color: ${({ theme }) => theme.colors.textFaint};
 `;

@@ -1,9 +1,16 @@
+import { useNavigate } from 'react-router-dom';
+
+import { Menu, MenuItem } from '@/components';
 import { FolderIcon } from '@/primitives';
 import type { LibraryTitle } from '@/types';
+import { enrichPath, movieFormPath, moviePath, seriesPath } from '@/utils';
 import { titleRowView } from '../titleRowView/titleRowView';
 import {
+  Actions,
   Badge,
+  Chevron,
   Dot,
+  EditTrigger,
   Heading,
   Meta,
   Path,
@@ -27,10 +34,27 @@ export interface TitleRowProps {
  * furniture: the accent tile, the title and its year, the path in mono, the
  * badge, the files and the **Details state**'s dot — and, for a title whose
  * Library folder can't be read, the line in danger. Its words are
- * `titleRowView`'s.
+ * `titleRowView`'s. At its right edge, _Edit ▾_: _Edit details_ pushes the
+ * **Movie form**'s edit, _Sync with TMDB_ the title's page and then its Sync,
+ * **Started on arrival**.
  */
 export function TitleRow({ title }: TitleRowProps) {
   const view = titleRowView(title);
+  const navigate = useNavigate();
+  const isMovie = title.kind === 'movie';
+
+  // Log 45's leaving, with a push where the add replaces: the title's page
+  // goes under the flow, so Back lands on the title and Back again here.
+  function sync() {
+    navigate(isMovie ? moviePath(title.id) : seriesPath(title.id));
+    navigate(
+      enrichPath(
+        isMovie
+          ? { movie: title.id, start: true }
+          : { series: title.id, start: true }
+      )
+    );
+  }
 
   return (
     <Row>
@@ -56,6 +80,37 @@ export function TitleRow({ title }: TitleRowProps) {
           <Unreachable>{view.unreachable}</Unreachable>
         )}
       </Text>
+      <Actions>
+        <Menu
+          trigger={(props) => (
+            <EditTrigger {...props} type="button">
+              Edit
+              <Chevron aria-hidden="true">▾</Chevron>
+            </EditTrigger>
+          )}
+        >
+          <MenuItem
+            glyph="✎"
+            hint="Change the title, year and poster by hand"
+            onSelect={() =>
+              navigate(
+                movieFormPath(
+                  isMovie ? { movie: title.id } : { series: title.id }
+                )
+              )
+            }
+          >
+            Edit details
+          </MenuItem>
+          <MenuItem
+            glyph="⟳"
+            hint="Fetch details and artwork again"
+            onSelect={sync}
+          >
+            Sync with TMDB
+          </MenuItem>
+        </Menu>
+      </Actions>
     </Row>
   );
 }
