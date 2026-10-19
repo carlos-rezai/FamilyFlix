@@ -60,3 +60,40 @@ export function tabSummary(
   const bare = titles.filter((title) => title.details === 'none').length;
   return bare === 0 ? count : `${count} · ${bare} without details`;
 }
+
+/** The **Delete dialog**'s words for a copied title (log 47 Q12). */
+export interface DeleteView {
+  /** _Delete “Coco”?_ */
+  heading: string;
+  /** The sentence under it: the title leaves FamilyFlix, not undone here. */
+  subtitle: string;
+  /** **What goes**. */
+  goes: string[];
+  /** **What stays**: the original in its Library folder, else _Nothing_. */
+  stays: string[];
+  /** _Delete movie_ / _Delete series_. */
+  confirm: string;
+}
+
+const COPIED_GOES = [
+  'Its details, poster and artwork',
+  'Its watch history, rating and heart',
+  'FamilyFlix’s copy of its video and subtitles',
+];
+
+/** Pure: a copied **Library title** → the **Delete dialog**'s words. */
+export function deleteView(title: LibraryTitle): DeleteView {
+  const noun = title.kind === 'movie' ? 'movie' : 'series';
+  return {
+    heading: `Delete “${title.title}”?`,
+    subtitle: `This takes the ${noun} out of FamilyFlix. It can’t be undone from here.`,
+    goes: COPIED_GOES,
+    stays:
+      title.originalPath === null
+        ? ['Nothing']
+        : [
+            'Your original in its library folder — Scan folders would bring it back',
+          ],
+    confirm: `Delete ${noun}`,
+  };
+}

@@ -1,7 +1,7 @@
 import { useCallback, useState } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { deleteMovie as sendDelete } from '../api/api';
+import { deleteMovie as sendDelete } from '@/api/deleteMovie/deleteMovie';
 
 export interface DeleteMovie {
   /** True for the life of the request, false before and after. */
@@ -34,10 +34,14 @@ export function useDeleteMovie(movieId: string): DeleteMovie {
 
   const deleteMovie = useCallback(async () => {
     setDeleting(true);
+    let outcome;
     try {
-      await sendDelete(movieId);
+      outcome = await sendDelete(movieId);
     } finally {
       setDeleting(false);
+    }
+    if (outcome.kind === 'refused') {
+      throw new Error(outcome.sentence);
     }
     goBack();
   }, [movieId, goBack]);

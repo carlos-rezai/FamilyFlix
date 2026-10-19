@@ -2,7 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { seriesTabPath } from '@/utils';
-import { deleteSeries as sendDelete } from '../api/api';
+import { deleteSeries as sendDelete } from '@/api/deleteSeries/deleteSeries';
 
 /** Where a delete lands with nothing behind the page: the Series tab. */
 const LANDING = seriesTabPath();
@@ -28,10 +28,14 @@ export function useDeleteSeries(seriesId: string): DeleteSeries {
 
   const deleteSeries = useCallback(async () => {
     setDeleting(true);
+    let outcome;
     try {
-      await sendDelete(seriesId);
+      outcome = await sendDelete(seriesId);
     } finally {
       setDeleting(false);
+    }
+    if (outcome.kind === 'refused') {
+      throw new Error(outcome.sentence);
     }
     goBack();
   }, [seriesId, goBack]);

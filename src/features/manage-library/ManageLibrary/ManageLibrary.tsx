@@ -6,6 +6,7 @@ import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
 import { PageHeader, PillTabs } from '@/components';
 import type { LibraryTitle } from '@/types';
 import { ClearDialog } from '../ClearDialog/ClearDialog';
+import { DeleteTitleDialog } from '../DeleteTitleDialog/DeleteTitleDialog';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { TitleRow } from '../TitleRow/TitleRow';
 import { tabSummary } from '../titleRowView/titleRowView';
@@ -22,9 +23,11 @@ type Tab = 'movies' | 'series';
  * the empty card. **Blank until it lands**. A row's _Clear details_ opens
  * the **Clear dialog**; a clear that lands closes it, the row redrawn from
  * the echo, with the `success` notice. A refused one leaves it open, live.
+ * _Delete…_ opens the **Delete dialog** the same way: a delete that lands
+ * closes it, the row off the list, with _“Coco” was deleted._
  */
 export function ManageLibrary() {
-  const { titles, clearDetails } = useLibraryTitles();
+  const { titles, clearDetails, deleteTitle } = useLibraryTitles();
   const { notify } = useSnackbar();
   const [asked, setAsked] = useState<LibraryTitle | null>(null);
   const [clearing, setClearing] = useState(false);
@@ -39,6 +42,18 @@ export function ManageLibrary() {
         variant: 'success',
         message: `Details cleared for “${title.title}”.`,
       });
+    }
+  }
+  const [doomed, setDoomed] = useState<LibraryTitle | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function confirmDelete(title: LibraryTitle) {
+    setDeleting(true);
+    const deleted = await deleteTitle(title);
+    setDeleting(false);
+    if (deleted) {
+      setDoomed(null);
+      notify({ variant: 'success', message: `“${title.title}” was deleted.` });
     }
   }
   const goBack = useGoBack('/settings');
@@ -90,7 +105,12 @@ export function ManageLibrary() {
           ) : (
             <List>
               {shown.map((title) => (
-                <TitleRow key={title.id} title={title} onClear={setAsked} />
+                <TitleRow
+                  key={title.id}
+                  title={title}
+                  onClear={setAsked}
+                  onDelete={setDoomed}
+                />
               ))}
             </List>
           )}
@@ -103,6 +123,15 @@ export function ManageLibrary() {
           clearing={clearing}
           onConfirm={() => void confirmClear(asked)}
           onClose={() => setAsked(null)}
+        />
+      )}
+
+      {doomed === null ? null : (
+        <DeleteTitleDialog
+          title={doomed}
+          deleting={deleting}
+          onConfirm={() => void confirmDelete(doomed)}
+          onClose={() => setDoomed(null)}
         />
       )}
     </>

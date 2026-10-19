@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
+import { deleteMovie } from '@/api/deleteMovie/deleteMovie';
+import { deleteSeries } from '@/api/deleteSeries/deleteSeries';
 import type { LibraryTitle, LibraryTitles } from '@/types';
 import {
   clearMovieDetails,
@@ -15,6 +17,12 @@ export interface LibraryTitlesState {
    * the echo, `false` on any failure, the list as it was. Never rejects.
    */
   clearDetails: (title: LibraryTitle) => Promise<boolean>;
+  /**
+   * Deletes a title over its unchanged route: `true` once its row is off its
+   * list, with no re-read; `false` for a refusal or any failure, the list as
+   * it was. Never rejects.
+   */
+  deleteTitle: (title: LibraryTitle) => Promise<boolean>;
 }
 
 /**
@@ -74,5 +82,32 @@ export function useLibraryTitles(): LibraryTitlesState {
     []
   );
 
-  return { titles, clearDetails };
+  const deleteTitle = useCallback(
+    async (title: LibraryTitle): Promise<boolean> => {
+      try {
+        const outcome =
+          title.kind === 'movie'
+            ? await deleteMovie(title.id)
+            : await deleteSeries(title.id);
+        if (outcome.kind === 'refused') {
+          return false;
+        }
+        const list = title.kind === 'movie' ? 'movies' : 'series';
+        setTitles((held) =>
+          held === null
+            ? held
+            : {
+                ...held,
+                [list]: held[list].filter((row) => row.id !== title.id),
+              }
+        );
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    []
+  );
+
+  return { titles, clearDetails, deleteTitle };
 }

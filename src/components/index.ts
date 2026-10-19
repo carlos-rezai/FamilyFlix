@@ -12,6 +12,7 @@ export { LoadMessage, type LoadMessageProps } from './LoadMessage/LoadMessage';
 export { SearchBar, type SearchBarProps } from './SearchBar/SearchBar';
 export {
   Menu,
+  MenuDivider,
   MenuItem,
   type MenuProps,
   type MenuItemProps,

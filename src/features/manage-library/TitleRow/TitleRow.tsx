@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 
-import { Menu, MenuItem } from '@/components';
+import { Menu, MenuDivider, MenuItem } from '@/components';
 import { BinIcon, FolderIcon, IconButton, MoreIcon } from '@/primitives';
 import type { LibraryTitle } from '@/types';
 import { enrichPath, movieFormPath, moviePath, seriesPath } from '@/utils';
@@ -29,6 +29,8 @@ export interface TitleRowProps {
   title: LibraryTitle;
   /** _Clear details_ in the ⋯ menu, handing the title over to be confirmed. */
   onClear: (title: LibraryTitle) => void;
+  /** _Delete…_ in the ⋯ menu, handing the title over to be confirmed. */
+  onDelete: (title: LibraryTitle) => void;
 }
 
 /**
@@ -39,9 +41,11 @@ export interface TitleRowProps {
  * `titleRowView`'s. At its right edge, _Edit ▾_: _Edit details_ pushes the
  * **Movie form**'s edit, _Sync with TMDB_ the title's page and then its Sync,
  * **Started on arrival**. After it, ⋯: _Clear details_, disabled while the
- * **Details state** is `none`, since there is nothing to clear.
+ * **Details state** is `none`, since there is nothing to clear; then, below a
+ * divider, _Delete…_ as the **Danger row** — offered for a copied title
+ * alone until the linked delete ships.
  */
-export function TitleRow({ title, onClear }: TitleRowProps) {
+export function TitleRow({ title, onClear, onDelete }: TitleRowProps) {
   const view = titleRowView(title);
   const navigate = useNavigate();
   const isMovie = title.kind === 'movie';
@@ -132,6 +136,16 @@ export function TitleRow({ title, onClear }: TitleRowProps) {
           >
             Clear details
           </MenuItem>
+          {title.linkedFiles === null ? <MenuDivider /> : null}
+          {title.linkedFiles === null ? (
+            <MenuItem
+              glyph={<BinIcon size={16} />}
+              danger
+              onSelect={() => onDelete(title)}
+            >
+              Delete…
+            </MenuItem>
+          ) : null}
         </Menu>
       </Actions>
     </Row>

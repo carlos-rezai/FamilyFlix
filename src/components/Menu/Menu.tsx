@@ -1,6 +1,7 @@
 import {
   Children,
   createContext,
+  isValidElement,
   useCallback,
   useContext,
   useEffect,
@@ -21,6 +22,7 @@ import {
   Body,
   Label,
   Hint,
+  Divider,
 } from './Menu.styles';
 
 /**
@@ -225,6 +227,14 @@ export function MenuItem({
 }
 
 /**
+ * A rule between two groups of rows — the ⋯ menu's line above its **Danger
+ * row**. `role="separator"`, and never a stop: the roving focus walks past it.
+ */
+export function MenuDivider() {
+  return <Divider role="separator" />;
+}
+
+/**
  * A popup menu: the panel, and the whole contract for getting rid of it.
  *
  * Closing is deliberately symmetrical — Escape, a press outside, and activating
@@ -273,6 +283,12 @@ export function Menu({
 
   const setActive = useCallback((index: number) => setActiveIndex(index), []);
 
+  // The rows the roving focus walks, a divider and an absent row left out.
+  const shown = Children.toArray(children);
+  const rows = shown.filter(
+    (child) => !(isValidElement(child) && child.type === MenuDivider)
+  );
+
   useEffect(() => {
     if (!open) {
       return;
@@ -319,7 +335,7 @@ export function Menu({
     // The panel owns these keys while it is open: an arrow would otherwise
     // scroll the capped panel, or the page behind it.
     event.preventDefault();
-    const last = Children.count(children) - 1;
+    const last = rows.length - 1;
     setActiveIndex((current) => step(current ?? 0, last));
   };
 
@@ -336,11 +352,19 @@ export function Menu({
           <Panel role="menu" onKeyDown={onPanelKeyDown}>
             {/* Each row is told where it sits, which is all it needs in order
                 to know whether it is the one holding the tab stop. */}
-            {Children.map(children, (child, index) => (
-              <RovingContext.Provider value={{ index, activeIndex, setActive }}>
-                {child}
-              </RovingContext.Provider>
-            ))}
+            {shown.map((child) => {
+              const index = rows.indexOf(child);
+              return index === -1 ? (
+                child
+              ) : (
+                <RovingContext.Provider
+                  key={index}
+                  value={{ index, activeIndex, setActive }}
+                >
+                  {child}
+                </RovingContext.Provider>
+              );
+            })}
           </Panel>
         </CloseContext.Provider>
       ) : null}

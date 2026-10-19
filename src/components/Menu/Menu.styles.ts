@@ -129,3 +129,10 @@ export const Hint = styled.span`
   font-weight: 400;
   color: ${({ theme }) => theme.colors.textFaint};
 `;
+
+/** The rule between two groups of rows, the handoff's ⋯ menu line. */
+export const Divider = styled.div`
+  height: 1px;
+  margin: 4px 6px;
+  background: ${({ theme }) => theme.colors.borderSoft};
+`;
