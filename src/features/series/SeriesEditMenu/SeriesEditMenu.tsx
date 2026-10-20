@@ -13,7 +13,7 @@ export interface SeriesEditMenuProps {
   /** Every episode it holds — what the Delete dialog counts. */
   episodeCount: number;
   /** Whether any episode is a **Linked video** — what the Delete dialog tells. */
-  linked?: boolean;
+  linked: boolean;
 }
 
 /**
@@ -29,7 +29,7 @@ export function SeriesEditMenu({
   seriesId,
   title,
   episodeCount,
-  linked = false,
+  linked,
 }: SeriesEditMenuProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();

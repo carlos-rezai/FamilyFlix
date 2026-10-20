@@ -11,7 +11,7 @@ export interface EditMenuProps {
   /** Its title — what the Delete dialog names. */
   title: string;
   /** Whether its video is a **Linked video** — what the Delete dialog tells. */
-  linked?: boolean;
+  linked: boolean;
 }
 
 /**
@@ -31,7 +31,7 @@ export interface EditMenuProps {
  * of what makes this menu *this* menu: three rows that know which movie they
  * are for.
  */
-export function EditMenu({ movieId, title, linked = false }: EditMenuProps) {
+export function EditMenu({ movieId, title, linked }: EditMenuProps) {
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
 

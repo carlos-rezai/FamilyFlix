@@ -47,6 +47,7 @@ function renderMenu(seriesId = 'harbor', title = 'Harbor & Vine', count = 22) {
           seriesId={seriesId}
           title={title}
           episodeCount={count}
+          linked={false}
         />
         <LocationProbe />
       </MemoryRouter>

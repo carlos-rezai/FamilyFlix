@@ -13,7 +13,7 @@ export interface DeleteTitleDialogProps {
   /** Whether the delete is in flight: _Deleting…_, and inert. */
   deleting: boolean;
   /** The route's `409` sentence, drawn above the buttons; `null` for none. */
-  refusal?: string | null;
+  refusal: string | null;
   /** _Delete movie_ / _Delete series_. */
   onConfirm: () => void;
   /** What Cancel, the ✕, Escape and the scrim ask for. */
@@ -32,7 +32,7 @@ export interface DeleteTitleDialogProps {
 export function DeleteTitleDialog({
   title,
   deleting,
-  refusal = null,
+  refusal,
   onConfirm,
   onClose,
 }: DeleteTitleDialogProps) {

@@ -104,9 +104,7 @@ export function seriesView(
     g2,
     topTag: toTopTag(detail, yearLabel, hasPoster),
     isFavorite: series.isFavorite,
-    linked: episodes.some(
-      (episode) => (episode.videoFolderId ?? null) !== null
-    ),
+    linked: episodes.some((episode) => episode.videoFolderId !== null),
     seasons: seasons.map((season) => ({
       number: season.number,
       episodeCount: season.episodes.length,
