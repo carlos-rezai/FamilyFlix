@@ -8,6 +8,7 @@ import type { LibraryTitle } from '@/types';
 import { ClearDialog } from '../ClearDialog/ClearDialog';
 import { DeleteTitleDialog } from '../DeleteTitleDialog/DeleteTitleDialog';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
+import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { TitleRow } from '../TitleRow/TitleRow';
 import { tabSummary } from '../titleRowView/titleRowView';
 import { useLibraryTitles } from '../useLibraryTitles/useLibraryTitles';
@@ -58,18 +59,9 @@ export function ManageLibrary() {
     }
   }
   const goBack = useGoBack('/settings');
-  const [searchParams, setSearchParams] = useSearchParams();
+  const [searchParams] = useSearchParams();
+  const setParam = useQueryParamWriter();
   const tab: Tab = searchParams.get('tab') === 'series' ? 'series' : 'movies';
-
-  function choose(next: Tab) {
-    const params = new URLSearchParams(searchParams);
-    if (next === 'movies') {
-      params.delete('tab');
-    } else {
-      params.set('tab', next);
-    }
-    setSearchParams(params, { replace: true });
-  }
 
   const shown = titles === null ? [] : titles[tab];
 
@@ -91,7 +83,7 @@ export function ManageLibrary() {
                 { value: 'series', label: `Series ${titles.series.length}` },
               ]}
               value={tab}
-              onChange={choose}
+              onChange={(next) => setParam('tab', next, 'movies')}
             />
             <Summary>
               {tabSummary(tab === 'movies' ? 'movie' : 'series', shown)}
