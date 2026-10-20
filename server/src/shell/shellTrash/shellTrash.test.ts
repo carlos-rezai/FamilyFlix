@@ -24,7 +24,7 @@ import {
   shellHandshake,
   type ShellParentPort,
 } from '../shellHandshake/shellHandshake';
-import { createShellTrash } from './createShellTrash';
+import { createShellTrash } from './shellTrash';
 
 type TrashRequest = Extract<ServerMessage, { type: 'trash' }>;
 

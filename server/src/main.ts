@@ -15,7 +15,7 @@ import {
   orderedShutdown,
   shutdownOnSignals,
 } from './shell/orderedShutdown/orderedShutdown';
-import { createShellTrash } from './shell/createShellTrash/createShellTrash';
+import { createShellTrash } from './shell/shellTrash/shellTrash';
 import {
   parentPortOf,
   shellHandshake,

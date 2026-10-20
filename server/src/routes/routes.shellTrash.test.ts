@@ -26,7 +26,7 @@ import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
-import { createShellTrash } from '../shell/createShellTrash/createShellTrash';
+import { createShellTrash } from '../shell/shellTrash/shellTrash';
 import type { ShellParentPort } from '../shell/shellHandshake/shellHandshake';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
