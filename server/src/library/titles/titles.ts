@@ -229,10 +229,9 @@ export function createTitles(db: SqliteDatabase): Titles {
     poster_path: string | null;
     backdrop_path: string | null;
   }
-  const artOf = (row: ArtRow) =>
-    [row.poster_path, row.backdrop_path].filter(
-      (path): path is string => path !== null && path !== ''
-    );
+  /** The Stored paths a clear lets go: every one held, `null` and `''` dropped. */
+  const heldPaths = (paths: readonly (string | null)[]): string[] =>
+    paths.filter((path): path is string => path !== null && path !== '');
 
   const clearMovieDetails = db.transaction((id: string): string[] | null => {
     const row = movieArt.get(id) as ArtRow | undefined;
@@ -241,7 +240,7 @@ export function createTitles(db: SqliteDatabase): Titles {
     }
     clearMovie.run(new Date().toISOString(), id);
     clearMovieGenres.run(id);
-    return artOf(row);
+    return heldPaths([row.poster_path, row.backdrop_path]);
   });
 
   const clearSeriesDetails = db.transaction((id: string): string[] | null => {
@@ -260,7 +259,12 @@ export function createTitles(db: SqliteDatabase): Titles {
     clearSeriesGenres.run(id);
     clearSeasonPosters.run(id);
     clearEpisodes.run(now, id);
-    return [...artOf(row), ...seasons, ...stills].filter((path) => path !== '');
+    return heldPaths([
+      row.poster_path,
+      row.backdrop_path,
+      ...seasons,
+      ...stills,
+    ]);
   });
 
   return { libraryTitles, clearMovieDetails, clearSeriesDetails };
