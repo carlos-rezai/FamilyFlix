@@ -3,16 +3,9 @@ import { BinIcon, Button } from '@/primitives';
 import type { LibraryTitle } from '@/types';
 
 import { deleteView } from '../libraryTitleView/libraryTitleView';
-import {
-  Actions,
-  Callout,
-  CalloutMark,
-  Columns,
-  List,
-  ListHeading,
-  PathWell,
-  Refusal,
-} from './DeleteTitleDialog.styles';
+import { GoesAndStays } from '../GoesAndStays/GoesAndStays';
+import { Actions, PathWell } from '../titleDialog.styles';
+import { Callout, CalloutMark, Refusal } from './DeleteTitleDialog.styles';
 
 export interface DeleteTitleDialogProps {
   /** The title the delete is asked of. */
@@ -54,24 +47,7 @@ export function DeleteTitleDialog({
       onClose={onClose}
     >
       <PathWell>{title.path}</PathWell>
-      <Columns>
-        <div>
-          <ListHeading $goes>What goes</ListHeading>
-          <List $goes>
-            {view.goes.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </List>
-        </div>
-        <div>
-          <ListHeading $goes={false}>What stays</ListHeading>
-          <List $goes={false}>
-            {view.stays.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </List>
-        </div>
-      </Columns>
+      <GoesAndStays goes={view.goes} stays={view.stays} />
       {view.callout === null ? null : (
         <Callout>
           <CalloutMark>!</CalloutMark>

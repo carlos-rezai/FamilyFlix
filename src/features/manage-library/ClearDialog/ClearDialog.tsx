@@ -3,13 +3,8 @@ import { BinIcon, Button } from '@/primitives';
 import type { LibraryTitle } from '@/types';
 import { clearView } from '../libraryTitleView/libraryTitleView';
 
-import {
-  Actions,
-  Columns,
-  List,
-  ListHeading,
-  PathWell,
-} from './ClearDialog.styles';
+import { GoesAndStays } from '../GoesAndStays/GoesAndStays';
+import { Actions, PathWell } from '../titleDialog.styles';
 
 export interface ClearDialogProps {
   /** The title the clear is asked of. */
@@ -46,24 +41,7 @@ export function ClearDialog({
       onClose={onClose}
     >
       <PathWell>{title.path}</PathWell>
-      <Columns>
-        <div>
-          <ListHeading $goes>What goes</ListHeading>
-          <List $goes>
-            {view.goes.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </List>
-        </div>
-        <div>
-          <ListHeading $goes={false}>What stays</ListHeading>
-          <List $goes={false}>
-            {view.stays.map((item) => (
-              <li key={item}>{item}</li>
-            ))}
-          </List>
-        </div>
-      </Columns>
+      <GoesAndStays goes={view.goes} stays={view.stays} />
       <Actions>
         <Button
           label={clearing ? 'Clearing…' : 'Clear details'}
