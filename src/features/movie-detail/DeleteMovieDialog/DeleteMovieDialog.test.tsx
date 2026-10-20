@@ -17,6 +17,7 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
+  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -54,12 +55,14 @@ afterEach(() => {
 interface RenderDialogOptions {
   open?: boolean;
   title?: string;
+  linked?: boolean;
   onClose?: () => void;
 }
 
 function renderDialog({
   open = true,
   title = 'Northwind',
+  linked = false,
   onClose = () => undefined,
 }: RenderDialogOptions = {}) {
   return render(
@@ -68,6 +71,7 @@ function renderDialog({
         <DeleteMovieDialog
           movieId="m1"
           title={title}
+          linked={linked}
           open={open}
           onClose={onClose}
         />
@@ -272,6 +276,7 @@ function renderFromShelf() {
               <DeleteMovieDialog
                 movieId="m1"
                 title="Northwind"
+                linked={false}
                 open
                 onClose={() => undefined}
               />
@@ -319,6 +324,7 @@ function Host() {
       <DeleteMovieDialog
         movieId="m1"
         title="Northwind"
+        linked={false}
         open={open}
         onClose={() => setOpen(false)}
       />
@@ -520,5 +526,106 @@ describe('DeleteMovieDialog — confirming', () => {
       await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
       await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
     });
+  });
+});
+
+/**
+ * 47 — Manage library, issue #413: the Delete dialog tells the truth about a
+ * linked film. The paragraph stays; a **Linked video** adds one sentence, read
+ * off the record the page already holds and handed in as `linked`.
+ */
+const LINKED_SENTENCE = 'Its video goes to the Recycle Bin.';
+
+describe('DeleteMovieDialog — a linked film', () => {
+  it('adds that its video goes to the Recycle Bin, for a linked film only', () => {
+    const copied = renderDialog({ linked: false });
+    expect(dialog().textContent).toContain(BODY);
+    expect(dialog().textContent).not.toMatch(/Recycle Bin/);
+    copied.unmount();
+
+    renderDialog({ linked: true });
+
+    // The paragraph stays; the sentence is added beside it.
+    expect(dialog().textContent).toContain(BODY);
+    expect(dialog().textContent).toContain(LINKED_SENTENCE);
+  });
+});
+
+/**
+ * The refusal line, the overview's: a `409`'s one sentence drawn in danger ink
+ * above the buttons, held until the next press is answered — cleared when it
+ * deletes, replaced when it is refused again. The page stays on the title.
+ */
+const NO_SHELL =
+  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
+const LOCKED =
+  'Couldn’t move E:\\Movies\\Northwind (1994) to the Recycle Bin. Close anything playing it and try again.';
+const DANGER = 'rgb(201, 122, 106)';
+
+describe('DeleteMovieDialog — the refusal line', () => {
+  it('draws a 409’s sentence in danger ink above the buttons', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
+    renderHosted();
+    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
+
+    fireEvent.click(confirmButton());
+
+    const line = await within(dialog()).findByText(NO_SHELL);
+    expect(getComputedStyle(line).color).toBe(DANGER);
+    expect(comesBefore(line, confirmButton())).toBe(true);
+    expect(comesBefore(line, cancelButton())).toBe(true);
+  });
+
+  it('stays on the movie, the dialog up and Delete movie live again', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(NO_SHELL);
+
+    expect(url()).toBe('/movie/m1');
+    expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('holds the sentence while the next press is in flight', async () => {
+    fetchMock.mockResolvedValueOnce(conflictResponse(NO_SHELL));
+    renderHosted();
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(NO_SHELL);
+
+    holdDelete();
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+    expect(within(dialog()).getByText(NO_SHELL)).toBeTruthy();
+  });
+
+  it('replaces the sentence with the next press’s own refusal', async () => {
+    fetchMock
+      .mockResolvedValueOnce(conflictResponse(NO_SHELL))
+      .mockResolvedValueOnce(conflictResponse(LOCKED));
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(NO_SHELL);
+    fireEvent.click(confirmButton());
+
+    expect(await within(dialog()).findByText(LOCKED)).toBeTruthy();
+    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
+    expect(url()).toBe('/movie/m1');
+  });
+
+  it('lands as it does today once the next press deletes', async () => {
+    fetchMock
+      .mockResolvedValueOnce(conflictResponse(LOCKED))
+      .mockResolvedValueOnce(noContentResponse());
+    renderHosted();
+
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(LOCKED);
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
+    expect(screen.queryByText(LOCKED)).toBeNull();
   });
 });

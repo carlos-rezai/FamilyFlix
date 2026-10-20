@@ -14,6 +14,7 @@ import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import {
+  conflictResponse,
   noContentResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -53,6 +54,7 @@ interface RenderDialogOptions {
   open?: boolean;
   title?: string;
   episodeCount?: number;
+  linked?: boolean;
   onClose?: () => void;
 }
 
@@ -60,6 +62,7 @@ function renderDialog({
   open = true,
   title = 'F’ck That’s Delicious',
   episodeCount = 24,
+  linked = false,
   onClose = () => undefined,
 }: RenderDialogOptions = {}) {
   return render(
@@ -78,6 +81,7 @@ function renderDialog({
                 seriesId="ftd"
                 title={title}
                 episodeCount={episodeCount}
+                linked={linked}
                 open={open}
                 onClose={onClose}
               />
@@ -245,5 +249,107 @@ describe('DeleteSeriesDialog — the ways out', () => {
 
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(fetchMock).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 47 — Manage library, issue #413: the series' Delete dialog tells the truth
+ * about a show with a **Linked video** among its episodes. The paragraph
+ * stays; one sentence is added, read off the record the page already holds
+ * and handed in as `linked`.
+ */
+const LINKED_SENTENCE = 'Its files go to the Recycle Bin.';
+
+describe('DeleteSeriesDialog — a linked show', () => {
+  it('adds that its files go to the Recycle Bin, for a linked show only', () => {
+    const copied = renderDialog({ linked: false });
+    expect(dialog().textContent).toContain(bodyFor(24));
+    expect(dialog().textContent).not.toMatch(/Recycle Bin/);
+    copied.unmount();
+
+    renderDialog({ linked: true });
+
+    // The paragraph stays; the sentence is added beside it.
+    expect(dialog().textContent).toContain(bodyFor(24));
+    expect(dialog().textContent).toContain(LINKED_SENTENCE);
+  });
+});
+
+/**
+ * The refusal line, the overview's: a `409`'s one sentence drawn in danger ink
+ * above the buttons, held until the next press is answered — cleared when it
+ * deletes, replaced when it is refused again. The page stays on the show.
+ */
+const NO_SHELL =
+  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
+const LOCKED =
+  'Couldn’t move E:\\Series\\Harbor & Vine to the Recycle Bin. Close anything playing it and try again.';
+const DANGER = 'rgb(201, 122, 106)';
+
+describe('DeleteSeriesDialog — the refusal line', () => {
+  it('draws a 409’s sentence in danger ink above the buttons', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
+    renderDialog({ linked: true });
+    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
+
+    fireEvent.click(confirmButton());
+
+    const line = await within(dialog()).findByText(NO_SHELL);
+    expect(getComputedStyle(line).color).toBe(DANGER);
+    expect(comesBefore(line, confirmButton())).toBe(true);
+    expect(comesBefore(line, cancelButton())).toBe(true);
+  });
+
+  it('stays on the show, the dialog up and Delete series live again', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
+    renderDialog({ linked: true });
+
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(NO_SHELL);
+
+    expect(url()).toBe('/series/ftd');
+    expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('holds the sentence while the next press is in flight', async () => {
+    fetchMock.mockResolvedValueOnce(conflictResponse(NO_SHELL));
+    renderDialog({ linked: true });
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(NO_SHELL);
+
+    holdDelete();
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(deletingButton()).toBeTruthy());
+    expect(within(dialog()).getByText(NO_SHELL)).toBeTruthy();
+  });
+
+  it('replaces the sentence with the next press’s own refusal', async () => {
+    fetchMock
+      .mockResolvedValueOnce(conflictResponse(NO_SHELL))
+      .mockResolvedValueOnce(conflictResponse(LOCKED));
+    renderDialog({ linked: true });
+
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(NO_SHELL);
+    fireEvent.click(confirmButton());
+
+    expect(await within(dialog()).findByText(LOCKED)).toBeTruthy();
+    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
+    expect(url()).toBe('/series/ftd');
+  });
+
+  it('lands as it does today once the next press deletes', async () => {
+    fetchMock
+      .mockResolvedValueOnce(conflictResponse(LOCKED))
+      .mockResolvedValueOnce(noContentResponse());
+    renderDialog({ linked: true });
+
+    fireEvent.click(confirmButton());
+    await within(dialog()).findByText(LOCKED);
+    fireEvent.click(confirmButton());
+
+    await waitFor(() => expect(url()).toBe('/?tab=series'));
+    expect(screen.queryByText(LOCKED)).toBeNull();
   });
 });

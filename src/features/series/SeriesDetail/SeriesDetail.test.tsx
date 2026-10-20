@@ -24,6 +24,7 @@ import {
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import {
+  conflictResponse,
   notFoundResponse,
   okResponse,
   serverErrorResponse,
@@ -890,5 +891,69 @@ describe('SeriesDetail — the Shown rating', () => {
     expect(screen.getByText('4.0')).toBeDefined();
     expect(screen.queryByText('1.5')).toBeNull();
     expect(screen.queryByText('TMDB')).toBeNull();
+  });
+});
+
+/**
+ * 47 — Manage library, issue #413, on the page: the series' Delete dialog
+ * reads whether the show is linked off the record the page already holds — a
+ * show with any episode whose `videoFolderId` is set — and a `409` leaves the
+ * page on the show with the route's sentence in the dialog.
+ */
+describe('SeriesDetail — deleting a linked show', () => {
+  const LINKED_SENTENCE = 'Its files go to the Recycle Bin.';
+  const NO_SHELL =
+    'Only the desktop app can move a linked title’s files to the Recycle Bin.';
+
+  /** Two seasons of 10 and 12, the last episode of season 2 linked. */
+  function oneLinkedEpisode(): SeriesDetailPayload {
+    const detail = unstarted();
+    const last = detail.seasons[1]!.episodes[11]!;
+    detail.seasons[1]!.episodes[11] = {
+      ...last,
+      videoFolderId: 'lf1',
+      videoPath: 'Harbor & Vine/S02E12.mkv',
+    };
+    return detail;
+  }
+
+  function openDeleteDialog() {
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete series' }));
+    return screen.getByRole('dialog', { name: 'Delete “Harbor & Vine”?' });
+  }
+
+  it('adds the Recycle Bin sentence for a show with a linked episode', async () => {
+    serve(oneLinkedEpisode());
+    renderDetail();
+    await findTitle('Harbor & Vine');
+
+    expect(openDeleteDialog().textContent).toContain(LINKED_SENTENCE);
+  });
+
+  it('stays on the show with the refusal in the dialog on a 409', async () => {
+    const detail = oneLinkedEpisode();
+    fetchMock.mockImplementation((input, init) => {
+      if ((init?.method ?? 'GET').toUpperCase() === 'DELETE') {
+        return Promise.resolve(conflictResponse(NO_SHELL));
+      }
+      if (String(input).includes('/api/series/')) {
+        return Promise.resolve(okResponse(detail));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${String(input)}`));
+    });
+    renderDetail();
+    await findTitle('Harbor & Vine');
+    const dialog = openDeleteDialog();
+
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete series' })
+    );
+
+    expect(await within(dialog).findByText(NO_SHELL)).toBeTruthy();
+    expect(pathname()).toBe('/series/harbor');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Harbor & Vine' })
+    ).toBeTruthy();
   });
 });

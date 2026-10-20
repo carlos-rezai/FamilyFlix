@@ -31,6 +31,7 @@ import {
 } from '@/App/useDisplayPreference/useDisplayPreference';
 import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 import {
+  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -1457,5 +1458,59 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
         body: { value: null },
       })
     );
+  });
+});
+
+/**
+ * 47 — Manage library, issue #413, on the page: the Delete dialog reads
+ * whether the film is linked off the record the page already holds — a
+ * **Linked video** is one with a `videoFolderId` — and a `409` leaves the
+ * page on the film with the route's sentence in the dialog.
+ */
+describe('MovieDetail — deleting a linked film', () => {
+  const LINKED_SENTENCE = 'Its video goes to the Recycle Bin.';
+  const NO_SHELL =
+    'Only the desktop app can move a linked title’s files to the Recycle Bin.';
+
+  async function openDeleteDialog(title = 'Northwind') {
+    await findTitle(title);
+    fireEvent.click(screen.getByRole('button', { name: /more options/i }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete movie' }));
+    return screen.getByRole('dialog');
+  }
+
+  it('adds the Recycle Bin sentence for a linked film', async () => {
+    serveMovie({ videoFolderId: 'lf1', videoPath: 'Northwind/northwind.mkv' });
+    renderDetail();
+
+    const dialog = await openDeleteDialog();
+
+    expect(dialog.textContent).toContain(LINKED_SENTENCE);
+  });
+
+  it('stays on the film with the refusal in the dialog on a 409', async () => {
+    fetchMock.mockImplementation((input, init) => {
+      if ((init?.method ?? 'GET').toUpperCase() === 'DELETE') {
+        return Promise.resolve(conflictResponse(NO_SHELL));
+      }
+      if (String(input).includes('/api/movies/')) {
+        return Promise.resolve(
+          okResponse(makeNorthwind({ videoFolderId: 'lf1' }))
+        );
+      }
+      return Promise.reject(new Error(`Unexpected request: ${String(input)}`));
+    });
+    renderDetail('m1', ['/', '/movie/m1']);
+    const dialog = await openDeleteDialog();
+
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete movie' })
+    );
+
+    expect(await within(dialog).findByText(NO_SHELL)).toBeTruthy();
+    expect(pathname()).toBe('/movie/m1');
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Northwind' })
+    ).toBeTruthy();
   });
 });
