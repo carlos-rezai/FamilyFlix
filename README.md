@@ -379,7 +379,8 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Episode stills — a frame from the file, as fallback | ✅ Done         |
 | Add and sync — add by files, TMDB fills the rest    | ✅ Done         |
 | Audio tracks — English by default, switch in player | ✅ Done         |
-| Manage library — show folders, overview, delete     | 🔜 Planned      |
+| Manage library — every title, edit, clear, delete   | ✅ Done         |
+| Add a show folder — a show by its folder, numbered  | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
@@ -529,17 +530,25 @@ and the player played whichever came first. It is done (design log 46):
     way VLC's _Audio → Audio Track_ does. A language picked there carries on
     to the next episode for the rest of the evening.
 
-Step 30 came out of using v0.8.0 too: adding a whole show by hand means
-picking its episodes one file at a time, and there is no one place to see
-what the library holds or take a title out of it completely. It is planned:
+Step 30 came out of using v0.8.0 too: there was no one place to see what the
+library holds or take a title out of it completely. It is done (design log 47):
 
-30. 🔜 **Manage library** — in the series form, pick a show's folder instead
-    of its episodes: FamilyFlix reads the season folders inside it and fills
-    in an episode row for every video, numbered for you. And a new page in
-    Settings lists everything in your library, films and series, linked and
-    copied, where you can delete a title for good — it disappears from
-    FamilyFlix along with its posters, stills, subtitles and every other file
-    FamilyFlix keeps for it.
+30. ✅ **Manage library** — Settings → Library → _Manage library_ lists every
+    film and series the library holds, each with where its files are,
+    whether it is linked or copied, and whether TMDB filled its details.
+    From a row you can edit a title, sync it with TMDB, clear its details
+    back to just its title and files, or delete it. A delete takes the
+    title out of FamilyFlix with its posters, stills, subtitles and every
+    file FamilyFlix keeps for it; a linked title's own files go to the
+    Recycle Bin, so nothing is lost for good by accident.
+
+Step 31 is the other half of what step 30 first set out to do: adding a whole
+show by hand still means picking its episodes one file at a time. It is
+planned:
+
+31. 🔜 **Add a show folder** — in the series form, pick a show's folder
+    instead of its episodes: FamilyFlix reads the season folders inside it
+    and fills in an episode row for every video, numbered for you.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 

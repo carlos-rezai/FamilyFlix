@@ -108,12 +108,12 @@ familyflix/
 ├── .claude/
 │ └── skills/
 ├── electron/ ← the **Desktop shell**'s main process: `tsconfig.electron.json`'s shipping code, one unit per decision, Electron only ever run in a manual smoke
-│ ├── main.ts ← the composition root, and wiring only: adapters over Electron's `fs`, `dialog`, `shell` and `app`, the window's options, each event handed to a unit below
+│ ├── main.ts ← the composition root, and wiring only: adapters over Electron's `fs`, `dialog`, `shell` and `app`, the window's options, each event handed to a unit below; the **Shell trash**'s world, `existsSync` and `shell.trashItem`, handed to `serverHandle`
 │ ├── preload.ts ← wiring only: `window.familyflix.updates` and `window.familyflix.folders` (`pick`, `pickOne` and `openMedia`), each member one channel through `contextBridge` to main, no state
 │ ├── shellMode/ ← pure: `shellMode(isPackaged, env)` → `'dev'` / `'start'` / `'installed'`, the **Shell mode**, read once; the one reader of `FAMILYFLIX_SHELL_PROD`
 │ ├── shellPaths/ ← pure: a mode and Electron's three locations (`appPath`, `resourcesPath`, `userData`) → the **Shell paths** — the icon and the server bundle off `appPath`, the renderer, the binding and the Default component's `ffmpeg.exe` off the repo unpackaged and `resourcesPath` installed (`null` unpackaged), the server's working directory, and the three data paths — `mediaRoot`, `database` and `componentSlot` — under `userData` installed and the repo unpackaged; read once by main in place of `process.cwd()`
 │ ├── serverLaunch/ ← pure: `serverLaunch(mode, paths)` over **Shell paths** → the entry and environment the **Server process** is forked with — `paths.serverEntry` in every mode, the binding in every mode, `3001` in dev and the **Shell port** otherwise, the renderer outside dev, the three data paths and `FAMILYFLIX_FFMPEG_PATH` only when installed — read off Shell paths, never joined
-│ ├── serverHandle/ ← main's hold on the server: fork, the 15 s wait for `ready`, `fatal` and an exit before `ready` as rejections, an exit after it to `onExit`, and `shutdown(ms)`
+│ ├── serverHandle/ ← main's hold on the server: fork, the 15 s wait for `ready`, `fatal` and an exit before `ready` as rejections, an exit after it to `onExit`, and `shutdown(ms)`; a `trash` request run through `trashItems` and answered `trashed`, unless the server is going
 │ ├── awaitExitOrKill/ ← wait for a child's exit, killing it at the budget and resolving anyway
 │ ├── quitAfterShutdown/ ← the quit gate: the `before-quit` listener that holds the app open until the **Ordered shutdown** is over, then quits and lets that quit through
 │ ├── reloadOnce/ ← the `render-process-gone` listener: a crashed renderer reloaded once, a second crash left as it is
@@ -123,6 +123,7 @@ familyflix/
 │ ├── downloadPath/ ← pure: a download's free name in Downloads, deduplicated as Chromium does, no dialog
 │ ├── pickFolders/ ← pure: the folder dialog's answer → the paths to post, in the order picked, `[]` for a cancel — behind `FOLDER_CHANNELS.pick`, the Library folders page's Browse…; and `pickOneFolder`, one folder or `null`, behind `FOLDER_CHANNELS.pickOne`, the Export dialog's Browse… — both over `main.ts`' one `showFolderDialog`
 │ ├── openMediaFolder/ ← the Storage card's _Open folder_ answered in main, behind `FOLDER_CHANNELS.openMedia`: the **Managed media directory** made, then opened in Explorer, a failure one **Shell log** line naming the root, never rejecting — over an injected world, the `shellDialogs` shape
+│ ├── trashItems/ ← main's half of the **Shell trash**, over an injected world: each path to the Recycle Bin in order, one already gone counted as gone, the first the bin will not take stopping the rest and answered — else `null`, the `trashed` command's `failed`
 │ ├── shellDialogs/ ← the two failure dialogs — _couldn't start_ (Quit / Show data folder) and _stopped unexpectedly_ (Restart / Quit) — each logging what it says before its box; `startServer` puts every startup failure in front of the first
 │ ├── shellLog/ ← the **Shell log**: `[main]` and `[server]` lines to `logs\familyflix.log` when installed, rolled at 5 MB, to the terminal otherwise
 │ ├── appIdentity/ ← `APP_USER_MODEL_ID`, set before the window so the taskbar groups it
@@ -147,12 +148,15 @@ familyflix/
 │ │ ├── settings/ ← the household's Settings: `settings()` with the default applied when the row is absent, `setSubtitleLanguage()`, `setAudioLanguage()`, `setUltrawideMargins()` and `setTmdbRatings()` as upserts over the four preference keys, `subtitle-language`, `audio-language`, `ultrawide-margins` and `tmdb-ratings` — the two flags through one `flagOf(key, fallback)` and one `setFlag(key, on)`; and two keys beside the preferences, never among them — `tmdb-api-key` and `enrichment-last-synced-at` — every one read through one `valueOf(key)`
 │ │ ├── enrich/ ← a Sync's film writes: `enrichMovie` (the columns named, only those), `moviesInScope`, `enrichmentCounts` over both kinds, `setSourceFolder` (a title's Library folder and Source folder together), `titleSource` (both read back as one) and `sourcePath` (the two joined, for a review row's mono line) over one id space, and `titleAt` (the title recorded at a folder and Source folder); the **Full details** rule spelled once as `fullDetails`, and the **Sync gap** — what _Only what's missing_ syncs — once as `syncGap`
 │ │ ├── folders/ ← the **Library folders**: the list in the order added with each folder's title count, an add, and a remove that keeps the titles, forgetting only where they came from — an outcome, `removed` / `not-found` / `in-use` with the count of titles a **Linked video** plays from there, the count and the delete in one transaction
+│ │ ├── titles/ ← the **Manage library page**'s storage: `libraryTitles` (every title A–Z with its **Details state**, `detailsStateSql` spelled once, its linked videos, its Source folder and Media folder) and the two **Clear details** — `clearMovieDetails` and `clearSeriesDetails`, one transaction each, answering the Stored paths they let go
 │ │ ├── parentFolder/ ← pure: a Stored path some directories up — the **Media folder** a row written without one is given; shipping adds name theirs
 │ │ │ └── folderOverlap/ ← pure: whether a path is, is inside or holds a listed folder — resolved, case-folded on Windows, by whole segments — and `clashSentence`, each clash's one sentence
 │ │ └── series/ ← series storage, one unit per concern as the movie's is, each with its own suite: `read` (the series page — each season's **Season poster** with it — the player's episode read, the episode list), `browse` (the Series tab and its genres), `write` (the two inserts), `watch` (the resume write, the episode and season marks), `curation` (the heart, and `setSeriesRating`, a held series' rating off a Sheet row), `enrich` (a Sync's series and episode writes, `setSeasonPoster`, `seriesInScope` and `stillSourcesOf`, each episode's **Still source**), and `nextEpisodeOf`, pure
 │ │ │ └── yearSpan/ ← pure: the one reading of a **Year range** — `2022`, `2019–2023`, `2021–` → `{ year, endYear }`, anything else `null` — read by the Movie form's series save and the Sheet's Year cell alike; and `spellYearSpan`, its writer, the Export's Year cell and title folders
 │ ├── media/ ← folder scanning, file copy into managed storage, subtitle detection, the Movie folder’s removal after a Delete
-│ │ ├── createMedia/ ← the injected domain, every title found by its recorded **Media folder**: reserve a Movie folder, `openFolder` (a recorded Media folder, opened), `storedFolder` (the title's folder a Stored path lies under — a **Resolve**'s, over the route's bytes), `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the four removals — `removeFolder` a rollback's, `removeFile`, `removeTitleFolder` a Delete's, and `emptyRoot`, **Factory reset**'s, the root emptied best-effort and kept; and a Sync's two — `storeNamed` (into a Media folder, or a `season` under it), `readStored` (a stored file as a stream). Only `media/` touches managed storage; a **Linked video** is not managed storage
+│ │ ├── createMedia/ ← the injected domain, every title found by its recorded **Media folder**: reserve a Movie folder, `openFolder` (a recorded Media folder, opened), `storedFolder` (the title's folder a Stored path lies under — a **Resolve**'s, over the route's bytes), `seasonFolder` (a Series folder’s `season-NN/`), storeUpload, copyIn (a stream under the cancel signal), the four removals — `removeFolder` a rollback's, `removeFile`, `removeTitleFolder` a Delete's, and `emptyRoot`, **Factory reset**'s, the root emptied best-effort and kept; `trashLinked`, a **Linked video**'s files to the Recycle Bin through the injected `Trash` (`NO_TRASH`, `unavailable`, with no shell behind it), a path already gone counted as trashed; and a Sync's two — `storeNamed` (into a Media folder, or a `season` under it), `readStored` (a stored file as a stream). Only `media/` touches managed storage; a **Linked video** is not managed storage
+│ │ ├── linkedFiles/ ← pure: a title's **Linked files** — `folder` when its Source folder holds every video of its own and no other title's and is not a Library folder, `videos` when shared or partly linked, `unreachable` while its Library folder can't be read, `null` copied — "within a folder" read through `folderOverlap`
+│ │ ├── libraryTitleList/ ← the **Manage library page**'s read out of the route, `exportSummary`'s shape: storage and the media root → every **Library title** with its path absolute (a copied title's Media folder, a linked Collection folder film's video, a linked Source folder, else its first video's folder) and `linkedFilesOf(kind, id)`, what a delete trashes; every Library folder's reach read afresh, never throwing
 │ │ ├── fileKinds/ ← what an image, a subtitle and a video may be called — the store’s security boundary, and the scanner’s line
 │ │ ├── readableFolder/ ← an absolute path → `readable` / `not-a-folder` / `missing` / `relative`, never throwing: the one reading of reach, for the folder add, the importer's root check, the list's `reachable`, the Sync and the Export; and `readableFolderSync`, its twin for Playback's `videoFile`, both ending in one reading so they differ only in waiting
 │ │ ├── writableFolder/ ← a path → whether it is a directory this process can write into, never throwing: the one reading of _writable_, for the Sync's Write targets and an Export's destination
@@ -215,6 +219,7 @@ familyflix/
 │ ├── shell/ ← the server's half of the shell seam and its process lifecycle — infrastructure beside `db/`, not a domain
 │ │ ├── shellHandshake/ ← `shellHandshake(parentPort, startup)`: the startup answers `Started { server, shutdown }`, `ready` or `fatal` is posted, main's `shutdown` command runs the shutdown it was handed; inert with no parent port
 │ │ ├── listen/ ← the `127.0.0.1` bind, always; under the shell a taken **Shell port** falls back to an ephemeral one; `boundPort(server)`, the one reading of the port
+│ │ ├── shellTrash/ ← the server's half of the **Shell trash**: `createShellTrash(parentPort)`, a `Trash` posting `trash` and settled by main's `trashed` of the same id; with no parent port, `media`'s `NO_TRASH`
 │ │ └── orderedShutdown/ ← the **Ordered shutdown** (cancel the runs, close the listener, close the database, exit) and `shutdownOnSignals`, one path for the command and the signals
 │ └── test-support/ ← test doubles shared across server tests, never imported by shipping code
 │ ├── heldCopy/ ← a Media whose first copy waits until released, forwarding the cancel signal
@@ -248,7 +253,7 @@ familyflix/
 │ │ └── index.ts
 │ ├── primitives/ ← dumb, reusable UI atoms (Button, Input, Text, Icon, Badge)
 │ │ ├── index.ts ← barrel: re-exports every primitive (only barrel at this rung)
-│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — the FAB's two — ArrowUpIcon, PlusIcon — enrichment's five — BangRingIcon, SyncIcon, DatabaseIcon, TableIcon, LandscapeIcon — and the Audio picker's SpeechBubbleIcon, named for what they draw, …), `currentColor`, sized by the caller
+│ │ ├── Icon/ ← one file per glyph on IconBase (DownloadIcon, SheetIcon, CheckIcon, MicrochipIcon, UploadIcon, the Snackbar's four — InfoCircleIcon, CheckCircleIcon, BangTriangleIcon, CrossCircleIcon — the FAB's two — ArrowUpIcon, PlusIcon — enrichment's five — BangRingIcon, SyncIcon, DatabaseIcon, TableIcon, LandscapeIcon — the Audio picker's SpeechBubbleIcon, and Manage library's BinIcon, named for what they draw, …), `currentColor`, sized by the caller
 │ │ ├── Artwork/ ← a title's art over its **Gradient fallback**: the url a background layer over the gradient, so a file that fails to load shows it; a size container; `poster` on a **Poster surface** draws the **Default poster** — the `aria-hidden` Wordmark centred at `11cqmin` — when there is no url
 │ │ ├── Wordmark/ ← _Family_ in the text ink, _Flix_ in the accent, serif 700, sized by its parent's `font-size`: the header's logo, the About card's brand row and the Default poster, each placing it through `styled(Wordmark)`
 │ │ ├── TextField/ ← the boxed input: a glyph slot (the sheet and folder glyphs among them) and `mono` for a path
@@ -269,6 +274,7 @@ familyflix/
 │ │ ├── BackButton/ ← the **Back button**: one 44px glass circle pinned at `s4`/`s6` in the **Content frame**'s top-left corner, on every screen but the player — one face, one place; the caller's `useGoBack` its press
 │ │ ├── PageHeader/ ← every column screen's header: the Back button, an optional eyebrow, the serif heading on Back's line, the screen's own controls at the row's end, the lede under it
 │ │ ├── CornerMenu/ ← the ⋯ menu's furniture, graduated when both detail pages drew it: `Menu` in the fixed top-right slot on the Back button's inset, the translucent 44px ⋯ named _More options_, `MoreIcon` at 20; its `MenuItem`s the caller's children. Presentational — it knows no route and no dialog
+│ │ ├── Menu/ ← the dropdown every ⋯ opens: a caller's trigger, `MenuItem`s — `glyph`, `danger` (the **Danger row**), `hint` (a second line, the row's accessible description) and `disabled` (`aria-disabled`, kept in the tab order) — and `MenuDivider`, the hairline between groups
 │ │ ├── DetailBackdrop/ ← the **Detail backdrop**, graduated when both detail pages drew it: the art sticky at the top of the page's scroller and a full viewport tall, under the **Backdrop veil** — a gradient over `accentSoft`; its `100vh` coupled to both pages' `Scroller`
 │ │ ├── SeasonCard/ ← `mol.SeasonCard` 1:1: the 2:3 **Card**, `S02` over its **Season poster**, else the gradient, the badge when complete, the bar when part-watched
 │ │ ├── PillTabs/ ← `mol.PillTabs` 1:1: the pill track of `aria-pressed` buttons in a labelled group, generic in its value so a press hands back the caller's own union; presentational — it knows no URL. The **Library tabs**, the **Kind tabs** and both reviews' **Kind filter** are its callers
@@ -290,11 +296,11 @@ familyflix/
 │ │ │ ├── MovieDetail/ ← the organism: owns the hooks, renders the rest
 │ │ │ ├── EditMenu/ ← the ⋯ menu: Edit details, and the Danger row that opens the Delete dialog
 │ │ │ ├── DeleteMovieDialog/ ← the Delete dialog: Modal + the fixed copy + Delete movie / Cancel
-│ │ │ ├── useDeleteMovie/ ← { deleting, deleteMovie }; back through useGoBack once the movie is gone
+│ │ │ ├── useDeleteMovie/ ← { deleting, refusal, deleteMovie }; back through useGoBack once the movie is gone, a `409`'s sentence held until the next press is answered
 │ │ │ ├── useMovieDetail/ ← fetch one movie, or its not-found state
 │ │ │ ├── MetaLine/ LoadingDetail/ ← the page’s own molecules
 │ │ │ ├── detailView/ ← pure: a Movie → what the page shows
-│ │ │ └── api/ ← saveRating, deleteMovie (one caller each, so they stay here)
+│ │ │ └── api/ ← saveRating (one caller, so it stays here)
 │ │ ├── series/ ← the Series page and the Season page
 │ │ │ ├── SeriesDetail/ ← the series page’s organism: the hero, the heart, the Seasons grid
 │ │ │ ├── SeasonEpisodes/ ← the season page’s organism: the Episode rows, the marks, _Other seasons_
@@ -304,8 +310,8 @@ familyflix/
 │ │ │ ├── seriesView/ seasonView/ ← pure: a SeriesDetail → SeriesPageModel, and → SeasonPageModel for one season
 │ │ │ ├── markEpisodes/ ← pure: an episode marked by the movie's watched rule, and the held read patched with every **Next episode** derived again — `nextEpisodeOf` mirrored — for both pages' marks
 │ │ │ ├── SeriesEditMenu/ ← the series page's ⋯ on `CornerMenu`: _Edit details_ (`/add?series=<id>`), _Fetch from TMDB_, and the Danger row that opens the Delete dialog
-│ │ │ ├── DeleteSeriesDialog/ useDeleteSeries/ ← the movie's Delete dialog worded for a series, _its N episodes_ in the singular at one; `{ deleting, deleteSeries }`, onto the Series tab once the series is gone
-│ │ │ └── api/ ← saveSeasonWatched, saveSeriesWatched, deleteSeries (one caller each)
+│ │ │ ├── DeleteSeriesDialog/ useDeleteSeries/ ← the movie's Delete dialog worded for a series, _its N episodes_ in the singular at one, a linked show's Recycle Bin sentence and the refusal line; `{ deleting, refusal, deleteSeries }`, onto the Series tab once the series is gone
+│ │ │ └── api/ ← saveSeasonWatched, saveSeriesWatched (one caller each)
 │ │ ├── player/ ← built-in video player, subtitle handling, resume position — for any **Playable**, a movie or an episode
 │ │ │ ├── PlayerScreen/ ← the **Fullscreen surface**: the unkeyed surface fullscreen is asked of, around the `Player` keyed on its **Playable**, so the next episode plays on still in fullscreen; and the **Audio choice** for the sitting, carried into the next episode
 │ │ │ ├── Player/ ← the organism: owns the hooks, renders the rest
@@ -378,7 +384,7 @@ familyflix/
 │ │ ├── settings/ ← the Maintainer’s hub: six Settings groups under one header
 │ │ │ ├── section.styles.ts ← the furniture every Settings group draws with: the Group heading, the Section card (with the 32px group gap under it), the divider, an item’s title and lede, and the row furniture — `Row`, `RowTitle`, `RowDesc` — the Playback and Display groups both draw
 │ │ │ ├── SettingsHeader/ ← Back, the heading, the lede — the Library group's ＋ Add a title row is the one door to the form
-│ │ │ ├── LibrarySection/ ← the Library group: Add a title, Library folders and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
+│ │ │ ├── LibrarySection/ ← the Library group: Add a title, Library folders, Manage library and Import from spreadsheet owning their routes, and Export to CSV owning the Export dialog it mounts — the one place a section composes another feature’s organism
 │ │ │ ├── ActionRow/ ← one glyph + label + description row of the Library group
 │ │ │ ├── PlaybackSection/ ← the Playback card: the Codecs row — the Codec summary as its line, pushing `/settings/codecs` — the divider, Subtitles — the Auto-on toggle under its Coming soon pill, and Preferred subtitle language over FilterDropdown, shown at once and put back on refusal; then Audio, Preferred audio language over the same dropdown — each pill undrawn while its read is `null`, its row drawn
 │ │ │ ├── DisplaySection/ ← the Display card: the _Ultrawide margins_ row and its Toggle, reading and writing through `useDisplayPreference()`
@@ -399,21 +405,32 @@ familyflix/
 │ │ │ ├── useStorageReport/ ← one fetch on mount, `null` until it lands and `null` still if it never does — nothing drawn while so
 │ │ │ ├── useSettings/ ← the read half the same, holding the **Preferred subtitle language** and the **Preferred audio language** — Ultrawide margins is `DisplayPreferenceProvider`'s; each `choose…` one bargain, `useHeldLanguage`'s, `useHeldFlag`'s twin: the pill flipped first and put back if the save refuses, never rejecting
 │ │ │ └── api/ ← fetchCapabilities, installComponent, removeComponent (both rejecting with ComponentRefusedError carrying the route's own words), saveSubtitleLanguage, saveAudioLanguage, saveTmdbKey (never rejecting: saved, refused or unreachable), fetchStorageReport, factoryReset (`reset` on a `204`, `refused` with the route’s sentence on a `409`, rejecting otherwise) (one caller each)
+│ │ ├── manage-library/ ← the **Manage library page** at `/settings/library`: every title the library holds, its Edit, Sync, Clear details and Delete
+│ │ │ ├── ManageLibrary/ ← the organism: the header, the _Movies N_ / _Series N_ `PillTabs` (`tab` through `useQueryParamWriter`, omitted at movies), the summary, the Title rows or the empty card, and which dialog is open for which title — nothing else
+│ │ │ ├── TitleRow/ ← one **Title row**: the tile, title and year, path in mono, _Linked_ / _Copied_, files, the Details state's dot, the unreachable line; _Edit ▾_ (Edit details, Sync with TMDB) and ⋯ (Clear details, a divider, _Delete…_)
+│ │ │ ├── ClearDialog/ DeleteTitleDialog/ ← the **Clear dialog** and the **Delete dialog** on `Modal`, their words `libraryTitleView`'s; the Delete dialog's own callout and refusal line
+│ │ │ ├── GoesAndStays/ ← **What goes** beside **What stays**, both dialogs' two columns
+│ │ │ ├── titleDialog.styles.ts ← the furniture both dialogs share, flat as `filesCard.styles.ts` is: the path well and the buttons
+│ │ │ ├── useLibraryTitles/ ← `{ titles, clearing, clearDetails, deleting, deleteTitle, refusalFor }`: the read on mount (**Blank until it lands**), each write's row redrawn from its echo or taken off, a refusal held against the title it answered; neither write rejects
+│ │ │ ├── libraryTitleView/ ← pure: a **Library title** → every word and path the page draws — `titleRowView`, `tabSummary`, `emptyLine`, `clearView`, `deleteView`, `titlePaths` (`addLeaving`'s precedent)
+│ │ │ └── api/ ← fetchLibraryTitles, clearMovieDetails, clearSeriesDetails (one caller each)
 │ │ └── collections/ ← playlists/collections (roadmap, not MVP)
 │ ├── layouts/ ← page chrome
 │ │ ├── chrome.styles.ts ← the furniture MainLayout and GenreLayout both extend
 │ │ ├── MainLayout/ ← the Family's screens: logo, gear, scrolling body — and Back-to-top mounted over the body, because the body is where the scrolling happens, so the chrome is what knows how far it has gone; it lends the control the same ref `useRestoredScroll` attached, and holds no state for either
 │ │ ├── GenreLayout/ ← the **Back button**, heading slot, trailing controls, scrolling body; the strip opens past Back's corner
 │ │ └── MaintainerLayout/ ← the Maintainer surface: bg2 sheet + one centred column at the **Page measure** (880), the Back button's room beside it, the scrollbar gutter held, its scroll restored; every column screen's, the Season page's too
-│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage owns a scroll container and the Back button, MoviePage’s precedent, and SeasonPage is MaintainerLayout around SeasonEpisodes; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout around CodecManager, the first nested Settings route; LibraryFoldersPage the same around LibraryFolders, at `/settings/folders`)
+│ ├── pages/ ← route-level views, composition only, no logic (ImportPage is MaintainerLayout around ImportFlow; SeriesPage owns a scroll container and the Back button, MoviePage’s precedent, and SeasonPage is MaintainerLayout around SeasonEpisodes; EnrichmentPage is MaintainerLayout around EnrichmentFlow; CodecsPage is MaintainerLayout around CodecManager, the first nested Settings route; LibraryFoldersPage the same around LibraryFolders, at `/settings/folders`; ManageLibraryPage the same around ManageLibrary, at `/settings/library`)
 │ ├── api/ ← wire calls two or more features share (one folder per call + its test, no barrel)
-│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ fetchSeriesDetail/ ← the ten that earned it
+│ │ ├── saveFavorite/ fetchMovie/ saveWatched/ dismissProblem/ fetchSettings/ saveSeriesFavorite/ saveEpisodeWatched/ fetchEnrichmentSummary/ fetchTmdbKey/ fetchSeriesDetail/ deleteMovie/ deleteSeries/ ← the twelve that earned it
+│ │ ├── deleteTitleAt/ ← the `DELETE` `deleteMovie` and `deleteSeries` share: `deleted` on a `204` or a `404` (**gone is gone**), `refused` with the route's sentence on a `409`, else rejecting
+│ │ ├── refusalSentence/ ← a refused response → the route's own sentence off `{ error }`, else `null`, never rejecting: the deletes', the settings' and the import-export folder add's one reader
 │ │ ├── folderBridge/ ← the one reader of `window.familyflix?.folders`, `null` in a browser: the preload is the shell's wire, and the Library folders page, the Export dialog and the Storage card all read it
 │ │ └── postValue/
 │ │ ├── postValue.ts
 │ │ └── postValue.test.ts
-│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands; and `useKeyStored`, whether a TMDB key is stored — `false` until it lands and for a failed read — the `EnrichCheckCard` hint's one read on Import setup, the Library folders page and the Movie form
-│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `LANGUAGE_POOL`, PoolLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_AUDIO_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, `DEFAULT_TMDB_RATINGS`, Settings (`subtitleLanguage`, `audioLanguage`, `ultrawideMargins`, `tmdbRatings`), StorageReport; playback.ts: PlaybackPath, AudioTrack, PlaybackRead (its `audioTracks`), CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s, and `RatingSource`, whose a **Shown rating** is; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
+│ ├── hooks/ ← global shared hooks only: `useGoBack(fallback)` — the one **Back rule**, a **History step** with the screen's own **Landing** behind it (the library by default) — `useRestoredScroll`, and `useOptimisticEdit`, the one bargain a detail page's edit keeps, over whatever record the page holds; `useEnrichmentSummary`, the summary Settings' sync row and the Enrichment setup both draw, `null` until it lands; `useKeyStored`, whether a TMDB key is stored — `false` until it lands and for a failed read — the `EnrichCheckCard` hint's one read on Import setup, the Library folders page and the Movie form; and `useQueryParamWriter`, one named query parameter written as a replace, the rest of the URL kept — the browse home's and the Genre page's query hooks, the Library tabs, the Movie form's Kind tabs and the Manage library page's tabs
+│ ├── types/ ← shared TypeScript interfaces (import.ts: `IMPORT_MODES`, ImportMode, `PROBLEM_KINDS`, ProblemKind, ImportRun (its `mode`), ImportSource, ImportProblem (its `seriesId` when an `unplaced` show is already held), ImportProblemDetail (its `files.videos` always present, empty with no folder), ImportField; libraryFolders.ts: LibraryFolder, `FOLDER_CHANNELS` (`pick`, `pickOne`, `openMedia`), FolderBridge — both build targets, and `tsconfig.electron.json` too; libraryTitles.ts: `DETAILS_STATES`, DetailsState, LinkedFiles, LibraryTitle, LibraryMovieTitle, LibrarySeriesTitle, LibraryTitles — the **Manage library page**'s wire, both build targets; export.ts: `EXPORT_FORMATS`, `EXPORT_COLUMNS`, `EXPORT_EPISODE_COLUMNS`, `EXPORT_NAME_PREFIX`, ExportSummary, StartExport, ExportResult; settings.ts: `LANGUAGE_POOL`, PoolLanguage, `DEFAULT_SUBTITLE_LANGUAGE`, `DEFAULT_AUDIO_LANGUAGE`, `DEFAULT_ULTRAWIDE_MARGINS`, `DEFAULT_TMDB_RATINGS`, Settings (`subtitleLanguage`, `audioLanguage`, `ultrawideMargins`, `tmdbRatings`), StorageReport; playback.ts: PlaybackPath, AudioTrack, PlaybackRead (its `audioTracks`), CodecKind, CodecSupport, CodecCapability, ComponentSource, PlaybackComponentInfo, PlaybackCapabilities — both build targets; series.ts: Series, Episode, SeasonSummary, SeriesDetail, EpisodeRead, NextEpisodeRef, EpisodeContinueEntry (its `series` carrying `posterPath`, for the Continue card's art), SeriesHomePayload, NewSeries, NewEpisode, Playable, StoredVideo — a row's `{ videoPath, videoFolderId }`, which `Movie` and `Episode` extend — both build targets; enrichment.ts: `ENRICH_FIELDS`, `ENRICH_FIELD_LABELS`, `ENRICH_SCOPES`, EnrichField, EnrichScope, EnrichmentSummary (its `libraryFolders` the reachable folders a Sync may write into), Candidate, Decision, DecisionKind, FieldConflict, ConflictChoices, EnrichmentRun (its `seasons` on a single-series run), SeasonChoice, SeasonPosterChoice, StartEnrichment — both build targets; viewModels.ts carries the series’ SeriesPageModel, SeasonPageModel, SeasonCardSeason and EpisodeRowEpisode beside the movie’s, and `RatingSource`, whose a **Shown rating** is; shell.ts: ServerMessage, ShellCommand — the **Shell handshake**, the **Shell trash**'s `trash` / `trashed` exchange among them, typed once and read by `server/src/shell/` and `electron/`, in `tsconfig.electron.json` too; form.ts: MovieFormValues, MovieFormFile, MovieFormSubtitle, EpisodeFormRow, SeasonPosterSlot (its `held`), FormKind — the Movie form's shapes; appVersion.d.ts: `__APP_VERSION__`, defined by Vite from package.json)
 │ ├── utils/ ← pure helper functions (one folder per helper + its test)
 │ │ ├── index.ts ← barrel: re-exports every helper
 │ │ ├── formatBytes/ ← 1024-based, one decimal from KB up: `18.4 GB`
@@ -437,6 +454,7 @@ familyflix/
 │ ├── fakeResponse/ ← a Response by status
 │ ├── makeContinueCardMovie/ ← a full `ContinueCardMovie` with overrides, `makePosterCardMovie`'s rule for the resume tile
 │ ├── makeEnrichmentRun/ ← an EnrichmentRun just started, `makeImportRun`'s rule
+│ ├── makeLibraryTitle/ ← `makeLibraryMovie` and `makeLibrarySeries`: a complete copied **Library title** with overrides, `makeEnrichmentRun`'s rule
 │ ├── fakeFolderBridge/ ← a controllable `window.familyflix.folders` for the length of a `describe`: each `pick()` answers what `setPick` last set and each `pickOne()` what `setPickOne` did, both counted — `fakeUpdateBridge`'s twin
 │ ├── makeSeriesDetail/ ← a SeriesDetail by its seasons’ watch states, `makeMovie`’s rule; `makeSeries` and `makeEpisode` beside it
 │ ├── comesBefore/ ← document order between two elements, for a slot's contract
@@ -493,7 +511,13 @@ key and Import setup chooses the _Also fetch from TMDB_ hint by it; and
 Settings hub's Storage card all read the shell's folder bridge; and
 `fetchSeriesDetail` did, because the series pages load the record they render,
 the Enrichment flow names the show under _Just this series_, and the Movie
-form reads the series it edits or a Series Resolve joins. `saveRating`
+form reads the series it edits or a Series Resolve joins; and `deleteMovie` and
+`deleteSeries` did, because each detail page's Delete dialog and the Manage
+library page send the same `DELETE` — both over `deleteTitleAt`, the helper
+the two calls share, `postValue`'s precedent; and `refusalSentence` did,
+because the deletes, the settings' reset and Component routes and the
+import-export folder add each read a route's refusal sentence the same
+way. `saveRating`
 has one caller and stays with the feature that makes it, and so does the
 player's own `saveResume` — the player is the only thing in the app that can
 know where a film is, which is the same rule read the other way round — and so
@@ -574,7 +598,8 @@ FamilyFlix is an offline-first desktop app. This is the only target.
 - **Shell:** Electron — one maximized, sandboxed window over the
   **Server process**, the bundled Express server forked in a
   `utilityProcess` in every **Shell mode**. The two speak the **Shell
-  handshake** (`ready` / `fatal` / `shutdown`), and quitting waits out the
+  handshake** (`ready` / `fatal` / `shutdown`, and the **Shell trash**'s
+  `trash` / `trashed` exchange), and quitting waits out the
   server's **Ordered shutdown**, killing it at 5 s
 - **One origin:** under `electron:start` and in the **Installed app** the
   server serves the built renderer beside `/api` on
@@ -588,8 +613,8 @@ FamilyFlix is an offline-first desktop app. This is the only target.
   **Library folder** by default, and copies it on request (the **Import
   mode**); posters, backdrops and subtitles are always copied into
   FamilyFlix's own managed media directory. The app owns its copies; a
-  linked video stays the Library folder's, played read-only and never
-  deleted by the app
+  linked video stays the Library folder's, played read-only and removed
+  only by a Delete, only to the Recycle Bin
 - **Data:** the **Installed app** keeps the database, the media, the
   **Component slot** and the **Shell log** under `%APPDATA%\FamilyFlix\`;
   an **Unpackaged run** uses the repo's own library
@@ -811,6 +836,20 @@ tmdbRatings }`,
   _Import all as guessed_, under the run's Import mode — each `200` with the
   whole **Current run**, an id not held passed over, `400` for `ids` that
   `problemIdsBody` refuses, `404` with no run.
+- The **Manage library page** at `/settings/library`, the hub's third nested
+  route, opened by the Library group's _☰ Manage library_ row:
+  `GET /api/library-titles` → `{ movies, series }`, every **Library title**
+  A–Z — its path absolute, its **Details state**, its **Linked files** read
+  against the disk now — off `media/libraryTitleList`;
+  `POST /api/movies/:id/clear-details` and `POST /api/series/:id/clear-details`
+  → `200` with the redrawn Library title, `404` for an id that kind does not
+  hold, the row first and the files it let go after, best-effort. The two
+  `DELETE`s, `/api/movies/:id` and `/api/series/:id`, move a title's Linked
+  files to the Recycle Bin before any row goes, and answer `409` in one
+  sentence — _Only the desktop app can move a linked title’s files to the
+  Recycle Bin._ with no shell, _Couldn’t move <path> to the Recycle Bin.
+  Close anything playing it and try again._ for a path it would not take —
+  every row kept.
 - `GET /api/storage` → `{ mediaPath, bytesUsed, movieCount }`, the
   **Storage report**: the path resolved to absolute at request time, the
   walk read afresh on every visit, the count off the database.
@@ -1123,8 +1162,9 @@ second chain is done too, shipped as v0.3.0, and so are steps 16–21:
 the third chain is done, and so are step 22, **Season posters**, step
 23, **Import review**, step 24, **Link or copy**, and step 25, **Review
 at scale + Season art**, step 26, **TMDB ratings**, step 27, **Episode
-stills**, step 28, **Add and sync**, and step 29, **Audio tracks**. Step
-30, **Manage library**, is next. Steps 10–15 came out of
+stills**, step 28, **Add and sync**, step 29, **Audio tracks**, and step
+30, **Manage library**. Step 31, **Add a show folder**, is next. Steps
+10–15 came out of
 installing FamilyFlix and using it: smallest and most self-contained first,
 the form before the folders that will feed it, export last because it
 mirrors what import holds.
@@ -1355,34 +1395,47 @@ and the player played whichever came first. It is done (design log 46):
 
 Step 30 came out of using v0.8.0 too: adding a whole show by hand meant
 picking its episodes file by file, and nothing lists what the library holds
-in one place or takes a title out of it completely. It is planned — grill-me,
-a PRD and a prototype revision first; a Claude Design handoff for the overview
-page is in progress:
+in one place or takes a title out of it completely. The grill split it in
+two (design log 47 Q1): the overview is step 30, done; the show folder is
+step 31.
 
-30. 🔜 **Manage library** — two halves, one step. **Add a show folder**: the
-    series form's Files card takes a folder — a **Show folder** of **Season
-    folders** with episodes in them, or loose tagged episodes at its root —
-    beside _＋ Add episode files_, one **Episode file row** per video, its
-    season read off its folder by `readSeasonFolder` and its number off the
-    **Episode tag**. This reopens design log 11 Q6 (manual pickers only, "do
-    not build it into this form"): Chromium's `webkitdirectory` hands the
-    form a folder's files with relative paths but still no absolute path, so
-    a pick is bytes and is copied, never linked — linking stays **Scan
-    folders**'. **The library overview**: a new Settings sub-page, reached
-    from the Library group, listing every title the library holds — films
-    and series, linked and copied — and a delete that takes a title out of
-    FamilyFlix completely: its rows, its watch state, and every file
-    FamilyFlix holds for it (poster, backdrop, stills, Season posters,
-    subtitles, a copied video). To settle in the grill: what a delete does
-    to a **Linked video** — forgotten, the rule today, or removed from the
-    Library folder, the app's first write that takes something out of one;
-    whether a later **Scan folders** brings a deleted title back, or the
-    title is remembered as excluded; whether a folder pick's subtitles and
-    art are paired to their episodes as the scanner pairs them; what the
-    overview shows per title (kind, Link or Copy, its Library folder, size
-    on disk) and whether it filters, sorts and deletes in bulk; and how it
-    sits beside the ⋯ menus' Delete, which already removes the managed
-    folder best-effort.
+30. ✅ **Manage library** — design log 47. The **Manage library page** at
+    `/settings/library`, opened by the Library group's _☰ Manage library_
+    row: _Movies N_ / _Series N_ on `PillTabs` beside the summary, one
+    **Title row** per title A–Z off one `GET /api/library-titles` — its path
+    in mono (a linked title's Source folder, else its Media folder), _Linked_
+    / _Copied_, its files, and its **Details state** (`synced` / `own` /
+    `none`, spelled once in SQL), with _Can’t be reached right now_ for an
+    unreachable Library folder. _Edit ▾_: _Edit details_ (the Movie form's
+    edit) and _Sync with TMDB_ (the title's page, then its Sync **Started on
+    arrival**). ⋯: **Clear details** — the **Clear dialog**, the title set
+    back to its title, files and household signals,
+    `POST /api/movies|series/:id/clear-details` — and _Delete…_. **One
+    Delete for every surface**: the movie and series routes, unchanged in
+    shape, now move a title's **Linked files** (`folder`, `videos`, or none
+    while `unreachable`) to the Recycle Bin through the **Shell trash**
+    before any row goes — `409` in one sentence with no shell, or for a path
+    the Recycle Bin would not take, every row kept. The detail pages' Delete
+    dialogs say so in one sentence more and draw the refusal. No migration.
+    Not this step: search, sort or bulk actions on the page, size on disk,
+    an exclusion list, an episode delete, Clear details on the detail pages,
+    a permanent delete.
+
+Step 31 is the half log 47 Q1 held back: _Add a show folder_ reopens design
+log 11 Q6, and the handoff drew nothing of it, so it gets its own grill and
+its own prototype revision first:
+
+31. 🔜 **Add a show folder** — the series form's Files card takes a folder —
+    a **Show folder** of **Season folders** with episodes in them, or loose
+    tagged episodes at its root — beside _＋ Add episode files_, one
+    **Episode file row** per video, its season read off its folder by
+    `readSeasonFolder` and its number off the **Episode tag**. This reopens
+    design log 11 Q6 (manual pickers only, "do not build it into this
+    form"): Chromium's `webkitdirectory` hands the form a folder's files
+    with relative paths but still no absolute path, so a pick is bytes and
+    is copied, never linked — linking stays **Scan folders**'. To settle in
+    the grill: whether a folder pick's subtitles and art are paired to their
+    episodes as the scanner pairs them.
 
 A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 
@@ -1428,10 +1481,11 @@ A 🧭 Roadmap item is not in this chain — it is after it, if ever.
 - ✅ **Title editing** — number a show's file in the app without renaming it: `S[01] E[01]` in front of `eps1.0_hellofriend.mov`, remembered as its **Source file**; the reader learns the **Episode word**; one `unplaced` Problem per show with a _Resolve_; the series page's ⋯ menu, its _Edit details_ the Movie form's series edit job (`PATCH /api/series/:id`) and its Danger row the delete (`DELETE /api/series/:id`); and the **Found-file choice** for a film folder of two or more videos (step 21).
 - ✅ **Export name** — the Export folder's name as the **Folder name field** in the Export dialog: prefilled with today's dated name and never overwritten once edited, refused in one sentence under the field when no folder can be called that, never stripped, numbered when taken.
 - ✅ **Import review** — one import over the Library folders and a spreadsheet (CSV or Excel), its scan ending in a review of the adjustments to make, settled row by row as a TMDB Sync's review is: a held title's Sheet fills written during the run, its Sheet differences settled on a _Yours | Spreadsheet_ diff, the Folder picker on `ambiguous` and _Import as_ on `no-row` (step 23, design log 40).
-- ✅ **Link or copy** — every import offers Link (the default) or Copy: a linked title plays from its Library folder, with no second copy and no copy time; the mode kept per title, a linked file never deleted by the app, TMDB art still in managed storage (step 24).
+- ✅ **Link or copy** — every import offers Link (the default) or Copy: a linked title plays from its Library folder, with no second copy and no copy time; the mode kept per title, a linked file played read-only and removed only by a Delete, only to the Recycle Bin, TMDB art still in managed storage (step 24).
 - ✅ **Review at scale + Season art** — the review grouped by title, filtered by kind, with bulk actions, and fewer rows filed at the source; a single-series Sync's Seasons section picks each season's poster from TMDB's choices, and the series edit takes one from a file (step 25).
 - ✅ **Add and sync** — add a film or a series by its files alone and let TMDB fill the rest: the box on the Movie form's plain add, and a ticked save lands on the title's own Sync, Started on arrival (step 28).
-- 🔜 **Manage library** — a show added by its folder in the series form, season folders and all; and a Settings page listing every title the library holds, linked and copied, with a delete that takes a title and every file FamilyFlix holds for it out of the app completely (step 30).
+- ✅ **Manage library** — a Settings page listing every title the library holds, linked and copied, with where its files are and whether TMDB matched it; each title edited, synced, cleared back to its title, or deleted — a linked title's files to the Recycle Bin, every file FamilyFlix holds for it removed (step 30).
+- 🔜 **Add a show folder** — a show added by its folder in the series form, season folders and all, its episodes numbered off the folders and the filenames (step 31).
 - ✅ **Delete a movie** — the ⋯ menu’s Danger row, the Delete dialog, `DELETE /api/movies/:id`, then the Movie folder under best-effort cleanup.
 - ✅ **Bulk import** — a Sheet over the listed Library folders becomes Movies and Series during the run; the Review step lists only the Problems the run could not settle, each with Resolve (the Movie form in Import context) and Skip.
 - ✅ **Import progress console** — the Connect ✓ → Scan → Import stepper, the bar, the current item, elapsed and ETA, the Activity log, and Cancel; a server run polled every 500 ms, re-attachable.
