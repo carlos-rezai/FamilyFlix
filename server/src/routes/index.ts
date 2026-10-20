@@ -1947,8 +1947,10 @@ export function createApiRouter(
     res.json(folders);
   });
 
-  // The **Manage library page**'s one read for both tabs: every title A–Z,
-  // its paths absolute and its **Linked files** read against the disk now.
+  // The **Manage library page**'s one read for both tabs, `media/`'s
+  // `libraryTitleList`: every title A–Z, its paths absolute and its **Linked
+  // files** read against the disk now. The delete's `trashedFirst` and the
+  // clear's echo read the same list.
   router.get('/library-titles', async (_req: Request, res: Response) => {
     res.json((await libraryTitleList(storage, mediaPath)).titles);
   });

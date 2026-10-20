@@ -37,9 +37,10 @@ export interface TitleRowProps {
  * furniture: the accent tile, the title and its year, the path in mono, the
  * badge, the files and the **Details state**'s dot — and, for a title whose
  * Library folder can't be read, the line in danger. Its words are
- * `titleRowView`'s, its presses `titlePaths`'. At its right edge, _Edit ▾_: _Edit details_ pushes the
- * **Movie form**'s edit, _Sync with TMDB_ the title's page and then its Sync,
- * **Started on arrival**. After it, ⋯: _Clear details_, disabled while the
+ * `titleRowView`'s and its presses `titlePaths`', both `libraryTitleView`'s.
+ * At its right edge, _Edit ▾_: _Edit details_ pushes the **Movie form**'s
+ * edit, _Sync with TMDB_ the title's page and then its Sync, **Started on
+ * arrival**. After it, ⋯: _Clear details_, disabled while the
  * **Details state** is `none`, since there is nothing to clear; then, below a
  * divider, _Delete…_ as the **Danger row**, offered on every row.
  */
