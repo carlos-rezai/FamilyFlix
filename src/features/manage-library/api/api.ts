@@ -1,7 +1,9 @@
-import type { LibraryTitle, LibraryTitles } from '@/types';
-
-type LibraryMovieTitle = Extract<LibraryTitle, { kind: 'movie' }>;
-type LibrarySeriesTitle = Extract<LibraryTitle, { kind: 'series' }>;
+import type {
+  LibraryMovieTitle,
+  LibrarySeriesTitle,
+  LibraryTitle,
+  LibraryTitles,
+} from '@/types';
 
 const TITLES_ENDPOINT = '/api/library-titles';
 

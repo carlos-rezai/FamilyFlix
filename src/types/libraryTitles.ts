@@ -43,8 +43,14 @@ export type LibraryTitle =
       episodes: number;
     });
 
+/** A film **Library title**, the Movies tab's row. */
+export type LibraryMovieTitle = Extract<LibraryTitle, { kind: 'movie' }>;
+
+/** A show **Library title**, the Series tab's row. */
+export type LibrarySeriesTitle = Extract<LibraryTitle, { kind: 'series' }>;
+
 /** The **Manage library page**'s one read: both tabs, each A–Z. */
 export interface LibraryTitles {
-  movies: Extract<LibraryTitle, { kind: 'movie' }>[];
-  series: Extract<LibraryTitle, { kind: 'series' }>[];
+  movies: LibraryMovieTitle[];
+  series: LibrarySeriesTitle[];
 }

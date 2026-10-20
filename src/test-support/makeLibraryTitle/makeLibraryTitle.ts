@@ -1,7 +1,4 @@
-import type { LibraryTitle } from '@/types';
-
-type LibraryMovie = Extract<LibraryTitle, { kind: 'movie' }>;
-type LibrarySeries = Extract<LibraryTitle, { kind: 'series' }>;
+import type { LibraryMovieTitle, LibrarySeriesTitle } from '@/types';
 
 /**
  * A complete film **Library title** for a test, overriding only what that
@@ -10,8 +7,8 @@ type LibrarySeries = Extract<LibraryTitle, { kind: 'series' }>;
  * files**, no original, its own details, one file.
  */
 export function makeLibraryMovie(
-  overrides: Partial<LibraryMovie> = {}
-): LibraryMovie {
+  overrides: Partial<LibraryMovieTitle> = {}
+): LibraryMovieTitle {
   return {
     kind: 'movie',
     id: 'm1',
@@ -31,8 +28,8 @@ export function makeLibraryMovie(
  * eight episodes, still running.
  */
 export function makeLibrarySeries(
-  overrides: Partial<LibrarySeries> = {}
-): LibrarySeries {
+  overrides: Partial<LibrarySeriesTitle> = {}
+): LibrarySeriesTitle {
   return {
     kind: 'series',
     id: 's1',

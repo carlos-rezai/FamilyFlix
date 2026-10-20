@@ -154,6 +154,8 @@ export { DETAILS_STATES } from './libraryTitles';
 export type {
   DetailsState,
   LinkedFiles,
+  LibraryMovieTitle,
+  LibrarySeriesTitle,
   LibraryTitle,
   LibraryTitles,
 } from './libraryTitles';
