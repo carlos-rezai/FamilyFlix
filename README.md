@@ -381,6 +381,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Audio tracks — English by default, switch in player | ✅ Done         |
 | Manage library — every title, edit, clear, delete   | ✅ Done         |
 | Add a show folder — a show by its folder, numbered  | 🔜 Planned      |
+| Release workflow off Node 20 — actions bumped       | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
