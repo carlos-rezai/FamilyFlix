@@ -4,7 +4,7 @@ import { Menu, MenuDivider, MenuItem } from '@/components';
 import { BinIcon, FolderIcon, IconButton, MoreIcon } from '@/primitives';
 import type { LibraryTitle } from '@/types';
 import { enrichPath, movieFormPath, moviePath, seriesPath } from '@/utils';
-import { titleRowView } from '../titleRowView/titleRowView';
+import { titleRowView } from '../libraryTitleView/libraryTitleView';
 import {
   Actions,
   Badge,

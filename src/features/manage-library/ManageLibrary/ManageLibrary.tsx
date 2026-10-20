@@ -10,7 +10,7 @@ import { DeleteTitleDialog } from '../DeleteTitleDialog/DeleteTitleDialog';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { TitleRow } from '../TitleRow/TitleRow';
-import { tabSummary } from '../titleRowView/titleRowView';
+import { tabSummary } from '../libraryTitleView/libraryTitleView';
 import { useLibraryTitles } from '../useLibraryTitles/useLibraryTitles';
 import { Empty, List, Summary, Toolbar } from './ManageLibrary.styles';
 

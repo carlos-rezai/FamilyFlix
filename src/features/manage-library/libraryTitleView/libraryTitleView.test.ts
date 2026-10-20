@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { deleteView, titleRowView } from './titleRowView';
+import { deleteView, titleRowView } from './libraryTitleView';
 import {
   makeLibraryMovie,
   makeLibrarySeries,

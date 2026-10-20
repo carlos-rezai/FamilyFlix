@@ -2,7 +2,7 @@ import { Modal } from '@/components';
 import { BinIcon, Button } from '@/primitives';
 import type { LibraryTitle } from '@/types';
 
-import { deleteView } from '../titleRowView/titleRowView';
+import { deleteView } from '../libraryTitleView/libraryTitleView';
 import {
   Actions,
   Callout,

@@ -2,7 +2,7 @@ import styled from 'styled-components';
 
 import { controlStates } from '@/styles/interactionStates/interactionStates';
 
-import type { DotTone } from '../titleRowView/titleRowView';
+import type { DotTone } from '../libraryTitleView/libraryTitleView';
 
 /** The row: tile and text block in a line — the **Folder row**'s furniture. */
 export const Row = styled.div`
