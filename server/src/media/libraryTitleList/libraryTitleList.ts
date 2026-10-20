@@ -91,27 +91,26 @@ async function readLibraryTitles(
         ? null
         : join(libraryFolder.path, title.sourceFolder);
     const managed = resolve(mediaPath, title.mediaFolder ?? '');
+    const own = new Set(videos);
     const answer = linkedFiles({
       videos,
       allLinked,
       sourceFolder,
       libraryFolder,
-      others: allVideos.filter((video) => !videos.includes(video)),
+      others: allVideos.filter((video) => !own.has(video)),
     });
     answers.set(`${kind}:${title.id}`, answer);
-    const linkedPath =
-      sourceFolder === null
-        ? videos[0] === undefined
-          ? managed
-          : dirname(videos[0])
-        : sourceFile === null
-          ? sourceFolder
-          : join(sourceFolder, sourceFile);
     return {
       id: title.id,
       title: title.title,
       year: title.year,
-      path: answer === null ? managed : linkedPath,
+      path: titlePath({
+        managed,
+        linked: answer !== null,
+        sourceFolder,
+        sourceFile,
+        videos,
+      }),
       linkedFiles: answer?.kind ?? null,
       originalPath: answer === null ? sourceFolder : null,
       details: title.details,
@@ -143,4 +142,35 @@ async function readLibraryTitles(
     })),
   };
   return { titles, linked: answers };
+}
+
+/**
+ * A **Library title**'s `path`, the one the dialogs print, in the rule's
+ * order: a copied title's Media folder; a linked **Collection folder** film's
+ * video; a linked title's Source folder; a linked title with no Source
+ * folder, its first video's folder — else, with none, its Media folder.
+ */
+function titlePath({
+  managed,
+  linked,
+  sourceFolder,
+  sourceFile,
+  videos,
+}: {
+  managed: string;
+  linked: boolean;
+  sourceFolder: string | null;
+  sourceFile: string | null;
+  videos: readonly string[];
+}): string {
+  if (!linked) {
+    return managed;
+  }
+  if (sourceFolder !== null && sourceFile !== null) {
+    return join(sourceFolder, sourceFile);
+  }
+  if (sourceFolder !== null) {
+    return sourceFolder;
+  }
+  return videos[0] === undefined ? managed : dirname(videos[0]);
 }
