@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { DEFAULT_MOVIE_SORT, type GenreQuery, type MovieSort } from '@/types';
 import { parseGenreQuery } from '@/utils';
 
-import { useQueryParamWriter } from '../useQueryParamWriter/useQueryParamWriter';
+import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 
 export interface UseGenreQueryResult {
   /** The settled query the URL is currently carrying. */

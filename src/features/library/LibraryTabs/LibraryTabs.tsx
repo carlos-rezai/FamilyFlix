@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 
 import { PillTabs } from '@/components';
-import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
+import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 
 const TABS = [
   { value: 'movies', label: 'Movies' },

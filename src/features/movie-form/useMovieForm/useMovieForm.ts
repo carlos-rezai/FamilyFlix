@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
-import { useQueryParamWriter } from '@/features/search/useQueryParamWriter/useQueryParamWriter';
+import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type {
   EpisodeFormRow,
