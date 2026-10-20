@@ -1047,6 +1047,46 @@ describe('ManageLibrary — deleting a linked title', () => {
     expect(await screen.findByText('“Coco” was deleted.')).toBeDefined();
   });
 
+  it('draws no refusal in another title’s dialog', async () => {
+    serveLinked([conflictResponse(NO_SHELL)]);
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+    confirmDelete();
+    await within(deleteDialog() as HTMLElement).findByText(NO_SHELL);
+    fireEvent.click(
+      within(deleteDialog() as HTMLElement).getByRole('button', {
+        name: 'Cancel',
+      })
+    );
+
+    openDeleteOn('Heat');
+
+    const dialog = deleteDialog('Heat') as HTMLElement;
+    expect(dialog).not.toBeNull();
+    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
+  });
+
+  it('still draws the refusal when the same title’s dialog is reopened', async () => {
+    serveLinked([conflictResponse(NO_SHELL)]);
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+    confirmDelete();
+    await within(deleteDialog() as HTMLElement).findByText(NO_SHELL);
+    fireEvent.click(
+      within(deleteDialog() as HTMLElement).getByRole('button', {
+        name: 'Cancel',
+      })
+    );
+
+    openDeleteOn('Coco');
+
+    expect(
+      within(deleteDialog() as HTMLElement).getByText(NO_SHELL)
+    ).toBeDefined();
+  });
+
   it('deletes an unreachable title, its row taken off', async () => {
     serveLinked([noContentResponse()]);
     renderPage();

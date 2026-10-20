@@ -28,10 +28,13 @@ export interface LibraryTitlesState {
    */
   deleteTitle: (title: LibraryTitle) => Promise<boolean>;
   /**
-   * The route's `409` sentence for the last refused delete, `null` until one
-   * is refused; replaced by the next press's own answer.
+   * The route's `409` sentence for `title`, held against the title it
+   * answered (`useSubtitles`' "held against the row it came from"): `null`
+   * for any other title, and until a press is refused; held until the next
+   * press is answered — cleared when it deletes, replaced when it is refused
+   * again.
    */
-  refusal: string | null;
+  refusalFor: (title: LibraryTitle) => string | null;
 }
 
 /** The list a title of each kind sits on. */
@@ -48,7 +51,19 @@ export function useLibraryTitles(): LibraryTitlesState {
   const [titles, setTitles] = useState<LibraryTitles | null>(null);
   const [clearing, setClearing] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [refusal, setRefusal] = useState<string | null>(null);
+  const [refusal, setRefusal] = useState<{
+    title: LibraryTitle;
+    sentence: string;
+  } | null>(null);
+  const refusalFor = useCallback(
+    (title: LibraryTitle) =>
+      refusal !== null &&
+      refusal.title.kind === title.kind &&
+      refusal.title.id === title.id
+        ? refusal.sentence
+        : null,
+    [refusal]
+  );
 
   /** `echo` in place of the row it redraws, on the list its kind sits on. */
   const replaced = useCallback(
@@ -109,7 +124,7 @@ export function useLibraryTitles(): LibraryTitlesState {
             ? await deleteMovie(title.id)
             : await deleteSeries(title.id);
         if (outcome.kind === 'refused') {
-          setRefusal(outcome.sentence);
+          setRefusal({ title, sentence: outcome.sentence });
           return false;
         }
         setRefusal(null);
@@ -138,6 +153,6 @@ export function useLibraryTitles(): LibraryTitlesState {
     clearDetails,
     deleting,
     deleteTitle,
-    refusal,
+    refusalFor,
   };
 }

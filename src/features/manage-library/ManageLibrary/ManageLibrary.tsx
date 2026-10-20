@@ -26,7 +26,7 @@ import { Empty, List, Summary, Toolbar } from './ManageLibrary.styles';
  * closes it, the row off the list, with _“Coco” was deleted._
  */
 export function ManageLibrary() {
-  const { titles, clearing, clearDetails, deleting, deleteTitle, refusal } =
+  const { titles, clearing, clearDetails, deleting, deleteTitle, refusalFor } =
     useLibraryTitles();
   const { notify } = useSnackbar();
   const [asked, setAsked] = useState<LibraryTitle | null>(null);
@@ -117,7 +117,7 @@ export function ManageLibrary() {
         <DeleteTitleDialog
           title={doomed}
           deleting={deleting}
-          refusal={refusal}
+          refusal={refusalFor(doomed)}
           onConfirm={() => void confirmDelete(doomed)}
           onClose={() => setDoomed(null)}
         />
