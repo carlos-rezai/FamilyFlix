@@ -39,7 +39,10 @@ import {
   type ExportRefusal,
 } from '../import-export/writeExport/writeExport';
 import type { Media } from '../media/createMedia/createMedia';
-import { linkedFiles } from '../media/linkedFiles/linkedFiles';
+import {
+  linkedFiles,
+  type LinkedFilesAnswer,
+} from '../media/linkedFiles/linkedFiles';
 import { readableFolder } from '../media/readableFolder/readableFolder';
 import { spaceUsed } from '../media/spaceUsed/spaceUsed';
 import { componentBinary } from '../playback/componentBinary/componentBinary';
@@ -682,6 +685,32 @@ async function libraryTitleList(
   storage: LibraryStorage,
   mediaPath: string
 ): Promise<LibraryTitles> {
+  return (await readLibraryTitles(storage, mediaPath)).titles;
+}
+
+/**
+ * One title's **Linked files** as the list read reads them now — the kind and
+ * the absolute paths a delete trashes — or `null` for a copied title.
+ */
+async function linkedFilesOf(
+  storage: LibraryStorage,
+  mediaPath: string,
+  kind: 'movie' | 'series',
+  id: string
+): Promise<LinkedFilesAnswer | null> {
+  const { linked } = await readLibraryTitles(storage, mediaPath);
+  return linked.get(`${kind}:${id}`) ?? null;
+}
+
+/** The list read, with each title's Linked files' paths beside it by kind and id. */
+async function readLibraryTitles(
+  storage: LibraryStorage,
+  mediaPath: string
+): Promise<{
+  titles: LibraryTitles;
+  linked: Map<string, LinkedFilesAnswer | null>;
+}> {
+  const answers = new Map<string, LinkedFilesAnswer | null>();
   const folders = new Map(
     await Promise.all(
       storage.libraryFolders().map(
@@ -709,6 +738,7 @@ async function libraryTitleList(
   const allVideos = [...linked.values()].flat();
 
   function placed(
+    kind: 'movie' | 'series',
     title: StoredLibraryMovie | StoredLibrarySeries,
     allLinked: boolean,
     sourceFile: string | null
@@ -730,6 +760,7 @@ async function libraryTitleList(
       libraryFolder,
       others: allVideos.filter((video) => !videos.includes(video)),
     });
+    answers.set(`${kind}:${title.id}`, answer);
     const linkedPath =
       sourceFolder === null
         ? videos[0] === undefined
@@ -749,15 +780,21 @@ async function libraryTitleList(
     };
   }
 
-  return {
+  const titles: LibraryTitles = {
     movies: movies.map((movie) => ({
       kind: 'movie' as const,
-      ...placed(movie, movie.linkedVideos.length > 0, movie.sourceFile),
+      ...placed(
+        'movie',
+        movie,
+        movie.linkedVideos.length > 0,
+        movie.sourceFile
+      ),
       files: movie.files,
     })),
     series: series.map((show) => ({
       kind: 'series' as const,
       ...placed(
+        'series',
         show,
         show.episodes > 0 && show.linkedVideos.length === show.episodes,
         null
@@ -767,6 +804,7 @@ async function libraryTitleList(
       episodes: show.episodes,
     })),
   };
+  return { titles, linked: answers };
 }
 
 /**
@@ -815,6 +853,39 @@ export function createApiRouter(
   const router = express.Router();
 
   router.use(express.json());
+
+  /**
+   * A delete's first step: the title's **Linked files** to the Recycle Bin
+   * through `media.trashLinked`, before any row goes. `true` to go on — a
+   * copied title, an `unreachable` one, or every file moved — else the `409`
+   * sentence is answered and every row kept.
+   */
+  async function trashedFirst(
+    kind: 'movie' | 'series',
+    id: string,
+    res: Response
+  ): Promise<boolean> {
+    const linked = await linkedFilesOf(storage, mediaPath, kind, id);
+    if (linked === null || linked.kind === 'unreachable') {
+      return true;
+    }
+    const outcome = await media.trashLinked(linked.paths);
+    switch (outcome.kind) {
+      case 'trashed':
+        return true;
+      case 'unavailable':
+        res.status(409).json({
+          error:
+            'Only the desktop app can move a linked title’s files to the Recycle Bin.',
+        });
+        return false;
+      case 'failed':
+        res.status(409).json({
+          error: `Couldn’t move ${outcome.path} to the Recycle Bin. Close anything playing it and try again.`,
+        });
+        return false;
+    }
+  }
 
   // The whole browse home in one request: the in-progress movies, the favorited
   // ones, plus a row per populated genre, alphabetical, each capped at 15
@@ -934,9 +1005,12 @@ export function createApiRouter(
   // No `409` guard, the movie delete's precedent.
   router.delete(
     '/series/:id',
-    (req: Request<{ id: string }>, res: Response) => {
+    async (req: Request<{ id: string }>, res: Response) => {
       const series = seriesOr404(storage, req.params.id, res);
       if (!series) {
+        return;
+      }
+      if (!(await trashedFirst('series', series.id, res))) {
         return;
       }
 
@@ -1755,9 +1829,12 @@ export function createApiRouter(
   // whole one. **Row first, then bytes, best-effort**: `removeTitleFolder`
   // swallows its own failure, so a video the stream route still has open
   // leaves a stranded folder and this `204`, never a ghost row and a `500`.
-  router.delete('/movies/:id', (req: Request<{ id: string }>, res) => {
+  router.delete('/movies/:id', async (req: Request<{ id: string }>, res) => {
     const movie = movieOr404(storage, req.params.id, res);
     if (!movie) {
+      return;
+    }
+    if (!(await trashedFirst('movie', movie.id, res))) {
       return;
     }
 
@@ -2028,11 +2105,9 @@ export function createApiRouter(
           ? storage.clearMovieDetails(id)
           : storage.clearSeriesDetails(id);
       if (letGo === null) {
-        res
-          .status(404)
-          .json({
-            error: `No ${kind === 'movies' ? 'movie' : 'series'} ${id}`,
-          });
+        res.status(404).json({
+          error: `No ${kind === 'movies' ? 'movie' : 'series'} ${id}`,
+        });
         return;
       }
       for (const path of letGo) {

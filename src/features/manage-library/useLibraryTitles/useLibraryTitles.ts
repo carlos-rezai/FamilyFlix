@@ -23,6 +23,11 @@ export interface LibraryTitlesState {
    * it was. Never rejects.
    */
   deleteTitle: (title: LibraryTitle) => Promise<boolean>;
+  /**
+   * The route's `409` sentence for the last refused delete, `null` until one
+   * is refused; replaced by the next press's own answer.
+   */
+  deleteRefusal: string | null;
 }
 
 /**
@@ -31,6 +36,7 @@ export interface LibraryTitlesState {
  */
 export function useLibraryTitles(): LibraryTitlesState {
   const [titles, setTitles] = useState<LibraryTitles | null>(null);
+  const [deleteRefusal, setDeleteRefusal] = useState<string | null>(null);
 
   useEffect(() => {
     let live = true;
@@ -90,8 +96,10 @@ export function useLibraryTitles(): LibraryTitlesState {
             ? await deleteMovie(title.id)
             : await deleteSeries(title.id);
         if (outcome.kind === 'refused') {
+          setDeleteRefusal(outcome.sentence);
           return false;
         }
+        setDeleteRefusal(null);
         const list = title.kind === 'movie' ? 'movies' : 'series';
         setTitles((held) =>
           held === null
@@ -109,5 +117,5 @@ export function useLibraryTitles(): LibraryTitlesState {
     []
   );
 
-  return { titles, clearDetails, deleteTitle };
+  return { titles, clearDetails, deleteTitle, deleteRefusal };
 }

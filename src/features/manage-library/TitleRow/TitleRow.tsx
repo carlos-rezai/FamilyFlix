@@ -42,8 +42,7 @@ export interface TitleRowProps {
  * **Movie form**'s edit, _Sync with TMDB_ the title's page and then its Sync,
  * **Started on arrival**. After it, ⋯: _Clear details_, disabled while the
  * **Details state** is `none`, since there is nothing to clear; then, below a
- * divider, _Delete…_ as the **Danger row** — offered for a copied title
- * alone until the linked delete ships.
+ * divider, _Delete…_ as the **Danger row**, offered on every row.
  */
 export function TitleRow({ title, onClear, onDelete }: TitleRowProps) {
   const view = titleRowView(title);
@@ -136,16 +135,14 @@ export function TitleRow({ title, onClear, onDelete }: TitleRowProps) {
           >
             Clear details
           </MenuItem>
-          {title.linkedFiles === null ? <MenuDivider /> : null}
-          {title.linkedFiles === null ? (
-            <MenuItem
-              glyph={<BinIcon size={16} />}
-              danger
-              onSelect={() => onDelete(title)}
-            >
-              Delete…
-            </MenuItem>
-          ) : null}
+          <MenuDivider />
+          <MenuItem
+            glyph={<BinIcon size={16} />}
+            danger
+            onSelect={() => onDelete(title)}
+          >
+            Delete…
+          </MenuItem>
         </Menu>
       </Actions>
     </Row>

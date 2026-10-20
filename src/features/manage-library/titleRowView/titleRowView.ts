@@ -61,7 +61,7 @@ export function tabSummary(
   return bare === 0 ? count : `${count} · ${bare} without details`;
 }
 
-/** The **Delete dialog**'s words for a copied title (log 47 Q12). */
+/** The **Delete dialog**'s words (log 47 Q12). */
 export interface DeleteView {
   /** _Delete “Coco”?_ */
   heading: string;
@@ -73,27 +73,54 @@ export interface DeleteView {
   stays: string[];
   /** _Delete movie_ / _Delete series_. */
   confirm: string;
+  /** The linked callout for `folder` and `videos`, else `null`. */
+  callout: string | null;
 }
 
-const COPIED_GOES = [
+const SHARED_GOES = [
   'Its details, poster and artwork',
   'Its watch history, rating and heart',
-  'FamilyFlix’s copy of its video and subtitles',
 ];
 
-/** Pure: a copied **Library title** → the **Delete dialog**'s words. */
+const LINKED_CALLOUT =
+  'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
+
+/** What goes beyond the details and history, by the title's files. */
+function filesGoing(title: LibraryTitle): string[] {
+  switch (title.linkedFiles) {
+    case null:
+      return ['FamilyFlix’s copy of its video and subtitles'];
+    case 'folder':
+      return ['Its folder, to the Recycle Bin'];
+    case 'videos':
+      return ['Its video file(s), to the Recycle Bin'];
+    case 'unreachable':
+      return [];
+  }
+}
+
+/** What stays, by the title's files. */
+function filesStaying(title: LibraryTitle): string[] {
+  if (title.linkedFiles === 'unreachable') {
+    return [`Its files on ${title.path} — they can’t be reached right now`];
+  }
+  return title.linkedFiles === null && title.originalPath !== null
+    ? ['Your original in its library folder — Scan folders would bring it back']
+    : ['Nothing'];
+}
+
+/** Pure: a **Library title** → the **Delete dialog**'s words. */
 export function deleteView(title: LibraryTitle): DeleteView {
   const noun = title.kind === 'movie' ? 'movie' : 'series';
   return {
     heading: `Delete “${title.title}”?`,
     subtitle: `This takes the ${noun} out of FamilyFlix. It can’t be undone from here.`,
-    goes: COPIED_GOES,
-    stays:
-      title.originalPath === null
-        ? ['Nothing']
-        : [
-            'Your original in its library folder — Scan folders would bring it back',
-          ],
+    goes: [...SHARED_GOES, ...filesGoing(title)],
+    stays: filesStaying(title),
     confirm: `Delete ${noun}`,
+    callout:
+      title.linkedFiles === 'folder' || title.linkedFiles === 'videos'
+        ? LINKED_CALLOUT
+        : null,
   };
 }

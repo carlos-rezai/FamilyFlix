@@ -27,7 +27,8 @@ type Tab = 'movies' | 'series';
  * closes it, the row off the list, with _“Coco” was deleted._
  */
 export function ManageLibrary() {
-  const { titles, clearDetails, deleteTitle } = useLibraryTitles();
+  const { titles, clearDetails, deleteTitle, deleteRefusal } =
+    useLibraryTitles();
   const { notify } = useSnackbar();
   const [asked, setAsked] = useState<LibraryTitle | null>(null);
   const [clearing, setClearing] = useState(false);
@@ -130,6 +131,7 @@ export function ManageLibrary() {
         <DeleteTitleDialog
           title={doomed}
           deleting={deleting}
+          refusal={deleteRefusal}
           onConfirm={() => void confirmDelete(doomed)}
           onClose={() => setDoomed(null)}
         />
