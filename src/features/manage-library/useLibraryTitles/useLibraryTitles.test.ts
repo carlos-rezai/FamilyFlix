@@ -199,6 +199,26 @@ describe('useLibraryTitles — clearDetails', () => {
     expect(result.current.titles?.movies).toEqual(LISTED.movies);
   });
 
+  it('holds clearing true for the life of the request, false after', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    const { result } = await loadedHook(
+      () => new Promise<Response>((resolve) => (answer = resolve))
+    );
+    expect(result.current.clearing).toBe(false);
+
+    let pending: Promise<boolean> | undefined;
+    act(() => {
+      pending = result.current.clearDetails(LISTED.movies[1]!);
+    });
+    expect(result.current.clearing).toBe(true);
+
+    await act(async () => {
+      answer(okResponse(CLEARED_MOVIE));
+      await pending;
+    });
+    expect(result.current.clearing).toBe(false);
+  });
+
   it('resolves true once the row is redrawn', async () => {
     const { result } = await loadedHook(() =>
       Promise.resolve(okResponse(CLEARED_MOVIE))
@@ -311,6 +331,26 @@ describe('useLibraryTitles — deleteTitle', () => {
     ).toHaveLength(1);
   });
 
+  it('holds deleting true for the life of the request, false after', async () => {
+    let answer: (response: Response) => void = () => undefined;
+    const { result } = await loadedHook(
+      () => new Promise<Response>((resolve) => (answer = resolve))
+    );
+    expect(result.current.deleting).toBe(false);
+
+    let pending: Promise<boolean> | undefined;
+    act(() => {
+      pending = result.current.deleteTitle(LISTED.movies[1]!);
+    });
+    expect(result.current.deleting).toBe(true);
+
+    await act(async () => {
+      answer(noContentResponse());
+      await pending;
+    });
+    expect(result.current.deleting).toBe(false);
+  });
+
   it('resolves true once the row is gone', async () => {
     const { result } = await loadedHook(() =>
       Promise.resolve(noContentResponse())
@@ -347,13 +387,13 @@ describe('useLibraryTitles — deleteTitle', () => {
  * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
  *
  * A linked delete the route refuses — `409` with one sentence, no shell or a
- * path the shell could not trash — is held as `deleteRefusal`, the
+ * path the shell could not trash — is held as `refusal`, the
  * `useFactoryReset` rule: `null` until a press is refused, the route's own
  * sentence then, and replaced by the next press's own answer — cleared when
  * that press deletes, the newer sentence when it is refused again. The row
  * stays on a refusal.
  */
-describe('useLibraryTitles — deleteRefusal', () => {
+describe('useLibraryTitles — refusal', () => {
   const NO_SHELL =
     'Only the desktop app can move a linked title’s files to the Recycle Bin.';
   const LOCKED =
@@ -364,7 +404,7 @@ describe('useLibraryTitles — deleteRefusal', () => {
       Promise.resolve(noContentResponse())
     );
 
-    expect(result.current.deleteRefusal).toBeNull();
+    expect(result.current.refusal).toBeNull();
   });
 
   it('holds the route’s sentence on a 409, the row kept, resolving false', async () => {
@@ -378,7 +418,7 @@ describe('useLibraryTitles — deleteRefusal', () => {
     });
 
     expect(deleted).toBe(false);
-    expect(result.current.deleteRefusal).toBe(NO_SHELL);
+    expect(result.current.refusal).toBe(NO_SHELL);
     expect(result.current.titles).toEqual(LISTED);
   });
 
@@ -389,11 +429,11 @@ describe('useLibraryTitles — deleteRefusal', () => {
     );
 
     await act(() => result.current.deleteTitle(LISTED.movies[1]!));
-    expect(result.current.deleteRefusal).toBe(LOCKED);
+    expect(result.current.refusal).toBe(LOCKED);
 
     await act(() => result.current.deleteTitle(LISTED.movies[1]!));
 
-    expect(result.current.deleteRefusal).toBeNull();
+    expect(result.current.refusal).toBeNull();
     expect(result.current.titles?.movies.map((row) => row.id)).toEqual([
       'm0',
       'm2',
@@ -409,7 +449,7 @@ describe('useLibraryTitles — deleteRefusal', () => {
     await act(() => result.current.deleteTitle(LISTED.movies[1]!));
     await act(() => result.current.deleteTitle(LISTED.movies[1]!));
 
-    expect(result.current.deleteRefusal).toBe(LOCKED);
+    expect(result.current.refusal).toBe(LOCKED);
   });
 
   it('refuses a show’s delete the same way', async () => {
@@ -419,7 +459,7 @@ describe('useLibraryTitles — deleteRefusal', () => {
 
     await act(() => result.current.deleteTitle(LISTED.series[0]!));
 
-    expect(result.current.deleteRefusal).toBe(NO_SHELL);
+    expect(result.current.refusal).toBe(NO_SHELL);
     expect(result.current.titles?.series).toEqual(LISTED.series);
   });
 });

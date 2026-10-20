@@ -26,16 +26,13 @@ import { Empty, List, Summary, Toolbar } from './ManageLibrary.styles';
  * closes it, the row off the list, with _“Coco” was deleted._
  */
 export function ManageLibrary() {
-  const { titles, clearDetails, deleteTitle, deleteRefusal } =
+  const { titles, clearing, clearDetails, deleting, deleteTitle, refusal } =
     useLibraryTitles();
   const { notify } = useSnackbar();
   const [asked, setAsked] = useState<LibraryTitle | null>(null);
-  const [clearing, setClearing] = useState(false);
 
   async function confirmClear(title: LibraryTitle) {
-    setClearing(true);
     const cleared = await clearDetails(title);
-    setClearing(false);
     if (cleared) {
       setAsked(null);
       notify({
@@ -45,12 +42,9 @@ export function ManageLibrary() {
     }
   }
   const [doomed, setDoomed] = useState<LibraryTitle | null>(null);
-  const [deleting, setDeleting] = useState(false);
 
   async function confirmDelete(title: LibraryTitle) {
-    setDeleting(true);
     const deleted = await deleteTitle(title);
-    setDeleting(false);
     if (deleted) {
       setDoomed(null);
       notify({ variant: 'success', message: `“${title.title}” was deleted.` });
@@ -123,7 +117,7 @@ export function ManageLibrary() {
         <DeleteTitleDialog
           title={doomed}
           deleting={deleting}
-          refusal={deleteRefusal}
+          refusal={refusal}
           onConfirm={() => void confirmDelete(doomed)}
           onClose={() => setDoomed(null)}
         />
