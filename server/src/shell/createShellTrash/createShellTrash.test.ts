@@ -167,9 +167,9 @@ describe('createShellTrash — without a parent port', () => {
   it('answers unavailable, asking nobody', async () => {
     const trash = createShellTrash(undefined);
 
-    await expect(trash.trash(PATHS)).resolves.toEqual<TrashOutcome>({
+    await expect(trash.trash(PATHS)).resolves.toEqual({
       kind: 'unavailable',
-    });
+    } satisfies TrashOutcome);
   });
 });
 

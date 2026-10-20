@@ -78,6 +78,14 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 - [ ] Settings → Storage → _Open folder_: Explorer opens
       `%APPDATA%\FamilyFlix\media`, holding the imported films' folders.
 - [ ] Settings → About reads the version.
+- [ ] The Shell trash: add a Library folder holding a copy of `smoke.mp4` in
+      a folder of its own, _Scan folders_ under **Link**, then delete that
+      title: its folder is in the Recycle Bin, and _Scan folders_ again does
+      not bring it back.
+- [ ] A locked file: link another title the same way, open its video in
+      another program so the file is held, then delete the title: the delete
+      is refused naming the file, the title is still in the library, and the
+      file is still in its Library folder.
 
 ## 6. The slot over the default
 

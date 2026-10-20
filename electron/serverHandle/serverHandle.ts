@@ -20,6 +20,11 @@ export interface ServerHandleWorld {
   launch: ServerLaunch;
   /** An exit after `ready`: a crash of a running app. */
   onExit: (code: number) => void;
+  /**
+   * The **Shell trash**: `trashItems` over Electron's `shell.trashItem`,
+   * answering the path the Recycle Bin would not take, else `null`.
+   */
+  trash: (paths: string[]) => Promise<string | null>;
 }
 
 export interface ServerHandle {
@@ -41,10 +46,22 @@ export function serverHandle({
   fork,
   launch,
   onExit,
+  trash,
 }: ServerHandleWorld): ServerHandle {
   let child: ServerChild | undefined;
   let stopping = false;
   let exited = false;
+
+  /** Run a **Shell trash** request and answer it, unless the server is going. */
+  const answerTrash = async (
+    to: ServerChild,
+    id: string,
+    paths: string[]
+  ): Promise<void> => {
+    const failed = await trash(paths);
+    if (stopping || exited) return;
+    to.postMessage({ type: 'trashed', id, failed } satisfies ShellCommand);
+  };
 
   return {
     shutdown(ms) {
@@ -79,6 +96,10 @@ export function serverHandle({
         );
 
         forked.on('message', (message: ServerMessage) => {
+          if (message.type === 'trash') {
+            void answerTrash(forked, message.id, message.paths);
+            return;
+          }
           if (settled) return;
           if (message.type === 'fatal') {
             fail(new Error(message.message));
