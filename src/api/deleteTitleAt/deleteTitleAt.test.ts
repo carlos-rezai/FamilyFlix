@@ -15,7 +15,7 @@ import {
  * on a `409`; and it rejects otherwise.
  */
 const LOCKED =
-  'Couldn’t move E:\Movies\Coco (2017) to the Recycle Bin. Close anything playing it and try again.';
+  'Couldn’t move E:\\Movies\\Coco (2017) to the Recycle Bin. Close anything playing it and try again.';
 
 const ENDPOINT = '/api/movies/m1';
 
