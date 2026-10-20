@@ -1,7 +1,7 @@
 import {
   deleteTitleAt,
   type DeleteOutcome,
-} from '@/api/deleteMovie/deleteMovie';
+} from '@/api/deleteTitleAt/deleteTitleAt';
 
 /**
  * Deletes one series — `DELETE /api/series/:id`, `deleteMovie`'s promise over
