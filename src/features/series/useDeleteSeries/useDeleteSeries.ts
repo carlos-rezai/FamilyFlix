@@ -11,6 +11,12 @@ export interface DeleteSeries {
   /** True for the life of the request, false before and after. */
   deleting: boolean;
   /**
+   * The route's `409` sentence, `null` until a press is refused; held until
+   * the next press is answered — cleared when it deletes, replaced when it is
+   * refused again. Nothing moves on a refusal.
+   */
+  refusal: string | null;
+  /**
    * Sends the delete and, once the series is gone, leaves its page. Rejects
    * with the request's own error when the server refused, nothing moved.
    */
@@ -25,6 +31,7 @@ export interface DeleteSeries {
 export function useDeleteSeries(seriesId: string): DeleteSeries {
   const goBack = useGoBack(LANDING);
   const [deleting, setDeleting] = useState(false);
+  const [refusal, setRefusal] = useState<string | null>(null);
 
   const deleteSeries = useCallback(async () => {
     setDeleting(true);
@@ -35,10 +42,12 @@ export function useDeleteSeries(seriesId: string): DeleteSeries {
       setDeleting(false);
     }
     if (outcome.kind === 'refused') {
+      setRefusal(outcome.sentence);
       throw new Error(outcome.sentence);
     }
+    setRefusal(null);
     goBack();
   }, [seriesId, goBack]);
 
-  return { deleting, deleteSeries };
+  return { deleting, refusal, deleteSeries };
 }

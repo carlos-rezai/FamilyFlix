@@ -38,6 +38,7 @@ function aMovie(over: Partial<MovieDetailModel> = {}): MovieDetailModel {
     g1: '#000',
     g2: '#111',
     topTag: null,
+    linked: false,
     ...over,
   };
 }

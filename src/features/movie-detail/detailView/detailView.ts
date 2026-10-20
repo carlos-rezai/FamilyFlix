@@ -135,5 +135,6 @@ export function detailView(
     g1,
     g2,
     topTag: toTopTag(movie, hasPoster),
+    linked: (movie.videoFolderId ?? null) !== null,
   };
 }

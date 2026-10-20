@@ -111,6 +111,8 @@ export interface MovieDetailModel {
   g2: string;
   /** The uppercase caption over the gradient; `null` when there is a poster. */
   topTag: string | null;
+  /** Its video is a **Linked video** — what the Delete dialog tells. */
+  linked: boolean;
 }
 
 /**
@@ -227,6 +229,8 @@ export interface SeriesPageModel {
   topTag: string | null;
   /** The series' heart. */
   isFavorite: boolean;
+  /** Any episode plays a **Linked video** — what the Delete dialog tells. */
+  linked: boolean;
   /** The Seasons grid, one card per season in order. */
   seasons: SeasonCardSeason[];
 }

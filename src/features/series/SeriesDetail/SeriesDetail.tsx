@@ -112,6 +112,7 @@ export function SeriesDetail() {
         seriesId={series.id}
         title={series.title}
         episodeCount={series.episodeCount}
+        linked={series.linked}
       />
 
       <Content>

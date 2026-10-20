@@ -1,13 +1,15 @@
 import { Modal } from '@/components';
 import { Button } from '@/primitives';
 import { useDeleteMovie } from '../useDeleteMovie/useDeleteMovie';
-import { Copy, Actions } from './DeleteMovieDialog.styles';
+import { Copy, Actions, Refusal } from './DeleteMovieDialog.styles';
 
 export interface DeleteMovieDialogProps {
   /** The movie the confirm deletes. */
   movieId: string;
   /** Its title, for the heading — so the dialog names the movie on the page. */
   title: string;
+  /** Whether its video is a **Linked video**: one sentence more, the Recycle Bin's. */
+  linked: boolean;
   /** Whether the dialog is on screen. Closed, it renders nothing at all. */
   open: boolean;
   /** What Cancel and the ✕ ask for. */
@@ -19,17 +21,19 @@ export interface DeleteMovieDialogProps {
  * hook. The copy is the prototype's word for word (`feat.DeleteMovieDialog`),
  * and the only thing that varies is which movie it names.
  *
- * The confirm swallows a refused delete: the prototype designs no error state
- * on this screen, so a failure leaves the dialog where it is with nothing
- * changed — the form's precedent — rather than inventing a surface for it.
+ * A linked film adds one sentence, _Its video goes to the Recycle Bin._ A
+ * `409`'s sentence is drawn in danger ink above the buttons, the overview's
+ * refusal line, until the next press is answered; any other failure leaves
+ * the dialog where it is with nothing changed.
  */
 export function DeleteMovieDialog({
   movieId,
   title,
+  linked,
   open,
   onClose,
 }: DeleteMovieDialogProps) {
-  const { deleting, deleteMovie } = useDeleteMovie(movieId);
+  const { deleting, refusal, deleteMovie } = useDeleteMovie(movieId);
 
   return (
     <Modal
@@ -42,7 +46,9 @@ export function DeleteMovieDialog({
       <Copy>
         The movie leaves your library, and the video, poster and subtitles
         FamilyFlix copied are deleted. The original files are not touched.
+        {linked ? ' Its video goes to the Recycle Bin.' : null}
       </Copy>
+      {refusal === null ? null : <Refusal>{refusal}</Refusal>}
       <Actions>
         {/* The label is the whole of the in-flight state — the form's
           "Adding…" precedent: it says the work started, and the disabled

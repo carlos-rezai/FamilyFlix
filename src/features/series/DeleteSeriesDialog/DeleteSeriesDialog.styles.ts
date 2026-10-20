@@ -16,3 +16,13 @@ export const Actions = styled.div`
   gap: 12px;
   margin-top: 4px;
 `;
+
+/**
+ * The route's `409` sentence, one 13px line in danger ink above the buttons —
+ * the overview's Delete dialog's refusal line.
+ */
+export const Refusal = styled.div`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.danger};
+`;
