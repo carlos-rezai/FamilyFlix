@@ -1,5 +1,6 @@
 import type { PlaybackCapabilities, StorageReport } from '@/types';
 import { postValue } from '@/api/postValue/postValue';
+import { refusalSentence } from '@/api/refusalSentence/refusalSentence';
 
 const CAPABILITIES_ENDPOINT = '/api/playback/capabilities';
 
@@ -65,17 +66,6 @@ const COMPONENT_ENDPOINT = '/api/playback/component';
 const REFUSAL_STATUSES = [400, 404, 409, 422];
 
 /**
- * What a refusing route answers with, when it says why — the **Component
- * route**'s and the reset's.
- */
-function namesAReason(body: unknown): body is { error: string } {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-  return typeof (body as { error?: unknown }).error === 'string';
-}
-
-/**
  * What to reject a refused **Component route** with: the route's own sentence
  * when it named one on a status that carries one, and a plain `Error`
  * otherwise — which is the hook's cue to substitute its own fixed line.
@@ -88,9 +78,9 @@ async function componentRefusal(
   what: string
 ): Promise<Error> {
   if (REFUSAL_STATUSES.includes(response.status)) {
-    const body: unknown = await response.json().catch(() => null);
-    if (namesAReason(body)) {
-      return new ComponentRefusedError(body.error);
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return new ComponentRefusedError(sentence);
     }
   }
   return new Error(`${what} failed: ${response.status}`);
@@ -241,9 +231,9 @@ export async function factoryReset(): Promise<FactoryResetOutcome> {
     return { kind: 'reset' };
   }
   if (response.status === 409) {
-    const body: unknown = await response.json().catch(() => null);
-    if (namesAReason(body)) {
-      return { kind: 'refused', sentence: body.error };
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return { kind: 'refused', sentence };
     }
   }
   throw new Error(`POST ${RESET_ENDPOINT} failed: ${response.status}`);

@@ -1,15 +1,9 @@
+import { refusalSentence } from '@/api/refusalSentence/refusalSentence';
+
 /** What a title's delete came to: gone, or refused in the route's sentence. */
 export type DeleteOutcome =
   | { kind: 'deleted' }
   | { kind: 'refused'; sentence: string };
-
-/** Whether a refusal's body names its reason. */
-function namesAReason(body: unknown): body is { error: string } {
-  if (typeof body !== 'object' || body === null) {
-    return false;
-  }
-  return typeof (body as { error?: unknown }).error === 'string';
-}
 
 /**
  * `DELETE` one title's route, no body — `factoryReset`'s shape. A `204` — any
@@ -25,9 +19,9 @@ export async function deleteTitleAt(endpoint: string): Promise<DeleteOutcome> {
     return { kind: 'deleted' };
   }
   if (response.status === 409) {
-    const body: unknown = await response.json().catch(() => null);
-    if (namesAReason(body)) {
-      return { kind: 'refused', sentence: body.error };
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return { kind: 'refused', sentence };
     }
   }
   throw new Error(`DELETE ${endpoint} failed: ${response.status}`);

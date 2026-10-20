@@ -12,6 +12,7 @@ import {
   type SheetChoices,
   type StartExport,
 } from '@/types';
+import { refusalSentence } from '@/api/refusalSentence/refusalSentence';
 
 /**
  * A start the route refused before any run existed — `400 { error, field }`
@@ -327,20 +328,6 @@ export async function fetchLibraryFolders(): Promise<LibraryFolder[]> {
 export type AddFolderOutcome =
   | { kind: 'added'; folder: LibraryFolder }
   | { kind: 'refused'; sentence: string };
-
-/**
- * A refusal body's one sentence — the `error` of `{ error }` — or `null` for
- * a body that is not one, so the caller can treat it as any other failure.
- * The folder add's refusals read through it.
- */
-async function refusalSentence(response: Response): Promise<string | null> {
-  const body: unknown = await response.json().catch(() => null);
-  const error =
-    typeof body === 'object' && body !== null
-      ? (body as { error?: unknown }).error
-      : undefined;
-  return typeof error === 'string' ? error : null;
-}
 
 /**
  * List one folder. A `400` or `409` resolves with the route's own sentence,
