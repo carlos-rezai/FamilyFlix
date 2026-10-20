@@ -26,7 +26,12 @@ let child: FakeServerChild;
 let onExit: ReturnType<typeof vi.fn<(code: number) => void>>;
 
 const handle = () =>
-  serverHandle({ fork: () => child, launch: LAUNCH, onExit });
+  serverHandle({
+    fork: () => child,
+    launch: LAUNCH,
+    onExit,
+    trash: async () => null,
+  });
 
 beforeEach(() => {
   child = new FakeServerChild();
@@ -152,5 +157,146 @@ describe('serverHandle — shutdown', () => {
     await stopping;
 
     expect(onExit).not.toHaveBeenCalled();
+  });
+});
+
+// 47 — Manage library, Phase 6: "the Shell trash" (issue #412). The
+// **Shell handshake** grows one exchange: the server posts
+// `{ type: 'trash', id, paths }`, and main answers each with
+// `{ type: 'trashed', id, failed }` — the world's `trash`, `trashItems` over
+// Electron's `shell.trashItem` in `main.ts`, answering the path the Recycle
+// Bin would not take, else `null`. A shutdown with a request in flight still
+// completes.
+
+/** A trash the test answers by hand: each call held until released. */
+function heldTrash() {
+  const calls: { paths: string[]; answer: (failed: string | null) => void }[] =
+    [];
+  const trash = vi.fn(
+    (paths: string[]) =>
+      new Promise<string | null>((resolve) => {
+        calls.push({ paths, answer: resolve });
+      })
+  );
+  return { trash, calls };
+}
+
+async function runningWith(trash: (paths: string[]) => Promise<string | null>) {
+  const held = serverHandle({
+    fork: () => child,
+    launch: LAUNCH,
+    onExit,
+    trash,
+  });
+  const started = held.start();
+  child.post({ type: 'ready', port: 3001 });
+  await started;
+  return held;
+}
+
+const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+describe('serverHandle — the Shell trash', () => {
+  it('hands a trash request’s paths to the world’s trash', async () => {
+    const { trash, calls } = heldTrash();
+    await runningWith(trash);
+
+    child.post({
+      type: 'trash',
+      id: 'req-1',
+      paths: ['D:\\Movies\\Coco (2017)'],
+    });
+
+    expect(calls.map(({ paths }) => paths)).toEqual([
+      ['D:\\Movies\\Coco (2017)'],
+    ]);
+  });
+
+  it('answers a trash request with a trashed command carrying its id', async () => {
+    const { trash, calls } = heldTrash();
+    await runningWith(trash);
+
+    child.post({ type: 'trash', id: 'req-1', paths: ['D:\\Movies\\Coco'] });
+    calls[0].answer(null);
+    await flush();
+
+    expect(child.postMessage).toHaveBeenCalledWith({
+      type: 'trashed',
+      id: 'req-1',
+      failed: null,
+    });
+  });
+
+  it('carries the path the Recycle Bin would not take as failed', async () => {
+    const { trash, calls } = heldTrash();
+    await runningWith(trash);
+
+    child.post({
+      type: 'trash',
+      id: 'req-7',
+      paths: ['D:\\Shows\\E01.mkv', 'D:\\Shows\\E02.mkv'],
+    });
+    calls[0].answer('D:\\Shows\\E02.mkv');
+    await flush();
+
+    expect(child.postMessage).toHaveBeenCalledWith({
+      type: 'trashed',
+      id: 'req-7',
+      failed: 'D:\\Shows\\E02.mkv',
+    });
+  });
+
+  it('answers each of two requests by its own id, in the order they finish', async () => {
+    const { trash, calls } = heldTrash();
+    await runningWith(trash);
+
+    child.post({ type: 'trash', id: 'first', paths: ['D:\\A'] });
+    child.post({ type: 'trash', id: 'second', paths: ['D:\\B'] });
+    calls[1].answer(null);
+    await flush();
+    calls[0].answer('D:\\A');
+    await flush();
+
+    const answered = child.postMessage.mock.calls.map(([message]) => message);
+    expect(answered).toEqual([
+      { type: 'trashed', id: 'second', failed: null },
+      { type: 'trashed', id: 'first', failed: 'D:\\A' },
+    ]);
+  });
+
+  it('is not taken for ready while the server is starting', async () => {
+    const { trash } = heldTrash();
+    const held = serverHandle({
+      fork: () => child,
+      launch: LAUNCH,
+      onExit,
+      trash,
+    });
+    const started = held.start();
+
+    child.post({ type: 'trash', id: 'early', paths: ['D:\\A'] });
+    child.post({ type: 'ready', port: 41720 });
+
+    await expect(started).resolves.toEqual({ port: 41720 });
+  });
+
+  it('completes a shutdown with a request still in flight', async () => {
+    const { trash, calls } = heldTrash();
+    const held = await runningWith(trash);
+    child.post({ type: 'trash', id: 'req-1', paths: ['D:\\Movies\\Coco'] });
+
+    const stopping = held.shutdown(5_000);
+    child.exit(0);
+
+    await expect(stopping).resolves.toBeUndefined();
+    expect(child.postMessage).toHaveBeenCalledWith({ type: 'shutdown' });
+    expect(child.kill).not.toHaveBeenCalled();
+    expect(onExit).not.toHaveBeenCalled();
+
+    calls[0].answer(null);
+    await flush();
+    expect(child.postMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'trashed' })
+    );
   });
 });
