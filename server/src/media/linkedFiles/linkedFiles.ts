@@ -1,5 +1,4 @@
-import { isAbsolute, relative, resolve } from 'node:path';
-
+import { folderOverlap } from '../../library/folders/folderOverlap/folderOverlap';
 import type { LinkedFiles } from '@/types';
 
 /** What {@link linkedFiles} reads off one title, every path absolute. */
@@ -22,13 +21,10 @@ export interface LinkedFilesAnswer {
   paths: string[];
 }
 
-const fold = (path: string): string =>
-  process.platform === 'win32' ? resolve(path).toLowerCase() : resolve(path);
-
-/** Whether `path` is `folder` or lies under it, by whole segments. */
+/** Whether `path` is `folder` or lies under it — `folderOverlap`'s reading. */
 function within(folder: string, path: string): boolean {
-  const between = relative(fold(folder), fold(path));
-  return between === '' || (!between.startsWith('..') && !isAbsolute(between));
+  const overlap = folderOverlap(path, [folder])?.overlap;
+  return overlap === 'same' || overlap === 'inside';
 }
 
 /**
@@ -52,7 +48,7 @@ export function linkedFiles({
   const wholeFolder =
     allLinked &&
     sourceFolder !== null &&
-    fold(sourceFolder) !== fold(libraryFolder.path) &&
+    folderOverlap(sourceFolder, [libraryFolder.path])?.overlap !== 'same' &&
     videos.every((video) => within(sourceFolder, video)) &&
     !others.some((other) => within(sourceFolder, other));
   return wholeFolder && sourceFolder !== null
