@@ -492,14 +492,13 @@ describe('PlaybackSection — choosing a language', () => {
 
 /**
  * 46 — Audio tracks, Phase 3 (issue #401): the Audio block, from the revised
- * `page.SettingsPage.dc.html`. Under _Subtitles_, a divider, then **Audio** with
- * its lede, then one row — _Preferred audio language_ over `FilterDropdown`
- * with the pool's seven names. While the settings read is `null` the row draws
+ * `page.SettingsPage.dc.html`. Under _Subtitles_, a divider, then one row —
+ * _Preferred audio language_ over `FilterDropdown` with the pool's seven
+ * names, no item title or lede over it. While the settings read is `null` the row draws
  * its title and lede and leaves only the pill out, as the subtitle row does. A choice is shown at once and posted to
  * `POST /api/settings/audio-language`; a refused save puts it back. No audio
  * on/off toggle is drawn.
  */
-const AUDIO_LEDE = 'Which language a movie plays in when it has more than one.';
 const AUDIO_DESC = 'Which track to play when a movie has several.';
 
 /** The _Preferred audio language_ pill, by the value it shows — or `null`. */
@@ -525,15 +524,16 @@ function postedAudioValues(): unknown[] {
 }
 
 describe('PlaybackSection — the Audio block', () => {
-  it('titles the block Audio, in 16px at weight 600, with its lede', async () => {
+  it('draws no Audio title or lede over the row', async () => {
     renderSection();
     await audioPillLanded('English');
 
-    const title = screen.getByText('Audio');
-    const style = getComputedStyle(title);
-    expect(style.fontSize).toBe('16px');
-    expect(style.fontWeight).toBe('600');
-    expect(comesBefore(title, screen.getByText(AUDIO_LEDE))).toBe(true);
+    expect(screen.queryByText('Audio')).toBeNull();
+    expect(
+      screen.queryByText(
+        'Which language a movie plays in when it has more than one.'
+      )
+    ).toBeNull();
   });
 
   it('names the row Preferred audio language, in 15px at weight 500, with its description', async () => {
@@ -551,16 +551,12 @@ describe('PlaybackSection — the Audio block', () => {
     const { container } = renderSection();
     await audioPillLanded('English');
 
-    expect(
-      comesBefore(screen.getByText(LANGUAGE_DESC), screen.getByText('Audio'))
-    ).toBe(true);
-    expect(
-      comesBefore(screen.getByText(AUDIO_LEDE), screen.getByText(AUDIO_DESC))
-    ).toBe(true);
+    const audioTitle = screen.getByText('Preferred audio language');
+    expect(comesBefore(screen.getByText(LANGUAGE_DESC), audioTitle)).toBe(true);
     const divider = rules(container).find(
       (candidate) =>
         comesBefore(screen.getByText(LANGUAGE_DESC), candidate) &&
-        comesBefore(candidate, screen.getByText('Audio'))
+        comesBefore(candidate, audioTitle)
     );
     expect(divider).toBeDefined();
   });

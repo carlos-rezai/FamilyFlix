@@ -38,9 +38,9 @@ import {
  * auto-on staying on the roadmap exactly as log 10 decided; a rule; and
  * _Preferred subtitle language_ with `FilterDropdown` on the right, the seven
  * names of the **Language pool** as its options and the fetched value as its
- * value. Then a divider and _Audio_ with its lede over _Preferred audio
- * language_, the same dropdown over the **Preferred audio language**; no audio
- * on/off toggle.
+ * value. Then a divider and _Preferred audio language_, the same dropdown over
+ * the **Preferred audio language** — a row alone, no item title or lede over
+ * it; no audio on/off toggle.
  *
  * The section owns `useSettings`, and takes only the read of
  * `useCapabilities` — the writes are the Codecs page's. Each pill is not drawn
@@ -122,13 +122,6 @@ export function PlaybackSection() {
         </Row>
 
         <Divider />
-
-        <ItemHeader>
-          <ItemTitle>Audio</ItemTitle>
-          <ItemDesc>
-            Which language a movie plays in when it has more than one.
-          </ItemDesc>
-        </ItemHeader>
 
         <Row $last>
           <div>
