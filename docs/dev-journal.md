@@ -11,6 +11,128 @@ Newest entry first.
 
 ---
 
+## 2026-10-20 — Manage library — the refactor (issue 414)
+
+Twenty-three commits against
+`docs/refactor-plans/47-manage-library-refactor.md`, one per plan commit, the
+initiative's closing round. **10361 tests pass across 616 files**, against
+10332 across 612 at the end of the build (`6a6e0a0`): four new suites
+(`libraryTitleList`, `deleteTitleAt`, `refusalSentence`, `GoesAndStays`), the
+view's `emptyLine`, `clearView` and `titlePaths` rows, the hook's two
+in-flight cases and a per-title refusal case, and the page's two refusal
+cases. `tsc -b --force` is clean. `eslint src server electron` reports one
+error and 148 warnings, against one and 139: the two `no-useless-escape`
+warnings are gone, and the eleven added are non-null assertions in this
+round's new cases, the suites' prevailing style.
+
+### What shipped
+
+Log 47's overview, the half of step 30 the grill kept (Q1): the prototype
+(407), then RED and GREEN each, 408 to 413. The **Manage library page** at
+`/settings/library` lists every title off one `GET /api/library-titles`, each
+**Title row** with its path, _Linked_ / _Copied_, its files and its **Details
+state**. _Edit ▾_ opens the Movie form's edit or the title's Sync **Started on
+arrival**. ⋯ offers **Clear details**, on two `clear-details` routes, and
+_Delete…_. The one Delete, on every surface, moves a title's **Linked files**
+to the Recycle Bin through the **Shell trash** before any row goes, or answers
+`409` in one sentence. No migration.
+
+### What each group changed
+
+- **Group 1, the list read, out of the route** (`e30820e`–`0710da2`).
+  `linkedFiles` reads "within a folder" through `folderOverlap`. The route's
+  three private readers became `media/libraryTitleList`, `exportSummary`'s
+  shape: `{ titles, linkedFilesOf(kind, id) }`, read by the list, the delete's
+  `trashedFirst` and the clear's echo. The row's path is a named
+  `titlePath`, a sequence of early answers, and `others` reads through a
+  `Set`. Both clears drop empty paths through one `heldPaths`.
+- **Group 2, the Shell trash** (`75958ba`, `d604b9c`). `media`'s `NO_TRASH`
+  is the one "no shell", and `createShellTrash` answers it with no parent
+  port. The folder is `shell/shellTrash/`, its files `shellTrash.ts` and its
+  suite, `componentSlot/`'s shape.
+- **Group 3, the client wire** (`243eb42`–`30502db`). `LibraryMovieTitle` and
+  `LibrarySeriesTitle` are named once in `types/`. `deleteTitleAt` has its own
+  folder in `src/api/`, with the outcome rows. `refusalSentence` — the
+  import-export `api/`'s reader, moved up — is the one reader of a route's
+  refusal for the deletes, the settings `api/` and the folder add, and both
+  `namesAReason` copies went.
+- **Group 4, the page** (`1aff4fc`–`3a8761b`). `useQueryParamWriter` is in
+  `hooks/`, and the page writes `tab` through it. `titleRowView/` is
+  `libraryTitleView/`, and it answers every word (`emptyLine`, `clearView`)
+  and every path (`titlePaths`) the page draws. The page's tab is a kind,
+  read and written in the URL's words once each. `useLibraryTitles` owns
+  `clearing` and `deleting`, and `clearDetails` writes through one
+  `replaced`. The one visible change, a `fix:`: a refused delete's sentence
+  is held against its title, so another title's dialog draws none.
+- **Group 5, the dialogs** (`2ab3524`, `fec1379`). The path well and the
+  buttons are `titleDialog.styles.ts`, flat. **What goes** / **What stays** is
+  one feature molecule, `GoesAndStays`, which holds the two columns' styles
+  itself, since it alone draws them. `ClearDialog.styles.ts` went:
+  `ClearDialog` draws nothing of its own now, `BackToTop`'s precedent.
+  `DeleteTitleDialog.refusal`, `EditMenu.linked` and `SeriesEditMenu.linked`
+  are required, and the two views read `videoFolderId !== null`.
+- **Group 6, the tests** (`edc42f6`). The delete suite's path doubles its
+  backslashes.
+- **Group 7, the docs** (`d7161dd`, `fecbe7c`, `2357b0c`, and this commit).
+  The promoted page prototype draws the linked Delete as it shipped: _Delete
+  movie_ / _Delete series_, the Recycle Bin words, the callout and the
+  refusal line. The series page draws the linked sentence and the refusal
+  line. `COMPONENT-SPEC.md` has rows for the five units, `Menu`'s `hint`,
+  `disabled` and `MenuDivider`, and `DeleteSeriesDialog`'s `linked`.
+  CLAUDE.md, the README and the glossary know the initiative shipped: step 30
+  is ✅ and step 31, **Add a show folder**, is 🔜.
+
+### Where this round left the plan
+
+- **`refusalFor(title)`, not `refusal`.** Plan commit 16 holds a refusal
+  against its title. A single sentence cannot say whose it is, so the hook
+  answers `refusalFor(title)`, and the page asks it for the open dialog's
+  title. The plan's state shape named `refusal`.
+- **`GoesAndStays.styles.ts` holds the columns.** The plan put the columns in
+  `titleDialog.styles.ts` and gave the molecule a styles file as well. The
+  columns went with the one unit that draws them.
+- **The movie page's prototype draws no Delete dialog.** Log 12 built that
+  dialog without a handoff file. Its linked sentence and refusal line are
+  written as a comment beside the Danger row in `page.MoviePage.dc.html`,
+  not drawn.
+- **`libraryTitleList.test.ts` uses the route suites' harness**: a sandboxed
+  Library folder filled per case, not the importer's fixtures.
+- **Not every commit had a full run of its own.** The full suite ran over
+  commits 1–2 together, 3–4 together, after 9, after 19 and at the end, green
+  each time. Every other commit was checked with the suites it touches and
+  `tsc -b --force`.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the detail dialogs' paragraph beside
+the linked sentence, "already gone" checked on both sides of the Shell trash,
+a delete reading the whole library, the five `Refusal` lines and the danger
+tint, `detailsStateSql`'s `filled` beside `fullDetails`, the suites'
+non-null assertions, and everything log 47 put out of scope.
+`handoff-manage-library/` stays as received.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **The detail dialogs' words for a linked title**: _The original files are
+  not touched._ followed by _Its video goes to the Recycle Bin._ is a copy
+  decision for a grill.
+- **The movie page's Delete dialog in the prototype**: it should be drawn, as
+  the series page's is.
+- **A `Refusal` molecule and a `dangerSoft` token**, each across the features
+  that spell them.
+- **From earlier entries**: the sandbox teardown flake, and the lint error in
+  `EnrichmentReview.test.tsx`. `useQueryParamWriter` to `hooks/` is closed.
+
+### The initiative
+
+**Manage library is done**: the prototype revision (407), the six slices
+(408–413) and this round (414). Issue 406 is closed with it. _Add a show
+folder_ is step 31.
+
+---
+
 ## 2026-10-18 — Audio tracks — the refactor (issue 405)
 
 Fifteen commits against `docs/refactor-plans/46-audio-tracks-refactor.md`, one
