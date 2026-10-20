@@ -216,7 +216,7 @@ export interface Trash {
 }
 
 /** The Trash with no shell behind it — standalone and in a browser. */
-const NO_TRASH: Trash = {
+export const NO_TRASH: Trash = {
   trash: () => Promise.resolve({ kind: 'unavailable' }),
 };
 

@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import type { Trash, TrashOutcome } from '../../media/createMedia/createMedia';
+import {
+  NO_TRASH,
+  type Trash,
+  type TrashOutcome,
+} from '../../media/createMedia/createMedia';
 import type { ShellParentPort } from '../shellHandshake/shellHandshake';
 
 /**
@@ -8,14 +12,14 @@ import type { ShellParentPort } from '../shellHandshake/shellHandshake';
  * `{ type: 'trash', id, paths }` to main and resolves on the `trashed`
  * command carrying the same id — `trashed`, or `failed` with the path the
  * Recycle Bin would not take. Answers are matched by id, each request
- * settled once. With no parent port it is inert and answers `unavailable`,
- * `shellHandshake`'s precedent.
+ * settled once. With no parent port it is `media`'s `NO_TRASH`, inert and
+ * answering `unavailable`, `shellHandshake`'s precedent.
  */
 export function createShellTrash(
   parentPort: ShellParentPort | undefined
 ): Trash {
   if (!parentPort) {
-    return { trash: () => Promise.resolve({ kind: 'unavailable' }) };
+    return NO_TRASH;
   }
 
   const pending = new Map<string, (outcome: TrashOutcome) => void>();
