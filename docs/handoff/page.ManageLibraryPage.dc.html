@@ -857,10 +857,25 @@
                       >!</span
                     >
                     <span
-                      >This is a linked folder. It’s deleted from where it lives
-                      on disk, not just unlinked — and it won’t be in the
-                      Recycle Bin.</span
+                      >This is a linked title. Its files go from your library
+                      folder to the Recycle Bin, not just out of
+                      FamilyFlix.</span
                     >
+                  </div>
+                </sc-if>
+
+                <sc-if
+                  value="{{ modal.hasRefusal }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-danger);
+                    "
+                  >
+                    {{ modal.refusal }}
                   </div>
                 </sc-if>
 
@@ -942,16 +957,16 @@
         state = {
           tab: 'movies', openMenu: null, modal: null, snack: null,
           items: [
-            { id:'m1', kind:'movies', title:'Coco', year:2017, path:'E:\\Movies\\Coco (2017)', source:'linked', files:3, meta:'synced' },
+            { id:'m1', kind:'movies', title:'Coco', year:2017, path:'E:\\Movies\\Coco (2017)', source:'linked', linkedFiles:'folder', files:3, meta:'synced' },
             { id:'m2', kind:'movies', title:'Paddington 2', year:2017, path:'C:\\FamilyFlix\\Media\\Paddington 2 (2017)', source:'copied', original:'E:\\Movies\\Paddington 2 (2017)', files:2, meta:'synced' },
-            { id:'m3', kind:'movies', title:'My Neighbor Totoro', year:1988, path:'E:\\Movies\\Tonari no Totoro (1988)', source:'linked', files:4, meta:'own' },
-            { id:'m4', kind:'movies', title:'The Iron Giant', year:1999, path:'E:\\Movies\\The Iron Giant (1999)', source:'linked', files:1, meta:'none' },
+            { id:'m3', kind:'movies', title:'My Neighbor Totoro', year:1988, path:'E:\\Movies\\Tonari no Totoro (1988)', source:'linked', linkedFiles:'folder', refuses:true, files:4, meta:'own' },
+            { id:'m4', kind:'movies', title:'The Iron Giant', year:1999, path:'E:\\Movies\\The Iron Giant (1999)', source:'linked', linkedFiles:'videos', files:1, meta:'none' },
             { id:'m5', kind:'movies', title:'Inside Out', year:2015, path:'C:\\FamilyFlix\\Media\\Inside Out (2015)', source:'copied', files:2, meta:'synced' },
-            { id:'m6', kind:'movies', title:'Spirited Away', year:2001, path:'F:\\Movies\\Spirited Away (2001)', source:'linked', files:3, meta:'synced', unreachable:true },
-            { id:'s1', kind:'series', title:'Bluey', year:2018, path:'E:\\Series\\Bluey', source:'linked', seasons:3, episodes:151, meta:'synced' },
+            { id:'m6', kind:'movies', title:'Spirited Away', year:2001, path:'F:\\Movies\\Spirited Away (2001)', source:'linked', linkedFiles:'unreachable', files:3, meta:'synced', unreachable:true },
+            { id:'s1', kind:'series', title:'Bluey', year:2018, path:'E:\\Series\\Bluey', source:'linked', linkedFiles:'folder', seasons:3, episodes:151, meta:'synced' },
             { id:'s2', kind:'series', title:'Avatar: The Last Airbender', year:2005, path:'C:\\FamilyFlix\\Media\\Avatar The Last Airbender', source:'copied', seasons:3, episodes:61, meta:'synced' },
-            { id:'s3', kind:'series', title:'Planet Earth II', year:2016, path:'E:\\Series\\Planet Earth II', source:'linked', seasons:1, episodes:6, meta:'own' },
-            { id:'s4', kind:'series', title:'Hilda', year:2018, path:'E:\\Series\\Hilda', source:'linked', seasons:2, episodes:21, meta:'none' }
+            { id:'s3', kind:'series', title:'Planet Earth II', year:2016, path:'E:\\Series\\Planet Earth II', source:'linked', linkedFiles:'folder', seasons:1, episodes:6, meta:'own' },
+            { id:'s4', kind:'series', title:'Hilda', year:2018, path:'E:\\Series\\Hilda', source:'linked', linkedFiles:'videos', seasons:2, episodes:21, meta:'none' }
           ]
         };
 
@@ -975,17 +990,20 @@
         confirm(){
           const m = this.state.modal; if (!m || m.busy) return;
           const it = this.state.items.find(x=>x.id===m.id); if (!it) return this.setState({ modal:null });
-          if (m.kind==='delete' && it.source==='copied') {
-            // Log 47 Q12: Deleting… in flight, then the row leaves the list,
-            // the counts and the summary with it, and the success notice.
+          if (m.kind==='delete') {
+            // Log 47 Q12, Q16: Deleting… in flight, then the row leaves the
+            // list with the success notice — a linked title's files to the
+            // Recycle Bin first. A refusal stays in the dialog, above the
+            // buttons, until the next press is answered.
             this.setState({ modal:{ ...m, busy:true } });
             setTimeout(()=>{
+              if (it.refuses && !m.refusal) {
+                this.setState({ modal:{ ...m, busy:false, refusal:'Couldn’t move '+it.path+' to the Recycle Bin. Close anything playing it and try again.' } });
+                return;
+              }
               this.setState(s=>({ modal:null, items:s.items.filter(x=>x.id!==it.id) }));
               this.toast('“'+it.title+'” was deleted.', 'success');
             }, 700);
-          } else if (m.kind==='delete') {
-            this.setState(s=>({ modal:null, items:s.items.filter(x=>x.id!==it.id) }));
-            this.toast('“'+it.title+'” and its folder were deleted.', 'danger');
           } else {
             // Log 47 Q13: Clearing… in flight, then the row redrawn from the
             // echo and the success notice.
@@ -1042,17 +1060,17 @@
             const isDelete = s.modal.kind==='delete';
             const copied = mi.source==='copied';
             const noun = mi.kind==='movies' ? 'movie' : 'series';
-            const fileNoun = mi.kind==='movies' ? this.filesLabel(mi) : mi.episodes+' episode files';
             modal = {
-              isDelete, isClear:!isDelete, path:mi.path, warnLinked: isDelete && mi.source==='linked',
+              isDelete, isClear:!isDelete, path:mi.path, warnLinked: isDelete && (mi.linkedFiles==='folder' || mi.linkedFiles==='videos'),
+              hasRefusal: isDelete && !!s.modal.refusal, refusal: s.modal.refusal || '',
               // Log 47 Q13: the Clear dialog's words and lists.
               title: isDelete ? 'Delete “'+mi.title+'”?' : 'Clear details?',
-              // Log 47 Q12: a copied title's delete takes it out of FamilyFlix; a linked one's words wait for the linked delete.
-              subtitle: isDelete ? (copied ? 'This takes the '+noun+' out of FamilyFlix. It can’t be undone from here.' : 'This removes the '+noun+' from FamilyFlix and deletes its folder from disk. It can’t be undone.') : 'The '+noun+' stays in your library under its title, with no details, until you edit it or sync it with TMDB.',
-              removed: isDelete ? (copied ? ['Its details, poster and artwork', 'Its watch history, rating and heart', 'FamilyFlix’s copy of its video and subtitles'] : ['The folder and '+fileNoun, 'Details, poster and artwork', 'Watch history']) : ['Year, synopsis, credits and genres', 'Poster, backdrop and artwork', 'Its TMDB match and score'],
-              kept: isDelete ? (copied && mi.original ? ['Your original in its library folder — Scan folders would bring it back'] : []) : ['Its title and files', 'Watch history, rating and heart'],
-              keptNone: isDelete && !(copied && mi.original),
-              confirmLabel: isDelete ? (copied ? (s.modal.busy ? 'Deleting…' : (mi.kind==='movies' ? 'Delete movie' : 'Delete series')) : 'Delete folder') : (s.modal.busy ? 'Clearing…' : 'Clear details'),
+              // Log 47 Q12: every delete takes the title out of FamilyFlix; a linked one's files go to the Recycle Bin.
+              subtitle: isDelete ? 'This takes the '+noun+' out of FamilyFlix. It can’t be undone from here.' : 'The '+noun+' stays in your library under its title, with no details, until you edit it or sync it with TMDB.',
+              removed: isDelete ? ['Its details, poster and artwork', 'Its watch history, rating and heart'].concat(({ folder:['Its folder, to the Recycle Bin'], videos:['Its video file(s), to the Recycle Bin'], unreachable:[] })[mi.linkedFiles] || ['FamilyFlix’s copy of its video and subtitles']) : ['Year, synopsis, credits and genres', 'Poster, backdrop and artwork', 'Its TMDB match and score'],
+              kept: isDelete ? (mi.linkedFiles==='unreachable' ? ['Its files on '+mi.path+' — they can’t be reached right now'] : copied && mi.original ? ['Your original in its library folder — Scan folders would bring it back'] : []) : ['Its title and files', 'Watch history, rating and heart'],
+              keptNone: isDelete && mi.linkedFiles!=='unreachable' && !(copied && mi.original),
+              confirmLabel: isDelete ? (s.modal.busy ? 'Deleting…' : (mi.kind==='movies' ? 'Delete movie' : 'Delete series')) : (s.modal.busy ? 'Clearing…' : 'Clear details'),
               onConfirm:()=>this.confirm(),
               tileStyle:{ flex:'0 0 auto', width:'44px', height:'44px', borderRadius:'var(--radius-md)', display:'grid', placeItems:'center', background: isDelete?'rgba(201,122,106,.12)':'var(--color-accent-soft)', border:'1px solid '+(isDelete?'rgba(201,122,106,.32)':'var(--color-accent-line)'), color: isDelete?'var(--color-danger)':'var(--color-accent)' },
               confirmStyle:{ height:'44px', padding:'0 20px', background: isDelete?'var(--color-danger)':'var(--color-accent)', border:'none', borderRadius:'10px', color:'#1a1109', fontFamily:'var(--font-sans)', fontSize:'15px', fontWeight:700, cursor:'pointer' }

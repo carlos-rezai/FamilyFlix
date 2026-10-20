@@ -528,7 +528,8 @@
       <!-- ========================= DELETE DIALOG (DeleteSeriesDialog) =========================
            On Modal, the movie's Delete dialog worded for a series: the title in the heading,
            the episode count in the body. Escape, the scrim, ✕ and Cancel each close it with
-           nothing sent. Delete series comes first and reads Deleting… and is disabled in flight. -->
+           nothing sent. Delete series comes first and reads Deleting… and is disabled in flight.
+           A show with a linked episode adds "Its files go to the Recycle Bin." to the body (log 47 Q16). -->
       <sc-if value="{{ sr.del.open }}" hint-placeholder-val="{{ false }}">
         <div
           onClick="{{ sr.del.onClose }}"
@@ -639,6 +640,22 @@
               >
                 {{ sr.del.body }}
               </p>
+              <!-- Log 47 Q16: a route's 409 sentence, one 13px line in danger ink above the
+                   buttons, until the next press is answered. -->
+              <sc-if
+                value="{{ sr.del.hasRefusal }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-danger);
+                  "
+                >
+                  {{ sr.del.refusal }}
+                </div>
+              </sc-if>
               <div
                 style="
                   display: flex;
