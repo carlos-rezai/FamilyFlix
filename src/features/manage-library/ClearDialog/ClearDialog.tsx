@@ -1,6 +1,7 @@
 import { Modal } from '@/components';
 import { BinIcon, Button } from '@/primitives';
 import type { LibraryTitle } from '@/types';
+import { clearView } from '../libraryTitleView/libraryTitleView';
 
 import {
   Actions,
@@ -9,16 +10,6 @@ import {
   ListHeading,
   PathWell,
 } from './ClearDialog.styles';
-
-/** Everything a **Clear details** empties, as the dialog lists it. */
-const WHAT_GOES = [
-  'Year, synopsis, credits and genres',
-  'Poster, backdrop and artwork',
-  'Its TMDB match and score',
-];
-
-/** Everything it keeps. */
-const WHAT_STAYS = ['Its title and files', 'Watch history, rating and heart'];
 
 export interface ClearDialogProps {
   /** The title the clear is asked of. */
@@ -44,13 +35,13 @@ export function ClearDialog({
   onConfirm,
   onClose,
 }: ClearDialogProps) {
-  const noun = title.kind === 'movie' ? 'movie' : 'series';
+  const view = clearView(title);
 
   return (
     <Modal
       open
       title="Clear details?"
-      subtitle={`The ${noun} stays in your library under its title, with no details, until you edit it or sync it with TMDB.`}
+      subtitle={view.subtitle}
       icon={<BinIcon size={22} />}
       onClose={onClose}
     >
@@ -59,7 +50,7 @@ export function ClearDialog({
         <div>
           <ListHeading $goes>What goes</ListHeading>
           <List $goes>
-            {WHAT_GOES.map((item) => (
+            {view.goes.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </List>
@@ -67,7 +58,7 @@ export function ClearDialog({
         <div>
           <ListHeading $goes={false}>What stays</ListHeading>
           <List $goes={false}>
-            {WHAT_STAYS.map((item) => (
+            {view.stays.map((item) => (
               <li key={item}>{item}</li>
             ))}
           </List>

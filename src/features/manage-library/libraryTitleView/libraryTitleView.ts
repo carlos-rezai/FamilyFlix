@@ -61,6 +61,43 @@ export function tabSummary(
   return bare === 0 ? count : `${count} · ${bare} without details`;
 }
 
+/** Pure: the empty card's line for a tab of `kind` that holds nothing. */
+export function emptyLine(kind: LibraryTitle['kind']): string {
+  return kind === 'movie'
+    ? 'No movies in your library.'
+    : 'No series in your library.';
+}
+
+/** The **Clear dialog**'s words (log 47 Q13), `DeleteView`'s twin. */
+export interface ClearView {
+  /** The sentence under _Clear details?_. */
+  subtitle: string;
+  /** **What goes**. */
+  goes: string[];
+  /** **What stays**. */
+  stays: string[];
+}
+
+/** Everything a **Clear details** empties, as the dialog lists it. */
+const CLEAR_GOES = [
+  'Year, synopsis, credits and genres',
+  'Poster, backdrop and artwork',
+  'Its TMDB match and score',
+];
+
+/** Everything it keeps. */
+const CLEAR_STAYS = ['Its title and files', 'Watch history, rating and heart'];
+
+/** Pure: a **Library title** → the **Clear dialog**'s words. */
+export function clearView(title: LibraryTitle): ClearView {
+  const noun = title.kind === 'movie' ? 'movie' : 'series';
+  return {
+    subtitle: `The ${noun} stays in your library under its title, with no details, until you edit it or sync it with TMDB.`,
+    goes: [...CLEAR_GOES],
+    stays: [...CLEAR_STAYS],
+  };
+}
+
 /** The **Delete dialog**'s words (log 47 Q12). */
 export interface DeleteView {
   /** _Delete “Coco”?_ */

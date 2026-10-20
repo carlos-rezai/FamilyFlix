@@ -10,11 +10,9 @@ import { DeleteTitleDialog } from '../DeleteTitleDialog/DeleteTitleDialog';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { TitleRow } from '../TitleRow/TitleRow';
-import { tabSummary } from '../libraryTitleView/libraryTitleView';
+import { emptyLine, tabSummary } from '../libraryTitleView/libraryTitleView';
 import { useLibraryTitles } from '../useLibraryTitles/useLibraryTitles';
 import { Empty, List, Summary, Toolbar } from './ManageLibrary.styles';
-
-type Tab = 'movies' | 'series';
 
 /**
  * The **Manage library page**'s organism: the maintainer header — Back onto
@@ -61,9 +59,11 @@ export function ManageLibrary() {
   const goBack = useGoBack('/settings');
   const [searchParams] = useSearchParams();
   const setParam = useQueryParamWriter();
-  const tab: Tab = searchParams.get('tab') === 'series' ? 'series' : 'movies';
+  const kind: LibraryTitle['kind'] =
+    searchParams.get('tab') === 'series' ? 'series' : 'movie';
 
-  const shown = titles === null ? [] : titles[tab];
+  const shown =
+    titles === null ? [] : kind === 'movie' ? titles.movies : titles.series;
 
   return (
     <>
@@ -79,22 +79,22 @@ export function ManageLibrary() {
             <PillTabs
               label="Kind"
               options={[
-                { value: 'movies', label: `Movies ${titles.movies.length}` },
+                { value: 'movie', label: `Movies ${titles.movies.length}` },
                 { value: 'series', label: `Series ${titles.series.length}` },
               ]}
-              value={tab}
-              onChange={(next) => setParam('tab', next, 'movies')}
+              value={kind}
+              onChange={(next) =>
+                setParam(
+                  'tab',
+                  next === 'movie' ? 'movies' : 'series',
+                  'movies'
+                )
+              }
             />
-            <Summary>
-              {tabSummary(tab === 'movies' ? 'movie' : 'series', shown)}
-            </Summary>
+            <Summary>{tabSummary(kind, shown)}</Summary>
           </Toolbar>
           {shown.length === 0 ? (
-            <Empty>
-              {tab === 'movies'
-                ? 'No movies in your library.'
-                : 'No series in your library.'}
-            </Empty>
+            <Empty>{emptyLine(kind)}</Empty>
           ) : (
             <List>
               {shown.map((title) => (

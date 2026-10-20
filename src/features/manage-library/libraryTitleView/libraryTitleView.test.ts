@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest';
 
-import { deleteView, titleRowView } from './libraryTitleView';
+import {
+  clearView,
+  deleteView,
+  emptyLine,
+  titleRowView,
+} from './libraryTitleView';
 import {
   makeLibraryMovie,
   makeLibrarySeries,
@@ -332,5 +337,43 @@ describe('deleteView — a copied title’s callout', () => {
       deleteView(makeLibrarySeries({ originalPath: 'E:\\Series\\Bluey' }))
         .callout
     ).toBeNull();
+  });
+});
+
+describe('emptyLine', () => {
+  it.each([
+    ['movie', 'No movies in your library.'],
+    ['series', 'No series in your library.'],
+  ] as const)('answers a %s tab with nothing in it', (kind, line) => {
+    expect(emptyLine(kind)).toBe(line);
+  });
+});
+
+describe('clearView', () => {
+  it('names a film in its sentence', () => {
+    expect(clearView(makeLibraryMovie()).subtitle).toBe(
+      'The movie stays in your library under its title, with no details, until you edit it or sync it with TMDB.'
+    );
+  });
+
+  it('names a show in its sentence', () => {
+    expect(clearView(makeLibrarySeries()).subtitle).toBe(
+      'The series stays in your library under its title, with no details, until you edit it or sync it with TMDB.'
+    );
+  });
+
+  it('lists What goes in order', () => {
+    expect(clearView(makeLibraryMovie()).goes).toEqual([
+      'Year, synopsis, credits and genres',
+      'Poster, backdrop and artwork',
+      'Its TMDB match and score',
+    ]);
+  });
+
+  it('lists What stays in order', () => {
+    expect(clearView(makeLibrarySeries()).stays).toEqual([
+      'Its title and files',
+      'Watch history, rating and heart',
+    ]);
   });
 });
