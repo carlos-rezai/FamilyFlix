@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Menu, MenuDivider, MenuItem } from '@/components';
 import { BinIcon, FolderIcon, IconButton, MoreIcon } from '@/primitives';
 import type { LibraryTitle } from '@/types';
-import { enrichPath, movieFormPath, moviePath, seriesPath } from '@/utils';
-import { titleRowView } from '../libraryTitleView/libraryTitleView';
+import { titlePaths, titleRowView } from '../libraryTitleView/libraryTitleView';
 import {
   Actions,
   Badge,
@@ -38,7 +37,7 @@ export interface TitleRowProps {
  * furniture: the accent tile, the title and its year, the path in mono, the
  * badge, the files and the **Details state**'s dot — and, for a title whose
  * Library folder can't be read, the line in danger. Its words are
- * `titleRowView`'s. At its right edge, _Edit ▾_: _Edit details_ pushes the
+ * `titleRowView`'s, its presses `titlePaths`'. At its right edge, _Edit ▾_: _Edit details_ pushes the
  * **Movie form**'s edit, _Sync with TMDB_ the title's page and then its Sync,
  * **Started on arrival**. After it, ⋯: _Clear details_, disabled while the
  * **Details state** is `none`, since there is nothing to clear; then, below a
@@ -46,20 +45,14 @@ export interface TitleRowProps {
  */
 export function TitleRow({ title, onClear, onDelete }: TitleRowProps) {
   const view = titleRowView(title);
+  const paths = titlePaths(title);
   const navigate = useNavigate();
-  const isMovie = title.kind === 'movie';
 
   // Log 45's leaving, with a push where the add replaces: the title's page
   // goes under the flow, so Back lands on the title and Back again here.
   function sync() {
-    navigate(isMovie ? moviePath(title.id) : seriesPath(title.id));
-    navigate(
-      enrichPath(
-        isMovie
-          ? { movie: title.id, start: true }
-          : { series: title.id, start: true }
-      )
-    );
+    navigate(paths.page);
+    navigate(paths.sync);
   }
 
   return (
@@ -98,13 +91,7 @@ export function TitleRow({ title, onClear, onDelete }: TitleRowProps) {
           <MenuItem
             glyph="✎"
             hint="Change the title, year and poster by hand"
-            onSelect={() =>
-              navigate(
-                movieFormPath(
-                  isMovie ? { movie: title.id } : { series: title.id }
-                )
-              )
-            }
+            onSelect={() => navigate(paths.edit)}
           >
             Edit details
           </MenuItem>

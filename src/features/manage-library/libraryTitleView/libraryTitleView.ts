@@ -1,5 +1,11 @@
 import type { DetailsState, LibraryTitle } from '@/types';
-import { spellYearSpan } from '@/utils';
+import {
+  enrichPath,
+  movieFormPath,
+  moviePath,
+  seriesPath,
+  spellYearSpan,
+} from '@/utils';
 
 /** The tone of a **Details state**'s dot, a theme colour's name. */
 export type DotTone = 'success' | 'info' | 'warning';
@@ -59,6 +65,31 @@ export function tabSummary(
       : `${titles.length} series`;
   const bare = titles.filter((title) => title.details === 'none').length;
   return bare === 0 ? count : `${count} · ${bare} without details`;
+}
+
+/** Where a **Title row**'s presses go, `addLeaving`'s precedent. */
+export interface TitlePaths {
+  /** The **Movie form**'s edit of the title. */
+  edit: string;
+  /** The title's own page. */
+  page: string;
+  /** Its Sync, **Started on arrival**. */
+  sync: string;
+}
+
+/** Pure: a **Library title** → where _Edit details_ and _Sync with TMDB_ go. */
+export function titlePaths(title: LibraryTitle): TitlePaths {
+  return title.kind === 'movie'
+    ? {
+        edit: movieFormPath({ movie: title.id }),
+        page: moviePath(title.id),
+        sync: enrichPath({ movie: title.id, start: true }),
+      }
+    : {
+        edit: movieFormPath({ series: title.id }),
+        page: seriesPath(title.id),
+        sync: enrichPath({ series: title.id, start: true }),
+      };
 }
 
 /** Pure: the empty card's line for a tab of `kind` that holds nothing. */

@@ -4,6 +4,7 @@ import {
   clearView,
   deleteView,
   emptyLine,
+  titlePaths,
   titleRowView,
 } from './libraryTitleView';
 import {
@@ -375,5 +376,23 @@ describe('clearView', () => {
       'Its title and files',
       'Watch history, rating and heart',
     ]);
+  });
+});
+
+describe('titlePaths', () => {
+  it('answers a film’s edit, page and Sync', () => {
+    expect(titlePaths(makeLibraryMovie({ id: 'm 7' }))).toEqual({
+      edit: '/add?movie=m+7',
+      page: '/movie/m%207',
+      sync: '/enrich?movie=m+7&start=1',
+    });
+  });
+
+  it('answers a show’s edit, page and Sync', () => {
+    expect(titlePaths(makeLibrarySeries({ id: 's1' }))).toEqual({
+      edit: '/add?series=s1',
+      page: '/series/s1',
+      sync: '/enrich?series=s1&start=1',
+    });
   });
 });
