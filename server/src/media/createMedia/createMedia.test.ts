@@ -37,7 +37,12 @@ import { Readable } from 'node:stream';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { mediaFilePath } from '../../playback/mediaFilePath/mediaFilePath';
 
-import { createMedia, type Media } from './createMedia';
+import {
+  createMedia,
+  type Media,
+  type Trash,
+  type TrashOutcome,
+} from './createMedia';
 
 /**
  * A managed media directory with a sibling beside it, and the domain composed
@@ -1238,5 +1243,96 @@ describe('createMedia — removeTitleFolder', () => {
     } finally {
       release();
     }
+  });
+});
+
+// 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
+//
+// `trashLinked(paths)` is the delete's one way to the Recycle Bin: it forwards
+// a **Linked video**'s absolute paths to the injected `Trash`, so no route
+// learns there is a shell, and answers the Trash's own outcome. An empty list
+// asks nothing; a path already gone counts as trashed, so a retry after a
+// partial failure asks only for what is still there.
+describe('createMedia — trashLinked over the injected Trash', () => {
+  /** A Trash that records each request and answers what it is told. */
+  function recordingTrash(answer: TrashOutcome = { kind: 'trashed' }) {
+    const asked: string[][] = [];
+    const trash: Trash = {
+      trash: (paths) => {
+        asked.push([...paths]);
+        return Promise.resolve(answer);
+      },
+    };
+    return { trash, asked };
+  }
+
+  function sandboxWith(...files: string[]) {
+    const root = sandboxRoot('familyflix-trash-');
+    const library = join(root, 'Movies');
+    for (const file of files) {
+      mkdirSync(join(library, file, '..'), { recursive: true });
+      writeFileSync(join(library, file), 'bytes');
+    }
+    return { media: join(root, 'media'), library };
+  }
+
+  it('forwards the paths to the Trash and answers its outcome', async () => {
+    const { media, library } = sandboxWith('Coco (2017)/Coco.mkv');
+    const { trash, asked } = recordingTrash();
+    const folder = join(library, 'Coco (2017)');
+
+    const outcome = await createMedia(media, trash).trashLinked([folder]);
+
+    expect(asked).toEqual([[folder]]);
+    expect(outcome).toEqual({ kind: 'trashed' });
+  });
+
+  it('answers the Trash’s refusal as it is', async () => {
+    const { media, library } = sandboxWith('Coco (2017)/Coco.mkv');
+    const folder = join(library, 'Coco (2017)');
+
+    const unavailable = recordingTrash({ kind: 'unavailable' });
+    expect(
+      await createMedia(media, unavailable.trash).trashLinked([folder])
+    ).toEqual({ kind: 'unavailable' });
+
+    const failed = recordingTrash({ kind: 'failed', path: folder });
+    expect(
+      await createMedia(media, failed.trash).trashLinked([folder])
+    ).toEqual({ kind: 'failed', path: folder });
+  });
+
+  it('asks nothing for an empty list', async () => {
+    const { media } = sandboxWith();
+    const { trash, asked } = recordingTrash({ kind: 'unavailable' });
+
+    const outcome = await createMedia(media, trash).trashLinked([]);
+
+    expect(asked).toEqual([]);
+    expect(outcome).toEqual({ kind: 'trashed' });
+  });
+
+  it('counts a path already gone as trashed, asking only for the rest', async () => {
+    const { media, library } = sandboxWith('Harbor.S01E02.mkv');
+    const { trash, asked } = recordingTrash();
+    const gone = join(library, 'Harbor.S01E01.mkv');
+    const there = join(library, 'Harbor.S01E02.mkv');
+
+    const outcome = await createMedia(media, trash).trashLinked([gone, there]);
+
+    expect(asked).toEqual([[there]]);
+    expect(outcome).toEqual({ kind: 'trashed' });
+  });
+
+  it('asks nothing when every path is already gone', async () => {
+    const { media, library } = sandboxWith();
+    const { trash, asked } = recordingTrash({ kind: 'unavailable' });
+
+    const outcome = await createMedia(media, trash).trashLinked([
+      join(library, 'Coco (2017)'),
+    ]);
+
+    expect(asked).toEqual([]);
+    expect(outcome).toEqual({ kind: 'trashed' });
   });
 });

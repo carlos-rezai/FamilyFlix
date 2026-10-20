@@ -26,6 +26,7 @@ import { movieFormPath } from '@/utils/movieFormPath/movieFormPath';
 import { moviePath } from '@/utils/moviePath/moviePath';
 import { seriesPath } from '@/utils/seriesPath/seriesPath';
 import {
+  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -951,5 +952,111 @@ describe('ManageLibrary — Delete…', () => {
     );
     expect(within(rowOf('Coco')).getByText('Synced with TMDB')).toBeDefined();
     expect(screen.queryByText('“Coco” was deleted.')).toBeNull();
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
+ *
+ * _Delete…_ is offered on every row, linked titles included. The dialog for a
+ * linked title draws its Recycle Bin words and callout; a `409` from the
+ * unchanged route holds its one sentence in danger above the buttons — the
+ * dialog open and the row kept, no notice — until the next press is
+ * answered. An unreachable title's delete answers `204` like any other.
+ */
+const LINKED: LibraryTitles = {
+  movies: [
+    makeLibraryMovie({
+      id: 'm1',
+      title: 'Coco',
+      linkedFiles: 'folder',
+      path: 'E:\\Movies\\Coco (2017)',
+    }),
+    makeLibraryMovie({
+      id: 'm2',
+      title: 'Heat',
+      linkedFiles: 'unreachable',
+      path: 'F:\\Movies\\Heat (1995)',
+    }),
+  ],
+  series: [],
+};
+const NO_SHELL =
+  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
+const CALLOUT =
+  'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
+const DANGER = 'rgb(201, 122, 106)';
+
+/** The list read answered with LINKED, each write by the next of `answers`. */
+function serveLinked(answers: Response[]) {
+  fetchMock.mockImplementation((input) =>
+    String(input) === '/api/library-titles'
+      ? Promise.resolve(okResponse(LINKED))
+      : Promise.resolve(answers.shift() ?? noContentResponse())
+  );
+}
+
+describe('ManageLibrary — deleting a linked title', () => {
+  it('opens the linked Delete dialog, its callout in it', async () => {
+    serveLinked([]);
+    renderPage();
+    await loaded();
+
+    openDeleteOn('Coco');
+
+    const dialog = deleteDialog() as HTMLElement;
+    expect(within(dialog).getByText(CALLOUT)).toBeDefined();
+    expect(
+      within(dialog).getByText('Its folder, to the Recycle Bin')
+    ).toBeDefined();
+  });
+
+  it('holds a refusal in danger above the buttons, the dialog and row kept', async () => {
+    serveLinked([conflictResponse(NO_SHELL)]);
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+
+    confirmDelete();
+
+    const dialog = deleteDialog() as HTMLElement;
+    const line = await within(dialog).findByText(NO_SHELL);
+    expect(getComputedStyle(line).color).toBe(DANGER);
+    const confirm = within(dialog).getByRole('button', {
+      name: 'Delete movie',
+    });
+    expect(comesBefore(line, confirm)).toBe(true);
+    expect((confirm as HTMLButtonElement).disabled).toBe(false);
+    expect(rowOf('Coco')).toBeDefined();
+    expect(screen.queryByText('“Coco” was deleted.')).toBeNull();
+  });
+
+  it('clears the refusal once the next press is answered', async () => {
+    serveLinked([conflictResponse(NO_SHELL), noContentResponse()]);
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+    confirmDelete();
+    await within(deleteDialog() as HTMLElement).findByText(NO_SHELL);
+
+    confirmDelete();
+
+    await waitFor(() => expect(deleteDialog()).toBeNull());
+    expect(screen.queryByText(NO_SHELL)).toBeNull();
+    expect(screen.queryByText('Coco')).toBeNull();
+    expect(await screen.findByText('“Coco” was deleted.')).toBeDefined();
+  });
+
+  it('deletes an unreachable title, its row taken off', async () => {
+    serveLinked([noContentResponse()]);
+    renderPage();
+    await loaded();
+    openDeleteOn('Heat');
+
+    confirmDelete('Heat');
+
+    await waitFor(() => expect(deleteDialog('Heat')).toBeNull());
+    expect(screen.queryByText('Heat')).toBeNull();
+    expect(String(writes()[0]?.[0])).toBe('/api/movies/m2');
   });
 });

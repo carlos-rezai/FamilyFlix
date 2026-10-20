@@ -48,11 +48,13 @@ const COCO = makeLibraryMovie({
 function renderDialog({
   title = COCO,
   deleting = false,
+  refusal = null,
   onConfirm = () => undefined,
   onClose = () => undefined,
 }: {
   title?: LibraryTitle;
   deleting?: boolean;
+  refusal?: string | null;
   onConfirm?: () => void;
   onClose?: () => void;
 } = {}) {
@@ -61,6 +63,7 @@ function renderDialog({
       <DeleteTitleDialog
         title={title}
         deleting={deleting}
+        refusal={refusal}
         onConfirm={onConfirm}
         onClose={onClose}
       />
@@ -253,5 +256,121 @@ describe('DeleteTitleDialog — focus', () => {
     });
 
     expect(onConfirm).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
+ *
+ * For a linked title the dialog draws `deleteView`'s linked words: What goes
+ * ends in _Its folder, to the Recycle Bin_ (`folder`) or _Its video file(s),
+ * to the Recycle Bin_ (`videos`), with the callout _This is a linked title.
+ * Its files go from your library folder to the Recycle Bin, not just out of
+ * FamilyFlix._; an `unreachable` title keeps _Its files on <path> — they
+ * can’t be reached right now_ and draws no callout. And the `refusal` prop —
+ * the route's `409` sentence the organism holds — is drawn in danger ink
+ * above the buttons, the **Reset dialog**'s line; nothing while `null`.
+ */
+const CALLOUT =
+  'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
+const SHARED_GOES = GOES.slice(0, 2);
+const NO_SHELL =
+  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
+
+describe('DeleteTitleDialog — a linked folder', () => {
+  const LINKED = makeLibraryMovie({
+    title: 'Coco',
+    linkedFiles: 'folder',
+    path: 'E:\\Movies\\Coco (2017)',
+  });
+
+  it('sends the folder to the Recycle Bin and keeps Nothing', () => {
+    renderDialog({ title: LINKED });
+
+    expect(itemsOf(listUnder('What goes'))).toEqual([
+      ...SHARED_GOES,
+      'Its folder, to the Recycle Bin',
+    ]);
+    expect(itemsOf(listUnder('What stays'))).toEqual(['Nothing']);
+  });
+
+  it('draws the linked callout', () => {
+    renderDialog({ title: LINKED });
+
+    expect(within(dialog()).getByText(CALLOUT)).toBeDefined();
+  });
+});
+
+describe('DeleteTitleDialog — linked videos', () => {
+  const HEAT = makeLibraryMovie({
+    title: 'Heat',
+    linkedFiles: 'videos',
+    path: 'E:\\Movies\\Collection\\Heat.mkv',
+  });
+
+  it('sends only its video file(s) to the Recycle Bin, with the callout', () => {
+    renderDialog({ title: HEAT });
+
+    expect(itemsOf(listUnder('What goes', 'Delete “Heat”?'))).toEqual([
+      ...SHARED_GOES,
+      'Its video file(s), to the Recycle Bin',
+    ]);
+    expect(itemsOf(listUnder('What stays', 'Delete “Heat”?'))).toEqual([
+      'Nothing',
+    ]);
+    expect(within(dialog('Delete “Heat”?')).getByText(CALLOUT)).toBeDefined();
+  });
+});
+
+describe('DeleteTitleDialog — an unreachable title', () => {
+  const GONE = makeLibraryMovie({
+    title: 'Coco',
+    linkedFiles: 'unreachable',
+    path: 'F:\\Movies\\Coco (2017)',
+  });
+
+  it('keeps the files on their path, which can’t be reached', () => {
+    renderDialog({ title: GONE });
+
+    expect(itemsOf(listUnder('What goes'))).toEqual(SHARED_GOES);
+    expect(itemsOf(listUnder('What stays'))).toEqual([
+      'Its files on F:\\Movies\\Coco (2017) — they can’t be reached right now',
+    ]);
+  });
+
+  it('draws no callout', () => {
+    renderDialog({ title: GONE });
+
+    expect(within(dialog()).queryByText(CALLOUT)).toBeNull();
+  });
+});
+
+describe('DeleteTitleDialog — a copied title draws no callout', () => {
+  it('has none', () => {
+    renderDialog();
+
+    expect(within(dialog()).queryByText(CALLOUT)).toBeNull();
+  });
+});
+
+describe('DeleteTitleDialog — the refusal line', () => {
+  it('draws the refusal in danger ink above the buttons', () => {
+    renderDialog({
+      title: makeLibraryMovie({ title: 'Coco', linkedFiles: 'folder' }),
+      refusal: NO_SHELL,
+    });
+
+    const line = within(dialog()).getByText(NO_SHELL);
+    expect(getComputedStyle(line).color).toBe(DANGER);
+    expect(comesBefore(line, confirm())).toBe(true);
+    expect(comesBefore(line, cancel())).toBe(true);
+  });
+
+  it('draws no refusal while there is none', () => {
+    renderDialog({
+      title: makeLibraryMovie({ title: 'Coco', linkedFiles: 'folder' }),
+    });
+
+    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
   });
 });

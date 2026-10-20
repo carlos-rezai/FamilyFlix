@@ -4,6 +4,7 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useLibraryTitles } from './useLibraryTitles';
 import type { LibraryTitles } from '@/types';
 import {
+  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -340,4 +341,85 @@ describe('useLibraryTitles — deleteTitle', () => {
       expect(result.current.titles).toEqual(LISTED);
     }
   );
+});
+
+/**
+ * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
+ *
+ * A linked delete the route refuses — `409` with one sentence, no shell or a
+ * path the shell could not trash — is held as `deleteRefusal`, the
+ * `useFactoryReset` rule: `null` until a press is refused, the route's own
+ * sentence then, and replaced by the next press's own answer — cleared when
+ * that press deletes, the newer sentence when it is refused again. The row
+ * stays on a refusal.
+ */
+describe('useLibraryTitles — deleteRefusal', () => {
+  const NO_SHELL =
+    'Only the desktop app can move a linked title’s files to the Recycle Bin.';
+  const LOCKED =
+    'Couldn’t move E:\\Movies\\Coco (2017) to the Recycle Bin. Close anything playing it and try again.';
+
+  it('holds no refusal before a delete is refused', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(noContentResponse())
+    );
+
+    expect(result.current.deleteRefusal).toBeNull();
+  });
+
+  it('holds the route’s sentence on a 409, the row kept, resolving false', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(conflictResponse(NO_SHELL))
+    );
+
+    let deleted: boolean | undefined;
+    await act(async () => {
+      deleted = await result.current.deleteTitle(LISTED.movies[1]!);
+    });
+
+    expect(deleted).toBe(false);
+    expect(result.current.deleteRefusal).toBe(NO_SHELL);
+    expect(result.current.titles).toEqual(LISTED);
+  });
+
+  it('clears the refusal once the next press deletes', async () => {
+    const answers = [conflictResponse(LOCKED), noContentResponse()];
+    const { result } = await loadedHook(() =>
+      Promise.resolve(answers.shift() ?? noContentResponse())
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    expect(result.current.deleteRefusal).toBe(LOCKED);
+
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+
+    expect(result.current.deleteRefusal).toBeNull();
+    expect(result.current.titles?.movies.map((row) => row.id)).toEqual([
+      'm0',
+      'm2',
+    ]);
+  });
+
+  it('replaces the refusal with the next press’s own sentence', async () => {
+    const answers = [conflictResponse(NO_SHELL), conflictResponse(LOCKED)];
+    const { result } = await loadedHook(() =>
+      Promise.resolve(answers.shift() ?? noContentResponse())
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+
+    expect(result.current.deleteRefusal).toBe(LOCKED);
+  });
+
+  it('refuses a show’s delete the same way', async () => {
+    const { result } = await loadedHook(() =>
+      Promise.resolve(conflictResponse(NO_SHELL))
+    );
+
+    await act(() => result.current.deleteTitle(LISTED.series[0]!));
+
+    expect(result.current.deleteRefusal).toBe(NO_SHELL);
+    expect(result.current.titles?.series).toEqual(LISTED.series);
+  });
 });

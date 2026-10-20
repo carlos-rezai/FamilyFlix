@@ -397,8 +397,8 @@ describe('TitleRow — ⋯', () => {
  *
  * The ⋯ menu gains _Delete…_ as its **Danger row** — danger ink, after
  * _Clear details_ and below a divider (`role="separator"`). A press hands the
- * title to the organism, which opens the **Delete dialog**. A linked title's
- * row is not offered _Delete…_ until the linked delete ships.
+ * title to the organism, which opens the **Delete dialog**. Since issue
+ * #411, _Delete…_ is offered on every row, linked titles included.
  */
 
 const deleteItem = () => screen.queryByRole('menuitem', { name: 'Delete…' });
@@ -460,13 +460,18 @@ describe('TitleRow — Delete…', () => {
   });
 
   it.each(['folder', 'videos', 'unreachable'] as const)(
-    'offers no Delete… for a linked title (%s)',
+    'offers Delete… for a linked title too (%s), and hands it over',
     (linkedFiles) => {
-      renderRow(makeLibraryMovie({ title: 'Coco', linkedFiles }));
+      const onDelete = vi.fn();
+      const title = makeLibraryMovie({ title: 'Coco', linkedFiles });
+      renderRow(title, undefined, onDelete);
       openMore();
 
-      expect(deleteItem()).toBeNull();
-      expect(clearItem()).toBeDefined();
+      expect(
+        screen.getAllByRole('menuitem').map((item) => item.textContent)
+      ).toEqual(['Clear details', 'Delete…']);
+      fireEvent.click(deleteItem() as HTMLElement);
+      expect(onDelete).toHaveBeenCalledWith(title);
     }
   );
 });
