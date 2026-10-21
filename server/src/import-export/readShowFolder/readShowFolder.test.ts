@@ -228,3 +228,115 @@ describe('readShowFolder — the refusals', () => {
     });
   });
 });
+
+// 48 — Add a show folder, Phase 4 (issue #420): the edges. A folder
+// `groupShows` reads as a film answers every video as **Unplaced** — the
+// maintainer said it is a show; the subtitles no episode's stem claims are
+// counted; and a folder that is already a held series's **Show folder**
+// answers that series's id as `heldSeriesId`, from the held Show folders the
+// caller passes.
+
+describe('readShowFolder — a folder read as a film', () => {
+  it('answers every video as Unplaced, and no episodes', async () => {
+    const show = folderWith(
+      sandboxRoot('familyflix-show-read-'),
+      'Harbor and Vine',
+      ['the harbor.mkv', 'the vine.mkv']
+    );
+
+    const read = await readOf(show);
+
+    expect(read.episodes).toEqual([]);
+    expect([...read.unplaced].sort()).toEqual([
+      join(show, 'the harbor.mkv'),
+      join(show, 'the vine.mkv'),
+    ]);
+  });
+});
+
+describe('readShowFolder — the stray subtitles', () => {
+  it('counts the subtitles that begin with no episode’s stem', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
+    folderWith(show, 'Season 1', [
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+      'Harbor.and.Vine.S01E01.Pilot.en.srt',
+      'commentary.en.srt',
+      'notes.pt.srt',
+    ]);
+
+    const read = await readOf(show);
+
+    expect(read.straySubtitles).toBe(2);
+    expect(read.episodes[0].subtitles).toHaveLength(1);
+  });
+
+  it('counts none when every subtitle has its episode', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
+    folderWith(show, 'Season 1', [
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+      'Harbor.and.Vine.S01E01.Pilot.en.srt',
+    ]);
+
+    const read = await readOf(show);
+
+    expect(read.straySubtitles).toBe(0);
+  });
+});
+
+describe('readShowFolder — a held Show folder', () => {
+  /** The read of `dir`, given the held series's Show folders. */
+  async function readHeld(
+    dir: string,
+    heldShowFolders: { seriesId: string; path: string }[]
+  ) {
+    const answer = await readShowFolder(dir, { heldShowFolders });
+    if (answer.kind !== 'read') {
+      throw new Error(`expected a read, got the ${answer.refusal} refusal`);
+    }
+    return answer.read;
+  }
+
+  it('answers the held series’s id when the folder is its Show folder', async () => {
+    const root = sandboxRoot('familyflix-show-read-');
+    const show = join(root, 'Harbor and Vine');
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readHeld(show, [
+      {
+        seriesId: 'lighthouse-keepers',
+        path: join(root, 'Lighthouse Keepers'),
+      },
+      { seriesId: 'harbor-and-vine', path: show },
+    ]);
+
+    expect(read.heldSeriesId).toBe('harbor-and-vine');
+  });
+
+  it('still reads the held folder’s episodes', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readHeld(show, [
+      { seriesId: 'harbor-and-vine', path: show },
+    ]);
+
+    expect(read.episodes).toHaveLength(1);
+  });
+
+  it('answers null when the folder is no held series’s Show folder', async () => {
+    const root = sandboxRoot('familyflix-show-read-');
+    const show = join(root, 'Harbor and Vine');
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readHeld(show, [
+      {
+        seriesId: 'lighthouse-keepers',
+        path: join(root, 'Lighthouse Keepers'),
+      },
+      // A season of the show is not the show.
+      { seriesId: 'harbor-season', path: join(show, 'Season 1') },
+    ]);
+
+    expect(read.heldSeriesId).toBeNull();
+  });
+});
