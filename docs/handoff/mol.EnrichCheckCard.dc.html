@@ -11,18 +11,55 @@
         <link rel="stylesheet" href="tokens.css" />
       </helmet>
       <!-- The Also fetch from TMDB box, graduated when the Movie form drew it beside Import
-           setup and the Library folders page: mol.CheckCard with its label fixed. The hint
-           while a key is stored is the caller's (keyedHint): the
+           setup and the Library folders page. A real checkbox in the tab order, clipped, under
+           the drawn box. The hint while a key is stored is the caller's (keyedHint): the
            import's "Runs straight after the import…", the form's "Runs straight after the
            save…". The key-less hint is the card's own. It holds nothing; a press reports. -->
-      <dc-import
-        name="mol.CheckCard"
-        checked="{{ checked }}"
-        label="Also fetch metadata and posters from TMDB"
-        hint="{{ hint }}"
-        on-toggle="{{ onToggle }}"
-        hint-size="100%,74px"
-      ></dc-import>
+      <label
+        style="
+          display: flex;
+          align-items: flex-start;
+          gap: 12px;
+          padding: 14px 16px;
+          background: var(--color-surface);
+          border: 1px solid var(--color-border-soft);
+          border-radius: 10px;
+          cursor: pointer;
+          margin-top: 4px;
+        "
+      >
+        <span style="{{ boxStyle }}">{{ check }}</span>
+        <input
+          type="checkbox"
+          checked="{{ checked }}"
+          onChange="{{ onToggle }}"
+          style="position: absolute; opacity: 0; width: 0; height: 0"
+        />
+        <span style="flex: 1; min-width: 0">
+          <span
+            style="
+              display: block;
+              font-family: var(--font-sans);
+              font-size: 15px;
+              font-weight: 600;
+              color: var(--color-text);
+            "
+            >Also fetch metadata and posters from TMDB</span
+          >
+          <span
+            style="
+              display: block;
+              font-family: var(--font-sans);
+              font-size: 13px;
+              color: var(--color-text-faint);
+              margin-top: 2px;
+              line-height: 1.45;
+              text-wrap: pretty;
+            "
+            >{{ hint }}</span
+          >
+        </span>
+      </label>
     </x-dc>
     <script
       type="text/x-dc"
@@ -34,7 +71,8 @@
           const on=!!this.props.checked;
           const keySet=this.props.keySet!==false;
           return {
-            checked:on,
+            checked:on, check:on?'✓':'',
+            boxStyle:{flex:'0 0 auto',display:'grid',placeItems:'center',width:'22px',height:'22px',marginTop:'1px',borderRadius:'6px',border:'2px solid '+(on?'var(--color-accent)':'var(--color-text-faint)'),background:on?'var(--color-accent)':'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'},
             // The keyed hint is the caller's; the key-less one is the card's own.
             hint:keySet?(this.props.keyedHint||'Runs straight after the import, over everything it brings in. Needs the internet.'):'Needs a TMDB key. Add one under Settings → Network first.',
             onToggle:()=>{ if(this.props.onToggle) this.props.onToggle(); },

@@ -232,9 +232,9 @@
               </sc-if>
             </div>
 
-            <!-- The group Scan: the Folder scan over the listed folders not scanned yet, no sheet.
-                 The shapes, the Import mode, Scan every folder again, the TMDB box, then Scan
-                 folders, disabled with no folder listed. -->
+            <!-- The group Scan: the Folder scan over every listed folder, no sheet. The shapes,
+                 the Import mode, the TMDB box — Import setup's three, in setup's order — then
+                 Scan folders, disabled with no folder listed. -->
             <div
               style="
                 font-family: var(--font-sans);
@@ -384,17 +384,6 @@
                   </sc-for>
                 </div>
               </div>
-              <!-- Scan every folder again, mol.CheckCard: off on every visit, never remembered;
-                   posted as `all` with Scan folders. Off, a Folder scan reads only the folders
-                   with no Scanned mark; ticked, every reachable one. -->
-              <dc-import
-                name="mol.CheckCard"
-                checked="{{ lf.rescanAll }}"
-                label="Scan every folder again"
-                hint="Reads the folders already scanned too, for files added or changed since. Nothing already in the library is imported twice."
-                on-toggle="{{ lf.onToggleRescanAll }}"
-                hint-size="100%,74px"
-              ></dc-import>
               <dc-import
                 name="mol.EnrichCheckCard"
                 checked="{{ lf.enrich }}"

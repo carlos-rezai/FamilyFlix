@@ -5,8 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { EnrichmentFlow } from './EnrichmentFlow';
-import type { EnrichmentRun, EnrichmentSummary, TitleReference } from '@/types';
-import { enrichPath } from '@/utils';
+import type { EnrichmentRun, EnrichmentSummary } from '@/types';
 import { theme } from '@/styles/theme';
 import {
   createdResponse,
@@ -173,81 +172,5 @@ describe('EnrichmentFlow — Done, reached from an import', () => {
     );
 
     expect(await screen.findByText('the browse home')).toBeDefined();
-  });
-});
-
-// Release review (issue #424): the **Run scope**. _Finish_ on a run carrying
-// _Also fetch from TMDB_ hands on to the Sync over exactly that run's imported
-// titles; _Start sync_ posts them as `scope: 'run'`. Settings' own _Sync
-// metadata & posters_ keeps its scopes, `missing` and `all`, and names no
-// titles.
-const IMPORTED: TitleReference[] = [
-  { kind: 'movie', id: 'm-amelie' },
-  { kind: 'series', id: 's-tidewater' },
-];
-
-/** The one start's body, once Start sync is pressed. */
-async function pressStart(): Promise<Record<string, unknown>> {
-  const start = await screen.findByRole('button', { name: 'Start sync' });
-  await waitFor(() => {
-    expect((start as HTMLButtonElement).disabled).toBe(false);
-    expect(start.getAttribute('aria-disabled')).not.toBe('true');
-  });
-  fireEvent.click(start);
-  await waitFor(() => {
-    expect(fetchMock.mock.calls.some(([i, n]) => isStart(i, n))).toBe(true);
-  });
-  const [, init] = fetchMock.mock.calls.find(([i, n]) => isStart(i, n)) ?? [];
-  return JSON.parse(String(init?.body)) as Record<string, unknown>;
-}
-
-describe('EnrichmentFlow — arriving with the Run scope', () => {
-  const FROM_RUN = [
-    '/',
-    '/settings',
-    enrichPath({ scope: 'run', titles: IMPORTED }),
-  ];
-
-  it('starts nothing unasked', async () => {
-    renderFlow(FROM_RUN);
-
-    await screen.findByRole('button', { name: 'Start sync' });
-    await new Promise((resolve) => setTimeout(resolve, 50));
-    expect(fetchMock.mock.calls.some(([i, n]) => isStart(i, n))).toBe(false);
-  });
-
-  it('starts the Sync over exactly the run’s titles once Start sync is pressed', async () => {
-    renderFlow(FROM_RUN);
-
-    expect(await pressStart()).toMatchObject({
-      scope: 'run',
-      titles: IMPORTED,
-    });
-  });
-});
-
-describe('EnrichmentFlow — Settings’ Sync keeps its own scopes', () => {
-  const FROM_SETTINGS = ['/', '/settings', '/enrich'];
-
-  it('offers Only what’s missing and Everything, and nothing else', async () => {
-    renderFlow(FROM_SETTINGS);
-
-    await scopeCard(/Everything/);
-    expect(
-      screen.getAllByRole('radio').map((radio) => radio.textContent)
-    ).toEqual([
-      expect.stringMatching(/Only what.s missing/),
-      expect.stringMatching(/Everything/),
-    ]);
-  });
-
-  it('posts its chosen scope and names no titles', async () => {
-    renderFlow(FROM_SETTINGS);
-    fireEvent.click(await scopeCard(/Everything/));
-
-    const body = await pressStart();
-
-    expect(body.scope).toBe('all');
-    expect(body).not.toHaveProperty('titles');
   });
 });

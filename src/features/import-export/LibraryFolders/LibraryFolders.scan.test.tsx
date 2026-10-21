@@ -292,7 +292,6 @@ describe('LibraryFolders — the Import mode', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       enrich: false,
       mode: 'link',
-      all: false,
     });
   });
 
@@ -308,7 +307,6 @@ describe('LibraryFolders — the Import mode', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       enrich: false,
       mode: 'copy',
-      all: false,
     });
   });
 
@@ -322,86 +320,5 @@ describe('LibraryFolders — the Import mode', () => {
     renderPage();
 
     expect((await modeRadio('Link')).getAttribute('aria-checked')).toBe('true');
-  });
-});
-
-/**
- * Release review (issue #424): **Scan every folder again**.
- *
- * A `CheckCard` in the group **Scan**, under the **Import mode** (_Files_) and
- * above the TMDB box: _Scan every folder again_ over its hint, off on every
- * visit and never remembered. _Scan folders_ posts it as `all` beside
- * `enrich` and `mode`: off, the scan reads only the folders with no **Scanned
- * mark**; ticked, every reachable one.
- */
-const RESCAN_LABEL = 'Scan every folder again';
-const RESCAN_HINT =
-  'Reads the folders already scanned too, for files added or changed since. Nothing already in the library is imported twice.';
-
-const rescanBox = () =>
-  screen.findByRole('checkbox', { name: new RegExp(RESCAN_LABEL) });
-
-describe('LibraryFolders — Scan every folder again', () => {
-  it('draws the box unticked with its hint', async () => {
-    serve([MOVIES]);
-    renderPage();
-
-    expect(((await rescanBox()) as HTMLInputElement).checked).toBe(false);
-    expect(screen.getByText(RESCAN_HINT)).toBeDefined();
-  });
-
-  it('draws it under the Import mode and above the TMDB box', async () => {
-    serve([MOVIES]);
-    renderPage();
-
-    const rescan = await rescanBox();
-    const group = await modeGroup();
-    const enrich = await enrichBox();
-    expect(
-      group.compareDocumentPosition(rescan) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-    expect(
-      rescan.compareDocumentPosition(enrich) & Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-  });
-
-  it('posts all false when nothing is pressed', async () => {
-    serve([MOVIES]);
-    renderPage();
-
-    await userEvent.click(await scanButton());
-
-    await waitFor(() => expect(pathname()).toBe('/import'));
-    const [, init] = scanCalls()[0] ?? [];
-    expect(JSON.parse(String(init?.body))).toMatchObject({ all: false });
-  });
-
-  it('posts all true once the box is ticked', async () => {
-    serve([MOVIES]);
-    renderPage();
-
-    await userEvent.click(await rescanBox());
-    expect(((await rescanBox()) as HTMLInputElement).checked).toBe(true);
-    await userEvent.click(await scanButton());
-
-    await waitFor(() => expect(pathname()).toBe('/import'));
-    const [, init] = scanCalls()[0] ?? [];
-    expect(JSON.parse(String(init?.body))).toEqual({
-      enrich: false,
-      mode: 'link',
-      all: true,
-    });
-  });
-
-  it('is off again on the next visit, never remembered', async () => {
-    serve([MOVIES]);
-    const first = renderPage();
-    await userEvent.click(await rescanBox());
-    expect(((await rescanBox()) as HTMLInputElement).checked).toBe(true);
-    first.unmount();
-
-    renderPage();
-
-    expect(((await rescanBox()) as HTMLInputElement).checked).toBe(false);
   });
 });
