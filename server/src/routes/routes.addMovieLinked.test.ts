@@ -463,7 +463,12 @@ describe('POST /api/movies — a body it will not take', () => {
       ['videoPath', 'Heat (1995)/Heat.1995.mp4'],
     ]);
 
-    await expectRefused(response, storage, media);
+    await expectRefused(
+      response,
+      storage,
+      media,
+      'Not an absolute path: "Heat (1995)/Heat.1995.mp4"'
+    );
   });
 
   it('answers 400 for a videoPath of no video kind', async () => {
@@ -475,7 +480,12 @@ describe('POST /api/movies — a body it will not take', () => {
       ['videoPath', files.heatTrack],
     ]);
 
-    await expectRefused(response, storage, media);
+    await expectRefused(
+      response,
+      storage,
+      media,
+      'Not a video file: "Heat.1995.srt"'
+    );
   });
 
   it('answers 400 for a Link path under no listed folder, leaving the file alone', async () => {

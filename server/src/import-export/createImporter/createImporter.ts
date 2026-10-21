@@ -1,15 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { setImmediate as nextTurn } from 'node:timers/promises';
-import {
-  basename,
-  dirname,
-  extname,
-  isAbsolute,
-  join,
-  relative,
-  sep,
-} from 'node:path';
+import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';

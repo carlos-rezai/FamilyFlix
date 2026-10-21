@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { basename, isAbsolute, resolve } from 'node:path';
+import { basename, resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -36,7 +36,7 @@ import {
 import { listedFolderOf } from '../import-export/listedFolderOf/listedFolderOf';
 import { placeFoundVideo } from '../import-export/placeFoundVideo/placeFoundVideo';
 import { placeShowFolder } from '../import-export/placeShowFolder/placeShowFolder';
-import { isVideoFilename } from '../media/fileKinds/fileKinds';
+import { foundPathRefusal } from './foundPathRefusal/foundPathRefusal';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
 import {
   writeExport,
@@ -1493,14 +1493,11 @@ export function createApiRouter(
       res.status(400).json({ error: 'Body must carry a video' });
       return;
     }
-    if (found !== undefined && !isAbsolute(found)) {
+    const refused =
+      found === undefined ? null : foundPathRefusal(found, 'video');
+    if (refused !== null) {
       rollback();
-      res.status(400).json({ error: 'The video path must be absolute.' });
-      return;
-    }
-    if (found !== undefined && !isVideoFilename(basename(found))) {
-      rollback();
-      res.status(400).json({ error: 'The video path must name a video file.' });
+      res.status(400).json({ error: refused });
       return;
     }
     // The found video placed by the **Placed video** rule: in Link, one under

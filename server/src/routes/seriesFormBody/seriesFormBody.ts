@@ -1,4 +1,4 @@
-import { basename, extname, isAbsolute } from 'node:path';
+import { basename, extname } from 'node:path';
 
 import type { Media } from '../../media/createMedia/createMedia';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -9,6 +9,7 @@ import {
 } from '../../media/fileKinds/fileKinds';
 import type { SeasonPosterEdit } from '../../library';
 import { yearSpan } from '../../library/series/yearSpan/yearSpan';
+import { foundPathRefusal } from '../foundPathRefusal/foundPathRefusal';
 import type { Refusal, ResolveFolder } from '../movieFormBody/movieFormBody';
 import { onlyField } from '../onlyField/onlyField';
 import {
@@ -553,17 +554,13 @@ export function readSeriesFields(
       return `Episode ${tag} has no video`;
     }
     if (found !== undefined) {
-      const refused = foundPathRefusal(found, isVideoFilename, 'video');
+      const refused = foundPathRefusal(found, 'video');
       if (refused !== null) {
         return refused;
       }
     }
     for (const track of episode.storedSubtitles ?? []) {
-      const refused = foundPathRefusal(
-        track.path,
-        isSubtitleFilename,
-        'subtitle'
-      );
+      const refused = foundPathRefusal(track.path, 'subtitle');
       if (refused !== null) {
         return refused;
       }
@@ -620,23 +617,6 @@ export function readSeriesEditFields(
             : { kind: 'none' },
     };
   });
-}
-
-/**
- * Why a **Found file** path a series add names is not taken, as its sentence
- * — not absolute, or not of the kind its slot holds — or `null` to take it.
- */
-function foundPathRefusal(
-  path: string,
-  isKind: (filename: string) => boolean,
-  kind: 'video' | 'subtitle'
-): string | null {
-  if (!isAbsolute(path)) {
-    return `Not an absolute path: ${JSON.stringify(path)}`;
-  }
-  return isKind(basename(path))
-    ? null
-    : `Not a ${kind} file: ${JSON.stringify(basename(path))}`;
 }
 
 /** The tracks of an upload whose bytes have landed, in order. */
