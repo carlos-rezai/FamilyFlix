@@ -11,6 +11,7 @@ import type {
   ShowFolderRead,
 } from '@/types';
 
+import { refusalSentence } from '@/api/refusalSentence/refusalSentence';
 import { movieFormData, seriesFormData } from '../formValues/formValues';
 
 /** Where a new series is written, with its episodes. */
@@ -301,14 +302,16 @@ export type ShowFolderAnswer =
 
 /**
  * Reads the folder the **Folder bridge**'s one-folder dialog answered on the
- * series add. A `400` is a refusal the form draws; anything else not ok is a
- * plain error.
+ * series add. A `400` whose sentence reads is a refusal the form draws;
+ * anything else not ok is a plain error.
  */
 export async function readShowFolder(path: string): Promise<ShowFolderAnswer> {
   const response = await fetch(showFolderEndpoint(path));
   if (response.status === 400) {
-    const { error } = (await response.json()) as { error: string };
-    return { kind: 'refused', sentence: error };
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return { kind: 'refused', sentence };
+    }
   }
   if (!response.ok) {
     throw new Error(`GET /api/show-folder failed: ${response.status}`);

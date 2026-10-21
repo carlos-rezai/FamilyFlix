@@ -6,6 +6,7 @@ import {
   fetchGenrePool,
   fetchProblem,
   ProblemGoneError,
+  readShowFolder,
   resolveProblem,
 } from './api';
 import type {
@@ -15,6 +16,7 @@ import type {
   MovieFormFile,
   MovieFormSubtitle,
   MovieFormValues,
+  ShowFolderRead,
 } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeries } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
@@ -1208,5 +1210,55 @@ describe('createSeries — each episode’s subtitles', () => {
     expect(
       JSON.parse(String(fields.getAll('episode')[1])).subtitleLanguages
     ).toEqual([]);
+  });
+});
+
+describe('readShowFolder', () => {
+  const READ: ShowFolderRead = {
+    path: 'D:\Shows\Harbor and Vine',
+    titleGuess: 'Harbor and Vine',
+    libraryFolderId: 'shows',
+    heldSeriesId: null,
+    episodes: [],
+    unplaced: [],
+    straySubtitles: 0,
+  };
+
+  it('GETs the folder’s read, its path encoded', async () => {
+    fetchMock.mockResolvedValue(okResponse(READ));
+
+    expect(await readShowFolder(READ.path)).toEqual({
+      kind: 'read',
+      read: READ,
+    });
+    expect(onlyRequest().url).toBe(
+      `/api/show-folder?path=${encodeURIComponent(READ.path)}`
+    );
+  });
+
+  it('answers a 400’s sentence as a refusal', async () => {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ error: 'That folder can’t be read.' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      })
+    );
+
+    expect(await readShowFolder(READ.path)).toEqual({
+      kind: 'refused',
+      sentence: 'That folder can’t be read.',
+    });
+  });
+
+  it('rejects on a 400 with no JSON body', async () => {
+    fetchMock.mockResolvedValue(new Response('Bad Request', { status: 400 }));
+
+    await expect(readShowFolder(READ.path)).rejects.toThrow();
+  });
+
+  it('rejects on a server error', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(readShowFolder(READ.path)).rejects.toThrow();
   });
 });
