@@ -1,7 +1,7 @@
 # 48 — Add a show folder
 
 > **Initiative:** `add-a-show-folder`
-> **PRD:** `docs/PRDs/48-add-a-show-folder.md` (to be written)
+> **PRD:** `docs/PRDs/48-add-a-show-folder.md`
 > **Plan:** `docs/PRDs/48-add-a-show-folder-plan.md` (to be written)
 
 This log is the `grill-me` session for step 31 of the build order, **Add a
