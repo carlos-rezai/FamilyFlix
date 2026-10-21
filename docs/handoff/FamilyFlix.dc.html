@@ -289,7 +289,7 @@
           genreView:null, genreSearch:'', detailReturn:'browse',
           playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true, playNotice:null, audioTrack:0, audioMenuOpen:false,
           addMode:'folder', folderPath:'', scanned:false,
-          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, fMode:'link', fLinkOff:false, fVideoLinkOff:false, fVideoPicks:0, subLangOpen:null,
+          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, fStray:0, fMode:'link', fLinkOff:false, fVideoLinkOff:false, fVideoPicks:0, subLangOpen:null,
           addContext:null, resolveId:null,
           libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0}], folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
           impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[], impKind:'all', impOpen:{},
@@ -538,7 +538,7 @@
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
         // ---- add form ----
-        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fSeasonPosters:{},fShowFolder:'',fShowFolderRefusal:'',fShowFolderPicks:0,fMode:'link',fLinkOff:false,fVideoLinkOff:false,fVideoPicks:0,fFound:[],fFoundPick:0,fRating:0,fRatingHover:null,fEnrich:false}); }
+        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fSeasonPosters:{},fShowFolder:'',fShowFolderRefusal:'',fShowFolderPicks:0,fStray:0,fMode:'link',fLinkOff:false,fVideoLinkOff:false,fVideoPicks:0,fFound:[],fFoundPick:0,fRating:0,fRatingHover:null,fEnrich:false}); }
         setFRating(pct){ this.setState({fRating:pct}); }
         hoverFRating(pct){ this.setState({fRatingHover:pct}); }
         clearFRatingHover(){ this.setState({fRatingHover:null}); }
@@ -556,15 +556,19 @@
         // The simulation cycles a read, the unreadable refusal and the empty one. A read fills the Show
         // folder row and one found row per episode, season then episode order; an empty title takes the
         // Title guess. A refusal adds no rows. The row's ✕ takes off only the folder's rows.
-        // Four picks in turn: a show under a Library folder, an unreadable folder, an empty one,
-        // and a show under none — which disables Link and stands Copy chosen (log 48).
-        addShowFolder(){ this.setState(s=>{ const turn=s.fShowFolderPicks%4; const picks=s.fShowFolderPicks+1;
+        // Five picks in turn: a show under a Library folder — an Unplaced bonus.mkv numbered by the
+        // guess after its numbered episodes, and two stray subtitles — an unreadable folder, an
+        // empty one, a show under none — which disables Link and stands Copy chosen — and a
+        // held series's Show folder, refused by its title (log 48).
+        addShowFolder(){ this.setState(s=>{ const turn=s.fShowFolderPicks%5; const picks=s.fShowFolderPicks+1;
           if(turn===1) return {fShowFolderPicks:picks, fShowFolderRefusal:'That folder can’t be read.'};
           if(turn===2) return {fShowFolderPicks:picks, fShowFolderRefusal:'There are no videos in that folder.'};
+          if(turn===4) return {fShowFolderPicks:picks, fShowFolderRefusal:'Harbor Lights is already in your library.'};
           const dir=turn===3?'D:\\Downloads\\Harbor Lights':'E:\\Shows\\Harbor Lights';
           const found=[[1,1,'Pilot'],[1,2,'Low Tide'],[2,1,'Spring Tide']].map(([se,n,t])=>({filename:'Harbor.Lights.S0'+se+'E0'+n+'.'+t.replace(/ /g,'.')+'.mkv',season:String(se),number:String(n),title:t,subs:se===1&&n===1?[{filename:'Harbor.Lights.S01E01.Pilot.pt.srt',lang:'Portuguese'}]:[],fromFolder:true}));
-          return {fShowFolderPicks:picks, fShowFolderRefusal:'', fShowFolder:dir, fLinkOff:turn===3, fEpisodes:[...s.fEpisodes.filter(e=>!e.fromFolder),...found], fTitle:s.fTitle||'Harbor Lights'}; }); }
-        removeShowFolder(){ this.setState(s=>({fShowFolder:'', fLinkOff:false, fEpisodes:s.fEpisodes.filter(e=>!e.fromFolder)})); }
+          if(turn===0) found.splice(2,0,{filename:'bonus.mkv',season:'1',number:'3',title:'',subs:[],fromFolder:true});
+          return {fShowFolderPicks:picks, fShowFolderRefusal:'', fShowFolder:dir, fStray:turn===0?2:0, fLinkOff:turn===3, fEpisodes:[...s.fEpisodes.filter(e=>!e.fromFolder),...found], fTitle:s.fTitle||'Harbor Lights'}; }); }
+        removeShowFolder(){ this.setState(s=>({fShowFolder:'', fStray:0, fLinkOff:false, fEpisodes:s.fEpisodes.filter(e=>!e.fromFolder)})); }
         // A press on the disabled Link changes nothing.
         setFMode(m){ this.setState(s=>(m==='link'&&(s.fKind==='series'?s.fLinkOff:s.fVideoLinkOff)?null:{fMode:m})); }
         // A season's poster from a file: picked as bytes, or taken away with ✕.
@@ -1084,7 +1088,7 @@
               addEpisodeFiles:()=>this.addEpisodeFiles(),
               // The Show folder pick: the shell's plain series add alone.
               canAddShowFolder:isSeriesForm&&s.addContext==='settings', addShowFolder:()=>this.addShowFolder(),
-              hasShowFolder:!!s.fShowFolder, showFolder:s.fShowFolder, removeShowFolder:()=>this.removeShowFolder(),
+              hasShowFolder:!!s.fShowFolder, showFolder:s.fShowFolder, strayLine:s.fStray>0?s.fStray+' subtitle file'+(s.fStray===1?'':'s')+' matched no episode.':'', removeShowFolder:()=>this.removeShowFolder(),
               showFolderRefusal:isSeriesForm?s.fShowFolderRefusal:'',
               // The Import mode: the shell's plain add alone, both kinds — never an edit, a Resolve or a browser.
               showImportMode:s.addContext==='settings'&&s.folderBridge, modes:formModeChoices(), groupHeadingStyle,

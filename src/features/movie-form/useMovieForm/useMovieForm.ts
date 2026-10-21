@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
+import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
@@ -45,6 +46,10 @@ import {
   pickedSubtitle,
   showFolderRows,
 } from '../formValues/formValues';
+
+/** The refusal of a picked folder that is already a held series's Show folder. */
+const heldShowFolderRefusal = (title: string): string =>
+  `${title} is already in your library.`;
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
@@ -183,6 +188,8 @@ export interface UseMovieFormResult {
   removeShowFolder: () => void;
   /** The sentence a refused Show folder read is drawn as, or `null`. */
   showFolderRefusal: string | null;
+  /** How many subtitles the picked Show folder matched to no episode. */
+  straySubtitles: number;
   /** The season of the row holding `key`, as typed. */
   setSeason: (key: string, season: string) => void;
   /** The episode number of the row holding `key`, as typed. */
@@ -641,6 +648,7 @@ export function useMovieForm(): UseMovieFormResult {
   const [showFolderRefusal, setShowFolderRefusal] = useState<string | null>(
     null
   );
+  const [straySubtitles, setStraySubtitles] = useState(0);
   // The **Import mode**: Link on every visit, never remembered. The picked
   // Show folder's read says whether Link is available — `libraryFolderId`
   // `null` disables it and Copy stands chosen, until a later pick under a
@@ -676,8 +684,18 @@ export function useMovieForm(): UseMovieFormResult {
       return;
     }
     const { read } = answer;
+    if (read.heldSeriesId !== null) {
+      // Already a held series's **Show folder**: refused by that series's own
+      // title, and no rows land.
+      const held = await fetchSeriesDetail(read.heldSeriesId).catch(() => null);
+      setShowFolderRefusal(
+        heldShowFolderRefusal(held?.series.title ?? read.titleGuess)
+      );
+      return;
+    }
     setShowFolderRefusal(null);
     setShowFolder(read.path);
+    setStraySubtitles(read.straySubtitles);
     setLinkDisabled(read.libraryFolderId === null);
     holdShowFolder(showFolderRows(read));
     setValues((current) =>
@@ -691,6 +709,7 @@ export function useMovieForm(): UseMovieFormResult {
   }, [pickShowFolder]);
   const removeShowFolder = useCallback(() => {
     setShowFolder(null);
+    setStraySubtitles(0);
     setLinkDisabled(false);
     dropShowFolder();
   }, [dropShowFolder]);
@@ -916,6 +935,7 @@ export function useMovieForm(): UseMovieFormResult {
     showFolder,
     removeShowFolder,
     showFolderRefusal,
+    straySubtitles,
     setSeason: episodeList.setSeason,
     setNumber: episodeList.setNumber,
     setEpisodeTitle: episodeList.setEpisodeTitle,

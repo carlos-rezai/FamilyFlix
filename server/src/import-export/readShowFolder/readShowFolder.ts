@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { basename } from 'node:path';
+import { basename, relative } from 'node:path';
 
 import { isVideoFilename } from '../../media/fileKinds/fileKinds';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
@@ -19,6 +19,24 @@ export type ShowFolderRefusal = 'unreadable' | 'empty';
 export type ShowFolderAnswer =
   | { kind: 'read'; read: ShowFolderRead }
   | { kind: 'refused'; refusal: ShowFolderRefusal };
+
+/** A held series's **Show folder**: its id and its absolute path. */
+export interface HeldShowFolder {
+  seriesId: string;
+  path: string;
+}
+
+/** What the caller knows of the library: the held series's Show folders. */
+export interface ShowFolderContext {
+  heldShowFolders?: readonly HeldShowFolder[];
+}
+
+/** The held series whose Show folder `dir` is, `null` for none. */
+const heldSeriesOf = (
+  dir: string,
+  held: readonly HeldShowFolder[]
+): string | null =>
+  held.find((folder) => relative(folder.path, dir) === '')?.seriesId ?? null;
 
 /**
  * The **Source folders** under a picked folder: the folder itself when
@@ -43,10 +61,17 @@ async function scansUnder(dir: string): Promise<MovieFolderScan[]> {
  * its videos as **Unplaced**. The **Title guess** is the importer's own rule
  * on the folder's name.
  *
+ * A folder that is already a held series's **Show folder** — one of the
+ * `heldShowFolders` the caller passes — is still read, its `heldSeriesId`
+ * set to that series's id; the form draws the refusal.
+ *
  * A folder that cannot be read is `unreadable`; one holding no video is
  * `empty`. Answered as a value, never a throw.
  */
-export async function readShowFolder(dir: string): Promise<ShowFolderAnswer> {
+export async function readShowFolder(
+  dir: string,
+  context: ShowFolderContext = {}
+): Promise<ShowFolderAnswer> {
   if ((await readableFolder(dir)) !== 'readable') {
     return { kind: 'refused', refusal: 'unreadable' };
   }
@@ -85,7 +110,7 @@ export async function readShowFolder(dir: string): Promise<ShowFolderAnswer> {
       path: dir,
       titleGuess: titleGuess(basename(dir)),
       libraryFolderId: null,
-      heldSeriesId: null,
+      heldSeriesId: heldSeriesOf(dir, context.heldShowFolders ?? []),
       episodes,
       unplaced,
       straySubtitles: shows.reduce(

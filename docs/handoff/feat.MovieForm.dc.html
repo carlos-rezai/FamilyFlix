@@ -538,7 +538,10 @@
                          on an add, the picked file's name; on the Series edit job, a held
                          episode's Source file (else its stored video's name), its ✕ removing
                          it on save; on the Series Resolve, the found file's path, its numbers
-                         prefilled by the Numbering guess. -->
+                         prefilled by the Numbering guess. A Show folder pick's Unplaced videos
+                         land after its numbered episodes, numbered by the same guess and
+                         continuing after them, so every row arrives numbered and editable; two
+                         rows claiming one number are the Save gate's refusal. -->
                     <sc-for
                       list="{{ form.episodes }}"
                       as="ep"
@@ -594,6 +597,25 @@
                         </button>
                       </dc-import>
                     </sc-for>
+                    <!-- The stray line (log 48): under the episodes, once a Show folder pick's
+                         read counted subtitles that begin with no episode's stem — one 13px
+                         dim line, “2 subtitle files matched no episode.” Nothing at zero; it
+                         goes with the folder's rows on the Show folder row's ✕. -->
+                    <sc-if
+                      value="{{ form.strayLine }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <p
+                        style="
+                          margin: 0;
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          color: var(--color-text-dim);
+                        "
+                      >
+                        {{ form.strayLine }}
+                      </p>
+                    </sc-if>
                     <!-- ＋ Add show folder (log 48): the series add in the shell alone — a
                          browser has no folder dialog and draws none. It opens the one-folder
                          dialog; a cancel changes nothing. The read fills the Show folder row,
@@ -768,8 +790,9 @@
           </div>
 
           <!-- A refused Show folder pick (log 48), under the buttons: one 13px danger line —
-               “That folder can’t be read.” or “There are no videos in that folder.” It adds no
-               rows. -->
+               “That folder can’t be read.”, “There are no videos in that folder.”, or, for a
+               folder that is already a held series's Show folder, “Harbor and Vine is already in
+               your library.” — the held series's own title. It adds no rows. -->
           <sc-if
             value="{{ form.showFolderRefusal }}"
             hint-placeholder-val="{{ false }}"

@@ -27,6 +27,7 @@ import {
   EpisodesLabel,
   SeasonPosters,
   SeasonPostersLabel,
+  StrayLine,
 } from './SeriesFormFiles.styles';
 
 /** The episodes section's name, and what its picker says. */
@@ -37,6 +38,10 @@ const EPISODES_ADD = 'Add episode files';
 const SHOW_FOLDER_ADD = 'Add show folder';
 const SHOW_FOLDER_LABEL = 'Show folder';
 const SHOW_FOLDER_REMOVES = 'show folder';
+
+/** The line counting the subtitles the Show folder read matched to no episode. */
+const strayLine = (count: number): string =>
+  `${count} subtitle ${count === 1 ? 'file' : 'files'} matched no episode.`;
 
 /** The _Season posters_ list's caption, and what an empty slot says. */
 const SEASON_POSTERS_LABEL = 'Season posters';
@@ -93,6 +98,11 @@ export interface SeriesFormFilesProps {
   showFolder?: string | null;
   /** Reports that the Show folder row's ✕ was pressed. */
   onRemoveShowFolder?: () => void;
+  /**
+   * How many subtitles the Show folder read matched to no episode — counted
+   * in one line under the episodes, and nothing drawn at zero.
+   */
+  straySubtitles?: number;
   /** Reports every video picked in one dialog of _＋ Add episode files_. */
   onAddEpisodeFiles: (files: File[]) => void;
   onSeasonChange: (key: string, season: string) => void;
@@ -140,6 +150,7 @@ export function SeriesFormFiles({
   onAddShowFolder = null,
   showFolder = null,
   onRemoveShowFolder = () => undefined,
+  straySubtitles = 0,
   onSeasonChange,
   onNumberChange,
   onEpisodeTitleChange,
@@ -255,6 +266,9 @@ export function SeriesFormFiles({
               />
             </EpisodeFileRow>
           ))}
+          {straySubtitles > 0 && (
+            <StrayLine>{strayLine(straySubtitles)}</StrayLine>
+          )}
           {onAddShowFolder !== null && (
             <AddShowFolder type="button" onClick={onAddShowFolder}>
               ＋ {SHOW_FOLDER_ADD}

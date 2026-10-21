@@ -251,10 +251,11 @@ export const isShowFolderRow = (row: EpisodeFormRow): boolean =>
 /**
  * A **Show folder read**'s rows: one **Episode file row** per episode, in the
  * read's season-then-episode order, each a **Found file** with its found
- * tracks in their detected languages.
+ * tracks in their detected languages — then one per **Unplaced** video,
+ * numbered by the **Numbering guess** after the read's numbered episodes.
  */
 export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
-  return read.episodes.map((episode, index) => ({
+  const numbered = read.episodes.map((episode, index) => ({
     key: `${SHOW_FOLDER_KEY}episode-${index}`,
     file: foundFile(episode.video),
     season: String(episode.season),
@@ -267,6 +268,18 @@ export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
     })),
     still: null,
   }));
+  const unplaced = numberFoundRows(read.unplaced, read.path, read.episodes).map(
+    ({ path, season, number, title }, index) => ({
+      key: `${SHOW_FOLDER_KEY}unplaced-${index}`,
+      file: foundFile(path),
+      season: String(season),
+      number: String(number),
+      title: title ?? '',
+      subtitles: [],
+      still: null,
+    })
+  );
+  return [...numbered, ...unplaced];
 }
 
 /**
@@ -585,23 +598,30 @@ function folderSeason(video: string, showFolder: string | undefined): number {
   return season ?? 1;
 }
 
+/** One found video's **Numbering guess**: its season, number and title. */
+export interface FoundRowGuess {
+  path: string;
+  season: number;
+  number: number;
+  title: string | null;
+}
+
 /**
- * The **Series Resolve**'s rows: one **Episode file row** per Unplaced video
- * of the **Problem detail**, as a found path, numbered by the **Numbering
- * guess** — the season from the folder, the episode from the **Episode word**,
- * else the next free number in name order. A held series' numbers are taken
- * already, and answered beside the rows for the gate to refuse.
+ * The **Numbering guess** for found videos in name order, under the folder
+ * they were found in: the season from the folder, the episode from the
+ * **Episode word**, else the next free number in that season. A pair in
+ * `taken` — a held series's, or a numbered row's — is never guessed.
  */
-export function seriesResolveRows(
-  detail: ImportProblemDetail,
-  held: SeriesDetail | null
-): { rows: EpisodeFormRow[]; taken: string[] } {
-  const taken = (held?.seasons ?? []).flatMap((season) =>
-    season.episodes.map((episode) => `${episode.season}x${episode.number}`)
+export function numberFoundRows(
+  videos: readonly string[],
+  folder: string | undefined,
+  taken: readonly { season: number; number: number }[]
+): FoundRowGuess[] {
+  const used = new Set(
+    taken.map(({ season, number }) => `${season}x${number}`)
   );
-  const used = new Set(taken);
-  const guesses = detail.files.videos.map((path) => {
-    const season = folderSeason(path, detail.folder);
+  const guesses = videos.map((path) => {
+    const season = folderSeason(path, folder);
     const tag = readEpisodeTag(foundFilenameOf(path), season);
     const claim =
       tag !== null && !used.has(`${tag.season}x${tag.number}`) ? tag : null;
@@ -610,7 +630,7 @@ export function seriesResolveRows(
     }
     return { path, season: claim?.season ?? season, claim };
   });
-  const rows = guesses.map(({ path, season, claim }, index) => {
+  return guesses.map(({ path, season, claim }) => {
     let number = claim?.number ?? null;
     if (number === null) {
       number = 1;
@@ -619,16 +639,37 @@ export function seriesResolveRows(
       }
       used.add(`${season}x${number}`);
     }
-    return {
-      key: `${FOUND_KEY}episode-${index}`,
-      // Named by its path: the folder is what tells two `Episode 1`s apart.
-      file: { kind: 'found' as const, path, filename: path },
-      season: String(season),
-      number: String(number),
-      title: claim?.title ?? '',
-      subtitles: [],
-      still: null,
-    };
+    return { path, season, number, title: claim?.title ?? null };
   });
+}
+
+/**
+ * The **Series Resolve**'s rows: one **Episode file row** per Unplaced video
+ * of the **Problem detail**, as a found path, numbered by the **Numbering
+ * guess** ({@link numberFoundRows}). A held series' numbers are taken
+ * already, and answered beside the rows for the gate to refuse.
+ */
+export function seriesResolveRows(
+  detail: ImportProblemDetail,
+  held: SeriesDetail | null
+): { rows: EpisodeFormRow[]; taken: string[] } {
+  const heldPairs = (held?.seasons ?? []).flatMap((group) =>
+    group.episodes.map(({ season, number }) => ({ season, number }))
+  );
+  const taken = heldPairs.map(({ season, number }) => `${season}x${number}`);
+  const rows = numberFoundRows(
+    detail.files.videos,
+    detail.folder,
+    heldPairs
+  ).map(({ path, season, number, title }, index) => ({
+    key: `${FOUND_KEY}episode-${index}`,
+    // Named by its path: the folder is what tells two `Episode 1`s apart.
+    file: { kind: 'found' as const, path, filename: path },
+    season: String(season),
+    number: String(number),
+    title: title ?? '',
+    subtitles: [],
+    still: null,
+  }));
   return { rows, taken };
 }

@@ -6,6 +6,7 @@ import {
   dirname,
   extname,
   isAbsolute,
+  join,
   relative,
   sep,
 } from 'node:path';
@@ -1974,7 +1975,22 @@ export function createImporter({
 
     current: snapshot,
 
-    readShowFolder: (path) => readShowFolder(path),
+    readShowFolder: (path) => {
+      const listed = new Map(
+        storage.libraryFolders().map((folder) => [folder.id, folder.path])
+      );
+      return readShowFolder(path, {
+        heldShowFolders: storage.libraryTitles().series.flatMap((series) => {
+          const root =
+            series.libraryFolderId === null
+              ? undefined
+              : listed.get(series.libraryFolderId);
+          return root === undefined || series.sourceFolder === null
+            ? []
+            : [{ seriesId: series.id, path: join(root, series.sourceFolder) }];
+        }),
+      });
+    },
 
     cancel: async () => {
       // Gone from the first line: a `current` read while the rollback is

@@ -31,6 +31,14 @@ export const SeasonPostersLabel = styled.div`
   color: ${({ theme }) => theme.colors.textFaint};
 `;
 
+/** The Show folder read's stray-subtitle count: one 13px dim line. */
+export const StrayLine = styled.p`
+  margin: 0;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textDim};
+`;
+
 /**
  * _＋ Add show folder_: the File picker's dashed 42px box, as a `<button>` —
  * it opens the **Folder bridge**'s dialog, not a file input.

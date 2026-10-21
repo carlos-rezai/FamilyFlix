@@ -184,6 +184,7 @@ export function MovieForm() {
     showFolder,
     removeShowFolder,
     showFolderRefusal,
+    straySubtitles,
     setSeason,
     setNumber,
     setEpisodeTitle,
@@ -352,6 +353,7 @@ export function MovieForm() {
             onAddShowFolder={addShowFolder}
             showFolder={showFolder}
             onRemoveShowFolder={removeShowFolder}
+            straySubtitles={straySubtitles}
             onSeasonChange={setSeason}
             onNumberChange={setNumber}
             onEpisodeTitleChange={setEpisodeTitle}
