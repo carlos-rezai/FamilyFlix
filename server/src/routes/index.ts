@@ -2076,9 +2076,6 @@ export function createApiRouter(
     res.json({ value });
   });
 
-  // The **Library folders** list. `reachable` is the disk's answer, read
-  // afresh on every list rather than stored, so a drive unplugged since the
-  // add reads false on the next visit and true again once it is back.
   // The series add's **Show folder pick**: the **Show folder read** of the
   // folder the dialog answered, or one sentence per refusal.
   router.get('/show-folder', async (req: Request, res: Response) => {
@@ -2100,6 +2097,9 @@ export function createApiRouter(
     res.json({ libraryFolderId: listed?.id ?? null });
   });
 
+  // The **Library folders** list. `reachable` is the disk's answer, read
+  // afresh on every list rather than stored, so a drive unplugged since the
+  // add reads false on the next visit and true again once it is back.
   router.get('/library-folders', async (_req: Request, res: Response) => {
     const listed = storage.libraryFolders();
     const folders: LibraryFolder[] = await Promise.all(
@@ -3153,18 +3153,16 @@ export function createApiRouter(
   };
 
   // _Save & continue_: the **Movie form**'s own multipart encoding, read by
-  // the same reader the two movie routes use — and **the only route in the
-  // app that accepts a path**. A **Found file** arrives as the path field the
-  // edit route already reads for a **Stored file** (`videoPath`, `posterPath`,
-  // `subtitlePath`), a picked one as bytes in the part beside it; the two are
-  // told apart exactly as the edit tells them apart, so nothing about the
-  // encoding is this route's own. What is this route's own is where a path
-  // may point: the importer copies from under the **Current run**'s Library
-  // folders and nowhere else, and a path outside them is a `400` with nothing
-  // copied — not the film named inside one beside it either.
-  // `POST /api/movies` keeps accepting bytes only, whatever a path field says:
-  // a path-accepting field on the route anyone on the network can reach was
-  // ruled out in the PRD.
+  // the same reader the two movie routes use. A **Found file** arrives as the
+  // path field the edit route already reads for a **Stored file**
+  // (`videoPath`, `posterPath`, `subtitlePath`), a picked one as bytes in the
+  // part beside it; the two are told apart exactly as the edit tells them
+  // apart, so nothing about the encoding is this route's own. Since log 48 the
+  // two adds take a found path too; the **Loopback guard** is what keeps a
+  // path-accepting route off the network. What is this route's own is where a
+  // path may point: the importer copies from under the **Current run**'s
+  // Library folders and nowhere else, and a path outside them is a `400` with
+  // nothing copied — not the film named inside one beside it either.
   //
   // **Every refusal takes the bytes this request wrote with it**, on the
   // add's rule rather than the edit's: a resolve is a new movie, so the folder
