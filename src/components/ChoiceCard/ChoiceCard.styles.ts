@@ -16,6 +16,11 @@ export const Card = styled.button<{ $selected: boolean }>`
       $selected ? theme.colors.accentLine : theme.colors.border};
   border-radius: ${({ theme }) => theme.radius.md};
   cursor: pointer;
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
 `;
 
 /** The label and the dot, on one line with the dot at the far end. */

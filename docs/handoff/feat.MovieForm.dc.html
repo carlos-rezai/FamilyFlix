@@ -652,6 +652,70 @@
             </sc-if>
           </div>
 
+          <!-- The Import mode (log 48), ImportModeChoice: the shell's plain series add alone —
+               never an edit, a Resolve or a browser — under the Files card, before the TMDB
+               check. Link chosen on every visit, never remembered; posted first as `mode`. A
+               show under no Library folder disables the Link card, reading its line, and Copy
+               stands chosen until a later pick under one. -->
+          <sc-if
+            value="{{ form.showImportMode }}"
+            hint-placeholder-val="{{ true }}"
+          >
+            <div style="margin-top: 24px">
+              <span style="{{ form.groupHeadingStyle }}" id="form-mode-caption"
+                >Files</span
+              >
+              <div
+                role="radiogroup"
+                aria-labelledby="form-mode-caption"
+                style="display: flex; gap: 10px"
+              >
+                <sc-for
+                  list="{{ form.modes }}"
+                  as="m"
+                  hint-placeholder-count="2"
+                >
+                  <button
+                    role="radio"
+                    aria-checked="{{ m.checked }}"
+                    disabled="{{ m.disabled }}"
+                    onClick="{{ m.onSelect }}"
+                    style="{{ m.cardStyle }}"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                      "
+                    >
+                      <span
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 16px;
+                          font-weight: 600;
+                          color: var(--color-text);
+                        "
+                        >{{ m.label }}</span
+                      ><span style="{{ m.dotStyle }}"></span>
+                    </div>
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 12.5px;
+                        color: var(--color-text-faint);
+                        margin-top: 4px;
+                        text-align: left;
+                      "
+                    >
+                      {{ m.line }}
+                    </div>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
           <!-- Add and sync: on a plain add alone, both kinds, between the Files card and the
                actions — never on an edit or a Resolve. Off on every mount; Add to library keeps
                its label. Ticked, the save lands on the title's page with the Enrichment flow

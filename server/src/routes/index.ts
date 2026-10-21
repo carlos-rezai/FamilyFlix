@@ -29,6 +29,10 @@ import {
   type ReviewOutcome,
 } from '../import-export/createImporter/createImporter';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
+import {
+  placeFoundVideo,
+  placeShowFolder,
+} from '../import-export/placeFoundVideo/placeFoundVideo';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
 import {
   writeExport,
@@ -71,6 +75,7 @@ import {
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
 import {
+  importModeOf,
   importStartBody,
   pickFolderBody,
   problemIdsBody,
@@ -921,6 +926,13 @@ export function createApiRouter(
       return;
     }
 
+    const mode = importModeOf(onlyField(fields, 'mode'));
+    if (!mode.ok) {
+      rollback();
+      res.status(400).json({ error: mode.error });
+      return;
+    }
+
     const read = readSeriesFields(
       fields,
       uploads,
@@ -940,13 +952,41 @@ export function createApiRouter(
     const { title, year, endYear, creator, synopsis, rating, cast, genres } =
       read;
 
+    // Each **Found file**'s video placed by the **Placed video** rule: in
+    // Link, one under a listed Library folder is linked where it lies; a
+    // `null` is copied. A Link path under no listed folder is refused.
+    const folders = storage.libraryFolders();
+    const placed = read.episodes.map((episode) =>
+      episode.video === undefined
+        ? placeFoundVideo(folders, episode.videoPath ?? '', mode.value)
+        : null
+    );
+    if (
+      mode.value === 'link' &&
+      read.episodes.some(
+        (episode, index) =>
+          episode.video === undefined && placed[index] === null
+      )
+    ) {
+      rollback();
+      res.status(400).json({
+        error: 'Link needs a file inside one of your library folders.',
+      });
+      return;
+    }
+    const firstFound = read.episodes.find(
+      (episode) => episode.video === undefined
+    )?.videoPath;
+    const showFolder =
+      firstFound === undefined ? null : placeShowFolder(folders, firstFound);
+
     // Nothing is refused after this point: the folder takes the title's name,
     // as a movie's does, and every stored path follows it.
     // A row of a **Show folder pick** sends no bytes, so a save of only those
     // reserves its Series folder here.
     const findsFiles = read.episodes.some(
-      (episode) =>
-        episode.video === undefined ||
+      (episode, index) =>
+        (episode.video === undefined && placed[index] === null) ||
         (episode.storedSubtitles ?? []).length > 0
     );
     if (uploads.folder === null && findsFiles) {
@@ -962,9 +1002,9 @@ export function createApiRouter(
     // Each **Found file** is copied into its season with `Media.copyIn` —
     // copied, never moved, so the picked folder is left as it was. A copy
     // that breaks is the save's failure, and takes the folder with it.
-    const copied: { videoPath: string; tracks: NewSubtitle[] }[] = [];
+    const copied: { video: StoredVideo; tracks: NewSubtitle[] }[] = [];
     try {
-      for (const episode of read.episodes) {
+      for (const [index, episode] of read.episodes.entries()) {
         const season =
           uploads.folder === null
             ? null
@@ -975,10 +1015,13 @@ export function createApiRouter(
           }
           return media.copyIn(season, path);
         };
-        const videoPath =
-          episode.video === undefined
-            ? await copy(episode.videoPath ?? '')
-            : stored(episode.video);
+        const video: StoredVideo = placed[index] ?? {
+          videoPath:
+            episode.video === undefined
+              ? await copy(episode.videoPath ?? '')
+              : stored(episode.video),
+          videoFolderId: null,
+        };
         const tracks: NewSubtitle[] = [];
         for (const track of episode.storedSubtitles ?? []) {
           tracks.push({
@@ -986,7 +1029,7 @@ export function createApiRouter(
             language: track.language,
           });
         }
-        copied.push({ videoPath, tracks });
+        copied.push({ video, tracks });
       }
     } catch {
       rollback();
@@ -995,11 +1038,8 @@ export function createApiRouter(
     }
 
     const episodes: NewEpisode[] = read.episodes.map((episode, index) => {
-      const { videoPath, tracks } = copied[index];
-      const runtimeMinutes = derivedRuntime(playback, {
-        videoPath,
-        videoFolderId: null,
-      });
+      const { video, tracks } = copied[index];
+      const runtimeMinutes = derivedRuntime(playback, video);
       const subtitles: NewSubtitle[] = [
         ...tracks,
         ...episode.subtitles.map((path, track) => ({
@@ -1010,7 +1050,7 @@ export function createApiRouter(
       return {
         season: episode.season,
         number: episode.number,
-        videoPath,
+        ...video,
         ...(episode.title === undefined ? {} : { title: episode.title }),
         ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
         ...(subtitles.length === 0 ? {} : { subtitles }),
@@ -1041,6 +1081,13 @@ export function createApiRouter(
         episodes,
         seasonPosterEdits(seasonPosters.changes, stored)
       );
+      if (showFolder !== null) {
+        storage.setSourceFolder(
+          series.id,
+          showFolder.folderId,
+          showFolder.sourceFolder
+        );
+      }
       res.status(201).json(series);
     } catch {
       rollback();

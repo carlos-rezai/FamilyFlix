@@ -4578,6 +4578,7 @@ describe('MovieForm — a series saved with its episodes', () => {
 
       const body = seriesSaves()[0][1]?.body as FormData;
       expect([...body.keys()]).toEqual([
+        'mode',
         'title',
         'year',
         'creator',

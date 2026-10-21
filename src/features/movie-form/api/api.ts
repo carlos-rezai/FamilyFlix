@@ -1,4 +1,5 @@
 import type {
+  ImportMode,
   EpisodeFormRow,
   Genre,
   GenrePoolPayload,
@@ -98,13 +99,14 @@ export function createMovie(values: MovieFormValues): Promise<Movie> {
  * standing with every field and row still in it.
  */
 export async function createSeries(
+  mode: ImportMode,
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
   seasonPosters: readonly SeasonPosterSlot[]
 ): Promise<Series> {
   const response = await fetch(SERIES_ENDPOINT, {
     method: 'POST',
-    body: seriesFormData(values, episodes, seasonPosters),
+    body: seriesFormData(values, episodes, seasonPosters, mode),
   });
 
   if (!response.ok) {

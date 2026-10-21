@@ -14,8 +14,7 @@ import {
 } from './ImportSetup.styles';
 import { FolderShapes } from '../FolderShapes/FolderShapes';
 import { FolderListEditor } from '../FolderListEditor/FolderListEditor';
-import { EnrichCheckCard } from '@/components';
-import { ImportModeChoice } from '../ImportModeChoice/ImportModeChoice';
+import { EnrichCheckCard, ImportModeChoice } from '@/components';
 import { useLibraryFolders } from '../useLibraryFolders/useLibraryFolders';
 
 /**

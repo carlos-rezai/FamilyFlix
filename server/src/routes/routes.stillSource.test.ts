@@ -120,6 +120,10 @@ function send(
   parts: Part[]
 ): Promise<Response> {
   const body = new FormData();
+  // An add's **Import mode** travels first (issue #418).
+  if (method === 'POST') {
+    body.append('mode', 'copy');
+  }
   for (const [name, value] of parts) {
     body.append(name, value);
   }

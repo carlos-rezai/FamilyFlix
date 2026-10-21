@@ -1,6 +1,6 @@
 import { useId } from 'react';
 
-import { Modal } from '@/components';
+import { ChoiceCard, Modal } from '@/components';
 import {
   Button,
   CheckIcon,
@@ -15,7 +15,6 @@ import {
   EXPORT_NAME_PREFIX,
   type ExportFormat,
 } from '@/types';
-import { ChoiceCard } from '../ChoiceCard/ChoiceCard';
 import { useExport } from '../useExport/useExport';
 import {
   Actions,

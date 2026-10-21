@@ -25,6 +25,7 @@ import {
   type ShowScan,
 } from '../groupShows/groupShows';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
+import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
 import { splitCollections } from '../splitCollections/splitCollections';
 import { heldSeriesValues, heldValues } from '../heldValues/heldValues';
 import {
@@ -1609,16 +1610,10 @@ export function createImporter({
     current: ImportRun,
     slot: ResolveFile
   ): StoredVideo | null => {
-    if (current.mode !== 'link' || !('found' in slot)) {
+    if (!('found' in slot)) {
       return null;
     }
-    const listed = listedFolderOf(slot.found);
-    return listed === null
-      ? null
-      : {
-          videoPath: spellLinkedVideo(listed.path, slot.found),
-          videoFolderId: listed.id,
-        };
+    return placeFoundVideo(storage.libraryFolders(), slot.found, current.mode);
   };
 
   /** A held film linked to where it was found. */

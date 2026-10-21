@@ -139,6 +139,8 @@ const FIELDS: Part[] = [
 /** A multipart POST to `/api/series` whose parts are given in order. */
 function postSeries(baseUrl: string, parts: Part[]): Promise<Response> {
   const body = new FormData();
+  // An add's **Import mode** travels first (issue #418).
+  body.append('mode', 'copy');
   for (const [name, value] of parts) {
     body.append(name, value);
   }

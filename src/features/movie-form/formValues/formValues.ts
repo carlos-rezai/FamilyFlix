@@ -1,4 +1,5 @@
 import type {
+  ImportMode,
   EpisodeFormRow,
   ImportProblemDetail,
   Movie,
@@ -434,8 +435,8 @@ export function movieFormData(values: MovieFormValues): FormData {
 }
 
 /**
- * The body of a series save, `POST /api/series`, in the contract's order: the
- * series fields (the director's field travels as `creator`), the poster, then
+ * The body of a series save, `POST /api/series`, in the contract's order: an
+ * add's `mode` first, the series fields (the director's field travels as `creator`), the poster, then
  * each row as its `episode` JSON field followed by its `episodeVideo`, its
  * picked **Still** as `episodeStill`, and its `episodeSubtitle` parts. The order is load-bearing: the route pairs the k-th
  * video with the k-th `episode` field and names the Series folder off a title
@@ -449,10 +450,15 @@ export function movieFormData(values: MovieFormValues): FormData {
 export function seriesFormData(
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
-  seasonPosters: readonly SeasonPosterSlot[]
+  seasonPosters: readonly SeasonPosterSlot[],
+  mode?: ImportMode
 ): FormData {
   const body = new FormData();
 
+  // An add's **Import mode** travels first; an edit and a Resolve send none.
+  if (mode !== undefined) {
+    body.append('mode', mode);
+  }
   body.append('title', values.title);
   body.append('year', values.year);
   body.append('creator', values.director);

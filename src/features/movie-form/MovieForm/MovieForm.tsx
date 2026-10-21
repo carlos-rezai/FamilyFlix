@@ -1,5 +1,6 @@
 import {
   EnrichCheckCard,
+  ImportModeChoice,
   PageHeader,
   PillTabs,
   RatingPicker,
@@ -28,6 +29,7 @@ import {
   UnderCaption,
   Actions,
   EnrichSlot,
+  ModeSlot,
   Refusal,
 } from './MovieForm.styles';
 
@@ -151,6 +153,10 @@ export function MovieForm() {
     showEnrich,
     enrich,
     toggleEnrich,
+    showImportMode,
+    importMode,
+    setImportMode,
+    linkDisabled,
     values,
     setTitle,
     setYear,
@@ -374,6 +380,18 @@ export function MovieForm() {
           />
         )}
       </Fields>
+
+      {/* The **Import mode**: a plain series add in the shell alone, under
+        the Files card and before the TMDB check. */}
+      {showImportMode && (
+        <ModeSlot>
+          <ImportModeChoice
+            mode={importMode}
+            onChange={setImportMode}
+            linkDisabled={linkDisabled}
+          />
+        </ModeSlot>
+      )}
 
       {/* **Add and sync**: a plain add of either kind alone, between the Files
         card and the actions. */}

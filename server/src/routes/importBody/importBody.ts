@@ -74,13 +74,22 @@ export function importStartBody(
   const { enrich, mode } = (
     typeof body === 'object' && body !== null ? body : {}
   ) as { enrich?: unknown; mode?: unknown };
+  const read = importModeOf(mode);
+  if (!read.ok) {
+    return read;
+  }
+  return { ok: true, value: { enrich: enrich === true, mode: read.value } };
+}
+
+/**
+ * A body's **Import mode** → one of **IMPORT_MODES**, a missing or unknown
+ * one refused in a sentence — read by the starts and by the add routes alike.
+ */
+export function importModeOf(mode: unknown): BodyRead<ImportMode> {
   if (!IMPORT_MODES.includes(mode as ImportMode)) {
     return { ok: false, error: 'Mode must be link or copy.' };
   }
-  return {
-    ok: true,
-    value: { enrich: enrich === true, mode: mode as ImportMode },
-  };
+  return { ok: true, value: mode as ImportMode };
 }
 
 /**

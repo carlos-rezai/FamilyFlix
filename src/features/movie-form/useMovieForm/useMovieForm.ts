@@ -8,6 +8,7 @@ import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type {
   EpisodeFormRow,
   FormKind,
+  ImportMode,
   MovieFormFile,
   MovieFormValues,
   SeasonPosterSlot,
@@ -105,6 +106,20 @@ export interface UseMovieFormResult {
   showEnrich: boolean;
   /** Whether _Also fetch metadata and posters from TMDB_ is ticked. */
   enrich: boolean;
+  /**
+   * Whether the **Import mode** is drawn: on a plain series add in the shell,
+   * and only there — never on an edit, a Resolve or in a browser.
+   */
+  showImportMode: boolean;
+  /** The Import mode chosen: Link on every visit, Copy while Link can't be. */
+  importMode: ImportMode;
+  /** Choose a mode; a press on the disabled Link changes nothing. */
+  setImportMode: (mode: ImportMode) => void;
+  /**
+   * Whether Link can't be chosen: the picked **Show folder** lies under no
+   * **Library folder**.
+   */
+  linkDisabled: boolean;
   /** Tick the box, or untick it. */
   toggleEnrich: () => void;
   /** What is in the fields right now. */
@@ -593,6 +608,22 @@ export function useMovieForm(): UseMovieFormResult {
   const [showFolderRefusal, setShowFolderRefusal] = useState<string | null>(
     null
   );
+  // The **Import mode**: Link on every visit, never remembered. The picked
+  // Show folder's read says whether Link is available — `libraryFolderId`
+  // `null` disables it and Copy stands chosen, until a later pick under a
+  // Library folder enables it again.
+  const [chosenMode, setChosenMode] = useState<ImportMode>('link');
+  const [linkDisabled, setLinkDisabled] = useState(false);
+  const importMode: ImportMode = linkDisabled ? 'copy' : chosenMode;
+  const setImportMode = useCallback(
+    (mode: ImportMode) => {
+      if (mode === 'link' && linkDisabled) {
+        return;
+      }
+      setChosenMode(mode);
+    },
+    [linkDisabled]
+  );
   const { holdShowFolder, removeShowFolder: dropShowFolder } = episodeList;
   const bridge = folderBridge();
   const pickShowFolder = useCallback(async () => {
@@ -611,6 +642,7 @@ export function useMovieForm(): UseMovieFormResult {
     const { read } = answer;
     setShowFolderRefusal(null);
     setShowFolder(read.path);
+    setLinkDisabled(read.libraryFolderId === null);
     holdShowFolder(showFolderRows(read));
     setValues((current) =>
       current.title.trim() === ''
@@ -623,6 +655,7 @@ export function useMovieForm(): UseMovieFormResult {
   }, [pickShowFolder]);
   const removeShowFolder = useCallback(() => {
     setShowFolder(null);
+    setLinkDisabled(false);
     dropShowFolder();
   }, [dropShowFolder]);
 
@@ -659,6 +692,10 @@ export function useMovieForm(): UseMovieFormResult {
     values.title.trim() !== '' &&
     (kind === 'series' ? episodesComplete : values.video !== null) &&
     !saving;
+
+  const showImportMode = bridge !== null && plainAdd && kind === 'series';
+  // A browser sends Copy: there is no path to link.
+  const sentMode: ImportMode = showImportMode ? importMode : 'copy';
 
   const save = useCallback(() => {
     if (!canSave) {
@@ -733,7 +770,7 @@ export function useMovieForm(): UseMovieFormResult {
           // place and then the flow over it.
           const created =
             kind === 'series'
-              ? createSeries(values, episodes, seasonPosters)
+              ? createSeries(sentMode, values, episodes, seasonPosters)
               : createMovie(values);
           return created.then(({ id }) => {
             const { replace, push } = addLeaving(
@@ -769,6 +806,7 @@ export function useMovieForm(): UseMovieFormResult {
     seasonPosters,
     showEnrich,
     enrich,
+    sentMode,
     navigate,
     goBack,
     editing,
@@ -797,6 +835,10 @@ export function useMovieForm(): UseMovieFormResult {
     showEnrich,
     enrich,
     toggleEnrich,
+    showImportMode,
+    importMode,
+    setImportMode,
+    linkDisabled,
     values,
     setTitle,
     setYear,

@@ -94,6 +94,10 @@ const video = (filename: string): File =>
 
 function post(baseUrl: string, path: string, parts: Part[]) {
   const body = new FormData();
+  // A series add's **Import mode** travels first (issue #418).
+  if (path === '/api/series') {
+    body.append('mode', 'copy');
+  }
   for (const [name, value] of parts) {
     body.append(name, value);
   }

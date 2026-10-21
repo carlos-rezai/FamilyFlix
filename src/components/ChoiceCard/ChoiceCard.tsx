@@ -8,13 +8,16 @@ export interface ChoiceCardProps {
   /** Whether this is the chosen one: the accent-soft fill, the dot filled. */
   checked: boolean;
   onSelect: () => void;
+  /** Whether it can't be chosen: still drawn with its line, a press ignored. */
+  disabled?: boolean;
 }
 
 /**
  * One selectable card of a radiogroup, from `feat.ExportModal.dc.html`, on the
  * `StatTile` pattern: a label, a line under it and an 18px radio dot, on the
  * accent-soft fill when checked. Its callers are the **Export dialog**'s
- * formats and the **Import mode**.
+ * formats and the **Import mode**, on Import setup, the Library folders page
+ * and the **Movie form**'s add.
  *
  * A `role="radio"` button — the caller draws the cards inside a
  * `role="radiogroup"` — and a button rather than an input, so a press submits
@@ -27,6 +30,7 @@ export function ChoiceCard({
   line,
   checked,
   onSelect,
+  disabled = false,
 }: ChoiceCardProps) {
   return (
     <Card
@@ -34,6 +38,7 @@ export function ChoiceCard({
       role="radio"
       aria-checked={checked}
       $selected={checked}
+      disabled={disabled}
       onClick={onSelect}
     >
       <TitleRow>

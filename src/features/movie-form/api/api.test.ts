@@ -1019,7 +1019,7 @@ describe('createSeries', () => {
   it('POSTs multipart to the series route, naming no Content-Type', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE], []);
+    await createSeries('copy', SERIES_VALUES, [PILOT, LOW_TIDE], []);
 
     const request = onlyRequest();
     expect(request.url).toBe('/api/series');
@@ -1034,9 +1034,10 @@ describe('createSeries', () => {
   it('sends its parts in the contract’s order', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE], []);
+    await createSeries('copy', SERIES_VALUES, [PILOT, LOW_TIDE], []);
 
     expect([...sentFields().keys()]).toEqual([
+      'mode',
       'title',
       'year',
       'creator',
@@ -1057,7 +1058,7 @@ describe('createSeries', () => {
   it('carries the series fields, the director’s field as the creator', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries(SERIES_VALUES, [PILOT], []);
+    await createSeries('copy', SERIES_VALUES, [PILOT], []);
 
     const fields = sentFields();
     expect(fields.get('title')).toBe('Harbor and Vine');
@@ -1073,7 +1074,7 @@ describe('createSeries', () => {
   it('sends each episode as its numbers and title, then its video', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE], []);
+    await createSeries('copy', SERIES_VALUES, [PILOT, LOW_TIDE], []);
 
     const fields = sentFields();
     expect(
@@ -1090,7 +1091,7 @@ describe('createSeries', () => {
   it('sends no poster part when the slot is empty', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries({ ...SERIES_VALUES, poster: null }, [PILOT], []);
+    await createSeries('copy', { ...SERIES_VALUES, poster: null }, [PILOT], []);
 
     expect(sentFields().has('poster')).toBe(false);
   });
@@ -1098,9 +1099,9 @@ describe('createSeries', () => {
   it('resolves the Series the route answered with on a 201', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await expect(createSeries(SERIES_VALUES, [PILOT], [])).resolves.toEqual(
-      SERIES_CREATED
-    );
+    await expect(
+      createSeries('copy', SERIES_VALUES, [PILOT], [])
+    ).resolves.toEqual(SERIES_CREATED);
   });
 
   it('rejects on a refusal', async () => {
@@ -1110,13 +1111,17 @@ describe('createSeries', () => {
       json: () => Promise.resolve({ error: 'Duplicate episode: S01E01' }),
     } as unknown as Response);
 
-    await expect(createSeries(SERIES_VALUES, [PILOT], [])).rejects.toThrow();
+    await expect(
+      createSeries('copy', SERIES_VALUES, [PILOT], [])
+    ).rejects.toThrow();
   });
 
   it('rejects when the request could not be made at all', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
-    await expect(createSeries(SERIES_VALUES, [PILOT], [])).rejects.toThrow();
+    await expect(
+      createSeries('copy', SERIES_VALUES, [PILOT], [])
+    ).rejects.toThrow();
   });
 });
 
@@ -1152,6 +1157,7 @@ describe('createSeries — each episode’s subtitles', () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
     await createSeries(
+      'copy',
       { ...SERIES_VALUES, poster: null },
       [PILOT_SUBTITLED, LOW_TIDE_SUBTITLED],
       []
@@ -1177,6 +1183,7 @@ describe('createSeries — each episode’s subtitles', () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
     await createSeries(
+      'copy',
       SERIES_VALUES,
       [PILOT_SUBTITLED, LOW_TIDE_SUBTITLED],
       []
@@ -1192,7 +1199,7 @@ describe('createSeries — each episode’s subtitles', () => {
   it('sends no subtitle part and no language for a row with none', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries(SERIES_VALUES, [PILOT_SUBTITLED, LOW_TIDE], []);
+    await createSeries('copy', SERIES_VALUES, [PILOT_SUBTITLED, LOW_TIDE], []);
 
     const fields = sentFields();
     expect(
