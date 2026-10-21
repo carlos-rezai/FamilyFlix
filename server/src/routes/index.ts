@@ -28,6 +28,10 @@ import {
   type ResolveForm,
   type ReviewOutcome,
 } from '../import-export/createImporter/createImporter';
+import {
+  copyFoundEpisodes,
+  type CopiedEpisode,
+} from '../import-export/copyFoundEpisodes/copyFoundEpisodes';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
   placeFilmFolder,
@@ -998,38 +1002,17 @@ export function createApiRouter(
       stored = (path) => renamed.storedPath(path);
     }
 
-    // Each **Found file** is copied into its season with `Media.copyIn` —
-    // copied, never moved, so the picked folder is left as it was. A copy
-    // that breaks is the save's failure, and takes the folder with it.
-    const copied: { video: StoredVideo; tracks: NewSubtitle[] }[] = [];
+    // Each **Found file** is copied into its season — a copy that breaks is
+    // the save's failure, and takes the folder with it.
+    let copied: CopiedEpisode[];
     try {
-      for (const [index, episode] of read.episodes.entries()) {
-        const season =
-          uploads.folder === null
-            ? null
-            : media.seasonFolder(uploads.folder, episode.season);
-        const copy = (path: string): Promise<string> => {
-          if (season === null) {
-            throw new Error('No Series folder to copy into');
-          }
-          return media.copyIn(season, path);
-        };
-        const video: StoredVideo = placed[index] ?? {
-          videoPath:
-            episode.video === undefined
-              ? await copy(episode.videoPath ?? '')
-              : stored(episode.video),
-          videoFolderId: null,
-        };
-        const tracks: NewSubtitle[] = [];
-        for (const track of episode.storedSubtitles ?? []) {
-          tracks.push({
-            path: await copy(track.path),
-            language: track.language,
-          });
-        }
-        copied.push({ video, tracks });
-      }
+      copied = await copyFoundEpisodes(
+        media,
+        uploads.folder,
+        read.episodes,
+        placed,
+        stored
+      );
     } catch {
       rollback();
       res.status(500).json({ error: 'Could not add the series' });
