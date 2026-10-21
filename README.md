@@ -1,8 +1,8 @@
 # FamilyFlix
 
-> A Netflix for the family movie folder — built with a structured Claude Code workflow
+> A Netflix for the family movie folder, built with a structured Claude Code workflow
 
-FamilyFlix turns a folder of movie files — one folder per movie, each containing a video, a subtitle file, and a poster — into a browsable, searchable library with a built-in player. It was built for my parents, who had been navigating their movie collection through an Excel sheet and a folder tree. They just want to pick something and watch it.
+FamilyFlix turns a folder of movie files (one folder per movie, each containing a video, a subtitle file, and a poster) into a browsable, searchable library with a built-in player. It was built for my parents, who had been navigating their movie collection through an Excel sheet and a folder tree. They just want to pick something and watch it.
 
 ---
 
@@ -10,11 +10,11 @@ FamilyFlix turns a folder of movie files — one folder per movie, each containi
 
 This project has two purposes:
 
-1. **A genuinely useful family tool** — my parents have a real collection of movies on disk and a spreadsheet tracking titles, years, and genres. FamilyFlix replaces both with something that looks and feels like the streaming apps they already know how to use.
+1. **A genuinely useful family tool**: my parents have a real collection of movies on disk and a spreadsheet tracking titles, years, and genres. FamilyFlix replaces both with something that looks and feels like the streaming apps they already know how to use.
 
-2. **A portfolio demonstrating AI-assisted engineering** — every feature is built using a structured Claude Code workflow: grill-me sessions, PRDs, TDD, and a living ubiquitous language document. The methodology is as much the point as the product.
+2. **A portfolio demonstrating AI-assisted engineering**: every feature is built using a structured Claude Code workflow: grill-me sessions, PRDs, TDD, and a living ubiquitous language document. The methodology is as much the point as the product.
 
-**Note on AI:** FamilyFlix itself does not use AI anywhere — no recommendations, no smart search, no generated summaries. It's a deliberately simple, local-only tool. The "AI-assisted engineering" above refers to how it's _built_, not what it _does_.
+**Note on AI:** FamilyFlix itself does not use AI anywhere: no recommendations, no smart search, no generated summaries. It's a deliberately simple, local-only tool. The "AI-assisted engineering" above refers to how it's _built_, not what it _does_.
 
 ---
 
@@ -22,10 +22,10 @@ This project has two purposes:
 
 FamilyFlix is an offline-first desktop application for Windows. There is no cloud version, no authentication, and no network dependency. All data and media live locally on the machine.
 
-- **Shell:** Electron — one window over the bundled Express server, forked as a utility process and serving the built app beside its API on one loopback origin
+- **Shell:** Electron, one window over the bundled Express server, forked as a utility process and serving the built app beside its API on one loopback origin
 - **Storage:** SQLite via `better-sqlite3` for the library; an import links each video where it lies in its Library folder (or copies it, if you choose Copy), and copies posters and subtitles into FamilyFlix's own managed media folder. Installed, everything lives under `%APPDATA%\FamilyFlix\`
-- **No auth** — single household, single shared watch history, local-only by design
-- **Packaging:** one file, `FamilyFlix-Setup-<version>.exe` — a one-click, per-user NSIS installer via `electron-builder`, no UAC prompt, unsigned, carrying the pinned FFmpeg build as the Default component; uninstalling keeps the library
+- **No auth**: single household, single shared watch history, local-only by design
+- **Packaging:** one file, `FamilyFlix-Setup-<version>.exe`, a one-click, per-user NSIS installer via `electron-builder`, no UAC prompt, unsigned, carrying the pinned FFmpeg build as the Default component; uninstalling keeps the library
 
 ---
 
@@ -33,13 +33,13 @@ FamilyFlix is an offline-first desktop application for Windows. There is no clou
 
 ### Adding a movie
 
-One screen adds a movie and edits one. You fill in the title, year, director, cast, description, genre and rating, then pick the files: the video, a poster, and as many subtitle files as the film has, each tagged with its language. A title and a video are all that's required to save — everything else can be filled in later by opening the same screen again. Running time isn't asked for at all; it's read off the video file after it's copied.
+One screen adds a movie and edits one. You fill in the title, year, director, cast, description, genre and rating, then pick the files: the video, a poster, and as many subtitle files as the film has, each tagged with its language. A title and a video are all that's required to save; everything else can be filled in later by opening the same screen again. Running time isn't asked for at all; it's read off the video file after it's copied.
 
-Files are picked individually, from your machine's normal file dialog. FamilyFlix then **copies** what you gave it into its own media folder, so the app owns its copy and moving the original later can't break anything. On an edit, files you don't touch aren't re-uploaded — fixing a typo in a title doesn't move a 12 GB film.
+Files are picked individually, from your machine's normal file dialog. FamilyFlix then **copies** what you gave it into its own media folder, so the app owns its copy and moving the original later can't break anything. On an edit, files you don't touch aren't re-uploaded: fixing a typo in a title doesn't move a 12 GB film.
 
 ### Migrating an existing library
 
-A bulk importer reads an existing spreadsheet (title, year, genre, …) over every library folder you've listed, matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format — `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own — a row with no folder, two folders for one row, a folder no row names, a copy that failed — each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip; two folders for one row are settled by pressing the right one, and a folder no row names by one _Import as_ press. A row for a title already in the library fills in whatever that title has empty, and anything it says differently waits in the review as _Yours | Spreadsheet_, field by field — nothing you filled in is overwritten without a press. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Filling in what the sheet left blank — synopses, posters, runtimes — is a separate, opt-in Enrichment pass over the finished library — Settings → Network, or the import's own _Also fetch metadata and posters from TMDB_ — which is the one and only place FamilyFlix goes online. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled — the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel — every movie, A–Z, under the same columns the importer reads — for backups or bulk edits, and an export fed back to the importer adds nothing.
+A bulk importer reads an existing spreadsheet (title, year, genre, …) over every library folder you've listed, matches each row to its movie folder, and scans that folder for the video, poster and subtitle files (it isn't picky about subtitle format: `.srt`, `.vtt`, `.ass`, and `.sub` are all recognised), building the whole library in one pass. A row whose folder is a confident match is imported as the run goes, with a live progress console showing what's happening; the review step at the end lists only what the run couldn't settle on its own (a row with no folder, two folders for one row, a folder no row names, a copy that failed), each with a Resolve that opens the ordinary Add Movie form prefilled, and a Skip; two folders for one row are settled by pressing the right one, and a folder no row names by one _Import as_ press. A row for a title already in the library fills in whatever that title has empty, and anything it says differently waits in the review as _Yours | Spreadsheet_, field by field; nothing you filled in is overwritten without a press. Nothing is looked up online: the spreadsheet and the folder are all the importer reads, so there is no TMDB key to enter and no network to be on. Filling in what the sheet left blank (synopses, posters, runtimes) is a separate, opt-in Enrichment pass over the finished library, started from Settings → Network or the import's own _Also fetch metadata and posters from TMDB_, which is the one and only place FamilyFlix goes online. Pointing at a folder is the bulk importer's job rather than the Add Movie form's: a file dialog hands over a file, never a folder path. It is also how a development library gets filled: the importer's own test fixtures replace the dev seed the app carried until it shipped. An exporter writes the library back out as CSV or Excel (every movie, A–Z, under the same columns the importer reads) for backups or bulk edits, and an export fed back to the importer adds nothing.
 
 ### Watching
 
@@ -53,25 +53,25 @@ The main screen is genre rows, like a streaming app, with search and filtering o
 
 ## Development Methodology
 
-This project is built using a structured Claude Code skill workflow. Unlike a typical feature-by-feature build, FamilyFlix starts with a full Claude Design prototype — the browse grid, search, movie form, and player are designed up front, before any feature code is written, and that prototype becomes the visual reference for everything that follows.
+This project is built using a structured Claude Code skill workflow. Unlike a typical feature-by-feature build, FamilyFlix starts with a full Claude Design prototype: the browse grid, search, movie form, and player are designed up front, before any feature code is written, and that prototype becomes the visual reference for everything that follows.
 
 ui-design-handoff → grill-me → design-log → ubiquitous-language → write-a-prd → prd-to-plan → prd-to-issues → tdd → build → request-refactor-plan → refactor
 
 **What this means in practice:**
 
-- The Claude Design prototype is built first and lives in docs/handoff/ — every feature is implemented against it, not designed ad hoc as it's built
-- Every feature starts with a grill-me session — Claude interrogates the design until every assumption is resolved
+- The Claude Design prototype is built first and lives in docs/handoff/; every feature is implemented against it, not designed ad hoc as it's built
+- Every feature starts with a grill-me session, where Claude interrogates the design until every assumption is resolved
 - A PRD is written and filed as a GitHub issue before implementation begins
 - Tests are written before code (TDD, stopping at RED)
 - All domain terminology is locked in docs/ubiquitous-language.md
 - Design decisions are recorded in docs/design-logs/
-- All UI code strictly follows Atomic Design — see Component Architecture below
+- All UI code strictly follows Atomic Design; see Component Architecture below
 
-The `.claude/` folder contains all skill definitions. The `docs/` folder contains the full paper trail — PRDs, design logs, and the ubiquitous language dictionary — so the reasoning behind every decision is readable alongside the code.
+The `.claude/` folder contains all skill definitions. The `docs/` folder contains the full paper trail (PRDs, design logs, and the ubiquitous language dictionary), so the reasoning behind every decision is readable alongside the code.
 
 ---
 
-## Component Architecture — Atomic Design
+## Component Architecture: Atomic Design
 
 Every piece of UI maps to a rung on the Atomic Design ladder, and nothing skips a rung:
 
@@ -96,15 +96,15 @@ There is no per-component `index.ts`. Category folders (`primitives/`, `componen
 
 Three folders under `src/` sit outside the ladder, because what they hold is not UI:
 
-| Folder          | Purpose              | Rule                                                            |
-| --------------- | -------------------- | --------------------------------------------------------------- |
-| `api/`          | Shared wire calls    | One folder per call with its test. No barrel — imported by path |
-| `App/`          | Router and providers | The shell every page renders inside. No domain logic            |
-| `test-support/` | Shared test doubles  | Never imported by shipping code                                 |
+| Folder          | Purpose              | Rule                                                           |
+| --------------- | -------------------- | -------------------------------------------------------------- |
+| `api/`          | Shared wire calls    | One folder per call with its test. No barrel; imported by path |
+| `App/`          | Router and providers | The shell every page renders inside. No domain logic           |
+| `test-support/` | Shared test doubles  | Never imported by shipping code                                |
 
 `server/src/` carries the mirror of the last of those. It is otherwise organised
-strictly by domain — `library/`, `media/`, `import-export/`, `playback/`, with
-`db/` as shared infrastructure and no miscellaneous catch-all — and that rule is
+strictly by domain (`library/`, `media/`, `import-export/`, `playback/`, with
+`db/` as shared infrastructure and no miscellaneous catch-all), and that rule is
 about **backend logic** having a domain home. Test doubles are not backend logic, so
 `server/src/test-support/` gets the same one-line rule the frontend's rung has:
 shared test doubles, one folder per unit with its test, never imported by
@@ -117,7 +117,7 @@ makes it, and moves up only when a second feature asks for it.
 
 ---
 
-Every feature is a 1:1 translation of the canonical prototype in docs/handoff/ — the prototype is designed and resolved first, then implemented against, never redesigned mid-build.
+Every feature is a 1:1 translation of the canonical prototype in docs/handoff/: the prototype is designed and resolved first, then implemented against, never redesigned mid-build.
 
 ---
 
@@ -150,15 +150,15 @@ familyflix/
 │   ├── assets/             # icon.ico, the App mark, and its guard
 │   ├── packaging/          # builderConfig.json, ffmpegPin.json, and the guard that holds them to the shell
 │   ├── scripts/            # buildElectron.mjs, buildIcon.mjs, fetchNative.mjs, fetchFfmpeg.mjs, packageApp.mjs; verifyDigest/ and zipEntries/, pure units the scripts import
-│   ├── test-support/       # fakeServerChild — never imported by shipping code
+│   ├── test-support/       # fakeServerChild, never imported by shipping code
 │   └── .native/ .ffmpeg/ dist/ # gitignored: the Electron-ABI binding, the Default component, the two bundles
 ├── server/             # Express backend
 │   └── src/
-│       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices, seriesFormBody/ a series save, foundPathRefusal/ a found path both adds read; loopbackGuard/ and rendererRouter/ stand in front of the API
+│       ├── routes/         # HTTP layer only: parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices, seriesFormBody/ a series save, foundPathRefusal/ a found path both adds read; loopbackGuard/ and rendererRouter/ stand in front of the API
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key and stamp beside them
 │       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
 │       │   ├── folders/           # the Library folders: the list, its title counts, the remove that keeps the titles, and folderOverlap
-│       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf, and yearSpan — the one reading of a Year range
+│       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf, and yearSpan, the one reading of a Year range
 │       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, into a title's Media folder or a season under it; readStored), subtitle detection, removing a title's Media folder after a delete, space used
 │       │   ├── readableFolder/        # whether a path is a folder the app can read, never throwing
 │       │   ├── walkLibraryFolder/     # a Library folder → its Source folders
@@ -173,7 +173,7 @@ familyflix/
 │       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
 │       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them; 8 and 9: the Source file an episode and a film remember across scans; 10: season posters); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
 │       ├── shell/          # the server's half of the shell seam: shellHandshake, listen (the loopback bind and boundPort), orderedShutdown
-│       └── test-support/   # Shared test doubles — never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
+│       └── test-support/   # Shared test doubles, never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
 ├── src/                # React frontend
 │   ├── App/            # Router and app-level providers
 │   │   ├── DisplayPreferenceProvider/ # the household's Ultrawide margins and TMDB ratings, held app-wide; useDisplayPreference and useTmdbRatings read them, saveUltrawideMargins and saveTmdbRatings write them
@@ -181,46 +181,47 @@ familyflix/
 │   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
 │   │   └── useSnackbar/      # `{ notify, dismiss }` off the stack, and SnackbarNotice
 │   ├── assets/         # Static images, fonts, icons
-│   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/ — controlStates(press), cardLift, cardFocus, and the structural guard in its test
+│   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/: controlStates(press), cardLift, cardFocus, and the structural guard in its test
 │   ├── tokens/         # Colors, spacing, typography, breakpoints, motion, layout (the Content measure)
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, the Icon glyphs — the Snackbar's four, the FAB's two and enrichment's five among them) — each with .tsx, .test.tsx, .styles.ts
-│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice) — same three-file shape
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, the Icon glyphs: the Snackbar's four, the FAB's two and enrichment's five among them), each with .tsx, .test.tsx, .styles.ts
+│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice), same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
-│   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational — the stack above owns the timing
-│   │   ├── Fab/            # the FAB: the accent circle in the bottom-right corner, one of two glyphs; presentational — it does not know there is a threshold
+│   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational, as the stack above owns the timing
+│   │   ├── Fab/            # the FAB: the accent circle in the bottom-right corner, one of two glyphs; presentational, as it does not know there is a threshold
 │   │   └── BackToTop/      # the control over a scrolling container: the Scroll threshold, the passive listener, the read on attach, the press; mounts the FAB or nothing
 │   ├── features/       # Domain UI + logic co-located
-│   │   ├── library/        # browse grid, genre rows — and the Movies / Series tabs, with the Series tab under series/
+│   │   ├── library/        # browse grid, genre rows, and the Movies / Series tabs, with the Series tab under series/
 │   │   ├── search/          # search-as-you-type, filters
 │   │   ├── movie-detail/    # the movie page, its ⋯ menu, and the Delete dialog the menu opens
 │   │   │   ├── EditMenu/          # Edit details, and the red Delete row
 │   │   │   ├── DeleteMovieDialog/ # Modal + the fixed copy + Delete movie / Cancel
 │   │   │   ├── useDeleteMovie/    # sends the delete, then steps back through history
-│   │   │   └── api/               # saveRating, deleteMovie — one caller each
+│   │   │   └── api/               # saveRating, deleteMovie, one caller each
 │   │   ├── series/          # the Series page and the Season page: SeriesDetail, SeasonEpisodes, SeriesMetaLine, LoadingSeries, useSeriesRead and the two page hooks, seriesView, seasonView
 │   │   ├── player/          # built-in video player for any Playable, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
-│   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs — MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, useImportMode, useShowFolderPick, readEpisodeTag, titleFromFilename, and createSeries, readShowFolder and containingFolder in its api/ — and Resolve, the Import context
-│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan — and the Export dialog: ExportModal, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
+│   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs; MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, useImportMode, useShowFolderPick, readEpisodeTag, titleFromFilename, and createSeries, readShowFolder and containingFolder in its api/; and Resolve, the Import context
+│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView; the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan; and the Export dialog: ExportModal, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
 │   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
-│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins Toggle); CodecManager — the Codecs page's screen — over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
-│   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture — what every group draws with
+│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins Toggle); CodecManager (the Codecs page's screen) over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
+│   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture: what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
 │   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage, CodecsPage and LibraryFoldersPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
-│   ├── hooks/            # Global shared hooks (useGoBack(fallback) — the one Back rule, a history step with the screen's own landing behind it — useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
-│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts — read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
+│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
+│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks and accentScale among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
-├── release/            # gitignored: the Installer, and win-unpacked/ — the Packaged layout
+├── release/            # gitignored: the Installer, and win-unpacked/, the Packaged layout
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
     ├── refactor-plans/ # Refactor RFCs filed as work items
-    ├── handoff/        # Canonical design prototype — spec, screens, brand
+    ├── handoff/        # Canonical design prototype: spec, screens, brand
     ├── ubiquitous-language.md
+    ├── feature-checklist.md  # Every feature, shipped and planned, in build order
     └── dev-journal.md
 ```
 
@@ -255,7 +256,7 @@ npm run electron:native   # once, and again after an Electron upgrade
 npm run electron:dev
 ```
 
-`electron:native` fetches the Electron-ABI `better-sqlite3` binding into the gitignored `electron/.native/`, so the shell and Vitest each keep their own. `electron:dev` opens the window over Vite with hot reload, and forks the bundled server the watcher rebuilds — a server change is picked up by restarting the script.
+`electron:native` fetches the Electron-ABI `better-sqlite3` binding into the gitignored `electron/.native/`, so the shell and Vitest each keep their own. `electron:dev` opens the window over Vite with hot reload, and forks the bundled server the watcher rebuilds; a server change is picked up by restarting the script.
 
 ### The installed shape, unpackaged
 
@@ -263,7 +264,7 @@ npm run electron:dev
 npm run electron:start
 ```
 
-Builds the renderer and both bundles, then runs exactly what the installed app runs — the built renderer served on the server's own origin, the Shell port `41720` — over the repo's own library rather than `%APPDATA%`.
+Builds the renderer and both bundles, then runs exactly what the installed app runs (the built renderer served on the server's own origin, the Shell port `41720`) over the repo's own library rather than `%APPDATA%`.
 
 ### The App mark
 
@@ -293,7 +294,7 @@ Every Installer is proven by the [release checklist](./docs/release-checklist.md
 ### Installing on a new machine
 
 1. Copy `FamilyFlix-Setup-<version>.exe` over.
-2. Run it. The installer is unsigned, so SmartScreen stops it once: _More info → Run anyway_. There is no other prompt — it installs for the current user and opens FamilyFlix.
+2. Run it. The installer is unsigned, so SmartScreen stops it once: _More info → Run anyway_. There is no other prompt: it installs for the current user and opens FamilyFlix.
 3. Import the library: Settings → Import from spreadsheet.
 
 The library lives in `%APPDATA%\FamilyFlix\` and survives an uninstall, so a reinstall finds it as it was.
@@ -304,7 +305,7 @@ The library lives in `%APPDATA%\FamilyFlix\` and survives an uninstall, so a rei
 <type>: [<initiative>] issue #<n> <description>
 ```
 
-`<initiative>` is the PRD/feature initiative name (e.g. `movie-form`, `import-export`) — not the issue title.
+`<initiative>` is the PRD/feature initiative name (e.g. `movie-form`, `import-export`), not the issue title.
 
 Examples:
 
@@ -316,248 +317,13 @@ refactor: [library] issue #9 extract genre-row hook
 
 Types: `feat`, `fix`, `chore`, `refactor`, `test`, `docs`
 
-Keep the description short enough to fit on one line — long descriptions get wrapped or mangled in commit history. If it doesn't fit, the issue is too broad; split it.
+Keep the description short enough to fit on one line; long descriptions get wrapped or mangled in commit history. If it doesn't fit, the issue is too broad; split it.
 
 ---
 
 ## Build Status
 
-| Feature                                             | Status          |
-| --------------------------------------------------- | --------------- |
-| Nx + Vite + React workspace scaffold                | ✅ Done         |
-| Claude Design handoff prototype                     | ✅ Done         |
-| Library core (movie model, SQLite, repository)      | ✅ Done         |
-| Browse grid — genre rows                            | ✅ Done         |
-| Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done         |
-| Movie detail page (synopsis, director, cast)        | ✅ Done         |
-| Search + filter (title, genre, rating)              | ✅ Done         |
-| Genre page — every movie in one genre, uncapped     | ✅ Done         |
-| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done         |
-| Ratings — 5-star display + half-star picker         | ✅ Done         |
-| Favorites — mark + dedicated row                    | ✅ Done         |
-| Continue Watching row                               | ✅ Done         |
-| Built-in video player (playback, subtitles)         | ✅ Done         |
-| Watch tracking (watched / in-progress / resume)     | ✅ Done         |
-| Add Movie — manual file picker                      | ✅ Done         |
-| Edit a movie — amend metadata and files             | ✅ Done         |
-| Delete a movie — from the ⋯ menu, with confirmation | ✅ Done         |
-| Bulk import (Excel/CSV → library)                   | ✅ Done         |
-| Import progress console (scan/import, live log)     | ✅ Done         |
-| Export (library → CSV/Excel)                        | ✅ Done         |
-| Settings hub (six groups, Library to About)         | ✅ Done         |
-| Codec manager — view installed codecs               | ✅ Done         |
-| Codec manager — add a playback component            | ✅ Done         |
-| Subtitle preferences (preferred language)           | ✅ Done         |
-| Storage (media folder location, space used)         | ✅ Done         |
-| Snackbar system (info / success / warning / error)  | ✅ Done         |
-| Back-to-top FAB                                     | ✅ Done         |
-| Back navigation — one Back rule on every screen     | ✅ Done         |
-| Motion & interaction states (hover / press / focus) | ✅ Done         |
-| Series (TV) — tab, series page, seasons, episodes   | ✅ Done         |
-| Enrichment — TMDB metadata & posters sync           | ✅ Done         |
-| Network group — the TMDB key and the sync row       | ✅ Done         |
-| Electron desktop shell                              | ✅ Done         |
-| Desktop packaging (Windows installer)               | ✅ Done         |
-| Software update (check / install)                   | ✅ Done         |
-| Codecs page — the codec list on its own page        | ✅ Done         |
-| Ultrawide margins — side gutters for wide screens   | ✅ Done         |
-| Default poster — a fallback for titles without one  | ✅ Done         |
-| Add a series — the Add form for shows too           | ✅ Done         |
-| Library folders — several root folders at once      | ✅ Done         |
-| Export options — where to, and what travels         | ✅ Done         |
-| Single-title Sync — the ⋯ menu's fetch, one movie   | ✅ Done         |
-| Backdrop veil — full-screen art, accent-veiled      | ✅ Done         |
-| Open the media folder from Settings → Storage       | ✅ Done         |
-| Export name — the export folder's name as a field   | ✅ Done         |
-| Factory reset — erase everything, behind a dialog   | ✅ Done         |
-| Title editing — number, edit and delete a series    | ✅ Done         |
-| Season posters — TMDB art on each season card       | ✅ Done         |
-| Import review — folders + sheet, adjustments listed | ✅ Done         |
-| Link or copy — import without a second copy         | ✅ Done         |
-| Review at scale + Season art — grouped review       | ✅ Done         |
-| TMDB ratings — fetched stars until the family rates | ✅ Done         |
-| Episode stills — a frame from the file, as fallback | ✅ Done         |
-| Add and sync — add by files, TMDB fills the rest    | ✅ Done         |
-| Audio tracks — English by default, switch in player | ✅ Done         |
-| Manage library — every title, edit, clear, delete   | ✅ Done         |
-| Add a show folder — a show by its folder, numbered  | ✅ Done         |
-| Release workflow off Node 20 — actions bumped       | 🔜 Planned      |
-| Start on Series — open FamilyFlix on the Series tab | 🔜 Planned      |
-| Subtitle picker — choose a track in the player      | 🔜 Planned      |
-| Loading states — spinners and an FF loading overlay | 🔜 Planned      |
-| Collections / playlists                             | 🧭 Roadmap      |
-| Auto-on subtitles                                   | 🧭 Roadmap      |
-| Backgroundable import                               | 🧭 Roadmap      |
-| Back up the library                                 | 🧭 Roadmap      |
-| Move the media folder                               | 🧭 Roadmap      |
-| User accounts / multi-profile                       | 🚫 Out of scope |
-
-Everything marked ✅ is done — steps 1–9 of the first build order, ending
-with Software update, which shipped as v0.2.0, and steps 10–15, the
-Codecs page, Ultrawide margins, the Default poster, Add a series, Library
-folders and Export options: the second chain is done too — and steps
-16–21, the third chain, from Single-title Sync to Title editing. Steps 10–15 came out of installing
-FamilyFlix and using it for real, and are numbered in **build
-order**: smallest and most self-contained first, the form before the folders
-that will feed it, export last because it mirrors what import now holds. Each
-went through grill-me and a prototype revision before it was built.
-_Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
-**Move the media folder**.
-
-10. ✅ **Codecs page** — the codec rows moved to their own Settings
-    sub-page, `/settings/codecs`, opened from the Playback card's Codecs row.
-11. ✅ **Ultrawide margins** — an optional left/right margin on every screen, so
-    the library doesn't stretch edge to edge on an ultra-wide monitor.
-12. ✅ **Default poster** — a title with no poster linked shows a FamilyFlix
-    default poster instead of an empty tile.
-13. ✅ **Add a series** — the Add form adds a show, its seasons and its
-    episodes, not only a film.
-14. ✅ **Library folders** — point FamilyFlix at one or more top folders that
-    hold movies, and add everything in them at once.
-15. ✅ **Export options** — choose where the export is saved and what it
-    carries: the sheet with films, series and episodes, and optionally
-    posters, backdrops, stills and subtitles beside it.
-
-Steps 16–21 are the **third chain**, out of using v0.3.0 (design log 32,
-its last three steps folded into one by log 38), again smallest first:
-
-16. ✅ **Single-title Sync** — _Fetch from TMDB_ on a movie's ⋯ menu syncs
-    that movie alone, rather than reopening a library-wide sync left in review.
-17. ✅ **Backdrop veil** — the detail pages' art fills the whole screen under
-    an accent-tinted veil, so the title, buttons and text read clearly.
-18. ✅ **Open the media folder** — an _Open folder_ button on Settings →
-    Storage.
-19. ✅ **Export name** — the export folder's name becomes editable beside
-    _Save to_.
-20. ✅ **Factory reset** — erase every title, watch history and setting and
-    empty the media folder, behind an _Erase everything?_ dialog; your own
-    folders are never touched.
-21. ✅ **Title editing** — a show whose files carry no `S01E01` is imported
-    anyway: `Episode 12` is read, and for any other name you type
-    `S[01] E[01]` in front of the file (`eps1.0_hellofriend.mov`) without
-    renaming it, one review row per show. A series is edited — its details,
-    and its episodes renumbered, added or removed — and deleted from the
-    series page's ⋯ menu, with confirmation, as a movie is.
-
-Step 22 came after the third chain, out of the open issues from v0.3.0's use
-(design log 39):
-
-22. ✅ **Season posters** — a synced series shows each season's own TMDB
-    poster on its season card, not just the series' gradient. A Sync already
-    asked TMDB for every season and threw the poster away; now it keeps it,
-    never replacing one already there, and an export with images on carries
-    them too.
-
-Step 23 came after it, out of using the latest release (design log 40):
-
-23. ✅ **Import review** — _Import from spreadsheet_ reads all your library
-    folders and a spreadsheet (CSV or Excel) together. New films still import
-    as the run goes. For a title already in the library, the sheet fills in
-    whatever is empty, and anything it says differently waits in the review
-    as _Yours | Spreadsheet_, field by field, the way a TMDB Sync asks —
-    nothing you filled in is overwritten without a press. A row two folders
-    could match is settled by picking the folder, and a folder the sheet
-    doesn't name by one _Import as_ press.
-
-Steps 24–25 came out of importing five real series (3–8 seasons, 8–20
-episodes each): the import was slow and doubled the disk space, and the review
-listed more than 1,400 rows. Both are done (design logs 41 and 42):
-
-24. ✅ **Link or copy** — Import from spreadsheet and Scan folders offer
-    **Link** or **Copy**, **Link by default** (design log 41). A linked title's
-    video plays from where it lies in your Library folder, so nothing is
-    duplicated and the import is fast; its poster, subtitles and TMDB art are
-    still kept in FamilyFlix's own media folder, and Copy keeps today's
-    behaviour. The choice is kept per video, so a library already copied keeps
-    working beside new linked titles. Deleting a linked title or a Factory
-    reset never touches your files, and a Library folder can't be removed
-    while titles play from it. A linked title whose drive is unplugged says
-    so in the player rather than failing. The Add form still copies: a file
-    in a Library folder is added by Scan folders, which links it.
-25. ✅ **Review at scale + Season art** — a review never runs to a thousand
-    rows (design log 42). A show whose episodes couldn't be copied is one row,
-    not one per episode. The Import review groups a title's rows under one
-    header with a count, opened on demand; both reviews filter by kind; and
-    bulk actions settle many rows in one press (_Skip all_, _Import all as
-    guessed_, _Keep all mine_). A Sync finds more of what TMDB holds — it tries
-    the title without its year, cleaned of release tags and punctuation, and
-    before its subtitle — and _Only what's missing_ comes back to any title
-    still unmatched or missing episode or season art. A single-series Sync
-    shows a **Seasons** section — each season's current poster beside TMDB's
-    choices — so every season can be given art, and the series form takes a
-    season poster from a file too.
-
-Step 26 came out of using step 25: a synced library still showed every title
-at 0/5 stars, because a Sync stores TMDB's score but never draws it. It is
-done (design log 43):
-
-26. ✅ **TMDB ratings** — a switch in Settings → Display, _Fill in ratings
-    from TMDB_, **on by default**. While it is on, a title the family hasn't
-    rated shows TMDB's score as stars (7.8/10 → 4★, to the nearest half), so a
-    synced library no longer reads 0/5 everywhere; setting the stars by hand
-    saves the family's own rating, which always wins and is never overwritten
-    by a Sync. Off shows the family's ratings alone, as today. Nothing is
-    copied between the two — the switch only changes what is drawn — and
-    TMDB's stars look different from the family's, so it's clear whose they
-    are.
-
-Step 27 came out of using step 26: TMDB has a still for every episode of some
-shows and for none of others, so half a season page can be gradients. It is
-done (design log 44):
-
-27. ✅ **Episode stills** — when TMDB has no still for an episode, a Sync
-    takes one from the episode's own file: a single frame a third of the way
-    in, grabbed with the FFmpeg it already ships, stored beside the episode's
-    other art and never written into your Library folder. TMDB's still is
-    preferred whenever it has one — a later Sync swaps a frame for it — and a
-    still you picked by hand in the series form is never replaced. With no
-    FFmpeg on the machine the episode keeps its gradient.
-
-Step 28 came out of using v0.7.0: adding one title by hand means typing every
-field TMDB already knows. It is done (design log 45):
-
-28. ✅ **Add and sync** — when you add a movie or a series by hand, tick
-    _Also fetch metadata and posters from TMDB_ and pick only its files: the
-    title comes from the video's name, and once it is saved a Sync for just
-    that title starts by itself and fills the synopsis, poster, cast and the
-    rest. A match it is unsure of waits in that Sync's review; Back from it
-    lands on the title's page.
-
-Step 29 came out of using v0.8.0: some films carry several audio languages,
-and the player played whichever came first. It is done (design log 46):
-
-29. ✅ **Audio tracks** — Settings → Playback has an _Audio_ section beside
-    Subtitles, where you choose the household's preferred audio language —
-    English by default. A film with several audio tracks opens on that
-    language when it has it, and the player has an _Audio_ menu beside CC
-    (or the `A` key) to switch track mid-film without losing your place, the
-    way VLC's _Audio → Audio Track_ does. A language picked there carries on
-    to the next episode for the rest of the evening.
-
-Step 30 came out of using v0.8.0 too: there was no one place to see what the
-library holds or take a title out of it completely. It is done (design log 47):
-
-30. ✅ **Manage library** — Settings → Library → _Manage library_ lists every
-    film and series the library holds, each with where its files are,
-    whether it is linked or copied, and whether TMDB filled its details.
-    From a row you can edit a title, sync it with TMDB, clear its details
-    back to just its title and files, or delete it. A delete takes the
-    title out of FamilyFlix with its posters, stills, subtitles and every
-    file FamilyFlix keeps for it; a linked title's own files go to the
-    Recycle Bin, so nothing is lost for good by accident.
-
-Step 31 is the other half of what step 30 first set out to do: adding a whole
-show by hand meant picking its episodes one file at a time. It is done
-(design log 48):
-
-31. ✅ **Add a show folder** — in the series form, _＋ Add show folder_ picks
-    a show's folder instead of its episodes: FamilyFlix reads it by the same
-    rules a folder scan uses and fills in an episode row for every video,
-    numbered for you. Both adds now link by default — the video stays where
-    it lies — and copy only a file outside every Library folder. The show's
-    or film's folder is recorded, so a later scan never adds it twice.
-
-A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
+Every shipped and planned feature, in build order, lives in the [Feature Checklist](./docs/feature-checklist.md).
 
 ---
 
@@ -568,15 +334,14 @@ A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 - [PRDs](./docs/PRDs/)
 - [Refactor Plans](./docs/refactor-plans/)
 - [Design Handoff](./docs/handoff/HANDOFF.md)
+- [Feature Checklist](./docs/feature-checklist.md): every feature, shipped and planned, in build order
 - [Dev Journal](./docs/dev-journal.md)
-- [Release Checklist](./docs/release-checklist.md) — the Package smoke a release is ticked against
+- [Release Checklist](./docs/release-checklist.md): the Package smoke a release is ticked against
 
 ---
 
 ## Author
 
-**Carlos Rezai** — Senior Software Engineer, Berlin
-Transitioning from frontend specialist to agentic AI engineering — building structured human-AI workflows and fullstack AI-powered products.
+**Carlos Rezai**, Senior Software Engineer, Berlin
 
-[GitHub](https://github.com/carlos-rezai)
-[LinkedIn](https://www.linkedin.com/in/aryan-carlos-r-0ba21017b/)
+[GitHub](https://github.com/carlos-rezai) · [LinkedIn](https://www.linkedin.com/in/aryan-carlos-r-0ba21017b/)
