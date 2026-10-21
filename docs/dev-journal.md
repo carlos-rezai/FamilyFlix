@@ -11,6 +11,113 @@ Newest entry first.
 
 ---
 
+## 2026-10-21 — Add a show folder — the refactor (issue 421)
+
+Twenty-one commits against
+`docs/refactor-plans/48-add-a-show-folder-refactor.md`, one per plan commit, the
+initiative's closing round. **10550 tests pass across 635 files**, against
+10485 across 628 at the end of the build (`d32145a`): seven new suites
+(`listedFolderOf`, `placeShowFolder`, `placeFilmFolder`, `foundPathRefusal`,
+`copyFoundEpisodes`, `useImportMode`, `useShowFolderPick`), `placeFoundVideos`'
+list rows, `readShowFolder`'s three Library folder rows, the route case that
+proves the fix, the feature `api/`'s `readShowFolder` rows, and the
+`movieAddValues`, `showFolderRows`, `isShowFolderRow` and `useEpisodeList`
+rows. `tsc -b --force` is clean. `eslint src server electron` reports one error
+and 148 warnings, against one and 150: the `no-loop-func` and
+`exhaustive-deps` warnings this initiative added are gone.
+
+### What shipped
+
+Log 48's step 31: the prototype amended inside each phase's GREEN, then RED
+and GREEN each, 417 to 420. _＋ Add show folder_ on the series add reads a
+picked folder by the scan's own rules into **Episode file rows**; both adds
+link by default in the shell — a movie's picked video through the **Path
+bridge**, a show through the **Show folder pick** — and copy a file under no
+Library folder; the **Source folder** is recorded, so a later scan reads the
+title as held. No migration.
+
+### What each group changed
+
+- **Group 1, one "under a listed folder"** (`cfb408f`–`1511562`).
+  `listedFolderOf` has its own folder and reads `folderOverlap`. The importer's
+  review presses ask it, and a run's `placeVideo` places by
+  `placeFoundVideo`.
+- **Group 2, the fix** (`953de58`). `readShowFolder` answered
+  `libraryFolderId: null` on every read, so in the installed app every Show
+  folder pick disabled Link. Its context is now `{ folders, heldSeriesAt }`:
+  the id is `listedFolderOf`'s, and the held check is `heldShow`'s question,
+  the folder on record.
+- **Group 3, a show's folder and a film's Source** (`0f02d9c`, `5adca23`).
+  `groupShows` exports `showFolderOf`, read by `placeShowFolder` in its own
+  folder. `placeFilmFolder/` exports `filmSourceOf` and `sourceFileOf`, and
+  the importer reads them.
+- **Group 4, the add routes keep HTTP** (`c1dcd6e`–`ace2f9c`).
+  `foundPathRefusal` in `routes/`, read by both adds — the movie's sentences
+  are now the series'. `placeFoundVideos` owns `LINK_REFUSAL`.
+  `copyFoundEpisodes` holds the series add's copy loop. The route's comments
+  say what is true.
+- **Group 5, the client wire** (`975c78c`–`0aaf889`). `readShowFolder` reads
+  through `refusalSentence`, its fourth feature. Both creates take `mode`
+  last and required. `movieAddValues` is a linked movie's wire shape.
+- **Group 6, the hook** (`8090d8f`–`13d0dd0`). `useImportMode` and
+  `useShowFolderPick` hold their bargains, and `useMovieForm` composes them,
+  keeping every `UseMovieFormResult` member. `SeriesFormFiles`' four Show
+  folder props are required.
+- **Group 7, the tests** (`f6e1605`). The pick's units have their own rows;
+  the refusal loop is `it.each`.
+- **Group 8, the docs** (`7fe2bb9`, `9571553`, `a89d975`, and this commit).
+  `COMPONENT-SPEC.md` knows the form's members; the docblocks name where
+  things now are; CLAUDE.md, the README and the glossary know step 31
+  shipped.
+
+### Where this round left the plan
+
+- **`linkedVideo` stays.** Plan commit 3 inlined it "at its one call"; it has
+  two, the Resolve's movie and series, so inlining would spell its found
+  check twice.
+- **`setShowLink(available)`, not `setShowLink(libraryFolderId)`.** The Show
+  folder row's ✕ makes Link available again with no read to pass.
+- **`copyFoundEpisodes` takes `stored` as a fifth argument**: the route owns
+  the folder's rename, which a picked episode's path follows. Season folders
+  are `season-NN`, not the plan's `Season 02/`.
+- **`useShowFolderPick` takes `plainAdd`**, since it decides whether the pick
+  is offered at all.
+- **`api.test.ts` had no `readShowFolder` rows** to leave unchanged; it gained
+  four. **`COMPONENT-SPEC.md` had no `SeriesFormFiles` row**; the series Files
+  card paragraph names its four props.
+- **Two small catches rode along**: the importer's unused `join` and `sep`
+  (from commits 4 and 6) went in commit 7, and a test path's backslashes,
+  collapsed by a heredoc in commit 11, were restored in commit 12.
+- The full suite ran after each group, green each time; every commit ran the
+  suites it touched and `tsc -b --force`.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the held title carried on the read,
+overloading `storedSubtitles`, a dashed-button primitive, the `Refusal` line
+and the danger tint, a silent failed read, the two `ShowFolderAnswer`s, the
+suites' non-null assertions, and everything log 48 put out of scope.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **Walk the release checklist's linked-add line** in the installed app: the
+  fix is the first build in which a show inside a Library folder can be linked
+  from the form.
+- **The held series' title on the Show folder read**, removing the second
+  round trip — a grill, since log 48 Q5 set the read's shape.
+- **A dashed-button primitive** for _＋ Add show folder_ and its siblings.
+- **From earlier entries**: the `Refusal` molecule and `dangerSoft` token, the
+  sandbox teardown flake, and the lint error in `EnrichmentReview.test.tsx`.
+
+### The initiative
+
+**Add a show folder is done**: the four slices (417–420) and this round
+(421). Issue 416 is closed with it.
+
+---
+
 ## 2026-10-20 — Manage library — the refactor (issue 414)
 
 Twenty-three commits against
