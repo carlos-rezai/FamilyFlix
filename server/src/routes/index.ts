@@ -29,6 +29,7 @@ import {
   type ReviewOutcome,
 } from '../import-export/createImporter/createImporter';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
+import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
 import {
   writeExport,
   type ExportRefusal,
@@ -593,6 +594,12 @@ const FOLDER_REFUSALS: Record<
   missing: { status: 400, error: 'No folder at that path.' },
 };
 
+/** How each refused **Show folder read** is answered: a `400`'s one sentence. */
+const SHOW_FOLDER_REFUSALS: Record<ShowFolderRefusal, string> = {
+  unreadable: 'That folder can’t be read.',
+  empty: 'There are no videos in that folder.',
+};
+
 /**
  * How each refused export destination or name is answered: a status, the
  * field the dialog draws it under, and its one sentence.
@@ -935,6 +942,16 @@ export function createApiRouter(
 
     // Nothing is refused after this point: the folder takes the title's name,
     // as a movie's does, and every stored path follows it.
+    // A row of a **Show folder pick** sends no bytes, so a save of only those
+    // reserves its Series folder here.
+    const findsFiles = read.episodes.some(
+      (episode) =>
+        episode.video === undefined ||
+        (episode.storedSubtitles ?? []).length > 0
+    );
+    if (uploads.folder === null && findsFiles) {
+      uploads.folder = media.reserveFolder(title, year ?? null);
+    }
     let stored = (path: string): string => path;
     if (uploads.folder !== null) {
       const renamed = media.renameFolder(uploads.folder, title, year ?? null);
@@ -942,16 +959,54 @@ export function createApiRouter(
       stored = (path) => renamed.storedPath(path);
     }
 
-    const episodes: NewEpisode[] = read.episodes.map((episode) => {
-      const videoPath = stored(episode.video);
+    // Each **Found file** is copied into its season with `Media.copyIn` —
+    // copied, never moved, so the picked folder is left as it was. A copy
+    // that breaks is the save's failure, and takes the folder with it.
+    const copied: { videoPath: string; tracks: NewSubtitle[] }[] = [];
+    try {
+      for (const episode of read.episodes) {
+        const season =
+          uploads.folder === null
+            ? null
+            : media.seasonFolder(uploads.folder, episode.season);
+        const copy = (path: string): Promise<string> => {
+          if (season === null) {
+            throw new Error('No Series folder to copy into');
+          }
+          return media.copyIn(season, path);
+        };
+        const videoPath =
+          episode.video === undefined
+            ? await copy(episode.videoPath ?? '')
+            : stored(episode.video);
+        const tracks: NewSubtitle[] = [];
+        for (const track of episode.storedSubtitles ?? []) {
+          tracks.push({
+            path: await copy(track.path),
+            language: track.language,
+          });
+        }
+        copied.push({ videoPath, tracks });
+      }
+    } catch {
+      rollback();
+      res.status(500).json({ error: 'Could not add the series' });
+      return;
+    }
+
+    const episodes: NewEpisode[] = read.episodes.map((episode, index) => {
+      const { videoPath, tracks } = copied[index];
       const runtimeMinutes = derivedRuntime(playback, {
         videoPath,
         videoFolderId: null,
       });
-      const subtitles: NewSubtitle[] = episode.subtitles.map((path, track) => ({
-        path: stored(path),
-        language: episode.subtitleLanguages[track],
-      }));
+      const subtitles: NewSubtitle[] = [
+        ...tracks,
+        ...episode.subtitles.map((path, track) => ({
+          path: stored(path),
+          language: episode.subtitleLanguages[track],
+        })),
+      ];
       return {
         season: episode.season,
         number: episode.number,
@@ -1936,6 +1991,18 @@ export function createApiRouter(
   // The **Library folders** list. `reachable` is the disk's answer, read
   // afresh on every list rather than stored, so a drive unplugged since the
   // add reads false on the next visit and true again once it is back.
+  // The series add's **Show folder pick**: the **Show folder read** of the
+  // folder the dialog answered, or one sentence per refusal.
+  router.get('/show-folder', async (req: Request, res: Response) => {
+    const path = typeof req.query.path === 'string' ? req.query.path : '';
+    const answer = await importer.readShowFolder(path);
+    if (answer.kind === 'refused') {
+      res.status(400).json({ error: SHOW_FOLDER_REFUSALS[answer.refusal] });
+      return;
+    }
+    res.json(answer.read);
+  });
+
   router.get('/library-folders', async (_req: Request, res: Response) => {
     const listed = storage.libraryFolders();
     const folders: LibraryFolder[] = await Promise.all(

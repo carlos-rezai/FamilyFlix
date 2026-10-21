@@ -162,3 +162,34 @@ export interface SeasonPosterSlot {
 
 /** The **Form kind**: what a plain add is adding. */
 export type FormKind = 'movie' | 'series';
+
+/**
+ * The **Show folder read**: what `GET /api/show-folder` answers for a folder
+ * picked on the series add — its **Title guess**, its numbered episodes in
+ * season, then episode order, each with its stem-matched subtitles, its
+ * **Unplaced** videos and how many subtitles matched no episode.
+ */
+export interface ShowFolderRead {
+  /** The Show folder, absolute. */
+  path: string;
+  /** The importer's Title guess on its name. */
+  titleGuess: string;
+  /** The listed Library folder it lies under — Link is possible — or `null`. */
+  libraryFolderId: string | null;
+  /** The held series whose Show folder this is, or `null`. */
+  heldSeriesId: string | null;
+  episodes: ShowFolderEpisode[];
+  /** Videos no rule numbered, absolute, in scan order. */
+  unplaced: string[];
+  /** Subtitles that matched no episode's stem. */
+  straySubtitles: number;
+}
+
+/** One numbered episode of a {@link ShowFolderRead}, its paths absolute. */
+export interface ShowFolderEpisode {
+  season: number;
+  number: number;
+  title: string | null;
+  video: string;
+  subtitles: { path: string; language: string }[];
+}

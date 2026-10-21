@@ -90,6 +90,8 @@ export type {
   MovieFormSubtitle,
   MovieFormValues,
   SeasonPosterSlot,
+  ShowFolderEpisode,
+  ShowFolderRead,
 } from './form';
 export type {
   ImportField,

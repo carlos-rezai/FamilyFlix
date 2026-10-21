@@ -37,6 +37,10 @@ import {
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
+import {
+  readShowFolder,
+  type ShowFolderAnswer,
+} from '../readShowFolder/readShowFolder';
 import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
 import type {
   CandidateFolder,
@@ -300,6 +304,12 @@ export interface Importer {
     enrich?: boolean,
     mode?: ImportMode
   ): Promise<ImportRun>;
+
+  /**
+   * The **Show folder read** of one absolute folder picked on the series add
+   * — `readShowFolder`'s, so no route learns there is a walk.
+   */
+  readShowFolder(path: string): Promise<ShowFolderAnswer>;
 }
 
 /** The sheet formats the reader opens, by extension. */
@@ -1968,6 +1978,8 @@ export function createImporter({
     },
 
     current: snapshot,
+
+    readShowFolder: (path) => readShowFolder(path),
 
     cancel: async () => {
       // Gone from the first line: a `current` read while the rollback is

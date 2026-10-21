@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
+import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type {
@@ -31,12 +32,17 @@ import {
   createMovie,
   createSeries,
   ProblemGoneError,
+  readShowFolder,
   resolveProblem,
   resolveSeriesProblem,
   updateMovie,
   updateSeries,
 } from '../api/api';
-import { pickedFile, pickedSubtitle } from '../formValues/formValues';
+import {
+  pickedFile,
+  pickedSubtitle,
+  showFolderRows,
+} from '../formValues/formValues';
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
@@ -149,6 +155,18 @@ export interface UseMovieFormResult {
   episodeRefusals: Readonly<Record<string, EpisodeRefusal>>;
   /** Append a pick of episode videos; the first fills an empty title. */
   addEpisodeFiles: (files: readonly File[]) => void;
+  /**
+   * Opens the **Folder bridge**'s one-folder dialog for a **Show folder
+   * pick** — `null` where there is no bridge, or beside a plain add, and no
+   * _＋ Add show folder_ is drawn.
+   */
+  addShowFolder: (() => void) | null;
+  /** The picked **Show folder**, absolute, for its row — or `null`. */
+  showFolder: string | null;
+  /** The Show folder row's ✕: its rows go, the rows added by hand stay. */
+  removeShowFolder: () => void;
+  /** The sentence a refused Show folder read is drawn as, or `null`. */
+  showFolderRefusal: string | null;
   /** The season of the row holding `key`, as typed. */
   setSeason: (key: string, season: string) => void;
   /** The episode number of the row holding `key`, as typed. */
@@ -568,6 +586,46 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
+  // The **Show folder pick**: the folder the dialog answered, read by the
+  // server, its rows after the held ones; an empty title takes the read's
+  // **Title guess**. A cancel changes nothing; a refusal adds no rows.
+  const [showFolder, setShowFolder] = useState<string | null>(null);
+  const [showFolderRefusal, setShowFolderRefusal] = useState<string | null>(
+    null
+  );
+  const { holdShowFolder, removeShowFolder: dropShowFolder } = episodeList;
+  const bridge = folderBridge();
+  const pickShowFolder = useCallback(async () => {
+    const path = await bridge?.pickOne();
+    if (path === null || path === undefined) {
+      return;
+    }
+    const answer = await readShowFolder(path).catch(() => null);
+    if (answer === null) {
+      return;
+    }
+    if (answer.kind === 'refused') {
+      setShowFolderRefusal(answer.sentence);
+      return;
+    }
+    const { read } = answer;
+    setShowFolderRefusal(null);
+    setShowFolder(read.path);
+    holdShowFolder(showFolderRows(read));
+    setValues((current) =>
+      current.title.trim() === ''
+        ? { ...current, title: read.titleGuess }
+        : current
+    );
+  }, [bridge, holdShowFolder]);
+  const addShowFolder = useCallback(() => {
+    void pickShowFolder();
+  }, [pickShowFolder]);
+  const removeShowFolder = useCallback(() => {
+    setShowFolder(null);
+    dropShowFolder();
+  }, [dropShowFolder]);
+
   const addEpisodeFiles = useCallback(
     (files: readonly File[]) => {
       // The **Title guess** off the first file picked, into an empty title
@@ -762,6 +820,10 @@ export function useMovieForm(): UseMovieFormResult {
     episodes,
     episodeRefusals: episodeList.refusals,
     addEpisodeFiles,
+    addShowFolder: bridge !== null && plainAdd ? addShowFolder : null,
+    showFolder,
+    removeShowFolder,
+    showFolderRefusal,
     setSeason: episodeList.setSeason,
     setNumber: episodeList.setNumber,
     setEpisodeTitle: episodeList.setEpisodeTitle,

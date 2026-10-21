@@ -28,6 +28,7 @@ import {
   UnderCaption,
   Actions,
   EnrichSlot,
+  Refusal,
 } from './MovieForm.styles';
 
 /**
@@ -173,6 +174,10 @@ export function MovieForm() {
     episodes,
     episodeRefusals,
     addEpisodeFiles,
+    addShowFolder,
+    showFolder,
+    removeShowFolder,
+    showFolderRefusal,
     setSeason,
     setNumber,
     setEpisodeTitle,
@@ -338,6 +343,9 @@ export function MovieForm() {
             episodes={episodes}
             refusals={episodeRefusals}
             onAddEpisodeFiles={addEpisodeFiles}
+            onAddShowFolder={addShowFolder}
+            showFolder={showFolder}
+            onRemoveShowFolder={removeShowFolder}
             onSeasonChange={setSeason}
             onNumberChange={setNumber}
             onEpisodeTitleChange={setEpisodeTitle}
@@ -398,6 +406,11 @@ export function MovieForm() {
           onClick={cancel}
         />
       </Actions>
+      {/* A refused **Show folder pick**, under the buttons, where the
+        form's other refusals read. */}
+      {kind === 'series' && showFolderRefusal !== null && (
+        <Refusal>{showFolderRefusal}</Refusal>
+      )}
     </>
   );
 }

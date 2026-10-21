@@ -7,6 +7,7 @@ import type {
   MovieFormValues,
   SeasonPosterSlot,
   Series,
+  ShowFolderRead,
 } from '@/types';
 
 import { movieFormData, seriesFormData } from '../formValues/formValues';
@@ -278,4 +279,33 @@ export async function resolveSeriesProblem(
   }
 
   return (await response.json()) as Series;
+}
+
+/** Where a picked **Show folder** is read. */
+const showFolderEndpoint = (path: string) =>
+  `/api/show-folder?path=${encodeURIComponent(path)}`;
+
+/**
+ * What reading a picked folder came to: its **Show folder read**, or the
+ * route's one sentence for a folder it refused — unreadable, or empty.
+ */
+export type ShowFolderAnswer =
+  | { kind: 'read'; read: ShowFolderRead }
+  | { kind: 'refused'; sentence: string };
+
+/**
+ * Reads the folder the **Folder bridge**'s one-folder dialog answered on the
+ * series add. A `400` is a refusal the form draws; anything else not ok is a
+ * plain error.
+ */
+export async function readShowFolder(path: string): Promise<ShowFolderAnswer> {
+  const response = await fetch(showFolderEndpoint(path));
+  if (response.status === 400) {
+    const { error } = (await response.json()) as { error: string };
+    return { kind: 'refused', sentence: error };
+  }
+  if (!response.ok) {
+    throw new Error(`GET /api/show-folder failed: ${response.status}`);
+  }
+  return { kind: 'read', read: (await response.json()) as ShowFolderRead };
 }

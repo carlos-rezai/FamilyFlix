@@ -1,5 +1,5 @@
 import { EpisodeFileRow, FileField, SubtitleRow } from '@/components';
-import { FilePicker, ImageIcon } from '@/primitives';
+import { FileIcon, FilePicker, ImageIcon } from '@/primitives';
 import {
   LANGUAGE_POOL,
   type EpisodeFormRow,
@@ -19,6 +19,7 @@ import {
 import { typedNumber } from '../formValues/formValues';
 import type { EpisodeRefusal } from '../useEpisodeList/useEpisodeList';
 import {
+  AddShowFolder,
   Caption,
   Card,
   EpisodeRows,
@@ -31,6 +32,11 @@ import {
 /** The episodes section's name, and what its picker says. */
 const EPISODES_LABEL = 'Episodes';
 const EPISODES_ADD = 'Add episode files';
+
+/** The **Show folder pick**'s button, and its row's label. */
+const SHOW_FOLDER_ADD = 'Add show folder';
+const SHOW_FOLDER_LABEL = 'Show folder';
+const SHOW_FOLDER_REMOVES = 'show folder';
 
 /** The _Season posters_ list's caption, and what an empty slot says. */
 const SEASON_POSTERS_LABEL = 'Season posters';
@@ -78,6 +84,15 @@ export interface SeriesFormFilesProps {
   episodes: readonly EpisodeFormRow[];
   /** Each row the **Save gate** refuses, by its key, with why. */
   refusals: Readonly<Record<string, EpisodeRefusal>>;
+  /**
+   * Opens the one-folder dialog of _＋ Add show folder_ — `null` draws no
+   * button: a browser has no **Folder bridge**.
+   */
+  onAddShowFolder?: (() => void) | null;
+  /** The picked **Show folder**, absolute — `null` draws no Show folder row. */
+  showFolder?: string | null;
+  /** Reports that the Show folder row's ✕ was pressed. */
+  onRemoveShowFolder?: () => void;
   /** Reports every video picked in one dialog of _＋ Add episode files_. */
   onAddEpisodeFiles: (files: File[]) => void;
   onSeasonChange: (key: string, season: string) => void;
@@ -122,6 +137,9 @@ export function SeriesFormFiles({
   episodes,
   refusals,
   onAddEpisodeFiles,
+  onAddShowFolder = null,
+  showFolder = null,
+  onRemoveShowFolder = () => undefined,
   onSeasonChange,
   onNumberChange,
   onEpisodeTitleChange,
@@ -163,6 +181,20 @@ export function SeriesFormFiles({
             />
           ))}
         </SeasonPosters>
+      )}
+      {showFolder !== null && (
+        // Only ever drawn filled: the folder comes from the button below, so
+        // the slot's picker is never reached.
+        <FileField
+          label={SHOW_FOLDER_LABEL}
+          chooseLabel={SHOW_FOLDER_ADD}
+          removes={SHOW_FOLDER_REMOVES}
+          filename={showFolder}
+          accept=""
+          icon={<FileIcon size={16} />}
+          onPick={() => undefined}
+          onRemove={onRemoveShowFolder}
+        />
       )}
       <Episodes>
         <EpisodesLabel>{EPISODES_LABEL}</EpisodesLabel>
@@ -223,6 +255,11 @@ export function SeriesFormFiles({
               />
             </EpisodeFileRow>
           ))}
+          {onAddShowFolder !== null && (
+            <AddShowFolder type="button" onClick={onAddShowFolder}>
+              ＋ {SHOW_FOLDER_ADD}
+            </AddShowFolder>
+          )}
           <FilePicker
             label={EPISODES_ADD}
             accept={VIDEO_ACCEPT}

@@ -1,4 +1,4 @@
-import { basename, extname } from 'node:path';
+import { basename, extname, isAbsolute } from 'node:path';
 
 import type { Media } from '../../media/createMedia/createMedia';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -483,7 +483,11 @@ export function collectEpisodeUploads(
  * a picked **Still** when one landed.
  */
 export interface LandedEpisode extends EpisodeField {
-  video: string;
+  /**
+   * The picked video, once landed — absent for a **Found file** row, whose
+   * absolute `videoPath` the route copies in, with its `storedSubtitles`.
+   */
+  video?: string;
   subtitles: string[];
   still?: string;
 }
@@ -544,18 +548,35 @@ export function readSeriesFields(
   pool: ReadonlySet<string>
 ): SeriesFormRead {
   return readSeriesBody(fields, uploads, pool, (episode, upload, tag) => {
-    if (upload?.video === undefined) {
+    const found = upload?.video === undefined ? episode.videoPath : undefined;
+    if (upload?.video === undefined && found === undefined) {
       return `Episode ${tag} has no video`;
     }
-    const subtitles = landedTracks(upload);
+    if (found !== undefined) {
+      const refused = foundPathRefusal(found, isVideoFilename, 'video');
+      if (refused !== null) {
+        return refused;
+      }
+    }
+    for (const track of episode.storedSubtitles ?? []) {
+      const refused = foundPathRefusal(
+        track.path,
+        isSubtitleFilename,
+        'subtitle'
+      );
+      if (refused !== null) {
+        return refused;
+      }
+    }
+    const subtitles = upload === undefined ? [] : landedTracks(upload);
     if (subtitles.length !== episode.subtitleLanguages.length) {
       return `Episode ${tag} is missing a subtitle`;
     }
     return {
       ...episode,
-      video: upload.video,
+      ...(upload?.video === undefined ? {} : { video: upload.video }),
       subtitles,
-      ...(upload.still === undefined ? {} : { still: upload.still }),
+      ...(upload?.still === undefined ? {} : { still: upload.still }),
     };
   });
 }
@@ -599,6 +620,23 @@ export function readSeriesEditFields(
             : { kind: 'none' },
     };
   });
+}
+
+/**
+ * Why a **Found file** path a series add names is not taken, as its sentence
+ * — not absolute, or not of the kind its slot holds — or `null` to take it.
+ */
+function foundPathRefusal(
+  path: string,
+  isKind: (filename: string) => boolean,
+  kind: 'video' | 'subtitle'
+): string | null {
+  if (!isAbsolute(path)) {
+    return `Not an absolute path: ${JSON.stringify(path)}`;
+  }
+  return isKind(basename(path))
+    ? null
+    : `Not a ${kind} file: ${JSON.stringify(basename(path))}`;
 }
 
 /** The tracks of an upload whose bytes have landed, in order. */

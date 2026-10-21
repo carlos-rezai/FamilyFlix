@@ -30,3 +30,29 @@ export const SeasonPostersLabel = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textFaint};
 `;
+
+/**
+ * _＋ Add show folder_: the File picker's dashed 42px box, as a `<button>` —
+ * it opens the **Folder bridge**'s dialog, not a file input.
+ */
+export const AddShowFolder = styled.button`
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 42px;
+  background: transparent;
+  border: 1px dashed ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radius.sm};
+  color: ${({ theme }) => theme.colors.textDim};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    border-color: ${({ theme }) => theme.colors.accentLine};
+    color: ${({ theme }) => theme.colors.text};
+  }
+`;

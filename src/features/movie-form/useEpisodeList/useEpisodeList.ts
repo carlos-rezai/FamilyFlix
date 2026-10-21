@@ -3,6 +3,7 @@ import { useCallback, useMemo, useRef, useState } from 'react';
 import type { EpisodeFormRow, MovieFormSubtitle } from '@/types';
 import { formatEpisodeTag } from '@/utils';
 import {
+  isShowFolderRow,
   pickedFile,
   pickedSubtitle,
   typedNumber,
@@ -46,6 +47,13 @@ export interface EpisodeList {
     rows: readonly EpisodeFormRow[],
     taken?: readonly string[]
   ) => void;
+  /**
+   * Put a **Show folder pick**'s rows after the rows held — in place of an
+   * earlier pick's, the rows _＋ Add episode files_ added kept.
+   */
+  holdShowFolder: (rows: readonly EpisodeFormRow[]) => void;
+  /** Take off the Show folder pick's rows, and only those. */
+  removeShowFolder: () => void;
   setSeason: (key: string, season: string) => void;
   setNumber: (key: string, number: string) => void;
   setEpisodeTitle: (key: string, title: string) => void;
@@ -152,6 +160,20 @@ export function useEpisodeList(): EpisodeList {
       setEpisodes([...rows]);
       setTaken(new Set(held));
     },
+    []
+  );
+
+  const holdShowFolder = useCallback(
+    (rows: readonly EpisodeFormRow[]) =>
+      setEpisodes((current) => [
+        ...current.filter((row) => !isShowFolderRow(row)),
+        ...rows,
+      ]),
+    []
+  );
+  const removeShowFolder = useCallback(
+    () =>
+      setEpisodes((current) => current.filter((row) => !isShowFolderRow(row))),
     []
   );
 
@@ -273,6 +295,8 @@ export function useEpisodeList(): EpisodeList {
     episodes,
     addEpisodeFiles,
     holdEpisodes,
+    holdShowFolder,
+    removeShowFolder,
     setSeason,
     setNumber,
     setEpisodeTitle,

@@ -7,6 +7,7 @@ import type {
   MovieFormValues,
   SeriesDetail,
   SeasonPosterSlot,
+  ShowFolderRead,
 } from '@/types';
 import { spellYearSpan, toRatingPercent, toRatingUnits } from '@/utils';
 
@@ -236,6 +237,38 @@ export function heldEpisodeRows({ seasons }: SeriesDetail): EpisodeFormRow[] {
 }
 
 /**
+ * What the form's own key for a **Show folder pick**'s rows and their tracks
+ * is prefixed with — what tells them from the rows _＋ Add episode files_
+ * added, so the Show folder row's ✕ takes off only its own.
+ */
+const SHOW_FOLDER_KEY = 'show-folder-';
+
+/** Whether the row holding `key` came from the **Show folder pick**. */
+export const isShowFolderRow = (row: EpisodeFormRow): boolean =>
+  row.key.startsWith(SHOW_FOLDER_KEY);
+
+/**
+ * A **Show folder read**'s rows: one **Episode file row** per episode, in the
+ * read's season-then-episode order, each a **Found file** with its found
+ * tracks in their detected languages.
+ */
+export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
+  return read.episodes.map((episode, index) => ({
+    key: `${SHOW_FOLDER_KEY}episode-${index}`,
+    file: foundFile(episode.video),
+    season: String(episode.season),
+    number: String(episode.number),
+    title: episode.title ?? '',
+    subtitles: episode.subtitles.map((track, at) => ({
+      key: `${SHOW_FOLDER_KEY}episode-${index}-subtitle-${at}`,
+      file: foundFile(track.path),
+      language: track.language,
+    })),
+    still: null,
+  }));
+}
+
+/**
  * The **File slot** a **Found file** fills: the absolute path the scan found
  * it at, and the name after its last separator — which is all the slot shows
  * of it, exactly as it shows a stored file.
@@ -462,8 +495,22 @@ export function seriesFormData(
                 : []
             ),
           };
-    // A **Found file** — the **Series Resolve**'s — travels as its path.
-    const found = row.file.kind === 'found' ? { videoPath: row.file.path } : {};
+    // A **Found file** — the **Series Resolve**'s, a **Show folder pick**'s —
+    // travels as its path, and its found tracks as theirs.
+    const foundTracks = row.subtitles.flatMap((subtitle) =>
+      subtitle.file.kind === 'found'
+        ? [{ path: subtitle.file.path, language: subtitle.language }]
+        : []
+    );
+    const found =
+      row.file.kind === 'found'
+        ? {
+            videoPath: row.file.path,
+            ...(foundTracks.length === 0
+              ? {}
+              : { storedSubtitles: foundTracks }),
+          }
+        : {};
     body.append(
       'episode',
       JSON.stringify({

@@ -139,3 +139,11 @@ export const Actions = styled.div`
 export const EnrichSlot = styled.div`
   margin-top: ${({ theme }) => theme.space.s5};
 `;
+
+/** A refused **Show folder pick**'s one sentence, a 13px `danger` line. */
+export const Refusal = styled.p`
+  margin: ${({ theme }) => theme.space.s3} 0 0;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.danger};
+`;

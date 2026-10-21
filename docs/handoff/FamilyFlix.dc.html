@@ -289,7 +289,7 @@
           genreView:null, genreSearch:'', detailReturn:'browse',
           playing:true, currentTime:0, subsOn:true, muted:false, volume:0.8, controlsVisible:true, playNotice:null, audioTrack:0, audioMenuOpen:false,
           addMode:'folder', folderPath:'', scanned:false,
-          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, subLangOpen:null,
+          fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, subLangOpen:null,
           addContext:null, resolveId:null,
           libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0}], folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
           impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[], impKind:'all', impOpen:{},
@@ -538,7 +538,7 @@
         onVolClick(e){ const r=e.currentTarget.getBoundingClientRect(); const p=Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)); this.setState({volume:p,muted:p===0}); }
 
         // ---- add form ----
-        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fSeasonPosters:{},fFound:[],fFoundPick:0,fRating:0,fRatingHover:null,fEnrich:false}); }
+        resetForm(){ this.setState({addMode:'folder',folderPath:'',scanned:false,fTitle:'',fYear:'',fDirector:'',fCast:'',fDescription:'',fGenres:[],fVideo:'',fPoster:'',fSubs:[],fKind:'movie',fEpisodes:[],fSeasonPosters:{},fShowFolder:'',fShowFolderRefusal:'',fShowFolderPicks:0,fFound:[],fFoundPick:0,fRating:0,fRatingHover:null,fEnrich:false}); }
         setFRating(pct){ this.setState({fRating:pct}); }
         hoverFRating(pct){ this.setState({fRatingHover:pct}); }
         clearFRatingHover(){ this.setState({fRatingHover:null}); }
@@ -552,6 +552,17 @@
         // ---- the Kind tabs (plain add only): one record, each kind's files held side by side ----
         setFKind(k){ this.setState({fKind:k}); }
         addEpisodeFiles(){ this.setState(s=>{ const n=s.fEpisodes.length; const picked=[1,2,3].map(i=>({filename:'Harbor.Lights.S01E0'+(n+i)+'.mkv',season:'1',number:String(n+i),title:'',subs:[]})); return {fEpisodes:[...s.fEpisodes,...picked], fTitle:s.fTitle||'Harbor Lights'}; }); }
+        // ＋ Add show folder (log 48), the shell's series add: the one-folder dialog, then the server's read.
+        // The simulation cycles a read, the unreadable refusal and the empty one. A read fills the Show
+        // folder row and one found row per episode, season then episode order; an empty title takes the
+        // Title guess. A refusal adds no rows. The row's ✕ takes off only the folder's rows.
+        addShowFolder(){ this.setState(s=>{ const turn=s.fShowFolderPicks%3; const picks=s.fShowFolderPicks+1;
+          if(turn===1) return {fShowFolderPicks:picks, fShowFolderRefusal:'That folder can’t be read.'};
+          if(turn===2) return {fShowFolderPicks:picks, fShowFolderRefusal:'There are no videos in that folder.'};
+          const dir='E:\\Shows\\Harbor Lights';
+          const found=[[1,1,'Pilot'],[1,2,'Low Tide'],[2,1,'Spring Tide']].map(([se,n,t])=>({filename:'Harbor.Lights.S0'+se+'E0'+n+'.'+t.replace(/ /g,'.')+'.mkv',season:String(se),number:String(n),title:t,subs:se===1&&n===1?[{filename:'Harbor.Lights.S01E01.Pilot.pt.srt',lang:'Portuguese'}]:[],fromFolder:true}));
+          return {fShowFolderPicks:picks, fShowFolderRefusal:'', fShowFolder:dir, fEpisodes:[...s.fEpisodes.filter(e=>!e.fromFolder),...found], fTitle:s.fTitle||'Harbor Lights'}; }); }
+        removeShowFolder(){ this.setState(s=>({fShowFolder:'', fEpisodes:s.fEpisodes.filter(e=>!e.fromFolder)})); }
         // A season's poster from a file: picked as bytes, or taken away with ✕.
         pickSeasonPoster(n){ this.setState(s=>({fSeasonPosters:{...s.fSeasonPosters,[n]:'season-'+n+'.jpg'}})); }
         removeSeasonPoster(n){ this.setState(s=>{ const next={...s.fSeasonPosters}; delete next[n]; return {fSeasonPosters:next}; }); }
@@ -1057,6 +1068,10 @@
               episodes:s.fEpisodes.map((ep,i)=>({...ep, onSeason:(v)=>this.setEpisode(i,{season:v}), onNumber:(v)=>this.setEpisode(i,{number:v}), onTitle:(v)=>this.setEpisode(i,{title:v}), remove:()=>this.removeEpisode(i), addSub:()=>this.addEpisodeSub(i),
                 subtitles:ep.subs.map((x,k)=>({...x, remove:()=>this.removeEpisodeSub(i,k), onLangChange:(l)=>this.setEpisodeSubLang(i,k,l)}))})),
               addEpisodeFiles:()=>this.addEpisodeFiles(),
+              // The Show folder pick: the shell's plain series add alone.
+              canAddShowFolder:isSeriesForm&&s.addContext==='settings', addShowFolder:()=>this.addShowFolder(),
+              hasShowFolder:!!s.fShowFolder, showFolder:s.fShowFolder, removeShowFolder:()=>this.removeShowFolder(),
+              showFolderRefusal:isSeriesForm?s.fShowFolderRefusal:'',
               canSave,
               // Add and sync: the box on a plain add alone, both kinds — never on an edit or a Resolve. Off on every mount.
               showEnrich:s.addContext==='settings', enrich:!!s.fEnrich, onToggleEnrich:()=>this.setState(x=>({fEnrich:!x.fEnrich})), keySet:s.tmdbConnected,
