@@ -27,9 +27,9 @@ export interface UpNextCardProps {
  * `feat.PlayerControls.dc.html`.
  *
  * Presentational: it is told the next episode and the seconds left, and hands
- * the two presses back. The thumbnail is the next episode's **Still** over its
- * gradient, `EpisodeRow`'s, and the gradient alone when it has none. When it is shown, and what a press does, are the
- * `Player`'s.
+ * the two presses back. The thumbnail is the next episode's **Still**, drawn as
+ * an image edge to edge over its gradient, and the gradient alone when it has
+ * none. When it is shown, and what a press does, are the `Player`'s.
  */
 export function UpNextCard({
   next,
@@ -43,7 +43,7 @@ export function UpNextCard({
   return (
     <Card>
       <Thumb $g1={g1} $g2={g2} aria-hidden="true">
-        {stillUrl ? <Artwork url={stillUrl} g1={g1} g2={g2} /> : null}
+        {stillUrl ? <Artwork image url={stillUrl} g1={g1} g2={g2} /> : null}
       </Thumb>
       <Body>
         <Label>{`Up next · in ${secondsLeft}s`}</Label>

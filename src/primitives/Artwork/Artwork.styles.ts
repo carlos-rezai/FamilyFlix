@@ -46,3 +46,14 @@ export const PosterMark = styled.span`
   opacity: 0.9;
   text-shadow: 0 1px 8px rgba(0, 0, 0, 0.55);
 `;
+
+/**
+ * The url drawn as an `<img>`, in `image` mode: a block, so no inline baseline
+ * gap opens under it, covering the frame edge to edge.
+ */
+export const Image = styled.img`
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+`;

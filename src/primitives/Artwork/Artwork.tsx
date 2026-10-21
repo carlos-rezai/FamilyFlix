@@ -1,5 +1,5 @@
 import { Wordmark } from '../Wordmark/Wordmark';
-import { PosterMark, Root } from './Artwork.styles';
+import { Image, PosterMark, Root } from './Artwork.styles';
 
 export interface ArtworkProps {
   /**
@@ -13,6 +13,12 @@ export interface ArtworkProps {
    * player and the cards that are not posters leave it unset.
    */
   poster?: boolean;
+  /**
+   * Draw the url as an `<img>` that covers the frame edge to edge, rather than
+   * as a background layer. The gradient still sits under it. Unset, the url is
+   * a background layer.
+   */
+  image?: boolean;
   /** The **Gradient fallback**'s two stops, as `gradientFromId` derives them. */
   g1: string;
   g2: string;
@@ -39,12 +45,14 @@ export interface ArtworkProps {
 export function Artwork({
   url = null,
   poster = false,
+  image = false,
   g1,
   g2,
   className,
 }: ArtworkProps) {
   return (
-    <Root className={className} $url={url} $g1={g1} $g2={g2}>
+    <Root className={className} $url={image ? null : url} $g1={g1} $g2={g2}>
+      {image && url ? <Image src={url} alt="" /> : null}
       {poster && !url ? (
         <PosterMark aria-hidden="true">
           <Wordmark />

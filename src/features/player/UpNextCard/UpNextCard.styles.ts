@@ -13,6 +13,7 @@ export const Card = styled.div`
   z-index: 40;
   width: 440px;
   display: flex;
+  align-items: center;
   gap: 14px;
   padding: 14px;
   background: rgba(20, 17, 13, 0.88);
@@ -25,15 +26,14 @@ export const Card = styled.div`
 
 /**
  * The next episode's 16:9 thumbnail: its **Still** over its id's gradient.
- * Centred, not stretched: a row's stretch would size it to the text column and
- * override the ratio. At 200px it is about as tall as that column.
+ * It takes the width the text column does not need, so the card's margin is
+ * even on all four sides; the card centres it against that column.
  */
 export const Thumb = styled.div<{ $g1: string; $g2: string }>`
   position: relative;
   overflow: hidden;
-  flex: 0 0 auto;
-  width: 200px;
-  align-self: center;
+  flex: 1 1 0;
+  min-width: 0;
   aspect-ratio: 16 / 9;
   border-radius: 7px;
   background: linear-gradient(
@@ -43,8 +43,10 @@ export const Thumb = styled.div<{ $g1: string; $g2: string }>`
   );
 `;
 
+/** Sized to its content, capped so a long title still ellipsises. */
 export const Body = styled.div`
-  flex: 1;
+  flex: 0 1 auto;
+  max-width: 200px;
   min-width: 0;
   display: flex;
   flex-direction: column;
