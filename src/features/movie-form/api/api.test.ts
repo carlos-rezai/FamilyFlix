@@ -109,7 +109,7 @@ describe('createMovie', () => {
   it('POSTs the form values as multipart to the movies route', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }), 'copy');
 
     const request = onlyRequest();
     expect(request.url).toBe('/api/movies');
@@ -119,7 +119,7 @@ describe('createMovie', () => {
   it('carries the title and the year as form fields', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }), 'copy');
 
     const fields = sentFields();
     expect(fields.get('title')).toBe('Rear Window');
@@ -129,7 +129,7 @@ describe('createMovie', () => {
   it('sends an empty year rather than omitting the field', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', year: '' }));
+    await createMovie(typed({ title: 'Rear Window', year: '' }), 'copy');
 
     // The server reads an empty year as "no year"; a field that vanished when
     // it was cleared would make an edit unable to say the year was removed,
@@ -140,7 +140,7 @@ describe('createMovie', () => {
   it('sets no Content-Type of its own', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }), 'copy');
 
     // A multipart body is nothing without its boundary, and only the platform
     // knows the boundary it generated. Naming the header here would send
@@ -159,7 +159,8 @@ describe('createMovie', () => {
       typed({
         title: 'Rear Window',
         year: '1954',
-      })
+      }),
+      'copy'
     );
 
     // The whole record, so the screen it lands on has the film without a second
@@ -171,7 +172,7 @@ describe('createMovie', () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
     await expect(
-      createMovie(typed({ title: 'Rear Window', year: '1954' }))
+      createMovie(typed({ title: 'Rear Window', year: '1954' }), 'copy')
     ).rejects.toThrow();
   });
 
@@ -179,7 +180,7 @@ describe('createMovie', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(
-      createMovie(typed({ title: 'Rear Window', year: '1954' }))
+      createMovie(typed({ title: 'Rear Window', year: '1954' }), 'copy')
     ).rejects.toThrow();
   });
 
@@ -193,7 +194,8 @@ describe('createMovie', () => {
         title: 'Rear Window',
         year: '1954',
         genres: ['Thriller', 'Sci-Fi'],
-      })
+      }),
+      'copy'
     );
 
     // A repeated part under one name — what a set has always looked like on a
@@ -210,7 +212,8 @@ describe('createMovie', () => {
         title: 'Rear Window',
         year: '1954',
         genres: ['Sci-Fi', 'Thriller'],
-      })
+      }),
+      'copy'
     );
 
     // The same two names, sent the other way round. Nothing between the chips
@@ -221,7 +224,7 @@ describe('createMovie', () => {
   it('sends no genre part at all when none is picked', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', year: '1954' }));
+    await createMovie(typed({ title: 'Rear Window', year: '1954' }), 'copy');
 
     // Unlike `year`, an empty genre selection is an *absent* field rather than
     // an empty one: there is no such thing as a genre named `''`, so a part
@@ -245,7 +248,8 @@ describe('createMovie', () => {
         title: 'Rear Window',
         director: 'Alfred Hitchcock',
         description: 'A photographer watches his neighbours.',
-      })
+      }),
+      'copy'
     );
 
     // `description` is the form's word for it, and the column's is `synopsis`.
@@ -261,7 +265,7 @@ describe('createMovie', () => {
   it('sends an empty director and description rather than omitting them', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window' }));
+    await createMovie(typed({ title: 'Rear Window' }), 'copy');
 
     // `year`'s rule, over two more nullable columns: a field that vanished when
     // it was cleared could not say a director had been *removed*.
@@ -274,7 +278,8 @@ describe('createMovie', () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
     await createMovie(
-      typed({ title: 'Rear Window', cast: 'Jane Doe, John Roe, Ana Vega' })
+      typed({ title: 'Rear Window', cast: 'Jane Doe, John Roe, Ana Vega' }),
+      'copy'
     );
 
     // The genres' own spelling, for the genres' own reason: a list on this wire
@@ -291,7 +296,8 @@ describe('createMovie', () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
     await createMovie(
-      typed({ title: 'Rear Window', cast: ' Jane Doe ,, John Roe, ' })
+      typed({ title: 'Rear Window', cast: ' Jane Doe ,, John Roe, ' }),
+      'copy'
     );
 
     // Trailing commas, doubled commas and stray spaces are what a field being
@@ -302,7 +308,7 @@ describe('createMovie', () => {
   it('sends no cast part at all when the field is empty', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', cast: '' }));
+    await createMovie(typed({ title: 'Rear Window', cast: '' }), 'copy');
 
     // The genres' rule rather than the year's, because this is a list too: an
     // untyped cast is an absent field, never one empty part that the row would
@@ -314,7 +320,7 @@ describe('createMovie', () => {
   it('sends no cast part for a field holding only commas and spaces', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', cast: ' , , ' }));
+    await createMovie(typed({ title: 'Rear Window', cast: ' , , ' }), 'copy');
 
     expect(sentFields().has('cast')).toBe(false);
   });
@@ -331,7 +337,7 @@ describe('createMovie', () => {
   it('carries the rating in the units the column stores, not the percent the picker speaks', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', rating: 80 }));
+    await createMovie(typed({ title: 'Rear Window', rating: 80 }), 'copy');
 
     expect(sentFields().get('rating')).toBe('8');
   });
@@ -339,7 +345,7 @@ describe('createMovie', () => {
   it('carries a half star as the half unit it is', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', rating: 70 }));
+    await createMovie(typed({ title: 'Rear Window', rating: 70 }), 'copy');
 
     // Three and a half stars is 7 of the 10 units, and it stays a whole number
     // on the wire — which is what makes the half-star scale storable at all.
@@ -349,7 +355,7 @@ describe('createMovie', () => {
   it('sends an empty rating for an unrated movie rather than omitting the field', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', rating: null }));
+    await createMovie(typed({ title: 'Rear Window', rating: null }), 'copy');
 
     // `year`'s rule over the one column where getting it wrong scores the film
     // instead of erasing it: the field travels, empty, so a rating the
@@ -448,7 +454,10 @@ describe('createMovie — the video', () => {
   it('sends the picked file as the video part', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'The Lantern Keeper', video: PICKED }));
+    await createMovie(
+      typed({ title: 'The Lantern Keeper', video: PICKED }),
+      'copy'
+    );
 
     // The `File` itself: a browser gives a name and bytes and never a path, so
     // the bytes are the only thing there is to send — and sending them is what
@@ -459,7 +468,10 @@ describe('createMovie — the video', () => {
   it('sends it as one part, whatever the film weighs', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'The Lantern Keeper', video: PICKED }));
+    await createMovie(
+      typed({ title: 'The Lantern Keeper', video: PICKED }),
+      'copy'
+    );
 
     // One request per save. `FormData` streams the part rather than reading it
     // into the body, which is what keeps a 12 GB film out of memory on both
@@ -477,7 +489,8 @@ describe('createMovie — the video', () => {
         year: '2019',
         genres: ['Drama'],
         video: PICKED,
-      })
+      }),
+      'copy'
     );
 
     const fields = sentFields();
@@ -489,7 +502,7 @@ describe('createMovie — the video', () => {
 
   it('sends a video part only when there is a film in the slot', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
-    await createMovie(typed({ title: 'Rear Window', video: null }));
+    await createMovie(typed({ title: 'Rear Window', video: null }), 'copy');
 
     // The lists' rule rather than the fields': there is no file with no bytes,
     // so an empty slot sends nothing rather than an empty part the server
@@ -499,7 +512,7 @@ describe('createMovie — the video', () => {
     expect(sentFields().has('video')).toBe(false);
 
     fetchMock.mockClear();
-    await createMovie(typed({ title: 'Rear Window', video: PICKED }));
+    await createMovie(typed({ title: 'Rear Window', video: PICKED }), 'copy');
 
     expect(sentFields().has('video')).toBe(true);
   });
@@ -529,7 +542,8 @@ describe('createMovie — the poster', () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
     await createMovie(
-      typed({ title: 'The Lantern Keeper', poster: PICKED_POSTER })
+      typed({ title: 'The Lantern Keeper', poster: PICKED_POSTER }),
+      'copy'
     );
 
     expect(sentFields().get('poster')).toBe(ARTWORK);
@@ -538,7 +552,7 @@ describe('createMovie — the poster', () => {
   it('sends a poster part only when there is artwork in the slot', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', poster: null }));
+    await createMovie(typed({ title: 'Rear Window', poster: null }), 'copy');
 
     // The lists' rule rather than the fields': `year` travels empty so an edit
     // can say a year was removed, but there is no file with no bytes — and
@@ -556,7 +570,8 @@ describe('createMovie — the poster', () => {
         genres: ['Drama'],
         video: PICKED,
         poster: PICKED_POSTER,
-      })
+      }),
+      'copy'
     );
 
     // Story 36 with two files in it. One request per save however many slots
@@ -624,7 +639,8 @@ describe('createMovie — the subtitles', () => {
           attached('s1', EN_SRT),
           attached('s2', PT_SRT, 'Portuguese'),
         ],
-      })
+      }),
+      'copy'
     );
 
     // The `File` itself, on the video part's own rule — and the order is the
@@ -643,7 +659,8 @@ describe('createMovie — the subtitles', () => {
           attached('s1', EN_SRT),
           attached('s2', PT_SRT, 'Portuguese'),
         ],
-      })
+      }),
+      'copy'
     );
 
     // Read pairwise against the parts above: two repeated names travelling in
@@ -662,7 +679,8 @@ describe('createMovie — the subtitles', () => {
         title: 'The Lantern Keeper',
         video: PICKED,
         subtitles: [attached('s1', PT_SRT, 'Portuguese')],
-      })
+      }),
+      'copy'
     );
 
     // A **Subtitle**'s language is stored as the chosen text — the **Language
@@ -674,7 +692,7 @@ describe('createMovie — the subtitles', () => {
   it('sends no subtitle part at all when none is attached', async () => {
     fetchMock.mockResolvedValue(createdResponse(CREATED));
 
-    await createMovie(typed({ title: 'Rear Window', subtitles: [] }));
+    await createMovie(typed({ title: 'Rear Window', subtitles: [] }), 'copy');
 
     // The lists' rule: an empty set sends no part rather than an empty one, the
     // way an unpicked genre does. Story 64 is a row with no subtitles, not a
@@ -698,7 +716,8 @@ describe('createMovie — the subtitles', () => {
           attached('s1', EN_SRT),
           attached('s2', PT_SRT, 'Portuguese'),
         ],
-      })
+      }),
+      'copy'
     );
 
     // Story 36 with four files in it: one request per save, however many slots
@@ -1021,7 +1040,7 @@ describe('createSeries', () => {
   it('POSTs multipart to the series route, naming no Content-Type', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries('copy', SERIES_VALUES, [PILOT, LOW_TIDE], []);
+    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE], [], 'copy');
 
     const request = onlyRequest();
     expect(request.url).toBe('/api/series');
@@ -1036,7 +1055,7 @@ describe('createSeries', () => {
   it('sends its parts in the contract’s order', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries('copy', SERIES_VALUES, [PILOT, LOW_TIDE], []);
+    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE], [], 'copy');
 
     expect([...sentFields().keys()]).toEqual([
       'mode',
@@ -1060,7 +1079,7 @@ describe('createSeries', () => {
   it('carries the series fields, the director’s field as the creator', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries('copy', SERIES_VALUES, [PILOT], []);
+    await createSeries(SERIES_VALUES, [PILOT], [], 'copy');
 
     const fields = sentFields();
     expect(fields.get('title')).toBe('Harbor and Vine');
@@ -1076,7 +1095,7 @@ describe('createSeries', () => {
   it('sends each episode as its numbers and title, then its video', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries('copy', SERIES_VALUES, [PILOT, LOW_TIDE], []);
+    await createSeries(SERIES_VALUES, [PILOT, LOW_TIDE], [], 'copy');
 
     const fields = sentFields();
     expect(
@@ -1093,7 +1112,7 @@ describe('createSeries', () => {
   it('sends no poster part when the slot is empty', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries('copy', { ...SERIES_VALUES, poster: null }, [PILOT], []);
+    await createSeries({ ...SERIES_VALUES, poster: null }, [PILOT], [], 'copy');
 
     expect(sentFields().has('poster')).toBe(false);
   });
@@ -1102,7 +1121,7 @@ describe('createSeries', () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
     await expect(
-      createSeries('copy', SERIES_VALUES, [PILOT], [])
+      createSeries(SERIES_VALUES, [PILOT], [], 'copy')
     ).resolves.toEqual(SERIES_CREATED);
   });
 
@@ -1114,7 +1133,7 @@ describe('createSeries', () => {
     } as unknown as Response);
 
     await expect(
-      createSeries('copy', SERIES_VALUES, [PILOT], [])
+      createSeries(SERIES_VALUES, [PILOT], [], 'copy')
     ).rejects.toThrow();
   });
 
@@ -1122,7 +1141,7 @@ describe('createSeries', () => {
     fetchMock.mockRejectedValue(new Error('offline'));
 
     await expect(
-      createSeries('copy', SERIES_VALUES, [PILOT], [])
+      createSeries(SERIES_VALUES, [PILOT], [], 'copy')
     ).rejects.toThrow();
   });
 });
@@ -1159,10 +1178,10 @@ describe('createSeries — each episode’s subtitles', () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
     await createSeries(
-      'copy',
       { ...SERIES_VALUES, poster: null },
       [PILOT_SUBTITLED, LOW_TIDE_SUBTITLED],
-      []
+      [],
+      'copy'
     );
 
     const parts = [...sentFields().entries()]
@@ -1185,10 +1204,10 @@ describe('createSeries — each episode’s subtitles', () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
     await createSeries(
-      'copy',
       SERIES_VALUES,
       [PILOT_SUBTITLED, LOW_TIDE_SUBTITLED],
-      []
+      [],
+      'copy'
     );
 
     expect(
@@ -1201,7 +1220,7 @@ describe('createSeries — each episode’s subtitles', () => {
   it('sends no subtitle part and no language for a row with none', async () => {
     fetchMock.mockResolvedValue(createdResponse(SERIES_CREATED));
 
-    await createSeries('copy', SERIES_VALUES, [PILOT_SUBTITLED, LOW_TIDE], []);
+    await createSeries(SERIES_VALUES, [PILOT_SUBTITLED, LOW_TIDE], [], 'copy');
 
     const fields = sentFields();
     expect(
@@ -1215,7 +1234,7 @@ describe('createSeries — each episode’s subtitles', () => {
 
 describe('readShowFolder', () => {
   const READ: ShowFolderRead = {
-    path: 'D:\Shows\Harbor and Vine',
+    path: 'D:\\Shows\\Harbor and Vine',
     titleGuess: 'Harbor and Vine',
     libraryFolderId: 'shows',
     heldSeriesId: null,

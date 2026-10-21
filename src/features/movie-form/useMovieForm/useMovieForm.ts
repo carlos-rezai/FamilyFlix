@@ -838,7 +838,7 @@ export function useMovieForm(): UseMovieFormResult {
           // place and then the flow over it.
           const created =
             kind === 'series'
-              ? createSeries(sentMode, values, episodes, seasonPosters)
+              ? createSeries(values, episodes, seasonPosters, sentMode)
               : createMovie(sentMovie, sentMode);
           return created.then(({ id }) => {
             const { replace, push } = addLeaving(

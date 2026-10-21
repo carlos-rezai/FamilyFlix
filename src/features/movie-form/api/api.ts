@@ -92,7 +92,7 @@ async function sendMovie(
  */
 export function createMovie(
   values: MovieFormValues,
-  mode: ImportMode = 'copy'
+  mode: ImportMode
 ): Promise<Movie> {
   return sendMovie('POST', MOVIES_ENDPOINT, values, mode);
 }
@@ -104,10 +104,10 @@ export function createMovie(
  * standing with every field and row still in it.
  */
 export async function createSeries(
-  mode: ImportMode,
   values: MovieFormValues,
   episodes: readonly EpisodeFormRow[],
-  seasonPosters: readonly SeasonPosterSlot[]
+  seasonPosters: readonly SeasonPosterSlot[],
+  mode: ImportMode
 ): Promise<Series> {
   const response = await fetch(SERIES_ENDPOINT, {
     method: 'POST',
