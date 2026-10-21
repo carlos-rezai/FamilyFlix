@@ -1054,7 +1054,7 @@
               nextCountdown:Math.max(0,Math.ceil(dur-ct)),
               nextEpLabel: nextEp ? ('S'+String(nextEp.season).padStart(2,'0')+'E'+String(nextEp.number).padStart(2,'0')) : '',
               nextEpTitle: nextEp ? nextEp.title : '',
-              nextThumbStyle: nextEp ? {flex:'0 0 auto',width:'200px',alignSelf:'center',aspectRatio:'16 / 9',borderRadius:'7px',background:'linear-gradient(150deg, '+nextEp.g1+' 0%, '+nextEp.g2+' 100%)'} : {},
+              nextThumbStyle: nextEp ? {flex:'1 1 0',minWidth:0,aspectRatio:'16 / 9',overflow:'hidden',borderRadius:'7px',background:'linear-gradient(150deg, '+nextEp.g1+' 0%, '+nextEp.g2+' 100%)'} : {},
               onPlayNext:()=>this.playNextEpisode(), onCancelNext:()=>this.cancelAutoNext(),
               showBigPlay:!s.playing && !s.playNotice, showSubtitle:s.subsOn && hasSubs && !s.playNotice,
               showBuffering:s.playNotice==='buffering', showUnavailable:['missing-file','cannot-play','could-not-start','unreachable'].includes(s.playNotice),
