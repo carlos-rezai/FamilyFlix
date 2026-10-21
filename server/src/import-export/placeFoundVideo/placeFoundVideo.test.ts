@@ -2,9 +2,10 @@
 //
 // 48 — Add a show folder, Phase 2 (issue #418): the **Placed video** rule.
 //
-// `placeFoundVideo(folders, path, mode)` is the importer's private
-// `linkedVideo` + `listedFolderOf` lifted out, so the importer, the Resolve
-// and the two add routes share one rule. In **Link**, a found video under a
+// `placeFoundVideo(folders, path, mode)` was lifted out of the importer's
+// `linkedVideo`, reading the one `listedFolderOf`, so a run, the Resolve and
+// the two add routes share one rule; `placeFoundVideos` is the same rule over
+// an add's list, owning the Link refusal. In **Link**, a found video under a
 // listed **Library folder** answers a **Linked video** — its `videoPath`
 // relative to that folder with forward slashes, its `videoFolderId` the
 // folder's id — and of nested listed folders the deepest is the one. A path

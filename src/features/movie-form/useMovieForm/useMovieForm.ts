@@ -362,7 +362,9 @@ export interface UseMovieFormResult {
  * of {@link UseMovieFormResult} those do not reach. The series half's list
  * rules — the order rows land in, their numbers and the gate they make — are
  * `useEpisodeList`'s own suite's, because that hook is a unit of its own, and
- * its Season posters' slots are `useSeasonPosters`' for the same reason.
+ * its Season posters' slots are `useSeasonPosters`' for the same reason. So
+ * are the **Import mode**'s availabilities and reads, `useImportMode`'s, and
+ * the **Show folder pick**'s dialog, read and refusals, `useShowFolderPick`'s.
  *
  * The testable halves of the five jobs have left for units of their own:
  * `formJob`, which reads the URL into a job and its Landing, and

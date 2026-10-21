@@ -302,7 +302,8 @@ export interface Importer {
 
   /**
    * The **Show folder read** of one absolute folder picked on the series add
-   * — `readShowFolder`'s, so no route learns there is a walk.
+   * — `readShowFolder`'s, so no route learns there is a walk — given the
+   * listed Library folders and the held series on record at a folder.
    */
   readShowFolder(path: string): Promise<ShowFolderAnswer>;
 }
