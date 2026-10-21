@@ -21,6 +21,18 @@ export interface StubMediaOptions {
    * untestable, since its whole claim is that one press starts the film.
    */
   autoplay?: 'allowed' | 'refused';
+  /**
+   * `'load'` models what a browser does when an element is pointed at a source,
+   * through its `src` property or its `src` attribute (React writes the
+   * attribute): the media element load algorithm, which leaves the element
+   * paused at nought with nothing loaded. A play that was under way is
+   * cancelled, so a playing element reports its `pause`: the film the family
+   * sees is stopped, and the big-play circle is drawn over it.
+   *
+   * `'inert'`, the default, is jsdom's own: a source changes nothing, which is
+   * what every suite written before the load was modelled expects.
+   */
+  sources?: 'inert' | 'load';
 }
 
 /** What one stubbed element remembers, since a prototype cannot remember it. */
@@ -51,6 +63,7 @@ interface MediaState {
  */
 export function stubMediaElement({
   autoplay = 'allowed',
+  sources = 'inert',
 }: StubMediaOptions = {}) {
   const states = new WeakMap<HTMLMediaElement, MediaState>();
 
@@ -64,7 +77,23 @@ export function stubMediaElement({
     return state;
   }
 
+  /** The load algorithm, as far as anything the player reads can tell. */
+  function load(element: HTMLMediaElement): void {
+    const state = stateOf(element);
+    const wasPlaying = !state.paused;
+    state.paused = true;
+    state.currentTime = 0;
+    state.readyState = 0;
+    if (wasPlaying) {
+      element.dispatchEvent(new Event('pause'));
+    }
+  }
+
   const originals = new Map<StubbedProperty, PropertyDescriptor | undefined>();
+  const sourceOriginals = new Map<
+    'src' | 'setAttribute',
+    PropertyDescriptor | undefined
+  >();
 
   beforeEach(() => {
     for (const property of STUBBED) {
@@ -137,9 +166,68 @@ export function stubMediaElement({
         get: () => Number.NaN,
       },
     });
+
+    if (sources === 'load') {
+      installLoad();
+    }
   });
 
+  /**
+   * Both ways a source reaches an element run the load: the property, which a
+   * test sets by hand, and the attribute, which is how React writes `src`.
+   */
+  function installLoad(): void {
+    for (const property of ['src', 'setAttribute'] as const) {
+      sourceOriginals.set(
+        property,
+        Object.getOwnPropertyDescriptor(HTMLMediaElement.prototype, property)
+      );
+    }
+    const src = sourceOriginals.get('src');
+    const setAttribute = Element.prototype.setAttribute;
+
+    Object.defineProperties(HTMLMediaElement.prototype, {
+      src: {
+        configurable: true,
+        get(this: HTMLMediaElement): string {
+          return src?.get?.call(this) as string;
+        },
+        set(this: HTMLMediaElement, value: string) {
+          src?.set?.call(this, value);
+          load(this);
+        },
+      },
+      setAttribute: {
+        configurable: true,
+        writable: true,
+        value: function (
+          this: HTMLMediaElement,
+          name: string,
+          value: string
+        ): void {
+          setAttribute.call(this, name, value);
+          if (name.toLowerCase() === 'src') {
+            load(this);
+          }
+        },
+      },
+    });
+  }
+
   afterEach(() => {
+    for (const [property, original] of sourceOriginals) {
+      if (original) {
+        Object.defineProperty(HTMLMediaElement.prototype, property, original);
+      } else {
+        delete (
+          HTMLMediaElement.prototype as Partial<
+            Record<typeof property, unknown>
+          >
+        )[property];
+      }
+    }
+    sourceOriginals.clear();
+
     for (const property of STUBBED) {
       const original = originals.get(property);
       if (original) {

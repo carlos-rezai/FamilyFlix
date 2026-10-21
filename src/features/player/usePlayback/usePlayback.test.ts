@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import { useLayoutEffect } from 'react';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { usePlayback } from './usePlayback';
@@ -992,5 +993,142 @@ describe('usePlayback — switching audio track mid-film', () => {
     expect(result.current.playing).toBe(false);
     expect(video.currentTime).toBe(1200);
     expect(result.current.buffering).toBe(false);
+  });
+});
+
+/**
+ * Release review (issue #422): a resumed title opens paused.
+ *
+ * A **Continue watching** card opens the player at the title's **Resume
+ * position**, and the film has to start on its own there exactly as a fresh
+ * open does. On a stream path the resume re-points the source after the open
+ * has already asked the element to play, and a browser's load leaves an element
+ * paused: the film the family chose sat behind the big-play circle.
+ *
+ * These suites point the element at the source the hook answers with, the way
+ * the screen does, and the stub runs the browser's load on every new source.
+ */
+describe('usePlayback — a film opened at its resume position', () => {
+  stubMediaElement({ sources: 'load' });
+
+  const REMUX: PlaybackRead = {
+    path: 'remux',
+    durationSeconds: 5391.2,
+    audioTracks: [],
+  };
+  const TRANSCODE: PlaybackRead = {
+    path: 'transcode',
+    durationSeconds: 5391.2,
+    audioTracks: [],
+  };
+
+  /**
+   * The hook with its element pointed at the source it answers, in the commit
+   * that answers it, before any effect runs: where React writes `src`.
+   */
+  function renderPointed(
+    read: PlaybackRead,
+    startAt: number,
+    { refused = false }: { refused?: boolean } = {}
+  ) {
+    const video = document.createElement('video');
+    if (refused) {
+      // A browser that refuses every play the page makes on its own, however
+      // many times it is asked.
+      vi.spyOn(video, 'play').mockImplementation(() =>
+        Promise.reject(
+          new DOMException(
+            'play() failed because the user did not interact with the document first',
+            'NotAllowedError'
+          )
+        )
+      );
+    }
+    const ref = { current: video };
+    const view = renderHook(() => {
+      const state = usePlayback({
+        videoRef: ref,
+        read,
+        startAt,
+        streamSrc: STREAM,
+      });
+      useLayoutEffect(() => {
+        video.src = state.src;
+      }, [state.src]);
+      return state;
+    });
+    return { video, ...view };
+  }
+
+  /** The new source has arrived far enough to play. */
+  function arrives(video: HTMLVideoElement): void {
+    emit(video, 'loadedmetadata');
+    emit(video, 'loadeddata');
+    emit(video, 'canplay');
+  }
+
+  it('is playing on direct play once it can play, at the resume position', async () => {
+    const { video, result } = renderPointed(DIRECT_PLAY, 1800);
+    arrives(video);
+
+    await waitFor(() => expect(video.paused).toBe(false));
+    expect(result.current.playing).toBe(true);
+    expect(video.currentTime).toBe(1800);
+    expect(result.current.position).toBe(1800);
+  });
+
+  it('is playing on a remux once it can play, opened at the resume position', async () => {
+    const { video, result } = renderPointed(REMUX, 1800);
+    await waitFor(() => expect(result.current.src).toBe(`${STREAM}?t=1800`));
+    arrives(video);
+
+    await waitFor(() => expect(video.paused).toBe(false));
+    expect(result.current.playing).toBe(true);
+    expect(result.current.position).toBe(1800);
+  });
+
+  it('is playing on a transcode once it can play, opened at the resume position', async () => {
+    const { video, result } = renderPointed(TRANSCODE, 1800);
+    await waitFor(() => expect(result.current.src).toBe(`${STREAM}?t=1800`));
+    arrives(video);
+
+    await waitFor(() => expect(video.paused).toBe(false));
+    expect(result.current.playing).toBe(true);
+    expect(result.current.position).toBe(1800);
+  });
+
+  it('leaves a refused film paused behind the big-play circle, with no console error', async () => {
+    const errors = vi.spyOn(console, 'error');
+    const rejections: unknown[] = [];
+    const onRejection = (event: PromiseRejectionEvent) => {
+      rejections.push(event.reason);
+    };
+    window.addEventListener('unhandledrejection', onRejection);
+
+    const { video, result } = renderPointed(REMUX, 1800, { refused: true });
+    await waitFor(() => expect(result.current.src).toBe(`${STREAM}?t=1800`));
+    arrives(video);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    window.removeEventListener('unhandledrejection', onRejection);
+    // Paused is what draws the big-play circle.
+    expect(video.paused).toBe(true);
+    expect(result.current.playing).toBe(false);
+    expect(rejections).toEqual([]);
+    expect(errors).not.toHaveBeenCalled();
+    errors.mockRestore();
+  });
+
+  it('opens a fresh film at the beginning and playing, as it always has', async () => {
+    for (const read of [DIRECT_PLAY, REMUX, TRANSCODE]) {
+      const { video, result, unmount } = renderPointed(read, 0);
+      arrives(video);
+
+      await waitFor(() => expect(video.paused).toBe(false));
+      expect(result.current.playing).toBe(true);
+      expect(result.current.src).toBe(STREAM);
+      expect(result.current.position).toBe(0);
+      unmount();
+    }
   });
 });

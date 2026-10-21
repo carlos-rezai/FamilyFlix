@@ -424,6 +424,32 @@ describe('Player — an episode’s watching', () => {
   });
 });
 
+/**
+ * Release review (issue #422): an episode opened from the series' **Continue
+ * watching** row opens at its **Resume position** and has to be playing, not
+ * waiting behind the big-play circle. The stub runs the browser's load on every
+ * new source, which is what a resume on a stream path re-points.
+ */
+describe('Player — an episode opened where the family left it', () => {
+  stubMediaElement({ sources: 'load' });
+
+  it('is playing on a converted path once it can play, with no big-play circle', async () => {
+    answerWith({
+      read: makeRead({ resumePositionSeconds: 660, status: 'in-progress' }),
+      playback: { path: 'remux', durationSeconds: 2640, audioTracks: [] },
+    });
+    const { video } = await renderPlayer();
+    await waitFor(() => expect(video.getAttribute('src')).toContain('t=660'));
+
+    emit(video, 'loadedmetadata');
+    emit(video, 'loadeddata');
+    emit(video, 'canplay');
+
+    await started(video);
+    expect(screen.queryByRole('button', { name: 'Play' })).toBeNull();
+  });
+});
+
 describe('Player — an episode whose file is missing', () => {
   stubMediaElement();
 
