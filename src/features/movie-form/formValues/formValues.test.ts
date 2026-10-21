@@ -5,15 +5,18 @@ import type {
   MovieFormFile,
   MovieFormValues,
   SeasonPosterSlot,
+  ShowFolderRead,
 } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 import {
+  isShowFolderRow,
   movieAddValues,
   movieFormValues,
   movieFormData,
   pickedFile,
   seriesFormData,
+  showFolderRows,
 } from './formValues';
 
 /**
@@ -610,5 +613,159 @@ describe('movieAddValues', () => {
     const values = movieFormValues(STORED);
 
     expect(movieAddValues(values, 'link', PATH)).toBe(values);
+  });
+});
+
+describe('showFolderRows', () => {
+  const SHOW = 'E:\\Shows\\Harbor and Vine';
+  const PILOT = `${SHOW}\\Season 1\\Harbor.and.Vine.S01E01.Pilot.mkv`;
+  const LOW_TIDE = `${SHOW}\\Season 1\\Harbor.and.Vine.S01E02.Low.Tide.mkv`;
+  const SPRING = `${SHOW}\\Season 2\\Harbor.and.Vine.S02E01.Spring.mkv`;
+  const PILOT_PT = `${SHOW}\\Season 1\\Harbor.and.Vine.S01E01.Pilot.pt.srt`;
+  const BONUS = `${SHOW}\\Season 1\\bonus.mkv`;
+
+  /** A read of the show holding `episodes` and `unplaced`. */
+  const read = (
+    episodes: ShowFolderRead['episodes'],
+    unplaced: string[] = []
+  ): ShowFolderRead => ({
+    path: SHOW,
+    titleGuess: 'Harbor and Vine',
+    libraryFolderId: 'shows',
+    heldSeriesId: null,
+    episodes,
+    unplaced,
+    straySubtitles: 0,
+  });
+
+  const EPISODES: ShowFolderRead['episodes'] = [
+    {
+      season: 1,
+      number: 1,
+      title: 'Pilot',
+      video: PILOT,
+      subtitles: [{ path: PILOT_PT, language: 'Portuguese' }],
+    },
+    { season: 1, number: 2, title: 'Low Tide', video: LOW_TIDE, subtitles: [] },
+    { season: 2, number: 1, title: null, video: SPRING, subtitles: [] },
+  ];
+
+  it('keeps the read’s season-then-episode order, each a Found file', () => {
+    expect(
+      showFolderRows(read(EPISODES)).map((row) => [
+        row.season,
+        row.number,
+        row.title,
+        row.file,
+      ])
+    ).toEqual([
+      [
+        '1',
+        '1',
+        'Pilot',
+        {
+          kind: 'found',
+          path: PILOT,
+          filename: 'Harbor.and.Vine.S01E01.Pilot.mkv',
+        },
+      ],
+      [
+        '1',
+        '2',
+        'Low Tide',
+        {
+          kind: 'found',
+          path: LOW_TIDE,
+          filename: 'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+        },
+      ],
+      [
+        '2',
+        '1',
+        '',
+        {
+          kind: 'found',
+          path: SPRING,
+          filename: 'Harbor.and.Vine.S02E01.Spring.mkv',
+        },
+      ],
+    ]);
+  });
+
+  it('tags every row and track key as the folder’s', () => {
+    const rows = showFolderRows(read(EPISODES, [BONUS]));
+
+    expect(rows.every(isShowFolderRow)).toBe(true);
+    expect(
+      new Set([
+        ...rows.map((row) => row.key),
+        ...rows.flatMap((row) => row.subtitles.map((track) => track.key)),
+      ]).size
+    ).toBe(5);
+    expect(
+      rows
+        .flatMap((row) => row.subtitles.map((track) => track.key))
+        .every((key) => key.startsWith('show-folder-'))
+    ).toBe(true);
+  });
+
+  it('finds each episode’s tracks in their languages', () => {
+    const [pilot] = showFolderRows(read(EPISODES));
+
+    expect(
+      pilot.subtitles.map(({ file, language }) => [file, language])
+    ).toEqual([
+      [
+        {
+          kind: 'found',
+          path: PILOT_PT,
+          filename: 'Harbor.and.Vine.S01E01.Pilot.pt.srt',
+        },
+        'Portuguese',
+      ],
+    ]);
+  });
+
+  it('numbers the Unplaced after the numbered rows', () => {
+    const rows = showFolderRows(read(EPISODES, [BONUS]));
+
+    expect(rows.at(-1)).toMatchObject({
+      season: '1',
+      number: '3',
+      title: '',
+      file: { kind: 'found', path: BONUS, filename: 'bonus.mkv' },
+      subtitles: [],
+    });
+  });
+
+  it('reads a folder of only Unplaced videos as rows from S01E01', () => {
+    const loose = `${SHOW}\\loose.mkv`;
+
+    expect(
+      showFolderRows(read([], [BONUS, loose])).map((row) => [
+        row.season,
+        row.number,
+      ])
+    ).toEqual([
+      ['1', '1'],
+      ['1', '2'],
+    ]);
+  });
+});
+
+describe('isShowFolderRow', () => {
+  it('tells a Show folder row from one added by hand', () => {
+    const [folderRow] = showFolderRows({
+      path: 'E:\\Shows\\Harbor',
+      titleGuess: 'Harbor',
+      libraryFolderId: null,
+      heldSeriesId: null,
+      episodes: [],
+      unplaced: ['E:\\Shows\\Harbor\\bonus.mkv'],
+      straySubtitles: 0,
+    });
+
+    expect(isShowFolderRow(folderRow)).toBe(true);
+    expect(isShowFolderRow({ ...folderRow, key: 'episode-1' })).toBe(false);
   });
 });

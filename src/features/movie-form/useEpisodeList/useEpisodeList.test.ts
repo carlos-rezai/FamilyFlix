@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
+import type { EpisodeFormRow } from '@/types';
 import { useEpisodeList } from './useEpisodeList';
 
 /**
@@ -581,6 +582,50 @@ describe('useEpisodeList — the Episode word', () => {
       ['1', '1', 'Harbor.and.Vine.S01E01.Pilot.mkv'],
       ['1', '2', 'E02.mkv'],
       ['1', '3', 'Episode 03.mkv'],
+    ]);
+  });
+});
+
+describe('useEpisodeList — a Show folder pick’s rows', () => {
+  /** A Show folder row: its key carries the pick's own prefix. */
+  const folderRow = (key: string, filename: string): EpisodeFormRow => ({
+    key: `show-folder-${key}`,
+    file: { kind: 'found', path: `E:/Shows/${filename}`, filename },
+    season: '1',
+    number: key,
+    title: '',
+    subtitles: [],
+    still: null,
+  });
+
+  it('holdShowFolder replaces an earlier pick’s rows and keeps hand-added ones', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, ['Harbor.and.Vine.S03E01.Bonus.mkv']);
+    act(() => result.current.holdShowFolder([folderRow('1', 'first.mkv')]));
+
+    act(() =>
+      result.current.holdShowFolder([
+        folderRow('1', 'second.mkv'),
+        folderRow('2', 'third.mkv'),
+      ])
+    );
+
+    expect(result.current.episodes.map((row) => row.file.filename)).toEqual([
+      'Harbor.and.Vine.S03E01.Bonus.mkv',
+      'second.mkv',
+      'third.mkv',
+    ]);
+  });
+
+  it('removeShowFolder takes off only the folder’s rows', () => {
+    const { result } = renderHook(() => useEpisodeList());
+    add(result, ['Harbor.and.Vine.S03E01.Bonus.mkv']);
+    act(() => result.current.holdShowFolder([folderRow('1', 'first.mkv')]));
+
+    act(() => result.current.removeShowFolder());
+
+    expect(result.current.episodes.map((row) => row.file.filename)).toEqual([
+      'Harbor.and.Vine.S03E01.Bonus.mkv',
     ]);
   });
 });

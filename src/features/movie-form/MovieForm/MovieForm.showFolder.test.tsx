@@ -335,8 +335,9 @@ describe('MovieForm — Add show folder in the shell', () => {
       bridge.setPickOne(SHOW);
     });
 
-    for (const sentence of [UNREADABLE, EMPTY]) {
-      it(`draws “${sentence}” under the form’s buttons, and adds no rows`, async () => {
+    it.each([UNREADABLE, EMPTY])(
+      'draws “%s” under the form’s buttons, and adds no rows',
+      async (sentence) => {
         answerRead = () => Promise.resolve(refusedResponse(sentence));
         await renderSeries();
 
@@ -347,8 +348,8 @@ describe('MovieForm — Add show folder in the shell', () => {
         expect(drawnRows()).toEqual([]);
         expect(showFolderRemove()).toBeNull();
         expect(seriesTitle().value).toBe('');
-      });
-    }
+      }
+    );
   });
 
   describe('the Show folder row’s ✕', () => {
