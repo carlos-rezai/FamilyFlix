@@ -19,7 +19,6 @@ import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFold
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
-import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import {
   groupShows,
   type ShowEpisode,
@@ -956,10 +955,11 @@ export function createImporter({
   };
 
   /**
-   * The importer's one decision between link and copy: under the **Import
-   * mode** `link`, the **Linked video** where it lies, relative to its
-   * **Library folder**; under `copy`, the file copied `into` managed storage.
-   * Everything a run imports beside the video is copied either way.
+   * The importer's one decision between link and copy, by the **Placed
+   * video** rule: under the **Import mode** `link`, the **Linked video** where
+   * it lies in its **Library folder**; under `copy`, the file copied `into`
+   * managed storage. Everything a run imports beside the video is copied
+   * either way.
    */
   const placeVideo = async (
     current: ImportRun,
@@ -968,15 +968,10 @@ export function createImporter({
     into: string,
     signal: AbortSignal
   ): Promise<StoredVideo> =>
-    current.mode === 'link'
-      ? {
-          videoPath: spellLinkedVideo(libraryFolder.path, file),
-          videoFolderId: libraryFolder.id,
-        }
-      : {
-          videoPath: await media.copyIn(into, file, signal),
-          videoFolderId: null,
-        };
+    placeFoundVideo([libraryFolder], file, current.mode) ?? {
+      videoPath: await media.copyIn(into, file, signal),
+      videoFolderId: null,
+    };
 
   /**
    * Import one match by the form's own sequence. Answers the movie added, or
