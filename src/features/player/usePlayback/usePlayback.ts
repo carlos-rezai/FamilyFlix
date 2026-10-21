@@ -367,6 +367,7 @@ export function usePlayback({
    * what keeps the moment before the movie record lands from counting as one.
    */
   const resumed = useRef(false);
+  const playAfterResume = useRef<number | null>(null);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -380,6 +381,7 @@ export function usePlayback({
     // silently start again from the beginning — the exact thing the **Resume
     // position** exists to prevent.
     if (streaming) {
+      playAfterResume.current = startAt;
       anchorStream(startAt);
       return;
     }
@@ -390,6 +392,26 @@ export function usePlayback({
     // having been lost.
     anchorElement(startAt);
   }, [videoRef, startAt, streaming, anchorStream, anchorElement]);
+
+  /**
+   * A film opened at its **Resume position** on a stream path starts on its
+   * own, as a fresh open does. The resume re-points the source after the open
+   * has already asked the element to play, and a browser's load leaves an
+   * element paused, so the film is asked again once the new source is set: the
+   * commit that carries the new **Stream offset**, not the one the resume was
+   * made in. A refusal is swallowed, as on open, and leaves the big-play circle
+   * showing.
+   */
+  useEffect(() => {
+    if (playAfterResume.current !== offset) {
+      return;
+    }
+    playAfterResume.current = null;
+    const video = videoRef.current;
+    if (video !== null && video.paused) {
+      void video.play().catch(() => undefined);
+    }
+  }, [videoRef, offset]);
 
   /**
    * The level the film opens at, put on the element once and then left alone —
