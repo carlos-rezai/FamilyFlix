@@ -15,8 +15,10 @@ import {
  *
  * The **Up next card**, drawn 1:1 from the `showNextEp` block of
  * `feat.PlayerControls.dc.html`: 440px wide, 28px from the right and 150px up,
- * on `ffPop`; a 200px 16:9 thumbnail, centred, beside _Up next · in 12s_, the next
- * episode's code and its title, then _Play now_ and _Cancel_.
+ * on `ffPop`; a 16:9 thumbnail, centred, beside _Up next · in 12s_, the next
+ * episode's code and its title, then _Play now_ and _Cancel_. Since #423 the
+ * thumbnail takes the width the text column does not need, so the margin is
+ * even, and its **Still** covers it edge to edge.
  *
  * Presentational: it is told the **Next episode** and the seconds left, and
  * hands the two presses back. When it is shown, what the countdown reads and
@@ -65,15 +67,27 @@ function card(): HTMLElement {
   return node;
 }
 
-/** The thumbnail: the one element in the card drawn 200px wide. */
+/** The thumbnail: the card's first decorative element. */
 function thumbnail(): HTMLElement {
-  const found = Array.from(card().querySelectorAll<HTMLElement>('*')).find(
-    (node) => getComputedStyle(node).width === '200px'
-  );
-  if (found === undefined) {
-    throw new Error('the card drew no 200px thumbnail');
+  const found = card().querySelector<HTMLElement>('[aria-hidden="true"]');
+  if (found === null) {
+    throw new Error('the card drew no thumbnail');
   }
   return found;
+}
+
+/** The text column: the label's parent, holding the code, title and actions. */
+function body(): HTMLElement {
+  const found = label().parentElement;
+  if (found === null) {
+    throw new Error('the label has no column');
+  }
+  return found;
+}
+
+/** A declaration as the injected stylesheet resolves it, normalised. */
+function declared(element: Element, property: string): string {
+  return normCss(resolvedStyle(element)[property] ?? '');
 }
 
 function rgb(hex: string): string {
@@ -158,33 +172,73 @@ describe('UpNextCard — drawn as its prototype', () => {
     );
   });
 
-  it('draws a 200px 16:9 thumbnail on the 7px radius, centred rather than stretched', () => {
+  it('centres its two columns on the cross axis, so the margin is even (#423)', () => {
     renderCard();
 
-    const drawn = getComputedStyle(thumbnail());
-    expect(drawn.borderRadius).toBe('7px');
-    expect(normCss(drawn.aspectRatio)).toBe('16/9');
-    expect(drawn.alignSelf).toBe('center');
+    expect(declared(card(), 'align-items')).toBe('center');
   });
 
-  it('draws the next episode’s still over its gradient, clipped to the thumbnail', () => {
+  it('draws a 16:9 thumbnail on the 7px radius that takes the width the text does not need (#423)', () => {
+    renderCard();
+
+    const frame = thumbnail();
+    expect(getComputedStyle(frame).borderRadius).toBe('7px');
+    expect(declared(frame, 'aspect-ratio')).toBe('16/9');
+    expect(declared(frame, 'overflow')).toBe('hidden');
+    expect(declared(frame, 'flex')).toBe('1 1 0');
+    expect(declared(frame, 'min-width')).toBe('0');
+    expect(declared(frame, 'width')).toBe('');
+    expect(declared(frame, 'align-self')).toBe('');
+  });
+
+  it('sizes the text column to its content, capped at 200px so a long title still ellipsises (#423)', () => {
+    renderCard({
+      next: {
+        ...NEXT,
+        title: 'A Very Long Episode Title That Will Never Fit The Column',
+      },
+    });
+
+    const column = body();
+    expect(declared(column, 'flex')).toBe('0 1 auto');
+    expect(declared(column, 'max-width')).toBe('200px');
+    expect(declared(column, 'min-width')).toBe('0');
+
+    const title = getComputedStyle(
+      screen.getByText(
+        'A Very Long Episode Title That Will Never Fit The Column'
+      )
+    );
+    expect(title.overflow).toBe('hidden');
+    expect(title.textOverflow).toBe('ellipsis');
+    expect(title.whiteSpace).toBe('nowrap');
+  });
+
+  it('draws the next episode’s still edge to edge, with no gradient strip under it (#423)', () => {
     renderCard({
       next: { ...NEXT, stillPath: 'harbor-2019/season-03/S03E01-still.jpg' },
     });
 
     const frame = thumbnail();
-    expect(getComputedStyle(frame).overflow).toBe('hidden');
-    const art = frame.firstElementChild as HTMLElement | null;
-    expect(art).not.toBeNull();
-    expect(getComputedStyle(art as HTMLElement).backgroundImage).toContain(
+    const still = frame.querySelector('img');
+    expect(still).not.toBeNull();
+    const image = still as HTMLImageElement;
+    expect(image.getAttribute('src')).toContain(
       '/api/images/harbor-2019/season-03/S03E01-still.jpg'
     );
+    expect(image.getAttribute('alt')).toBe('');
+    expect(declared(image, 'display')).toBe('block');
+    expect(declared(image, 'width')).toBe('100%');
+    expect(declared(image, 'height')).toBe('100%');
+    expect(declared(image, 'object-fit')).toBe('cover');
   });
 
   it('draws the gradient alone for an episode with no still', () => {
     renderCard();
 
-    expect(thumbnail().childElementCount).toBe(0);
+    const frame = thumbnail();
+    expect(frame.childElementCount).toBe(0);
+    expect(declared(frame, 'background')).toContain('linear-gradient');
   });
 
   it('draws the label small, bold and uppercase', () => {
