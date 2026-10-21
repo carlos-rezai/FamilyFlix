@@ -53,6 +53,10 @@ function renderFiles(poster: MovieFormFile | null = null) {
         onAddEpisodeSubtitle={vi.fn()}
         onChangeEpisodeSubtitleLanguage={vi.fn()}
         onRemoveEpisodeSubtitle={vi.fn()}
+        onAddShowFolder={null}
+        showFolder={null}
+        onRemoveShowFolder={vi.fn()}
+        straySubtitles={0}
       />
     </ThemeProvider>
   );
@@ -146,6 +150,10 @@ describe('SeriesFormFiles — the Season posters list', () => {
           onAddEpisodeSubtitle={vi.fn()}
           onChangeEpisodeSubtitleLanguage={vi.fn()}
           onRemoveEpisodeSubtitle={vi.fn()}
+          onAddShowFolder={null}
+          showFolder={null}
+          onRemoveShowFolder={vi.fn()}
+          straySubtitles={0}
         />
       </ThemeProvider>
     );

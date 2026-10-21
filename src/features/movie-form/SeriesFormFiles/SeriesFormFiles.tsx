@@ -93,16 +93,16 @@ export interface SeriesFormFilesProps {
    * Opens the one-folder dialog of _＋ Add show folder_ — `null` draws no
    * button: a browser has no **Folder bridge**.
    */
-  onAddShowFolder?: (() => void) | null;
+  onAddShowFolder: (() => void) | null;
   /** The picked **Show folder**, absolute — `null` draws no Show folder row. */
-  showFolder?: string | null;
+  showFolder: string | null;
   /** Reports that the Show folder row's ✕ was pressed. */
-  onRemoveShowFolder?: () => void;
+  onRemoveShowFolder: () => void;
   /**
    * How many subtitles the Show folder read matched to no episode — counted
    * in one line under the episodes, and nothing drawn at zero.
    */
-  straySubtitles?: number;
+  straySubtitles: number;
   /** Reports every video picked in one dialog of _＋ Add episode files_. */
   onAddEpisodeFiles: (files: File[]) => void;
   onSeasonChange: (key: string, season: string) => void;
@@ -147,10 +147,10 @@ export function SeriesFormFiles({
   episodes,
   refusals,
   onAddEpisodeFiles,
-  onAddShowFolder = null,
-  showFolder = null,
-  onRemoveShowFolder = () => undefined,
-  straySubtitles = 0,
+  onAddShowFolder,
+  showFolder,
+  onRemoveShowFolder,
+  straySubtitles,
   onSeasonChange,
   onNumberChange,
   onEpisodeTitleChange,
