@@ -18,7 +18,11 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { placeFoundVideo } from './placeFoundVideo';
+import {
+  LINK_REFUSAL,
+  placeFoundVideo,
+  placeFoundVideos,
+} from './placeFoundVideo';
 import type { StoredLibraryFolder } from '../../library';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 
@@ -107,5 +111,65 @@ describe('placeFoundVideo — Copy', () => {
     const pilot = videoAt(root, join('Shows', 'Harbor and Vine', 'S01E01.mp4'));
 
     expect(placeFoundVideo([shows], pilot, 'copy')).toBeNull();
+  });
+});
+
+describe('placeFoundVideos — the rule over a list', () => {
+  it('places every found path under a listed folder in Link', () => {
+    const root = sandboxRoot('familyflix-place-found-');
+    const shows = listed(root, 'shows', 'Shows');
+    const one = videoAt(root, join('Shows', 'Harbor and Vine', 'S01E01.mp4'));
+    const two = videoAt(root, join('Shows', 'Harbor and Vine', 'S01E02.mp4'));
+
+    expect(placeFoundVideos([shows], [one, two], 'link')).toEqual({
+      kind: 'placed',
+      placed: [
+        { videoPath: 'Harbor and Vine/S01E01.mp4', videoFolderId: 'shows' },
+        { videoPath: 'Harbor and Vine/S01E02.mp4', videoFolderId: 'shows' },
+      ],
+    });
+  });
+
+  it('places a picked row among found ones as null', () => {
+    const root = sandboxRoot('familyflix-place-found-');
+    const shows = listed(root, 'shows', 'Shows');
+    const one = videoAt(root, join('Shows', 'Harbor and Vine', 'S01E01.mp4'));
+
+    expect(placeFoundVideos([shows], [undefined, one], 'link')).toEqual({
+      kind: 'placed',
+      placed: [
+        null,
+        { videoPath: 'Harbor and Vine/S01E01.mp4', videoFolderId: 'shows' },
+      ],
+    });
+  });
+
+  it('refuses the whole list in Link when one found path lies outside', () => {
+    const root = sandboxRoot('familyflix-place-found-');
+    const shows = listed(root, 'shows', 'Shows');
+    const inside = videoAt(
+      root,
+      join('Shows', 'Harbor and Vine', 'S01E01.mp4')
+    );
+    const outside = videoAt(root, join('Downloads', 'S01E02.mp4'));
+
+    expect(placeFoundVideos([shows], [inside, outside], 'link')).toEqual({
+      kind: 'refused',
+      error: LINK_REFUSAL,
+    });
+  });
+
+  it('answers every null in Copy, inside or out', () => {
+    const root = sandboxRoot('familyflix-place-found-');
+    const shows = listed(root, 'shows', 'Shows');
+    const inside = videoAt(
+      root,
+      join('Shows', 'Harbor and Vine', 'S01E01.mp4')
+    );
+    const outside = videoAt(root, join('Downloads', 'S01E02.mp4'));
+
+    expect(
+      placeFoundVideos([shows], [inside, outside, undefined], 'copy')
+    ).toEqual({ kind: 'placed', placed: [null, null, null] });
   });
 });

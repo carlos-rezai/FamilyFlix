@@ -34,7 +34,7 @@ import {
   type FilmSource,
 } from '../import-export/placeFilmFolder/placeFilmFolder';
 import { listedFolderOf } from '../import-export/listedFolderOf/listedFolderOf';
-import { placeFoundVideo } from '../import-export/placeFoundVideo/placeFoundVideo';
+import { placeFoundVideos } from '../import-export/placeFoundVideo/placeFoundVideo';
 import { placeShowFolder } from '../import-export/placeShowFolder/placeShowFolder';
 import { foundPathRefusal } from './foundPathRefusal/foundPathRefusal';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
@@ -960,24 +960,19 @@ export function createApiRouter(
     // Link, one under a listed Library folder is linked where it lies; a
     // `null` is copied. A Link path under no listed folder is refused.
     const folders = storage.libraryFolders();
-    const placed = read.episodes.map((episode) =>
-      episode.video === undefined
-        ? placeFoundVideo(folders, episode.videoPath ?? '', mode.value)
-        : null
+    const placing = placeFoundVideos(
+      folders,
+      read.episodes.map((episode) =>
+        episode.video === undefined ? (episode.videoPath ?? '') : undefined
+      ),
+      mode.value
     );
-    if (
-      mode.value === 'link' &&
-      read.episodes.some(
-        (episode, index) =>
-          episode.video === undefined && placed[index] === null
-      )
-    ) {
+    if (placing.kind === 'refused') {
       rollback();
-      res.status(400).json({
-        error: 'Link needs a file inside one of your library folders.',
-      });
+      res.status(400).json({ error: placing.error });
       return;
     }
+    const { placed } = placing;
     const firstFound = read.episodes.find(
       (episode) => episode.video === undefined
     )?.videoPath;
@@ -1504,15 +1499,13 @@ export function createApiRouter(
     // a listed Library folder is linked where it lies; a `null` is copied. A
     // Link path under no listed folder is refused.
     const folders = storage.libraryFolders();
-    const placed =
-      found === undefined ? null : placeFoundVideo(folders, found, mode.value);
-    if (found !== undefined && mode.value === 'link' && placed === null) {
+    const placing = placeFoundVideos(folders, [found], mode.value);
+    if (placing.kind === 'refused') {
       rollback();
-      res.status(400).json({
-        error: 'Link needs a file inside one of your library folders.',
-      });
+      res.status(400).json({ error: placing.error });
       return;
     }
+    const [placed] = placing.placed;
     // The **Source folder** is recorded in both modes for a found video under
     // a listed folder, so a later Folder scan reads the film as held.
     let source: FilmSource | null = null;
