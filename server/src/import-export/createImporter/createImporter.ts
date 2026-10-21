@@ -25,6 +25,7 @@ import {
   type ShowEpisode,
   type ShowScan,
 } from '../groupShows/groupShows';
+import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
 import { splitCollections } from '../splitCollections/splitCollections';
@@ -1594,15 +1595,6 @@ export function createImporter({
   };
 
   /**
-   * The listed **Library folder** a review press imports a folder under, read
-   * live — the list as it is now, not as the run read it — or `null` when the
-   * folder lies under none.
-   */
-  const listedFolderOf = (dir: string): StoredLibraryFolder | null =>
-    storage.libraryFolders().find((listed) => isUnder(listed.path, dir)) ??
-    null;
-
-  /**
    * A Resolve's Found video in a Link run → the **Linked video** it records,
    * relative to its listed **Library folder** with forward slashes; `null` in
    * a Copy run, for a picked file, or for a path under no listed folder.
@@ -2028,7 +2020,7 @@ export function createImporter({
         return { kind: 'refused', error: REFUSAL.notCandidate };
       }
       const scan = wholeOf(candidate);
-      const libraryFolder = listedFolderOf(scan.dir);
+      const libraryFolder = listedFolderOf(storage.libraryFolders(), scan.dir);
       if (libraryFolder === null) {
         return { kind: 'refused', error: REFUSAL.unlisted };
       }
@@ -2047,7 +2039,10 @@ export function createImporter({
       ) {
         return { kind: 'not-found' };
       }
-      const libraryFolder = listedFolderOf(folder.dir);
+      const libraryFolder = listedFolderOf(
+        storage.libraryFolders(),
+        folder.dir
+      );
       if (libraryFolder === null) {
         return { kind: 'refused', error: REFUSAL.unlisted };
       }
