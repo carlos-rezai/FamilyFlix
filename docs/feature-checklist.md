@@ -64,6 +64,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Start on Series — open FamilyFlix on the Series tab | 🔜 Planned      |
 | Subtitle picker — choose a track in the player      | 🔜 Planned      |
 | Loading states — spinners and an FF loading overlay | 🔜 Planned      |
+| Scan new folders — and sync only what a run added   | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
