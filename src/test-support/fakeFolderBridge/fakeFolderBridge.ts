@@ -11,7 +11,9 @@ import type { FolderBridge } from '@/types/libraryFolders';
  * set (`[]` by default — a cancelled dialog), each `pickOne()` what
  * `setPickOne` last set and each `pickSheet()` what `setPickSheet` did
  * (`null` by default — a cancelled dialog), each
- * `openMedia()` resolves at once, and all three are counted. After the block
+ * `openMedia()` resolves at once, and all three are counted. Each
+ * `pathOf(file)` — the **Path bridge** — answers what `setPathOf` set for
+ * that file's name, `''` (a file with no path) when nothing was. After the block
  * the global is deleted, so every later file in the worker is a browser
  * again. `fakeUpdateBridge`'s twin.
  */
@@ -23,6 +25,7 @@ export function fakeFolderBridge() {
   let pickOnes = 0;
   let pickSheets = 0;
   let openMedias = 0;
+  let paths = new Map<string, string>();
 
   const folders: FolderBridge = {
     pick() {
@@ -41,6 +44,9 @@ export function fakeFolderBridge() {
       openMedias += 1;
       return Promise.resolve();
     },
+    pathOf(file: File) {
+      return paths.get(file.name) ?? '';
+    },
   };
 
   beforeEach(() => {
@@ -51,6 +57,7 @@ export function fakeFolderBridge() {
     pickOnes = 0;
     pickSheets = 0;
     openMedias = 0;
+    paths = new Map();
     window.familyflix = { ...window.familyflix, folders } as NonNullable<
       Window['familyflix']
     >;
@@ -74,6 +81,10 @@ export function fakeFolderBridge() {
     /** What the next `pickSheet()` answers: the file picked, `null` a cancel. */
     setPickSheet(path: string | null): void {
       sheetAnswer = path;
+    },
+    /** What `pathOf` answers for a file named `name`: its absolute path. */
+    setPathOf(name: string, path: string): void {
+      paths.set(name, path);
     },
     /** How many times the many-folder dialog was opened. */
     picks: (): number => picks,
