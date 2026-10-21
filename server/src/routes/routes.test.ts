@@ -3598,6 +3598,8 @@ function postMovie(
   fields: Record<string, string | string[]>
 ): Promise<Response> {
   const body = new FormData();
+  // An add's **Import mode** travels first (issue #419).
+  body.append('mode', 'copy');
   for (const [name, value] of Object.entries(fields)) {
     for (const entry of Array.isArray(value) ? value : [value]) {
       body.append(name, entry);
@@ -4208,6 +4210,8 @@ function postParts(
   parts: [name: string, value: string | File][]
 ): Promise<Response> {
   const body = new FormData();
+  // An add's **Import mode** travels first (issue #419).
+  body.append('mode', 'copy');
   for (const [name, value] of parts) {
     body.append(name, value);
   }

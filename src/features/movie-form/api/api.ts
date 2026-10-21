@@ -57,11 +57,12 @@ type SaveMethod = 'POST' | 'PATCH';
 async function sendMovie(
   method: SaveMethod,
   endpoint: string,
-  values: MovieFormValues
+  values: MovieFormValues,
+  mode?: ImportMode
 ): Promise<Movie> {
   const response = await fetch(endpoint, {
     method,
-    body: movieFormData(values),
+    body: movieFormData(values, mode),
   });
 
   if (!response.ok) {
@@ -88,8 +89,11 @@ async function sendMovie(
  * honest answer to a refused save is to still be standing with everything typed
  * still in it, which it cannot do unless this rejects.
  */
-export function createMovie(values: MovieFormValues): Promise<Movie> {
-  return sendMovie('POST', MOVIES_ENDPOINT, values);
+export function createMovie(
+  values: MovieFormValues,
+  mode: ImportMode = 'copy'
+): Promise<Movie> {
+  return sendMovie('POST', MOVIES_ENDPOINT, values, mode);
 }
 
 /**
@@ -310,4 +314,24 @@ export async function readShowFolder(path: string): Promise<ShowFolderAnswer> {
     throw new Error(`GET /api/show-folder failed: ${response.status}`);
   }
   return { kind: 'read', read: (await response.json()) as ShowFolderRead };
+}
+
+const containingEndpoint = (path: string) =>
+  `/api/library-folders/containing?path=${encodeURIComponent(path)}`;
+
+/**
+ * The listed **Library folder** a picked video's path lies under, or `null`
+ * — asked the moment a movie's video is picked, to say whether Link can be.
+ */
+export async function containingFolder(path: string): Promise<string | null> {
+  const response = await fetch(containingEndpoint(path));
+  if (!response.ok) {
+    throw new Error(
+      `GET /api/library-folders/containing failed: ${response.status}`
+    );
+  }
+  const { libraryFolderId } = (await response.json()) as {
+    libraryFolderId: string | null;
+  };
+  return libraryFolderId;
 }

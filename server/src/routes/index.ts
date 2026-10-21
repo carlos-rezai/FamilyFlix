@@ -1,5 +1,5 @@
 import { homedir } from 'node:os';
-import { basename, resolve } from 'node:path';
+import { basename, isAbsolute, resolve } from 'node:path';
 import { pipeline } from 'node:stream';
 
 import type {
@@ -30,9 +30,15 @@ import {
 } from '../import-export/createImporter/createImporter';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
+  placeFilmFolder,
+  type FilmSource,
+} from '../import-export/placeFilmFolder/placeFilmFolder';
+import {
+  listedFolderOf,
   placeFoundVideo,
   placeShowFolder,
 } from '../import-export/placeFoundVideo/placeFoundVideo';
+import { isVideoFilename } from '../media/fileKinds/fileKinds';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
 import {
   writeExport,
@@ -1457,6 +1463,13 @@ export function createApiRouter(
       return;
     }
 
+    const mode = importModeOf(onlyField(fields, 'mode'));
+    if (!mode.ok) {
+      rollback();
+      res.status(400).json({ error: mode.error });
+      return;
+    }
+
     const read = readMovieFields(
       fields,
       uploads,
@@ -1473,9 +1486,47 @@ export function createApiRouter(
     // A movie is a film: the **Save gate**'s other half, held on the wire in
     // the resolve route's own sentence, after the title so a body wrong in both
     // ways answers as it always did.
-    if (uploads.video === undefined) {
+    // A video arrives as bytes or, picked in the shell, as the absolute path
+    // of a **Found file** — `videoPath`, read only when no bytes came.
+    const found =
+      uploads.video === undefined ? onlyField(fields, 'videoPath') : undefined;
+    if (uploads.video === undefined && (found ?? '') === '') {
       rollback();
       res.status(400).json({ error: 'Body must carry a video' });
+      return;
+    }
+    if (found !== undefined && !isAbsolute(found)) {
+      rollback();
+      res.status(400).json({ error: 'The video path must be absolute.' });
+      return;
+    }
+    if (found !== undefined && !isVideoFilename(basename(found))) {
+      rollback();
+      res.status(400).json({ error: 'The video path must name a video file.' });
+      return;
+    }
+    // The found video placed by the **Placed video** rule: in Link, one under
+    // a listed Library folder is linked where it lies; a `null` is copied. A
+    // Link path under no listed folder is refused.
+    const folders = storage.libraryFolders();
+    const placed =
+      found === undefined ? null : placeFoundVideo(folders, found, mode.value);
+    if (found !== undefined && mode.value === 'link' && placed === null) {
+      rollback();
+      res.status(400).json({
+        error: 'Link needs a file inside one of your library folders.',
+      });
+      return;
+    }
+    // The **Source folder** is recorded in both modes for a found video under
+    // a listed folder, so a later Folder scan reads the film as held.
+    let source: FilmSource | null = null;
+    try {
+      source =
+        found === undefined ? null : await placeFilmFolder(folders, found);
+    } catch {
+      rollback();
+      res.status(400).json({ error: 'The video path cannot be read.' });
       return;
     }
     const { title, year, director, synopsis, rating, cast, genres } = read;
@@ -1490,6 +1541,11 @@ export function createApiRouter(
       if ('stored' in row) {
         subtitles.push({ path: row.stored, language: row.language });
       }
+    }
+
+    // A found video copied in needs a Media folder no part reserved.
+    if (uploads.folder === null && found !== undefined && placed === null) {
+      uploads.folder = media.reserveFolder(title, year ?? null);
     }
 
     // Nothing is refused after this point, so this is where the folder stops
@@ -1515,46 +1571,60 @@ export function createApiRouter(
     // read off them rather than typed. A film nothing on this machine can
     // measure is `null` — a dash rather than a lie — and nothing about that
     // costs the add.
-    const runtimeMinutes =
-      uploads.video === undefined
-        ? null
-        : derivedRuntime(playback, {
-            videoPath: uploads.video,
-            videoFolderId: null,
-          });
+    // Copied, never moved, so the picked file is left as it was. A copy that
+    // breaks is the save's failure, and takes the folder with it.
+    let video: StoredVideo;
+    try {
+      video = placed ?? {
+        videoPath:
+          uploads.video ??
+          (await media.copyIn(uploads.folder ?? '', found ?? '')),
+        videoFolderId: null,
+      };
+    } catch {
+      rollback();
+      res.status(500).json({ error: 'Could not add the movie' });
+      return;
+    }
+    const runtimeMinutes = derivedRuntime(playback, video);
 
     try {
-      res.status(201).json(
-        storage.addMovie({
-          title,
-          videoPath: uploads.video,
-          // No poster part is a film with no artwork, which is a normal row:
-          // `poster_path` stays null and the card draws its gradient. No
-          // backdrop is written either — the form does not collect one, and the
-          // detail page falls back to the same gradient.
-          ...(uploads.poster === undefined
-            ? {}
-            : { posterPath: uploads.poster }),
-          ...(year === undefined ? {} : { year }),
-          ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
-          ...(director === undefined ? {} : { director }),
-          ...(synopsis === undefined ? {} : { synopsis }),
-          ...(rating === undefined ? {} : { rating }),
-          ...(cast.length === 0 ? {} : { cast }),
-          ...(genres.length === 0 ? {} : { genres }),
-          // No subtitle part is a film with no tracks, which is a normal row —
-          // `addMovie` writes the positions from this order, and the cue route
-          // has been reading them since #88. Nothing here is a migration:
-          // `language` and `position` have both existed since V1, and this is
-          // simply the first code in the app that writes them from a request.
-          ...(subtitles.length === 0 ? {} : { subtitles }),
-          // The folder this request reserved and named is the movie's Media
-          // folder: named by whoever reserved it, never read back off a file.
-          ...(uploads.folder === null
-            ? {}
-            : { mediaFolder: basename(uploads.folder) }),
-        })
-      );
+      const movie = storage.addMovie({
+        title,
+        ...video,
+        // No poster part is a film with no artwork, which is a normal row:
+        // `poster_path` stays null and the card draws its gradient. No
+        // backdrop is written either — the form does not collect one, and the
+        // detail page falls back to the same gradient.
+        ...(uploads.poster === undefined ? {} : { posterPath: uploads.poster }),
+        ...(year === undefined ? {} : { year }),
+        ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
+        ...(director === undefined ? {} : { director }),
+        ...(synopsis === undefined ? {} : { synopsis }),
+        ...(rating === undefined ? {} : { rating }),
+        ...(cast.length === 0 ? {} : { cast }),
+        ...(genres.length === 0 ? {} : { genres }),
+        // No subtitle part is a film with no tracks, which is a normal row —
+        // `addMovie` writes the positions from this order, and the cue route
+        // has been reading them since #88. Nothing here is a migration:
+        // `language` and `position` have both existed since V1, and this is
+        // simply the first code in the app that writes them from a request.
+        ...(subtitles.length === 0 ? {} : { subtitles }),
+        // The folder this request reserved and named is the movie's Media
+        // folder: named by whoever reserved it, never read back off a file.
+        ...(uploads.folder === null
+          ? {}
+          : { mediaFolder: basename(uploads.folder) }),
+      });
+      if (source !== null) {
+        storage.setSourceFolder(
+          movie.id,
+          source.folderId,
+          source.sourceFolder,
+          source.sourceFile
+        );
+      }
+      res.status(201).json(movie);
     } catch {
       // `addMovie` is transactional, so a throw here has left no row — and the
       // bytes it would have pointed at go with it, for the same reason every
@@ -2048,6 +2118,15 @@ export function createApiRouter(
       return;
     }
     res.json(answer.read);
+  });
+
+  // The listed **Library folder** a path lies under, or `null` — what the
+  // movie add asks the moment a video is picked, to say whether Link can be.
+  router.get('/library-folders/containing', (req: Request, res: Response) => {
+    const path = typeof req.query.path === 'string' ? req.query.path : '';
+    const listed =
+      path === '' ? null : listedFolderOf(storage.libraryFolders(), path);
+    res.json({ libraryFolderId: listed?.id ?? null });
   });
 
   router.get('/library-folders', async (_req: Request, res: Response) => {

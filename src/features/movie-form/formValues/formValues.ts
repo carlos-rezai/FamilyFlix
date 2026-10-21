@@ -399,8 +399,16 @@ function appendFile(
  * separately, so a mixed list has no other way to keep the order `position` is
  * written from.
  */
-export function movieFormData(values: MovieFormValues): FormData {
+export function movieFormData(
+  values: MovieFormValues,
+  mode?: ImportMode
+): FormData {
   const body = new FormData();
+
+  // An add's **Import mode** travels first; an edit and a Resolve send none.
+  if (mode !== undefined) {
+    body.append('mode', mode);
+  }
 
   body.append('title', values.title);
   body.append('year', values.year);

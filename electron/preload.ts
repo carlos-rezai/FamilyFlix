@@ -1,4 +1,9 @@
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import {
+  contextBridge,
+  ipcRenderer,
+  webUtils,
+  type IpcRendererEvent,
+} from 'electron';
 
 import {
   FOLDER_CHANNELS,
@@ -37,8 +42,8 @@ const updates: UpdateBridge = {
 
 /**
  * The native pickers: the **Library folders page**'s _Browse…_, the Export
- * dialog's and Import setup's spreadsheet; and the Storage card's _Open
- * folder_.
+ * dialog's and Import setup's spreadsheet; the Storage card's _Open
+ * folder_; and the **Path bridge** the movie add reads a picked video with.
  */
 const folders: FolderBridge = {
   pick: () => ipcRenderer.invoke(FOLDER_CHANNELS.pick) as Promise<string[]>,
@@ -48,6 +53,7 @@ const folders: FolderBridge = {
     ipcRenderer.invoke(FOLDER_CHANNELS.pickSheet) as Promise<string | null>,
   openMedia: () =>
     ipcRenderer.invoke(FOLDER_CHANNELS.openMedia) as Promise<void>,
+  pathOf: (file) => webUtils.getPathForFile(file),
 };
 
 contextBridge.exposeInMainWorld('familyflix', { updates, folders });

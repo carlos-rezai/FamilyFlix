@@ -381,7 +381,7 @@ export function MovieForm() {
         )}
       </Fields>
 
-      {/* The **Import mode**: a plain series add in the shell alone, under
+      {/* The **Import mode**: a plain add in the shell alone, under
         the Files card and before the TMDB check. */}
       {showImportMode && (
         <ModeSlot>

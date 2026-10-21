@@ -652,11 +652,14 @@
             </sc-if>
           </div>
 
-          <!-- The Import mode (log 48), ImportModeChoice: the shell's plain series add alone —
-               never an edit, a Resolve or a browser — under the Files card, before the TMDB
-               check. Link chosen on every visit, never remembered; posted first as `mode`. A
-               show under no Library folder disables the Link card, reading its line, and Copy
-               stands chosen until a later pick under one. -->
+          <!-- The Import mode (log 48), ImportModeChoice: the shell's plain add alone, movie
+               and series — never an edit, a Resolve or a browser — under the Files card, before
+               the TMDB check. Link chosen on every visit, never remembered; posted first as
+               `mode`. A show, or a movie's picked video (read through the Path bridge and
+               checked with the containing read the moment it is picked), under no Library
+               folder disables the Link card, reading its line, and Copy stands chosen until a
+               later pick under one. In Link the movie's video travels as its path; in Copy as
+               its bytes. -->
           <sc-if
             value="{{ form.showImportMode }}"
             hint-placeholder-val="{{ true }}"

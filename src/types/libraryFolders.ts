@@ -52,4 +52,9 @@ export interface FolderBridge {
    * a failure is logged by main, never answered.
    */
   openMedia(): Promise<void>;
+  /**
+   * The **Path bridge**: a picked file's absolute path, over Electron's
+   * `webUtils.getPathForFile` — `''` for a file with none.
+   */
+  pathOf(file: File): string;
 }

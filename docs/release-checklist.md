@@ -86,6 +86,17 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
       another program so the file is held, then delete the title: the delete
       is refused naming the file, the title is still in the library, and the
       file is still in its Library folder.
+- [ ] The Path bridge: Settings → Add a movie, pick a video from outside
+      every Library folder: the Link card is disabled, reading _Only for files
+      inside one of your library folders._, and Copy is chosen. Remove it and
+      pick a video inside a Library folder: Link is enabled and chosen again.
+- [ ] A linked movie add: with that video picked under **Link**, add it: it
+      plays from where it lies, nothing new is under
+      `%APPDATA%\FamilyFlix\media`, and _Scan folders_ afterwards reads it as
+      _Already in library_.
+- [ ] A linked series add: Settings → Add a series, _Add a show folder_ from
+      the real folder dialog on a show inside a Library folder, add it under
+      **Link**: its episodes play from where they lie.
 
 ## 6. The slot over the default
 
