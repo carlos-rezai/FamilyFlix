@@ -26,6 +26,7 @@ import {
 } from '../groupShows/groupShows';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
+import { filmSourceOf, sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
 import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
 import { splitCollections } from '../splitCollections/splitCollections';
 import { heldSeriesValues, heldValues } from '../heldValues/heldValues';
@@ -494,21 +495,6 @@ const filmKey = (title: string, year: number | null): string =>
 /** A title as the log names it: with its year when the row has one. */
 const titleWithYear = (title: string, year: number | null): string =>
   year === null ? title : `${title} (${year})`;
-
-/**
- * A video's **Source file**: its path relative to its show's **Source
- * folder** `dir`, with forward slashes whatever the platform spells — the one
- * spelling the scan and the **Series Resolve** both record.
- */
-const sourceFileOf = (dir: string, video: string): string =>
-  relative(dir, video).split(sep).join('/');
-
-/**
- * A **Collection folder** film's **Source file**, its one video relative to
- * the shared folder; `null` for a film in a folder of its own.
- */
-const collectionFileOf = (scan: MovieFolderScan): string | null =>
-  scan.collection === true ? sourceFileOf(scan.dir, scan.videos[0]) : null;
 
 /** An episode as the console names it: `Harbor & Vine · S01E03`. */
 const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
@@ -1036,11 +1022,12 @@ export function createImporter({
         mediaFolder: basename(folder),
       };
       const added = storage.addMovie(movie);
+      const source = filmSourceOf(libraryFolder, scan);
       storage.setSourceFolder(
         added.id,
-        libraryFolder.id,
-        relative(libraryFolder.path, scan.dir),
-        collectionFileOf(scan)
+        source.folderId,
+        source.sourceFolder,
+        source.sourceFile
       );
       // A row no sheet named has no genre to be missing.
       if (genres.length === 0 && named) {
@@ -1558,14 +1545,18 @@ export function createImporter({
     folder: StoredLibraryFolder,
     scan: MovieFolderScan,
     row: SheetRow
-  ): string | null =>
-    storage.titleAt(
-      folder.id,
-      relative(folder.path, scan.dir),
-      collectionFileOf(scan)
-    ) ??
-    filmsByKey.get(filmKey(row.title, row.year)) ??
-    null;
+  ): string | null => {
+    const source = filmSourceOf(folder, scan);
+    return (
+      storage.titleAt(
+        source.folderId,
+        source.sourceFolder,
+        source.sourceFile
+      ) ??
+      filmsByKey.get(filmKey(row.title, row.year)) ??
+      null
+    );
+  };
 
   /**
    * The same two rules for a **Show folder**, over the held series: the folder
@@ -1610,11 +1601,12 @@ export function createImporter({
     folder: StoredLibraryFolder,
     scan: MovieFolderScan
   ): void => {
+    const source = filmSourceOf(folder, scan);
     storage.setSourceFolder(
       heldId,
-      folder.id,
-      relative(folder.path, scan.dir),
-      collectionFileOf(scan)
+      source.folderId,
+      source.sourceFolder,
+      source.sourceFile
     );
   };
 
