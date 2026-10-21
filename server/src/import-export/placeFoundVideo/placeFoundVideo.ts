@@ -1,37 +1,10 @@
-import { basename, dirname, isAbsolute, relative } from 'node:path';
+import { basename, dirname, relative } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
 import { seasonOf } from '../groupShows/groupShows';
+import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import type { ImportMode, StoredVideo } from '@/types';
-
-/**
- * Whether `path` lies strictly under `folder` — not the folder itself, not a
- * path climbing out of it through `..`, and not one on another drive.
- */
-const isUnder = (folder: string, path: string): boolean => {
-  const under = relative(folder, path);
-  return under !== '' && !under.startsWith('..') && !isAbsolute(under);
-};
-
-/**
- * The listed **Library folder** `path` lies under — of nested ones the
- * deepest — or `null` when it lies under none.
- */
-export function listedFolderOf(
-  folders: StoredLibraryFolder[],
-  path: string
-): StoredLibraryFolder | null {
-  return folders
-    .filter((folder) => isUnder(folder.path, path))
-    .reduce<StoredLibraryFolder | null>(
-      (deepest, folder) =>
-        deepest === null || folder.path.length > deepest.path.length
-          ? folder
-          : deepest,
-      null
-    );
-}
 
 /**
  * The **Placed video** rule: a found video in **Link** under a listed

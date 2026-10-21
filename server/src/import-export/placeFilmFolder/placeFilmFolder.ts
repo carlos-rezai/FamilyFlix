@@ -1,8 +1,8 @@
 import { dirname, relative, sep } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
+import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { scanMovieFolder } from '../../media/scanMovieFolder/scanMovieFolder';
-import { listedFolderOf } from '../placeFoundVideo/placeFoundVideo';
 import { splitCollections } from '../splitCollections/splitCollections';
 
 /** Where a found film lies, as `setSourceFolder` records it. */
