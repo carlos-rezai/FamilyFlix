@@ -291,7 +291,7 @@
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, fStray:0, fMode:'link', fLinkOff:false, fVideoLinkOff:false, fVideoPicks:0, subLangOpen:null,
           addContext:null, resolveId:null,
-          libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0}], folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
+          libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12,scanned:true},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0,scanned:true}], folderRescanAll:false, folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
           impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[], impKind:'all', impOpen:{},
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
@@ -435,7 +435,7 @@
           if(!/^[A-Za-z]:\\/.test(typed)){ this.setState({folderRefusal:'Type the folder’s full path, starting with its drive.'}); return; }
           const clash=this.folderClash(typed);
           if(clash){ this.setState({folderRefusal:clash}); return; }
-          this.setState(s=>({libraryFolders:[...s.libraryFolders,{id:'f'+Date.now(),path:typed,titleCount:0,reachable:true}],folderTyped:'',folderRefusal:null}));
+          this.setState(s=>({libraryFolders:[...s.libraryFolders,{id:'f'+Date.now(),path:typed,titleCount:0,reachable:true,scanned:false}],folderTyped:'',folderRefusal:null}));
         }
         browseFolders(){ this.addFolder('D:\\Films'); }
         // The route's 409: a folder linked videos play from is not removed, and the sentence is drawn
@@ -444,8 +444,10 @@
           if(f.linkedCount>0){ const n=f.linkedCount; this.setState({folderRemoveRefusal:{id,text:n===1?'1 title plays from this folder. Delete it before removing it.':n+' titles play from this folder. Delete them before removing it.'}}); return; }
           this.setState(s=>({libraryFolders:s.libraryFolders.filter(x=>x.id!==id),folderRemoveRefusal:null})); }
         setImpMode(m){ this.setState({impMode:m}); }
-        // Scan folders: the Folder scan, the same run as Start import with no sheet.
-        scanFolders(){ if(this.state.libraryFolders.length===0) return; this.setState({screen:'import',impSource:'folders'}); this.startImport(); }
+        // Scan folders: the Folder scan, the same run as Start import with no sheet, over the folders
+        // with no Scanned mark (every reachable one while Scan every folder again is ticked). A finished
+        // run marks each folder it read; the box is off again on the next visit.
+        scanFolders(){ if(this.state.libraryFolders.length===0) return; this.setState(s=>({screen:'import',impSource:'folders',folderRescanAll:false,libraryFolders:s.libraryFolders.map(f=>f.reachable?{...f,scanned:true}:f)})); this.startImport(); }
         uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
         removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
@@ -981,8 +983,9 @@
               onAdd:()=>this.addFolder(s.folderTyped),
               browse:s.folderBridge, onBrowse:()=>this.browseFolders(),
               refusal:s.folderRefusal, refused:s.folderRefusal!==null,
-              // The group Scan: the shapes, the Import mode, the TMDB box, then Scan folders.
+              // The group Scan: the shapes, the Import mode, Scan every folder again, the TMDB box, then Scan folders.
               modes:modeChoices(),
+              rescanAll:s.folderRescanAll, onToggleRescanAll:()=>this.setState(x=>({folderRescanAll:!x.folderRescanAll})),
               // The graduated mol.EnrichCheckCard: the keyed hint is ours, the key-less one the card's.
               enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(), keySet:s.tmdbConnected,
               keyedHint:'Runs straight after the scan, over everything it brings in. Needs the internet.',
