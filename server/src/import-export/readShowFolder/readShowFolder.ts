@@ -8,7 +8,9 @@ import {
   type MovieFolderScan,
 } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
+import type { StoredLibraryFolder } from '../../library';
 import { groupShows } from '../groupShows/groupShows';
+import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { titleGuess } from '../titleKey/titleKey';
 import type { ShowFolderEpisode, ShowFolderRead } from '@/types';
 
@@ -20,23 +22,15 @@ export type ShowFolderAnswer =
   | { kind: 'read'; read: ShowFolderRead }
   | { kind: 'refused'; refusal: ShowFolderRefusal };
 
-/** A held series's **Show folder**: its id and its absolute path. */
-export interface HeldShowFolder {
-  seriesId: string;
-  path: string;
-}
-
-/** What the caller knows of the library: the held series's Show folders. */
+/**
+ * What the caller knows of the library: the listed **Library folders**, and
+ * the held series on record at a folder relative to one of them.
+ */
 export interface ShowFolderContext {
-  heldShowFolders?: readonly HeldShowFolder[];
+  folders: readonly StoredLibraryFolder[];
+  /** The held series whose **Source folder** this is, `null` for none. */
+  heldSeriesAt(folderId: string, sourceFolder: string): string | null;
 }
-
-/** The held series whose Show folder `dir` is, `null` for none. */
-const heldSeriesOf = (
-  dir: string,
-  held: readonly HeldShowFolder[]
-): string | null =>
-  held.find((folder) => relative(folder.path, dir) === '')?.seriesId ?? null;
 
 /**
  * The **Source folders** under a picked folder: the folder itself when
@@ -61,16 +55,19 @@ async function scansUnder(dir: string): Promise<MovieFolderScan[]> {
  * its videos as **Unplaced**. The **Title guess** is the importer's own rule
  * on the folder's name.
  *
- * A folder that is already a held series's **Show folder** — one of the
- * `heldShowFolders` the caller passes — is still read, its `heldSeriesId`
- * set to that series's id; the form draws the refusal.
+ * Its `libraryFolderId` is the listed **Library folder** it lies inside, by
+ * `listedFolderOf`, or `null`. A folder that is already a held series's
+ * **Show folder** — the folder on record under that Library folder, as
+ * `heldSeriesAt` answers — is still read, its `heldSeriesId` set to that
+ * series's id; the form draws the refusal. A folder under no Library folder
+ * has no folder on record, so it is never held.
  *
  * A folder that cannot be read is `unreadable`; one holding no video is
  * `empty`. Answered as a value, never a throw.
  */
 export async function readShowFolder(
   dir: string,
-  context: ShowFolderContext = {}
+  context: ShowFolderContext
 ): Promise<ShowFolderAnswer> {
   if ((await readableFolder(dir)) !== 'readable') {
     return { kind: 'refused', refusal: 'unreadable' };
@@ -104,13 +101,17 @@ export async function readShowFolder(
     return { kind: 'refused', refusal: 'empty' };
   }
 
+  const listed = listedFolderOf(context.folders, dir);
   return {
     kind: 'read',
     read: {
       path: dir,
       titleGuess: titleGuess(basename(dir)),
-      libraryFolderId: null,
-      heldSeriesId: heldSeriesOf(dir, context.heldShowFolders ?? []),
+      libraryFolderId: listed?.id ?? null,
+      heldSeriesId:
+        listed === null
+          ? null
+          : context.heldSeriesAt(listed.id, relative(listed.path, dir)),
       episodes,
       unplaced,
       straySubtitles: shows.reduce(

@@ -12,8 +12,8 @@
 // `unreadable` refusal; one holding no video is `empty`. `admitFolder`'s
 // precedent: a value, never a throw.
 //
-// Phase 1 asks only the folder; the listed Library folders and the held Show
-// folders the later phases read are context the caller may leave out.
+// The context is the listed Library folders and the held series on record at
+// a folder under one — `noLibrary` when a case asks only the folder.
 //
 // Against real trees under `sandboxRoot`, `groupShows`' and
 // `walkLibraryFolder`'s prior art.
@@ -22,7 +22,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { readShowFolder } from './readShowFolder';
+import { readShowFolder, type ShowFolderContext } from './readShowFolder';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 
 /** A folder under `root`, holding the files named. */
@@ -35,9 +35,12 @@ function folderWith(root: string, path: string, files: string[]): string {
   return dir;
 }
 
+/** No folder listed and nothing held. */
+const noLibrary: ShowFolderContext = { folders: [], heldSeriesAt: () => null };
+
 /** The read of `dir`, failing the test on a refusal. */
-async function readOf(dir: string) {
-  const answer = await readShowFolder(dir);
+async function readOf(dir: string, context: ShowFolderContext = noLibrary) {
+  const answer = await readShowFolder(dir, context);
   if (answer.kind !== 'read') {
     throw new Error(`expected a read, got the ${answer.refusal} refusal`);
   }
@@ -185,7 +188,7 @@ describe('readShowFolder — the refusals', () => {
   it('refuses a folder that is not there as unreadable', async () => {
     const missing = join(sandboxRoot('familyflix-show-read-'), 'Gone');
 
-    expect(await readShowFolder(missing)).toEqual({
+    expect(await readShowFolder(missing, noLibrary)).toEqual({
       kind: 'refused',
       refusal: 'unreadable',
     });
@@ -197,7 +200,10 @@ describe('readShowFolder — the refusals', () => {
     ]);
 
     expect(
-      await readShowFolder(join(root, 'Harbor.and.Vine.S01E01.Pilot.mkv'))
+      await readShowFolder(
+        join(root, 'Harbor.and.Vine.S01E01.Pilot.mkv'),
+        noLibrary
+      )
     ).toEqual({ kind: 'refused', refusal: 'unreadable' });
   });
 
@@ -209,7 +215,7 @@ describe('readShowFolder — the refusals', () => {
     );
     folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.en.srt']);
 
-    expect(await readShowFolder(show)).toEqual({
+    expect(await readShowFolder(show, noLibrary)).toEqual({
       kind: 'refused',
       refusal: 'empty',
     });
@@ -222,7 +228,7 @@ describe('readShowFolder — the refusals', () => {
       []
     );
 
-    expect(await readShowFolder(show)).toEqual({
+    expect(await readShowFolder(show, noLibrary)).toEqual({
       kind: 'refused',
       refusal: 'empty',
     });
@@ -284,16 +290,23 @@ describe('readShowFolder — the stray subtitles', () => {
 });
 
 describe('readShowFolder — a held Show folder', () => {
-  /** The read of `dir`, given the held series's Show folders. */
+  /**
+   * The read of `dir`, given the held series's Show folders — each on record
+   * under one Library folder listed at the sandbox's root.
+   */
   async function readHeld(
     dir: string,
     heldShowFolders: { seriesId: string; path: string }[]
   ) {
-    const answer = await readShowFolder(dir, { heldShowFolders });
-    if (answer.kind !== 'read') {
-      throw new Error(`expected a read, got the ${answer.refusal} refusal`);
-    }
-    return answer.read;
+    const root = { id: 'root', path: join(dir, '..'), titleCount: 0 };
+    return readOf(dir, {
+      folders: [root],
+      heldSeriesAt: (folderId, sourceFolder) =>
+        heldShowFolders.find(
+          (held) =>
+            folderId === root.id && held.path === join(root.path, sourceFolder)
+        )?.seriesId ?? null,
+    });
   }
 
   it('answers the held series’s id when the folder is its Show folder', async () => {
@@ -338,5 +351,43 @@ describe('readShowFolder — a held Show folder', () => {
     ]);
 
     expect(read.heldSeriesId).toBeNull();
+  });
+});
+
+describe('readShowFolder — its Library folder', () => {
+  /** The context with one Library folder listed at `path`, nothing held. */
+  const listedAt = (path: string): ShowFolderContext => ({
+    folders: [{ id: 'shows', path, titleCount: 0 }],
+    heldSeriesAt: () => null,
+  });
+
+  it('answers the id of the listed folder the show lies inside', async () => {
+    const root = sandboxRoot('familyflix-show-read-');
+    const show = join(root, 'Shows', 'Harbor and Vine');
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readOf(show, listedAt(join(root, 'Shows')));
+
+    expect(read.libraryFolderId).toBe('shows');
+  });
+
+  it('answers null for a show outside every listed folder', async () => {
+    const root = sandboxRoot('familyflix-show-read-');
+    const show = join(root, 'Downloads', 'Harbor and Vine');
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readOf(show, listedAt(join(root, 'Shows')));
+
+    expect(read.libraryFolderId).toBeNull();
+  });
+
+  it('answers null for the Library folder itself', async () => {
+    const root = sandboxRoot('familyflix-show-read-');
+    const shows = join(root, 'Shows');
+    folderWith(shows, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readOf(shows, listedAt(shows));
+
+    expect(read.libraryFolderId).toBeNull();
   });
 });

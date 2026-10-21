@@ -1962,22 +1962,17 @@ export function createImporter({
 
     current: snapshot,
 
-    readShowFolder: (path) => {
-      const listed = new Map(
-        storage.libraryFolders().map((folder) => [folder.id, folder.path])
-      );
-      return readShowFolder(path, {
-        heldShowFolders: storage.libraryTitles().series.flatMap((series) => {
-          const root =
-            series.libraryFolderId === null
-              ? undefined
-              : listed.get(series.libraryFolderId);
-          return root === undefined || series.sourceFolder === null
-            ? []
-            : [{ seriesId: series.id, path: join(root, series.sourceFolder) }];
-        }),
-      });
-    },
+    readShowFolder: (path) =>
+      readShowFolder(path, {
+        folders: storage.libraryFolders(),
+        // `heldShow`'s question: the folder on record, kept only for a series.
+        heldSeriesAt: (folderId, sourceFolder) => {
+          const atFolder = storage.titleAt(folderId, sourceFolder);
+          return atFolder !== null && storage.getSeries(atFolder) !== null
+            ? atFolder
+            : null;
+        },
+      }),
 
     cancel: async () => {
       // Gone from the first line: a `current` read while the rollback is

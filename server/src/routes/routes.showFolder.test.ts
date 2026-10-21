@@ -42,7 +42,11 @@ afterEach(async () => {
 });
 
 /** A fresh library behind a listening API, and a sandbox to build shows in. */
-function freshApi(): { baseUrl: string; shows: string } {
+function freshApi(): {
+  baseUrl: string;
+  shows: string;
+  storage: LibraryStorage;
+} {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
 
@@ -75,7 +79,7 @@ function freshApi(): { baseUrl: string; shows: string } {
   servers.push(server);
 
   const { port } = server.address() as AddressInfo;
-  return { baseUrl: `http://127.0.0.1:${port}`, shows };
+  return { baseUrl: `http://127.0.0.1:${port}`, shows, storage };
 }
 
 /** A folder under `root`, holding the files named. */
@@ -142,6 +146,21 @@ describe('GET /api/show-folder', () => {
         subtitles: [],
       },
     ]);
+  });
+
+  it('answers the listed Library folder a show lies inside', async () => {
+    const { baseUrl, shows, storage } = freshApi();
+    const listed = storage.addLibraryFolder(shows);
+    const show = join(shows, 'Harbor and Vine');
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const response = await readFolder(baseUrl, show);
+
+    expect(response.status).toBe(200);
+    expect(
+      ((await response.json()) as { libraryFolderId: string | null })
+        .libraryFolderId
+    ).toBe(listed.id);
   });
 
   it('answers 400 “That folder can’t be read.” for a folder that is not there', async () => {
