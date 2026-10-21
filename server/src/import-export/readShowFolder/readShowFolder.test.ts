@@ -1,0 +1,230 @@
+// @vitest-environment node
+//
+// 48 — Add a show folder, Phase 1 (issue #417): the **Show folder read**.
+//
+// `readShowFolder` reads one absolute folder the maintainer picked on the
+// series add — walked with `walkLibraryFolder`, grouped with `groupShows`, so
+// there is no second numbering rule — and answers a `ShowFolderRead`: its
+// episodes season by season (a **Season folder**'s number beating the
+// filename's), loose tagged episodes at its root, each episode's stem-matched
+// subtitles in their detected languages, and the **Title guess** by the
+// importer's own rule on the folder's name. A folder it cannot read is the
+// `unreadable` refusal; one holding no video is `empty`. `admitFolder`'s
+// precedent: a value, never a throw.
+//
+// Phase 1 asks only the folder; the listed Library folders and the held Show
+// folders the later phases read are context the caller may leave out.
+//
+// Against real trees under `sandboxRoot`, `groupShows`' and
+// `walkLibraryFolder`'s prior art.
+
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { describe, expect, it } from 'vitest';
+
+import { readShowFolder } from './readShowFolder';
+import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+
+/** A folder under `root`, holding the files named. */
+function folderWith(root: string, path: string, files: string[]): string {
+  const dir = join(root, path);
+  mkdirSync(dir, { recursive: true });
+  for (const file of files) {
+    writeFileSync(join(dir, file), `${file} bytes`);
+  }
+  return dir;
+}
+
+/** The read of `dir`, failing the test on a refusal. */
+async function readOf(dir: string) {
+  const answer = await readShowFolder(dir);
+  if (answer.kind !== 'read') {
+    throw new Error(`expected a read, got the ${answer.refusal} refusal`);
+  }
+  return answer.read;
+}
+
+describe('readShowFolder — Season folders', () => {
+  it('reads each Season folder’s episodes, season then episode order, titles off their tags', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
+    folderWith(show, 'Season 2', ['Harbor.and.Vine.S02E01.Spring.Tide.mkv']);
+    folderWith(show, 'Season 1', [
+      'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+    ]);
+
+    const read = await readOf(show);
+
+    expect(
+      read.episodes.map((episode) => [
+        episode.season,
+        episode.number,
+        episode.title,
+        episode.video,
+      ])
+    ).toEqual([
+      [
+        1,
+        1,
+        'Pilot',
+        join(show, 'Season 1', 'Harbor.and.Vine.S01E01.Pilot.mkv'),
+      ],
+      [
+        1,
+        2,
+        'Low Tide',
+        join(show, 'Season 1', 'Harbor.and.Vine.S01E02.Low.Tide.mkv'),
+      ],
+      [
+        2,
+        1,
+        'Spring Tide',
+        join(show, 'Season 2', 'Harbor.and.Vine.S02E01.Spring.Tide.mkv'),
+      ],
+    ]);
+  });
+
+  it('lets a Season folder’s number beat the filename’s', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
+    // Misfiled under season 1's tag, in season 3's folder.
+    folderWith(show, 'Season 3', ['Harbor.and.Vine.S01E04.Harvest.mkv']);
+
+    const read = await readOf(show);
+
+    expect(
+      read.episodes.map((episode) => [episode.season, episode.number])
+    ).toEqual([[3, 4]]);
+  });
+
+  it('answers the picked folder itself as its absolute path', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readOf(show);
+
+    expect(read.path).toBe(show);
+  });
+});
+
+describe('readShowFolder — loose tagged episodes', () => {
+  it('reads tagged videos lying in the picked folder itself, seasons off their tags', async () => {
+    const show = folderWith(
+      sandboxRoot('familyflix-show-read-'),
+      'Lighthouse Keepers',
+      [
+        'Lighthouse.Keepers.S02E01.Return.mkv',
+        'Lighthouse.Keepers.S01E02.The.Storm.mkv',
+        'Lighthouse.Keepers.S01E01.Arrival.mkv',
+      ]
+    );
+
+    const read = await readOf(show);
+
+    expect(
+      read.episodes.map((episode) => [
+        episode.season,
+        episode.number,
+        episode.title,
+        episode.video,
+      ])
+    ).toEqual([
+      [1, 1, 'Arrival', join(show, 'Lighthouse.Keepers.S01E01.Arrival.mkv')],
+      [
+        1,
+        2,
+        'The Storm',
+        join(show, 'Lighthouse.Keepers.S01E02.The.Storm.mkv'),
+      ],
+      [2, 1, 'Return', join(show, 'Lighthouse.Keepers.S02E01.Return.mkv')],
+    ]);
+  });
+});
+
+describe('readShowFolder — subtitles', () => {
+  it('gives each episode the subtitles beginning with its stem, each in its detected language', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
+    const season = folderWith(show, 'Season 1', [
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+      'Harbor.and.Vine.S01E01.Pilot.en.srt',
+      'Harbor.and.Vine.S01E01.Pilot.pt.srt',
+      'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+    ]);
+
+    const read = await readOf(show);
+
+    const [pilot, lowTide] = read.episodes;
+    expect(pilot.subtitles).toEqual([
+      {
+        path: join(season, 'Harbor.and.Vine.S01E01.Pilot.en.srt'),
+        language: 'English',
+      },
+      {
+        path: join(season, 'Harbor.and.Vine.S01E01.Pilot.pt.srt'),
+        language: 'Portuguese',
+      },
+    ]);
+    expect(lowTide.subtitles).toEqual([]);
+  });
+});
+
+describe('readShowFolder — the Title guess', () => {
+  it('guesses the title off the folder’s name by the importer’s rule', async () => {
+    const show = join(
+      sandboxRoot('familyflix-show-read-'),
+      'Harbor.and.Vine.2019'
+    );
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+
+    const read = await readOf(show);
+
+    expect(read.titleGuess).toBe('Harbor and Vine');
+  });
+});
+
+describe('readShowFolder — the refusals', () => {
+  it('refuses a folder that is not there as unreadable', async () => {
+    const missing = join(sandboxRoot('familyflix-show-read-'), 'Gone');
+
+    expect(await readShowFolder(missing)).toEqual({
+      kind: 'refused',
+      refusal: 'unreadable',
+    });
+  });
+
+  it('refuses a file in place of a folder as unreadable', async () => {
+    const root = folderWith(sandboxRoot('familyflix-show-read-'), 'Shows', [
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+    ]);
+
+    expect(
+      await readShowFolder(join(root, 'Harbor.and.Vine.S01E01.Pilot.mkv'))
+    ).toEqual({ kind: 'refused', refusal: 'unreadable' });
+  });
+
+  it('refuses a folder holding no video anywhere as empty', async () => {
+    const show = folderWith(
+      sandboxRoot('familyflix-show-read-'),
+      'Harbor and Vine',
+      ['poster.jpg', 'notes.txt']
+    );
+    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.en.srt']);
+
+    expect(await readShowFolder(show)).toEqual({
+      kind: 'refused',
+      refusal: 'empty',
+    });
+  });
+
+  it('refuses a folder with nothing in it as empty', async () => {
+    const show = folderWith(
+      sandboxRoot('familyflix-show-read-'),
+      'Harbor and Vine',
+      []
+    );
+
+    expect(await readShowFolder(show)).toEqual({
+      kind: 'refused',
+      refusal: 'empty',
+    });
+  });
+});
