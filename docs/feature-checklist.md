@@ -75,8 +75,6 @@ FamilyFlix and using it for real, and are numbered in **build
 order**: smallest and most self-contained first, the form before the folders
 that will feed it, export last because it mirrors what import now holds. Each
 went through grill-me and a prototype revision before it was built.
-_Change…_ in Settings → Storage is not in the chain — it is the Roadmap's
-**Move the media folder**.
 
 10. ✅ **Codecs page** — the codec rows moved to their own Settings
     sub-page, `/settings/codecs`, opened from the Playback card's Codecs row.
