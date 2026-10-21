@@ -382,6 +382,9 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Manage library — every title, edit, clear, delete   | ✅ Done         |
 | Add a show folder — a show by its folder, numbered  | ✅ Done         |
 | Release workflow off Node 20 — actions bumped       | 🔜 Planned      |
+| Start on Series — open FamilyFlix on the Series tab | 🔜 Planned      |
+| Subtitle picker — choose a track in the player      | 🔜 Planned      |
+| Loading states — spinners and an FF loading overlay | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
 | Backgroundable import                               | 🧭 Roadmap      |
