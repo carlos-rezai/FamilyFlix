@@ -42,6 +42,7 @@ import {
   updateSeries,
 } from '../api/api';
 import {
+  movieAddValues,
   pickedFile,
   pickedSubtitle,
   showFolderRows,
@@ -751,19 +752,6 @@ export function useMovieForm(): UseMovieFormResult {
   const showImportMode = bridge !== null && plainAdd;
   // A browser sends Copy: there is no path to link.
   const sentMode: ImportMode = showImportMode ? importMode : 'copy';
-  // In Link a picked movie video travels as the path the Path bridge read;
-  // in Copy as its bytes.
-  const sentMovie: MovieFormValues =
-    sentMode === 'link' && values.video?.kind === 'picked' && videoPathOf !== ''
-      ? {
-          ...values,
-          video: {
-            kind: 'found',
-            path: videoPathOf,
-            filename: values.video.filename,
-          },
-        }
-      : values;
 
   const save = useCallback(() => {
     if (!canSave) {
@@ -839,7 +827,10 @@ export function useMovieForm(): UseMovieFormResult {
           const created =
             kind === 'series'
               ? createSeries(values, episodes, seasonPosters, sentMode)
-              : createMovie(sentMovie, sentMode);
+              : createMovie(
+                  movieAddValues(values, sentMode, videoPathOf),
+                  sentMode
+                );
           return created.then(({ id }) => {
             const { replace, push } = addLeaving(
               kind,
@@ -875,7 +866,7 @@ export function useMovieForm(): UseMovieFormResult {
     showEnrich,
     enrich,
     sentMode,
-    sentMovie,
+    videoPathOf,
     navigate,
     goBack,
     editing,

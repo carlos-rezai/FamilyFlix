@@ -292,6 +292,29 @@ export function foundFile(path: string): MovieFormFile {
 }
 
 /**
+ * The values a movie add sends: in **Link**, a picked video the **Path
+ * bridge** read a path for travels as a **Found file** of that path, its name
+ * kept; otherwise the values go as they are — in Copy, a picked video as its
+ * bytes. The series' equivalent is {@link seriesFormData}'s folder rows.
+ */
+export function movieAddValues(
+  values: MovieFormValues,
+  mode: ImportMode,
+  videoPath: string
+): MovieFormValues {
+  return mode === 'link' && values.video?.kind === 'picked' && videoPath !== ''
+    ? {
+        ...values,
+        video: {
+          kind: 'found',
+          path: videoPath,
+          filename: values.video.filename,
+        },
+      }
+    : values;
+}
+
+/**
  * A **Problem detail**, read into the box **Resolve** opens on.
  *
  * Stories 80 and 81: the **Sheet row** already said the title, the year, the

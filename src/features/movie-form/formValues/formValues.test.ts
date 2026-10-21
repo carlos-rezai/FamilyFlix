@@ -9,6 +9,7 @@ import type {
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 import {
+  movieAddValues,
   movieFormValues,
   movieFormData,
   pickedFile,
@@ -574,5 +575,40 @@ describe('seriesFormData — the Season posters', () => {
 
     expect(sent(body, 'seasonPoster')).toEqual([]);
     expect(sent(body, 'seasonPosterFile')).toEqual([]);
+  });
+});
+
+describe('movieAddValues', () => {
+  const PATH = 'D:/Films/new-lantern.mp4';
+  const picked = (): MovieFormValues => ({
+    ...movieFormValues(STORED),
+    video: pickedFile(someFile()),
+  });
+
+  it('sends a picked video as a found file of its path in Link', () => {
+    const values = picked();
+
+    expect(movieAddValues(values, 'link', PATH)).toEqual({
+      ...values,
+      video: { kind: 'found', path: PATH, filename: 'new-lantern.mp4' },
+    });
+  });
+
+  it('sends the picked bytes in Link when the Path bridge read no path', () => {
+    const values = picked();
+
+    expect(movieAddValues(values, 'link', '')).toBe(values);
+  });
+
+  it('sends the picked bytes in Copy, whatever the path', () => {
+    const values = picked();
+
+    expect(movieAddValues(values, 'copy', PATH)).toBe(values);
+  });
+
+  it('leaves a held video as it is', () => {
+    const values = movieFormValues(STORED);
+
+    expect(movieAddValues(values, 'link', PATH)).toBe(values);
   });
 });
