@@ -29,12 +29,12 @@ import {
   useEpisodeList,
   type EpisodeRefusal,
 } from '../useEpisodeList/useEpisodeList';
+import { useImportMode } from '../useImportMode/useImportMode';
 import { useSeasonPosters } from '../useSeasonPosters/useSeasonPosters';
 import {
   createMovie,
   createSeries,
   ProblemGoneError,
-  containingFolder,
   readShowFolder,
   resolveProblem,
   resolveSeriesProblem,
@@ -449,6 +449,18 @@ export function useMovieForm(): UseMovieFormResult {
     (job.kind === 'add' && job.formKind === 'series')
       ? 'series'
       : 'movie';
+  // The **Import mode** and its two availabilities, `useImportMode`'s: Link
+  // on every visit, each kind answering for its own files.
+  const {
+    showImportMode,
+    importMode,
+    setImportMode,
+    linkDisabled,
+    videoPath,
+    readVideo,
+    forgetVideo,
+    setShowLink,
+  } = useImportMode({ kind, plainAdd });
   const setParam = useQueryParamWriter();
   const setKind = useCallback(
     (next: FormKind) => setParam(KIND_PARAM, next, 'movie'),
@@ -544,12 +556,8 @@ export function useMovieForm(): UseMovieFormResult {
   // **The title prefill**: a video picked into an empty title fills it with
   // its **Title guess** — a prefill, never a write, so a typed title stays.
   //
-  // On a shell add the picked video's path is read through the **Path
-  // bridge** and checked with the containing read the moment it is picked:
-  // the answer says whether Link is available. A later pick's answer wins.
-  const [videoPathOf, setVideoPathOf] = useState('');
-  const [videoLinkDisabled, setVideoLinkDisabled] = useState(false);
-  const videoPick = useRef(0);
+  // On a shell add the picked video is read by `useImportMode`, whose answer
+  // says whether Link is available.
   const pickVideo = useCallback(
     (file: File) => {
       setValues((current) => ({
@@ -560,35 +568,15 @@ export function useMovieForm(): UseMovieFormResult {
             : current.title,
         video: pickedFile(file),
       }));
-      const shell = folderBridge();
-      if (shell === null || !plainAdd) {
-        return;
-      }
-      const pick = ++videoPick.current;
-      const path = shell.pathOf(file);
-      setVideoPathOf(path);
-      if (path === '') {
-        setVideoLinkDisabled(true);
-        return;
-      }
-      setVideoLinkDisabled(false);
-      void containingFolder(path)
-        .then((folderId) => {
-          if (pick === videoPick.current) {
-            setVideoLinkDisabled(folderId === null);
-          }
-        })
-        .catch(() => undefined);
+      readVideo(file);
     },
-    [plainAdd]
+    [readVideo]
   );
 
   const removeVideo = useCallback(() => {
-    videoPick.current += 1;
-    setVideoPathOf('');
-    setVideoLinkDisabled(false);
+    forgetVideo();
     setValues((current) => ({ ...current, video: null }));
-  }, []);
+  }, [forgetVideo]);
 
   const chooseVideo = useCallback((video: MovieFormFile) => {
     setValues((current) => ({ ...current, video }));
@@ -650,25 +638,6 @@ export function useMovieForm(): UseMovieFormResult {
     null
   );
   const [straySubtitles, setStraySubtitles] = useState(0);
-  // The **Import mode**: Link on every visit, never remembered. The picked
-  // Show folder's read says whether Link is available — `libraryFolderId`
-  // `null` disables it and Copy stands chosen, until a later pick under a
-  // Library folder enables it again.
-  // A movie's video says the same through the containing read, held apart
-  // so each kind answers for its own files.
-  const [chosenMode, setChosenMode] = useState<ImportMode>('link');
-  const [showLinkDisabled, setLinkDisabled] = useState(false);
-  const linkDisabled = kind === 'series' ? showLinkDisabled : videoLinkDisabled;
-  const importMode: ImportMode = linkDisabled ? 'copy' : chosenMode;
-  const setImportMode = useCallback(
-    (mode: ImportMode) => {
-      if (mode === 'link' && linkDisabled) {
-        return;
-      }
-      setChosenMode(mode);
-    },
-    [linkDisabled]
-  );
   const { holdShowFolder, removeShowFolder: dropShowFolder } = episodeList;
   const bridge = folderBridge();
   const pickShowFolder = useCallback(async () => {
@@ -697,23 +666,23 @@ export function useMovieForm(): UseMovieFormResult {
     setShowFolderRefusal(null);
     setShowFolder(read.path);
     setStraySubtitles(read.straySubtitles);
-    setLinkDisabled(read.libraryFolderId === null);
+    setShowLink(read.libraryFolderId !== null);
     holdShowFolder(showFolderRows(read));
     setValues((current) =>
       current.title.trim() === ''
         ? { ...current, title: read.titleGuess }
         : current
     );
-  }, [bridge, holdShowFolder]);
+  }, [bridge, holdShowFolder, setShowLink]);
   const addShowFolder = useCallback(() => {
     void pickShowFolder();
   }, [pickShowFolder]);
   const removeShowFolder = useCallback(() => {
     setShowFolder(null);
     setStraySubtitles(0);
-    setLinkDisabled(false);
+    setShowLink(true);
     dropShowFolder();
-  }, [dropShowFolder]);
+  }, [dropShowFolder, setShowLink]);
 
   const addEpisodeFiles = useCallback(
     (files: readonly File[]) => {
@@ -748,10 +717,6 @@ export function useMovieForm(): UseMovieFormResult {
     values.title.trim() !== '' &&
     (kind === 'series' ? episodesComplete : values.video !== null) &&
     !saving;
-
-  const showImportMode = bridge !== null && plainAdd;
-  // A browser sends Copy: there is no path to link.
-  const sentMode: ImportMode = showImportMode ? importMode : 'copy';
 
   const save = useCallback(() => {
     if (!canSave) {
@@ -826,10 +791,10 @@ export function useMovieForm(): UseMovieFormResult {
           // place and then the flow over it.
           const created =
             kind === 'series'
-              ? createSeries(values, episodes, seasonPosters, sentMode)
+              ? createSeries(values, episodes, seasonPosters, importMode)
               : createMovie(
-                  movieAddValues(values, sentMode, videoPathOf),
-                  sentMode
+                  movieAddValues(values, importMode, videoPath),
+                  importMode
                 );
           return created.then(({ id }) => {
             const { replace, push } = addLeaving(
@@ -865,8 +830,8 @@ export function useMovieForm(): UseMovieFormResult {
     seasonPosters,
     showEnrich,
     enrich,
-    sentMode,
-    videoPathOf,
+    importMode,
+    videoPath,
     navigate,
     goBack,
     editing,
