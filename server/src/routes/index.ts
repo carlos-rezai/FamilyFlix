@@ -34,10 +34,8 @@ import {
   type FilmSource,
 } from '../import-export/placeFilmFolder/placeFilmFolder';
 import { listedFolderOf } from '../import-export/listedFolderOf/listedFolderOf';
-import {
-  placeFoundVideo,
-  placeShowFolder,
-} from '../import-export/placeFoundVideo/placeFoundVideo';
+import { placeFoundVideo } from '../import-export/placeFoundVideo/placeFoundVideo';
+import { placeShowFolder } from '../import-export/placeShowFolder/placeShowFolder';
 import { isVideoFilename } from '../media/fileKinds/fileKinds';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
 import {

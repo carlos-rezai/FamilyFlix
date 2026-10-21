@@ -56,6 +56,13 @@ export const seasonOf = (name: string): number | null => {
   return found === null ? null : Number(found[1] ?? found[2]);
 };
 
+/**
+ * The **Show folder** a folder of episode videos belongs to: a **Season
+ * folder**'s parent, else the folder itself.
+ */
+export const showFolderOf = (dir: string): string =>
+  seasonOf(basename(dir)) === null ? dir : dirname(dir);
+
 /** A file's name without its extension, lower-cased for the stem rule. */
 const stemOf = (path: string): string => {
   const name = basename(path);
@@ -111,7 +118,7 @@ export function groupShows(scans: MovieFolderScan[]): GroupedScans {
       continue;
     }
 
-    const dir = loose ? scan.dir : dirname(scan.dir);
+    const dir = showFolderOf(scan.dir);
     let show = shows.get(dir);
     if (show === undefined) {
       show = {
