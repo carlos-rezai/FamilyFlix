@@ -2,8 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
-import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
-import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type {
@@ -31,11 +29,11 @@ import {
 } from '../useEpisodeList/useEpisodeList';
 import { useImportMode } from '../useImportMode/useImportMode';
 import { useSeasonPosters } from '../useSeasonPosters/useSeasonPosters';
+import { useShowFolderPick } from '../useShowFolderPick/useShowFolderPick';
 import {
   createMovie,
   createSeries,
   ProblemGoneError,
-  readShowFolder,
   resolveProblem,
   resolveSeriesProblem,
   updateMovie,
@@ -45,12 +43,7 @@ import {
   movieAddValues,
   pickedFile,
   pickedSubtitle,
-  showFolderRows,
 } from '../formValues/formValues';
-
-/** The refusal of a picked folder that is already a held series's Show folder. */
-const heldShowFolderRefusal = (title: string): string =>
-  `${title} is already in your library.`;
 
 /** The most digits a year can have. */
 const YEAR_LENGTH = 4;
@@ -630,59 +623,21 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
-  // The **Show folder pick**: the folder the dialog answered, read by the
-  // server, its rows after the held ones; an empty title takes the read's
-  // **Title guess**. A cancel changes nothing; a refusal adds no rows.
-  const [showFolder, setShowFolder] = useState<string | null>(null);
-  const [showFolderRefusal, setShowFolderRefusal] = useState<string | null>(
-    null
-  );
-  const [straySubtitles, setStraySubtitles] = useState(0);
-  const { holdShowFolder, removeShowFolder: dropShowFolder } = episodeList;
-  const bridge = folderBridge();
-  const pickShowFolder = useCallback(async () => {
-    const path = await bridge?.pickOne();
-    if (path === null || path === undefined) {
-      return;
-    }
-    const answer = await readShowFolder(path).catch(() => null);
-    if (answer === null) {
-      return;
-    }
-    if (answer.kind === 'refused') {
-      setShowFolderRefusal(answer.sentence);
-      return;
-    }
-    const { read } = answer;
-    if (read.heldSeriesId !== null) {
-      // Already a held series's **Show folder**: refused by that series's own
-      // title, and no rows land.
-      const held = await fetchSeriesDetail(read.heldSeriesId).catch(() => null);
-      setShowFolderRefusal(
-        heldShowFolderRefusal(held?.series.title ?? read.titleGuess)
-      );
-      return;
-    }
-    setShowFolderRefusal(null);
-    setShowFolder(read.path);
-    setStraySubtitles(read.straySubtitles);
-    setShowLink(read.libraryFolderId !== null);
-    holdShowFolder(showFolderRows(read));
+  // The **Show folder pick**, `useShowFolderPick`'s: an empty title takes
+  // the read's **Title guess**, and its Library folder says whether Link can
+  // be.
+  const prefillTitle = useCallback((guess: string) => {
     setValues((current) =>
-      current.title.trim() === ''
-        ? { ...current, title: read.titleGuess }
-        : current
+      current.title.trim() === '' ? { ...current, title: guess } : current
     );
-  }, [bridge, holdShowFolder, setShowLink]);
-  const addShowFolder = useCallback(() => {
-    void pickShowFolder();
-  }, [pickShowFolder]);
-  const removeShowFolder = useCallback(() => {
-    setShowFolder(null);
-    setStraySubtitles(0);
-    setShowLink(true);
-    dropShowFolder();
-  }, [dropShowFolder, setShowLink]);
+  }, []);
+  const showFolderPick = useShowFolderPick({
+    plainAdd,
+    holdShowFolder: episodeList.holdShowFolder,
+    removeShowFolder: episodeList.removeShowFolder,
+    prefillTitle,
+    setShowLink,
+  });
 
   const addEpisodeFiles = useCallback(
     (files: readonly File[]) => {
@@ -887,11 +842,11 @@ export function useMovieForm(): UseMovieFormResult {
     episodes,
     episodeRefusals: episodeList.refusals,
     addEpisodeFiles,
-    addShowFolder: bridge !== null && plainAdd ? addShowFolder : null,
-    showFolder,
-    removeShowFolder,
-    showFolderRefusal,
-    straySubtitles,
+    addShowFolder: showFolderPick.addShowFolder,
+    showFolder: showFolderPick.showFolder,
+    removeShowFolder: showFolderPick.removeShowFolder,
+    showFolderRefusal: showFolderPick.refusal,
+    straySubtitles: showFolderPick.straySubtitles,
     setSeason: episodeList.setSeason,
     setNumber: episodeList.setNumber,
     setEpisodeTitle: episodeList.setEpisodeTitle,
