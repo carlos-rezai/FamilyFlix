@@ -215,3 +215,46 @@ describe('seasonPosterBody', () => {
     expect(read.error).toMatch(/^[A-Z].*\.$/);
   });
 });
+
+// Release review (issue #424): the **Run scope**. _Finish_ on a run carrying
+// _Also fetch from TMDB_ starts the Sync over exactly the titles that run
+// imported, named as `titles: { kind, id }[]`; only a `run` Sync names them.
+describe('startEnrichmentBody: the Run scope', () => {
+  const RUN_TITLES = [
+    { kind: 'movie', id: 'm1' },
+    { kind: 'series', id: 's1' },
+  ];
+
+  it('reads a run Sync with its titles, in order', () => {
+    const body = { ...LIBRARY, scope: 'run', titles: RUN_TITLES };
+
+    expect(startEnrichmentBody(body)).toEqual({ ok: true, value: body });
+  });
+
+  it.each([
+    ['a run Sync with no titles', { ...LIBRARY, scope: 'run' }],
+    [
+      'a run Sync whose titles are not a list',
+      { ...LIBRARY, scope: 'run', titles: 'm1' },
+    ],
+    [
+      'a run Sync naming an unknown kind',
+      { ...LIBRARY, scope: 'run', titles: [{ kind: 'episode', id: 'e1' }] },
+    ],
+    [
+      'a run Sync naming an empty id',
+      { ...LIBRARY, scope: 'run', titles: [{ kind: 'movie', id: '' }] },
+    ],
+    ['a library Sync naming titles', { ...LIBRARY, titles: RUN_TITLES }],
+    [
+      'a single Sync naming titles',
+      { ...LIBRARY, scope: 'single', movieId: 'm1', titles: RUN_TITLES },
+    ],
+  ])('refuses %s in a sentence', (_name, body) => {
+    const read = startEnrichmentBody(body);
+
+    expect(read.ok).toBe(false);
+    if (read.ok) return;
+    expect(read.error).toMatch(/^[A-Z]/);
+  });
+});

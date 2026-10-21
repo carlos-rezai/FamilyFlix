@@ -4,7 +4,8 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { ImportFlow } from './ImportFlow';
-import type { ImportRun } from '@/types';
+import type { ImportRun, TitleReference } from '@/types';
+import { parseEnrichQuery } from '@/utils';
 import { theme } from '@/styles/theme';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import {
@@ -28,7 +29,7 @@ import {
  * `GET /api/tmdb/key`; the box travels on the run as `enrich` in
  * `POST /api/import`, and comes back on `ImportRun.enrich`, so a run
  * re-attached on arrival still knows it. _Finish_ on such a run **replaces**
- * `/import` with `/enrich?scope=all` — nothing starts unasked — and Back from
+ * `/import` with the Sync's setup — nothing starts unasked — and Back from
  * there steps to Settings. _Finish_ on a run without it is the push to `/` it
  * always was.
  *
@@ -171,7 +172,24 @@ async function startBody(): Promise<Record<string, unknown>> {
   return JSON.parse(String(init?.body)) as Record<string, unknown>;
 }
 
-const REVIEW = { found: 2, total: 2, done: 2, matched: 2 };
+const IMPORTED: TitleReference[] = [
+  { kind: 'movie', id: 'm-amelie' },
+  { kind: 'series', id: 's-tidewater' },
+];
+const REVIEW = {
+  found: 2,
+  total: 2,
+  done: 2,
+  matched: 2,
+  imported: IMPORTED,
+};
+
+/**
+ * Issue #424: where _Finish_ hands on to, read back: the **Run scope** over
+ * exactly the run's imported titles, never _Everything_.
+ */
+const handedTo = () => parseEnrichQuery(new URLSearchParams(search()));
+const RUN_SCOPE = { scope: 'run', titles: IMPORTED };
 /** Finish under either of its names: the run's `enrich` chooses. */
 const finish = () =>
   screen.findByRole(
@@ -246,7 +264,7 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
     expect((await finish()).textContent).toBe('Continue to TMDB sync');
   });
 
-  it('replaces /import with /enrich?scope=all', async () => {
+  it('replaces /import with the Sync over the run’s imported titles', async () => {
     serve({
       started: makeImportRun({ enrich: true }),
       then: [makeImportRun({ ...REVIEW, phase: 'review', enrich: true })],
@@ -259,7 +277,7 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
     fireEvent.click(await finish());
 
     expect(pathname()).toBe('/enrich');
-    expect(search()).toBe('?scope=all');
+    expect(handedTo()).toEqual(RUN_SCOPE);
     expect(navigationType()).toBe('REPLACE');
     expect(screen.getByText('the enrichment setup')).toBeDefined();
     // Nothing starts unasked: no enrichment is posted on the way.
@@ -304,7 +322,7 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
     fireEvent.click(await finish());
 
     expect(pathname()).toBe('/enrich');
-    expect(search()).toBe('?scope=all');
+    expect(handedTo()).toEqual(RUN_SCOPE);
     expect(navigationType()).toBe('REPLACE');
   });
 
@@ -360,7 +378,7 @@ describe('ImportFlow — Finish on a run without enrich', () => {
 describe('ImportFlow — Finish on a Folder scan', () => {
   const FROM_FOLDERS = ['/', '/settings', '/settings/folders', '/import'];
 
-  it('replaces /import with /enrich?scope=all when the scan was ticked', async () => {
+  it('replaces /import with the Sync over the scan’s imported titles when ticked', async () => {
     serve({
       onArrival: true,
       then: [
@@ -377,7 +395,7 @@ describe('ImportFlow — Finish on a Folder scan', () => {
     fireEvent.click(await finish());
 
     expect(pathname()).toBe('/enrich');
-    expect(search()).toBe('?scope=all');
+    expect(handedTo()).toEqual(RUN_SCOPE);
     expect(navigationType()).toBe('REPLACE');
   });
 

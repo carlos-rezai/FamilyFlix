@@ -101,3 +101,36 @@ describe('parseEnrichQuery', () => {
     expect(readBack('/enrich?movie=')).toEqual({ movie: '' });
   });
 });
+
+// Release review (issue #424): the **Run scope**. Import's _Finish_ on a run
+// carrying _Also fetch from TMDB_ opens the Sync over exactly the titles that
+// run imported, so the route carries them, each kind and id read back whole.
+describe('enrichPath with the Run scope', () => {
+  const titles: EnrichQuery['titles'] = [
+    { kind: 'movie', id: 'm1' },
+    { kind: 'series', id: 's1' },
+    { kind: 'movie', id: 'a&b #c,d:e' },
+  ];
+
+  it('reads a run’s titles back, in order', () => {
+    expect(readBack(enrichPath({ scope: 'run', titles }))).toEqual({
+      scope: 'run',
+      titles,
+    });
+  });
+
+  it('reads a run of one title back', () => {
+    const one: EnrichQuery = {
+      scope: 'run',
+      titles: [{ kind: 'series', id: 's9' }],
+    };
+
+    expect(readBack(enrichPath(one))).toEqual(one);
+  });
+
+  it('ignores titles on a query with no run scope', () => {
+    expect(readBack(enrichPath({ scope: 'all', titles }))).toEqual({
+      scope: 'all',
+    });
+  });
+});
