@@ -118,3 +118,46 @@ describe('ChoiceCard', () => {
     expect(screen.getByText('.xlsx workbook with a header row.')).toBeDefined();
   });
 });
+
+/**
+ * 48 — Add a show folder, Phase 2 (issue #418): graduated to `components/`
+ * on its third caller, the **Movie form**'s add, and gains `disabled` — a
+ * card that can't be chosen, its line still drawn, a press handed back to no
+ * one.
+ */
+describe('ChoiceCard — disabled', () => {
+  const isDisabled = (element: HTMLElement) =>
+    element.hasAttribute('disabled') ||
+    element.getAttribute('aria-disabled') === 'true';
+
+  it('is marked disabled and still draws its line', () => {
+    renderCard({
+      label: 'Link',
+      line: 'Only for files inside one of your library folders.',
+      disabled: true,
+    });
+
+    const card = screen.getByRole('radio', { name: /Link/ });
+    expect(isDisabled(card)).toBe(true);
+    expect(
+      within(card).getByText(
+        'Only for files inside one of your library folders.'
+      )
+    ).toBeDefined();
+  });
+
+  it('cannot be selected: a press calls nothing', () => {
+    const onSelect = vi.fn();
+    renderCard({ disabled: true, onSelect });
+
+    fireEvent.click(radio());
+
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+
+  it('is not marked disabled by default', () => {
+    renderCard();
+
+    expect(isDisabled(radio())).toBe(false);
+  });
+});

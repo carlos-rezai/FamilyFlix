@@ -112,3 +112,60 @@ describe('ImportModeChoice — Link chosen', () => {
     expect(radio('Copy').getAttribute('aria-checked')).toBe('false');
   });
 });
+
+/**
+ * 48 — Add a show folder, Phase 2 (issue #418): graduated to `components/`,
+ * and it can disable Link — for a file under no **Library folder** — the Link
+ * card then reading _Only for files inside one of your library folders._ and
+ * handing back nothing when pressed. Copy is unchanged.
+ */
+describe('ImportModeChoice — Link disabled', () => {
+  const DISABLED_LINE = 'Only for files inside one of your library folders.';
+
+  const isDisabled = (element: HTMLElement) =>
+    element.hasAttribute('disabled') ||
+    element.getAttribute('aria-disabled') === 'true';
+
+  function renderDisabled(
+    onChange: (mode: ImportMode) => void = () => undefined
+  ) {
+    return render(
+      <ThemeProvider theme={theme}>
+        <ImportModeChoice mode="copy" onChange={onChange} linkDisabled />
+      </ThemeProvider>
+    );
+  }
+
+  it('draws the Link card disabled, reading its line in place of Link’s', () => {
+    renderDisabled();
+
+    expect(isDisabled(radio('Link'))).toBe(true);
+    expect(within(radio('Link')).getByText(DISABLED_LINE)).toBeDefined();
+    expect(within(radio('Link')).queryByText(LINK_LINE)).toBeNull();
+  });
+
+  it('hands back nothing when the disabled Link is pressed', () => {
+    const onChange = vi.fn();
+    renderDisabled(onChange);
+
+    fireEvent.click(radio('Link'));
+
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('leaves Copy enabled, with its own line', () => {
+    const onChange = vi.fn();
+    renderDisabled(onChange);
+
+    expect(isDisabled(radio('Copy'))).toBe(false);
+    expect(within(radio('Copy')).getByText(COPY_LINE)).toBeDefined();
+    fireEvent.click(radio('Copy'));
+    expect(onChange).toHaveBeenCalledWith('copy');
+  });
+
+  it('draws Link enabled by default', () => {
+    renderChoice();
+
+    expect(isDisabled(radio('Link'))).toBe(false);
+  });
+});
