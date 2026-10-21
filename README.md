@@ -145,7 +145,7 @@ familyflix/
 │   ├── serverLaunch/ serverHandle/ awaitExitOrKill/ # the entry and environment off ShellPaths, fork the bundled server, wait for ready, shut it down or kill it
 │   ├── quitAfterShutdown/ reloadOnce/ loadRenderer/ # the quit gate, one reload after a crash, loading until Vite answers
 │   ├── rendererUrl/ windowPolicy/ downloadPath/     # where the window points, what it may open, where a download lands
-│   ├── pickFolders/        # the native folder dialog's answer → the paths to add, behind the preload's folders bridge
+│   ├── pickFolders/        # the native folder dialog's answer → the paths to add, behind the preload's folders bridge and its Path bridge (a picked file's absolute path)
 │   ├── shellDialogs/ shellLog/ appIdentity/         # the two failure dialogs, the Shell log, the taskbar identity
 │   ├── assets/             # icon.ico, the App mark, and its guard
 │   ├── packaging/          # builderConfig.json, ffmpegPin.json, and the guard that holds them to the shell
@@ -154,7 +154,7 @@ familyflix/
 │   └── .native/ .ffmpeg/ dist/ # gitignored: the Electron-ABI binding, the Default component, the two bundles
 ├── server/             # Express backend
 │   └── src/
-│       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices, seriesFormBody/ a series save; loopbackGuard/ and rendererRouter/ stand in front of the API
+│       ├── routes/         # HTTP layer only — parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices, seriesFormBody/ a series save, foundPathRefusal/ a found path both adds read; loopbackGuard/ and rendererRouter/ stand in front of the API
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key and stamp beside them
 │       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
 │       │   ├── folders/           # the Library folders: the list, its title counts, the remove that keeps the titles, and folderOverlap
@@ -168,7 +168,7 @@ familyflix/
 │       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   ├── writableFolder/        # whether a folder can be written into, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, heldValues, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
+│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, heldValues, readShowFolder, listedFolderOf, placeFoundVideo, placeShowFolder, placeFilmFolder, copyFoundEpisodes, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
 │       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
 │       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them; 8 and 9: the Source file an episode and a film remember across scans; 10: season posters); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
@@ -184,7 +184,7 @@ familyflix/
 │   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/ — controlStates(press), cardLift, cardFocus, and the structural guard in its test
 │   ├── tokens/         # Colors, spacing, typography, breakpoints, motion, layout (the Content measure)
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, the Icon glyphs — the Snackbar's four, the FAB's two and enrichment's five among them) — each with .tsx, .test.tsx, .styles.ts
-│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow) — same three-file shape
+│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice) — same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
 │   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational — the stack above owns the timing
@@ -200,8 +200,8 @@ familyflix/
 │   │   │   └── api/               # saveRating, deleteMovie — one caller each
 │   │   ├── series/          # the Series page and the Season page: SeriesDetail, SeasonEpisodes, SeriesMetaLine, LoadingSeries, useSeriesRead and the two page hooks, seriesView, seasonView
 │   │   ├── player/          # built-in video player for any Playable, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
-│   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs — MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, readEpisodeTag, titleFromFilename, and createSeries in its api/ — and Resolve, the Import context
-│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan — the Import mode both starts draw, ImportModeChoice — and the Export dialog: ExportModal, ChoiceCard, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
+│   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs — MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, useImportMode, useShowFolderPick, readEpisodeTag, titleFromFilename, and createSeries, readShowFolder and containingFolder in its api/ — and Resolve, the Import context
+│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView — the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan — and the Export dialog: ExportModal, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
 │   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
 │   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins Toggle); CodecManager — the Codecs page's screen — over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture — what every group draws with
@@ -380,7 +380,7 @@ Keep the description short enough to fit on one line — long descriptions get w
 | Add and sync — add by files, TMDB fills the rest    | ✅ Done         |
 | Audio tracks — English by default, switch in player | ✅ Done         |
 | Manage library — every title, edit, clear, delete   | ✅ Done         |
-| Add a show folder — a show by its folder, numbered  | 🔜 Planned      |
+| Add a show folder — a show by its folder, numbered  | ✅ Done         |
 | Release workflow off Node 20 — actions bumped       | 🔜 Planned      |
 | Collections / playlists                             | 🧭 Roadmap      |
 | Auto-on subtitles                                   | 🧭 Roadmap      |
@@ -544,12 +544,15 @@ library holds or take a title out of it completely. It is done (design log 47):
     Recycle Bin, so nothing is lost for good by accident.
 
 Step 31 is the other half of what step 30 first set out to do: adding a whole
-show by hand still means picking its episodes one file at a time. It is
-planned:
+show by hand meant picking its episodes one file at a time. It is done
+(design log 48):
 
-31. 🔜 **Add a show folder** — in the series form, pick a show's folder
-    instead of its episodes: FamilyFlix reads the season folders inside it
-    and fills in an episode row for every video, numbered for you.
+31. ✅ **Add a show folder** — in the series form, _＋ Add show folder_ picks
+    a show's folder instead of its episodes: FamilyFlix reads it by the same
+    rules a folder scan uses and fills in an episode row for every video,
+    numbered for you. Both adds now link by default — the video stays where
+    it lies — and copy only a file outside every Library folder. The show's
+    or film's folder is recorded, so a later scan never adds it twice.
 
 A 🧭 Roadmap item is not in the chain — it comes after it, if ever.
 

@@ -77,11 +77,12 @@ when a second feature needs it — no feature imports another's wire.
 - **Media:** an import links a video where it lies by default (the **Import
   mode**) or copies it; art and subtitles are always copied. A linked video is
   played read-only and removed only by a Delete, only to the Recycle Bin.
-- **Movie form** (`/add`): file fields are manual pickers only — a browser
-  file input never yields a path, so the form copies what it's given. Folder
-  autofill belongs to bulk import (step 31 reopens this for show folders). On
-  an edit a held file travels as its path, only a new pick as bytes; uploads
-  stream through `busboy`.
+- **Movie form** (`/add`): file fields are manual pickers. In the shell an
+  add links by default — a picked video's path read through the **Path
+  bridge**, a show taken whole by the **Show folder pick** — and copies a file
+  under no Library folder; a browser add copies what it's given. On an edit a
+  held file travels as its path, only a new pick as bytes; uploads stream
+  through `busboy`.
 - **Bulk import** reads nothing online, never makes a second copy of a held
   title, imports confident matches during the run, and lists only unsettled
   **Problems** in review. Copies run through `Media.copyIn`, cancellable.
