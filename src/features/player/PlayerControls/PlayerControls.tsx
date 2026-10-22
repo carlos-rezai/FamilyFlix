@@ -7,10 +7,11 @@ import {
   SkipForwardIcon,
   SubtitlesIcon,
 } from '@/primitives';
-import type { AudioTrack } from '@/types';
+import type { AudioTrack, Subtitle } from '@/types';
 
 import { AudioMenu } from '../AudioMenu/AudioMenu';
 import { PlayerScrubber } from '../PlayerScrubber/PlayerScrubber';
+import { SubtitleMenu } from '../SubtitleMenu/SubtitleMenu';
 import { VolumeSlider } from '../VolumeSlider/VolumeSlider';
 import {
   BackPill,
@@ -89,6 +90,19 @@ export interface PlayerControlsProps {
   onChooseAudio: (track: AudioTrack) => void;
   /** Told when the picker's menu opens or shuts, so the screen can hold the chrome up. */
   onAudioMenuChange: (open: boolean) => void;
+  /**
+   * Whether the film has two **Subtitles** or more. The **Subtitle picker** is
+   * drawn in the CC pill's place only then; with one the pill is the toggle.
+   */
+  hasSubtitlePicker: boolean;
+  /** The film's **Subtitles**, the picker's rows. */
+  subtitles: Subtitle[];
+  /** The **Subtitle track**, marked in the picker's menu while subtitles show. */
+  subtitleTrack: Subtitle | null;
+  /** A row chosen in the picker's menu: the Subtitle, or `null` for _Off_. */
+  onChooseSubtitle: (choice: Subtitle | null) => void;
+  /** Told when the picker's menu opens or shuts, so the screen can hold the chrome up. */
+  onSubtitleMenuChange: (open: boolean) => void;
 }
 
 /**
@@ -148,6 +162,11 @@ export function PlayerControls({
   audioTrack,
   onChooseAudio,
   onAudioMenuChange,
+  hasSubtitlePicker,
+  subtitles,
+  subtitleTrack,
+  onChooseSubtitle,
+  onSubtitleMenuChange,
 }: PlayerControlsProps) {
   return (
     <>
@@ -212,7 +231,14 @@ export function PlayerControls({
                   onOpenChange={onAudioMenuChange}
                 />
               ) : null}
-              {hasSubtitles ? (
+              {hasSubtitlePicker ? (
+                <SubtitleMenu
+                  subtitles={subtitles}
+                  track={subtitlesOn ? subtitleTrack : null}
+                  onChoose={onChooseSubtitle}
+                  onOpenChange={onSubtitleMenuChange}
+                />
+              ) : hasSubtitles ? (
                 <SubtitleButton
                   type="button"
                   aria-label="Subtitles"

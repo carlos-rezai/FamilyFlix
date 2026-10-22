@@ -218,8 +218,9 @@ export function Player({
     choice: audioChoice,
     onChoice: onAudioChoice,
   });
-  // An open menu holds the chrome up, as a paused film does.
-  const [audioMenuOpen, setAudioMenuOpen] = useState(false);
+  // An open menu, the Audio picker's or the Subtitle picker's, holds the
+  // chrome up, as a paused film does.
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const {
     src,
@@ -288,7 +289,15 @@ export function Player({
   );
 
   // Which track, whether the box is showing, and the line that is on it.
-  const { track, subtitlesOn, line, toggleSubtitles } = useSubtitles({
+  const {
+    subtitles,
+    track,
+    hasSubtitlePicker,
+    subtitlesOn,
+    line,
+    toggleSubtitles,
+    choose: chooseSubtitle,
+  } = useSubtitles({
     playable,
     subtitles: record?.subtitles ?? [],
     position,
@@ -305,7 +314,7 @@ export function Player({
   // about playback: a paused film is someone deciding, and a notice's only way
   // out is the Back pill inside the chrome.
   const { visible, onMouseMove } = useControlsVisibility(
-    playing && notice === null && !audioMenuOpen
+    playing && notice === null && !menuOpen
   );
 
   // The one **Back rule**, not a navigate of this screen's own: a **History
@@ -431,7 +440,12 @@ export function Player({
         audioTracks={audioTracks}
         audioTrack={audioTrack}
         onChooseAudio={chooseAudio}
-        onAudioMenuChange={setAudioMenuOpen}
+        onAudioMenuChange={setMenuOpen}
+        hasSubtitlePicker={hasSubtitlePicker}
+        subtitles={subtitles}
+        subtitleTrack={track}
+        onChooseSubtitle={chooseSubtitle}
+        onSubtitleMenuChange={setMenuOpen}
       />
     </Stage>
   );

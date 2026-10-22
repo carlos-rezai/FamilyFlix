@@ -60,9 +60,10 @@ function isTyping(target: EventTarget | null): boolean {
 }
 
 /**
- * Whether the press belongs to an open menu — the Audio picker's — whose own
- * keys walk it, choose from it and shut it. Escape there shuts the menu rather
- * than leaving the player, and an arrow walks the rows rather than the volume.
+ * Whether the press belongs to an open menu, the Audio picker's or the
+ * Subtitle picker's, whose own keys walk it, choose from it and shut it. Escape
+ * there shuts the menu rather than leaving the player, and an arrow walks the
+ * rows rather than the volume.
  */
 function isInMenu(target: EventTarget | null): boolean {
   return target instanceof Element && target.closest('[role="menu"]') !== null;
