@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 
 import { PlayerControls } from './PlayerControls';
 import { theme } from '@/styles/theme';
-import type { AudioTrack } from '@/types';
+import type { AudioTrack, Subtitle } from '@/types';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { ChromeIconButton } from './PlayerControls.styles';
 import {
@@ -67,6 +67,11 @@ function renderControls(
         audioTrack={null}
         onChooseAudio={vi.fn()}
         onAudioMenuChange={vi.fn()}
+        hasSubtitlePicker={false}
+        subtitles={[]}
+        subtitleTrack={null}
+        onChooseSubtitle={vi.fn()}
+        onSubtitleMenuChange={vi.fn()}
         {...overrides}
       />
     </ThemeProvider>
@@ -218,6 +223,11 @@ describe('PlayerControls — the transport row', () => {
           audioTrack={null}
           onChooseAudio={vi.fn()}
           onAudioMenuChange={vi.fn()}
+          hasSubtitlePicker={false}
+          subtitles={[]}
+          subtitleTrack={null}
+          onChooseSubtitle={vi.fn()}
+          onSubtitleMenuChange={vi.fn()}
         />
       </ThemeProvider>
     );
@@ -639,5 +649,169 @@ describe('PlayerControls — the Audio picker', () => {
     });
 
     expect(screen.queryByRole('button', { name: 'Audio' })).toBeNull();
+  });
+});
+
+/**
+ * 50 — Subtitle picker, Phase 5: "the picker in the player" (issue #439).
+ *
+ * Handed `hasSubtitlePicker` (two **Subtitles** or more), the chrome draws the
+ * **Subtitle picker** in the CC pill's place, its slot after the Audio picker
+ * in the right group: the pill as a menu button, never also a toggle. With one
+ * file it is the toggle as before, with none there is no pill.
+ */
+describe('PlayerControls — the Subtitle picker', () => {
+  const ENGLISH: Subtitle = {
+    id: 's-en',
+    language: 'English',
+    position: 0,
+    path: 'Northwind (1994)/northwind.en.srt',
+  };
+  const SPANISH: Subtitle = {
+    id: 's-es',
+    language: 'Spanish',
+    position: 1,
+    path: 'Northwind (1994)/northwind.es.srt',
+  };
+  const AUDIO_EN: AudioTrack = {
+    index: 0,
+    language: 'English',
+    label: 'English',
+    fileDefault: true,
+    path: 'direct',
+  };
+  const AUDIO_ES: AudioTrack = {
+    index: 1,
+    language: 'Spanish',
+    label: 'Spanish',
+    fileDefault: false,
+    path: 'remux',
+  };
+
+  const pill = () => screen.getByRole('button', { name: 'Subtitles' });
+
+  function renderPicker(
+    overrides: Partial<Parameters<typeof PlayerControls>[0]> = {}
+  ) {
+    return renderControls({
+      hasSubtitles: true,
+      hasSubtitlePicker: true,
+      subtitles: [ENGLISH, SPANISH],
+      subtitleTrack: null,
+      ...overrides,
+    });
+  }
+
+  it('draws the picker in the pill’s place for two files: a menu button, not a toggle', () => {
+    renderPicker();
+
+    expect(screen.getAllByRole('button', { name: 'Subtitles' })).toHaveLength(
+      1
+    );
+    expect(pill().textContent).toContain('CC');
+    expect(pill().getAttribute('aria-haspopup')).toBe('menu');
+    expect(pill().hasAttribute('aria-pressed')).toBe(false);
+  });
+
+  it('draws the toggle with aria-pressed for one file, where two draw the picker', () => {
+    const two = renderPicker();
+    expect(pill().getAttribute('aria-haspopup')).toBe('menu');
+    two.unmount();
+
+    const { onToggleSubtitles } = renderControls({
+      hasSubtitles: true,
+      hasSubtitlePicker: false,
+      subtitles: [ENGLISH],
+      subtitleTrack: ENGLISH,
+      subtitlesOn: false,
+    });
+
+    expect(pill().getAttribute('aria-pressed')).toBe('false');
+    expect(pill().hasAttribute('aria-haspopup')).toBe(false);
+    fireEvent.click(pill());
+    expect(onToggleSubtitles).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('draws no pill for a film with no files, where two draw the picker', () => {
+    const two = renderPicker();
+    expect(pill().getAttribute('aria-haspopup')).toBe('menu');
+    two.unmount();
+
+    renderControls({
+      hasSubtitles: false,
+      hasSubtitlePicker: false,
+      subtitles: [],
+      subtitleTrack: null,
+    });
+
+    expect(screen.queryByRole('button', { name: 'Subtitles' })).toBeNull();
+    expect(screen.queryByText('CC')).toBeNull();
+  });
+
+  it('keeps the pill’s slot: after the Audio picker, before fullscreen', () => {
+    renderPicker({
+      hasAudioTracks: true,
+      audioTracks: [AUDIO_EN, AUDIO_ES],
+      audioTrack: AUDIO_EN,
+    });
+
+    expect(pill().getAttribute('aria-haspopup')).toBe('menu');
+    expect(
+      comesBefore(screen.getByRole('button', { name: 'Audio' }), pill())
+    ).toBe(true);
+    expect(
+      comesBefore(pill(), screen.getByRole('button', { name: 'Fullscreen' }))
+    ).toBe(true);
+  });
+
+  it('opens on Off then the files, the showing one marked, and hands back a choice', () => {
+    const onChooseSubtitle = vi.fn<(choice: Subtitle | null) => void>();
+    renderPicker({
+      subtitleTrack: SPANISH,
+      subtitlesOn: true,
+      onChooseSubtitle,
+    });
+
+    fireEvent.click(pill());
+    const items = screen.getAllByRole('menuitem');
+
+    expect(items.map((item) => item.textContent)).toEqual([
+      'Off',
+      'English',
+      'Spanish',
+    ]);
+    expect(items[2]?.getAttribute('aria-current')).toBe('true');
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'English' }));
+
+    expect(onChooseSubtitle).toHaveBeenCalledWith(ENGLISH);
+  });
+
+  it('marks Off while subtitles are off, and hands back null for it', () => {
+    const onChooseSubtitle = vi.fn<(choice: Subtitle | null) => void>();
+    renderPicker({ subtitleTrack: null, onChooseSubtitle });
+
+    fireEvent.click(pill());
+    const marked = screen
+      .getAllByRole('menuitem')
+      .filter((item) => item.getAttribute('aria-current') === 'true')
+      .map((item) => item.textContent);
+    expect(marked).toEqual(['Off']);
+
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Off' }));
+
+    expect(onChooseSubtitle).toHaveBeenCalledWith(null);
+  });
+
+  it('says when its menu opens and shuts, so the screen can hold the chrome up', () => {
+    const onSubtitleMenuChange = vi.fn<(open: boolean) => void>();
+    renderPicker({ onSubtitleMenuChange });
+
+    fireEvent.click(pill());
+    expect(onSubtitleMenuChange).toHaveBeenLastCalledWith(true);
+
+    fireEvent.keyDown(document, { key: 'Escape' });
+    expect(onSubtitleMenuChange).toHaveBeenLastCalledWith(false);
   });
 });
