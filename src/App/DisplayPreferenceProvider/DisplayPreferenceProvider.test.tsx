@@ -470,3 +470,202 @@ describe('DisplayPreferenceProvider — setTmdbRatings', () => {
     expect(result.current.tmdbRatings).toBe(false);
   });
 });
+
+/**
+ * 49, Start on Series, Phase 4 (issue #429).
+ *
+ * The provider's one read now lands the **Start tab** too, and the hook
+ * answers `startTab` and `setStartTab` beside the two flags. `useHeldFlag`
+ * became `useHeldValue<T>`, the one bargain over any value, so `setStartTab`
+ * keeps it over `/api/settings/start-tab`: shown at once, posted, the echo
+ * kept, the previous tab put back on refusal, never rejecting. `null` until
+ * the read lands (**Blank until it lands**).
+ */
+
+const START_TAB_ROUTE = '/api/settings/start-tab';
+
+const STARTS_ON_MOVIES: Settings = {
+  subtitleLanguage: 'English',
+  audioLanguage: 'English',
+  ultrawideMargins: true,
+  tmdbRatings: false,
+  startTab: 'movies',
+};
+const STARTS_ON_SERIES: Settings = {
+  subtitleLanguage: 'English',
+  audioLanguage: 'English',
+  ultrawideMargins: false,
+  tmdbRatings: true,
+  startTab: 'series',
+};
+
+/** The values posted to the start-tab route so far. */
+function postedStartTabs(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) =>
+        String(input) === START_TAB_ROUTE && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+/** The hook under the provider, its read already landed as `read`. */
+async function renderStartTabLanded(read: Settings) {
+  const rendered = renderPreference();
+  await waitFor(() =>
+    expect(rendered.result.current.startTab).toBe(read.startTab)
+  );
+  return rendered;
+}
+
+describe('DisplayPreferenceProvider, startTab, the read', () => {
+  it('holds null until the read lands', () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+
+    const { result } = renderPreference();
+
+    expect(result.current.startTab).toBeNull();
+  });
+
+  it('hands over the stored tab once the one read lands', async () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+    const { result } = renderPreference();
+
+    await act(async () => {
+      read.settle(okResponse(STARTS_ON_SERIES));
+    });
+
+    await waitFor(() => expect(result.current.startTab).toBe('series'));
+    expect(result.current.ultrawideMargins).toBe(false);
+    expect(result.current.tmdbRatings).toBe(true);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('hands over movies when that is what is stored', async () => {
+    fetchMock.mockResolvedValue(okResponse(STARTS_ON_MOVIES));
+
+    const { result } = renderPreference();
+
+    await waitFor(() => expect(result.current.startTab).toBe('movies'));
+  });
+
+  it('keeps null when the route refuses', async () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+    const { result } = renderPreference();
+
+    await act(async () => {
+      read.settle(serverErrorResponse());
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.startTab).toBeNull();
+  });
+});
+
+describe('DisplayPreferenceProvider, setStartTab', () => {
+  it('shows the new tab at once, before the post has answered', async () => {
+    settledReadHeldWrite(STARTS_ON_MOVIES);
+    const { result } = await renderStartTabLanded(STARTS_ON_MOVIES);
+
+    act(() => {
+      void result.current.setStartTab('series');
+    });
+
+    expect(result.current.startTab).toBe('series');
+  });
+
+  it('posts the tab to the start-tab route, and to no other', async () => {
+    settledReadHeldWrite(STARTS_ON_MOVIES);
+    const { result } = await renderStartTabLanded(STARTS_ON_MOVIES);
+
+    act(() => {
+      void result.current.setStartTab('series');
+    });
+
+    await waitFor(() => expect(postedStartTabs()).toEqual(['series']));
+    expect(postedValues()).toEqual([]);
+    expect(postedTmdbValues()).toEqual([]);
+  });
+
+  it('keeps the tab once the route echoes it', async () => {
+    const write = settledReadHeldWrite(STARTS_ON_MOVIES);
+    const { result } = await renderStartTabLanded(STARTS_ON_MOVIES);
+
+    await act(async () => {
+      const set = result.current.setStartTab('series');
+      write.settle(okResponse({ value: 'series' }));
+      await set;
+    });
+
+    expect(result.current.startTab).toBe('series');
+  });
+
+  it('keeps the echo rather than what was sent: the route stored it', async () => {
+    const write = settledReadHeldWrite(STARTS_ON_MOVIES);
+    const { result } = await renderStartTabLanded(STARTS_ON_MOVIES);
+
+    await act(async () => {
+      const set = result.current.setStartTab('series');
+      write.settle(okResponse({ value: 'movies' }));
+      await set;
+    });
+
+    expect(result.current.startTab).toBe('movies');
+  });
+
+  it('leaves the two flags as they were', async () => {
+    const write = settledReadHeldWrite(STARTS_ON_MOVIES);
+    const { result } = await renderStartTabLanded(STARTS_ON_MOVIES);
+
+    await act(async () => {
+      const set = result.current.setStartTab('series');
+      write.settle(okResponse({ value: 'series' }));
+      await set;
+    });
+
+    expect(result.current.ultrawideMargins).toBe(true);
+    expect(result.current.tmdbRatings).toBe(false);
+  });
+
+  it('puts the previous tab back when the route refuses, without rejecting', async () => {
+    const write = settledReadHeldWrite(STARTS_ON_SERIES);
+    const { result } = await renderStartTabLanded(STARTS_ON_SERIES);
+
+    let outcome: Promise<void> = Promise.resolve();
+    act(() => {
+      outcome = result.current.setStartTab('movies');
+    });
+    expect(result.current.startTab).toBe('movies');
+
+    await act(async () => {
+      write.settle(serverErrorResponse());
+      await expect(outcome).resolves.toBeUndefined();
+    });
+
+    expect(result.current.startTab).toBe('series');
+  });
+
+  it('puts the previous tab back when the request itself fails, without rejecting', async () => {
+    const write = settledReadHeldWrite(STARTS_ON_MOVIES);
+    const { result } = await renderStartTabLanded(STARTS_ON_MOVIES);
+
+    let outcome: Promise<void> = Promise.resolve();
+    act(() => {
+      outcome = result.current.setStartTab('series');
+    });
+
+    await act(async () => {
+      write.refuse(new Error('offline'));
+      await expect(outcome).resolves.toBeUndefined();
+    });
+
+    expect(result.current.startTab).toBe('movies');
+  });
+});
