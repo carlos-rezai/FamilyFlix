@@ -11,6 +11,97 @@ Newest entry first.
 
 ---
 
+## 2026-10-22: Start on Series, the refactor (issue 433)
+
+Sixteen commits against
+`docs/refactor-plans/49-start-on-series-refactor.md`, one per plan commit, the
+initiative's closing round. **10667 tests pass across 643 files**, against
+10653 across 638 at the end of the build (`39adc9d`): five new suites
+(`libraryTabOptions`, `isLibraryTab`, `useLibraryTab`, `makeSettings`,
+`makeDisplayPreferenceApi`), with the server suite's Library tab rows moved
+into `isLibraryTab`'s. `tsc -b --force` is clean. `eslint src server electron`
+reports one error and 148 warnings, against one and 150: the
+`exhaustive-deps` and `jsx-no-useless-fragment` warnings this initiative added
+are gone.
+
+### What shipped
+
+Log 49's step 32: the prototype revision (426, 427), then RED and GREEN each,
+428 to 432. Settings' Display group gains a _Start on_ row, the **Pill tabs**
+the library draws, choosing the **Start tab**; the server stores it under
+`start-tab` and reads anything else as Movies. On the **Launch entry** alone
+`StartTabGate` draws nothing until the read settles, and a Series start
+replaces the entry with the Series tab, so no Movies frame is drawn first.
+Every link and Back keeps its own destination. No migration.
+
+### What each group changed
+
+- **Group 1, one guard per build target** (`a6981c4`, `d09cb60`). The
+  repository reads the Start tab through `choiceOf`, beside `flagOf`, with no
+  guard at all; the routes file keeps its own `isLibraryTab` beside
+  `isMovieSort`, under one widened note, and the `start-tab` route has its
+  siblings' comment.
+- **Group 2, one spelling of the Library tab** (`048bced`, `984e393`,
+  `4fe06b1`, `d8326f8`). `libraryTabOptions()` draws both switches;
+  `isLibraryTab` left the shared types for `src/utils/`, with its own test;
+  `useLibraryTab()` in `src/hooks/` is the one reader of `tab` for the
+  library and search features.
+- **Group 3, the launch** (`122d103`, `93bbad5`, `4ba584f`).
+  `useStartTab` is `useStartTabSettled`; the first entry's key is
+  `FIRST_ENTRY`; `navigate` is a dependency; the gate returns its children.
+- **Group 4, the prose** (`dafb311`, `9463f14`). Two docblocks rewrapped,
+  `saveStartTab`'s second sentence back, and the initiative's 24 em dashes
+  rewritten.
+- **Group 5, test builders** (`d3f4197`, `069ec60`, `a073cc5`).
+  `makeSettings` and `makeDisplayPreferenceApi` in `src/test-support/`,
+  `makeMovie`'s shape, replace the six local factories, the client's 33
+  `Settings` literals and the nine hand-built stubs.
+- **Group 6, the docs** (`9ca80af` and this commit). The checklist ticks step
+  32; the README's tree and the glossary name the new units.
+
+### Where this round left the plan
+
+- **The once-per-mount leaf held with `navigate` listed**, so commit 8 needed
+  no started ref.
+- **Of the 24 em dashes, three were already gone** by commit 11: the server
+  describe commit 4 deleted, and the provider's two, rewrapped in commit 10.
+- **`makeSettings` call sites keep the default a test is named for**, not
+  only the values that differ: `OFF`'s margins, `ENGLISH`'s subtitle
+  language, the frame suite's margins, so a fixture still reads as its intent.
+- **Commit 13's sites were in `App/`, `api/`, `features/settings/`,
+  `features/player/` and `pages/`**; `features/movie-form/`'s only fixture was
+  a `DisplayPreferenceApi`, commit 14's.
+- **The README has no build order sentence** any more; step 32's entry went
+  into the feature checklist, step 31's shape. The README's `settings/` line
+  now names the Display group's three controls, not one.
+- The full suite and `tsc -b --force` ran after every commit, green each
+  time; `eslint` at the end of each group.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the two settings reads at launch,
+`seriesTabPath()` per tab, `ManageLibrary`'s `tab`, the URL writer's omitted
+`'movies'`, the route's derived refusal, em dashes older than this
+initiative, held-response test helpers, the server's `Settings` literals, and
+everything log 49 put out of scope.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **A shared held-response test helper** (`held()`, `servePending()`).
+- **The repo-wide em dash pass**, including the older titles beside the ones
+  this round renamed.
+- **From earlier entries**: the sandbox teardown flake, and the lint error in
+  `EnrichmentReview.test.tsx`.
+
+### The initiative
+
+**Start on Series is done**: the prototype revision (426, 427), the five
+slices (428 to 432) and this round (433). Issue 425 is closed with it.
+
+---
+
 ## 2026-10-21 — Add a show folder — the refactor (issue 421)
 
 Twenty-one commits against
