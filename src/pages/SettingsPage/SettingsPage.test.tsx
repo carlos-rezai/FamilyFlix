@@ -25,7 +25,7 @@ const REPORT: PlaybackCapabilities = {
   ],
 };
 
-/** The household's settings the Playback card's Subtitles half reads. */
+/** The household's settings the Playback card's language rows read. */
 const SETTINGS = makeSettings();
 
 /** The **Storage report** the Storage card reads on mount. */

@@ -301,7 +301,7 @@
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
           seriesMenuOpen:false, seriesDeleteOpen:false, seriesDeleting:false, enSingleKind:'movie', fFound:[], fFoundPick:0,
-          settingsSubAuto:false, settingsSubLang:'English', settingsAudioLang:'English', settingsUltrawide:false, settingsStartTab:this.launchStartTab,
+          settingsSubLang:'English', settingsAudioLang:'English', settingsUltrawide:false, settingsStartTab:this.launchStartTab,
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
             {id:2,name:'AAC Audio',exts:['.mp4','.m4a'],kind:'built-in',size:'—'},
@@ -455,7 +455,6 @@
         removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
         setAudioLang(v){ this.setState({settingsAudioLang:v,openDrop:null}); }
-        toggleSubAuto(){ this.setState(s=>({settingsSubAuto:!s.settingsSubAuto})); }
         toggleUltrawide(){ this.setState(s=>({settingsUltrawide:!s.settingsUltrawide})); }
         setStartTab(t){ this.setState({settingsStartTab:t}); }
 
@@ -1024,7 +1023,6 @@
                 {key:'export',glyph:'⬇',label:'Export to CSV',desc:'Save your whole library out as a spreadsheet backup.',onClick:()=>this.openExport()},
               ],
               codecRow:{ summary:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you', onOpen:()=>this.goCodecs() },
-              subAutoOn:s.settingsSubAuto, onToggleSubAuto:()=>this.toggleSubAuto(),
               ultrawideMargins:s.settingsUltrawide, onToggleUltrawide:()=>this.toggleUltrawide(),
               startTab:s.settingsStartTab, startTabOptions:[{value:'movies',label:'Movies'},{value:'series',label:'Series'}], onStartTab:(t)=>this.setStartTab(t),
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),

@@ -1,5 +1,5 @@
 import { FilterDropdown } from '@/components';
-import { MicrochipIcon, Toggle } from '@/primitives';
+import { MicrochipIcon } from '@/primitives';
 import { LANGUAGE_POOL, type FilterOption } from '@/types';
 
 import { codecSummary } from '../codecView/codecView';
@@ -9,19 +9,11 @@ import {
   Card,
   Divider,
   GroupHeading,
-  ItemDesc,
-  ItemTitle,
   Row,
   RowDesc,
   RowTitle,
 } from '../section.styles';
-import {
-  CodecsRow,
-  ComingSoon,
-  ItemHeader,
-  RowRule,
-  RowTitleLine,
-} from './PlaybackSection.styles';
+import { CodecsRow } from './PlaybackSection.styles';
 
 /**
  * The Settings hub's Playback **Settings group**, from
@@ -32,10 +24,7 @@ import {
  * Pressed, it pushes `/settings/codecs`, the **Codecs page**, which reads the
  * report again for itself (log 26 Q13).
  *
- * Under the row, the second half of the card: the divider; _Subtitles_ with
- * its lede; _Turn on automatically_ beside a **Coming soon** pill over a
- * `Toggle` drawn off and disabled — it stores nothing and presses to nothing,
- * auto-on staying on the roadmap exactly as log 10 decided; a rule; and
+ * Under the row, the second half of the card: the divider and
  * _Preferred subtitle language_ with `FilterDropdown` on the right, the seven
  * names of the **Language pool** as its options and the fetched value as its
  * value. Then a divider and _Preferred audio language_, the same dropdown over
@@ -81,29 +70,6 @@ export function PlaybackSection() {
         />
 
         <Divider />
-
-        <ItemHeader>
-          <ItemTitle>Subtitles</ItemTitle>
-          <ItemDesc>How subtitles behave when a movie has them.</ItemDesc>
-        </ItemHeader>
-
-        <Row>
-          <div>
-            <RowTitleLine>
-              <RowTitle>Turn on automatically</RowTitle>
-              <ComingSoon>Coming soon</ComingSoon>
-            </RowTitleLine>
-            <RowDesc>Show subtitles by default when a movie has them.</RowDesc>
-          </div>
-          <Toggle
-            checked={false}
-            disabled
-            label="Turn on automatically"
-            onToggle={() => undefined}
-          />
-        </Row>
-
-        <RowRule />
 
         <Row $last>
           <div>

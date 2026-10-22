@@ -34,7 +34,7 @@ import {
  * `GET /api/playback/capabilities` as its line (blank until the read lands,
  * blank still after a refusal), and `/settings/codecs` — and leaves what every
  * row is (a button, its chevron, its keys) to `NavigationRow.test.tsx`. The
- * Subtitles half stays under it, as it was.
+ * language rows stay under it.
  *
  * The round trip — an upload on the **Codecs page**, Back, and the new summary
  * in this row — is the App suite's, because it crosses two screens.
@@ -232,8 +232,8 @@ describe('PlaybackSection — pressing the Codecs row', () => {
   });
 });
 
-describe('PlaybackSection — the Subtitles half under the row', () => {
-  it('draws the divider, Subtitles, the Coming soon toggle and Preferred subtitle language after the row', async () => {
+describe('PlaybackSection — the language rows under the row', () => {
+  it('draws the divider, then Preferred subtitle language, after the row', async () => {
     const { container } = renderSection();
     await lineLanded();
     await screen.findByRole('button', {
@@ -241,31 +241,15 @@ describe('PlaybackSection — the Subtitles half under the row', () => {
     });
 
     const row = codecsRow();
+    const subtitleTitle = screen.getByText('Preferred subtitle language');
     const divider = Array.from(container.querySelectorAll('div')).find(
       (element) =>
         getComputedStyle(element).height === '1px' &&
         element.childElementCount === 0 &&
         comesBefore(row, element) &&
-        comesBefore(element, screen.getByText('Subtitles'))
+        comesBefore(element, subtitleTitle)
     );
     expect(divider).toBeDefined();
-    expect(
-      comesBefore(
-        screen.getByText('Subtitles'),
-        screen.getByText('Coming soon')
-      )
-    ).toBe(true);
-    expect(
-      screen
-        .getByRole('switch', { name: 'Turn on automatically' })
-        .getAttribute('aria-disabled')
-    ).toBe('true');
-    expect(
-      comesBefore(
-        screen.getByText('Coming soon'),
-        screen.getByText('Preferred subtitle language')
-      )
-    ).toBe(true);
     expect(screen.getAllByText('Playback')).toHaveLength(1);
   });
 });

@@ -25,10 +25,7 @@ import { makeSettings } from '@/test-support/makeSettings/makeSettings';
  * `page.SettingsPage.dc.html`: the `Playback` **Group heading** over a
  * **Section card** that opens with the **Codecs row**.
  *
- * Under the row, the second half of the card: the `Divider`; _Subtitles_
- * with its lede; _Turn on automatically_ beside a **Coming soon** pill over
- * a `Toggle` drawn `checked={false} disabled` — it stores nothing and presses
- * to nothing, auto-on staying 🧭 exactly as log 10 decided; a rule; and
+ * Under the row, the second half of the card: the `Divider` and
  * _Preferred subtitle language_ with `FilterDropdown` on the right, the seven names of
  * the **Language pool** as its options and the fetched value as its value.
  * The section owns `useSettings`; the pill is not drawn while the settings
@@ -143,8 +140,6 @@ function renderSection() {
   );
 }
 
-const SUBTITLES_LEDE = 'How subtitles behave when a movie has them.';
-const AUTO_ON_DESC = 'Show subtitles by default when a movie has them.';
 const LANGUAGE_DESC = 'Which track to use whenever subtitles are shown.';
 
 /** The _Preferred subtitle language_ pill, by the value it shows — or `null`. */
@@ -167,10 +162,6 @@ const pillLanded = async (value: string) => {
 const openLanguages = () =>
   screen.queryAllByRole('menuitem').map((row) => row.textContent);
 
-/** The auto-on switch. */
-const autoOnSwitch = () =>
-  screen.getByRole('switch', { name: 'Turn on automatically' });
-
 /** Every hairline rule in the card: a 1px-tall block in the soft border ink. */
 function rules(container: HTMLElement): HTMLElement[] {
   return Array.from(container.querySelectorAll('div')).filter((element) => {
@@ -187,80 +178,6 @@ describe('PlaybackSection — the heading', () => {
   });
 });
 
-describe('PlaybackSection — the Subtitles header', () => {
-  it('titles the half Subtitles, in 16px at weight 600, with its lede', () => {
-    renderSection();
-
-    const title = screen.getByText('Subtitles');
-    const style = getComputedStyle(title);
-    expect(style.fontSize).toBe('16px');
-    expect(style.fontWeight).toBe('600');
-    expect(screen.getByText(SUBTITLES_LEDE)).toBeDefined();
-    expect(
-      comesBefore(
-        screen.getByText('Subtitles'),
-        screen.getByText(SUBTITLES_LEDE)
-      )
-    ).toBe(true);
-  });
-});
-
-describe('PlaybackSection — Turn on automatically', () => {
-  it('names the row, in 15px at weight 500, with its description', () => {
-    renderSection();
-
-    const title = screen.getByText('Turn on automatically');
-    const style = getComputedStyle(title);
-    expect(style.fontSize).toBe('15px');
-    expect(style.fontWeight).toBe('500');
-    expect(screen.getByText(AUTO_ON_DESC)).toBeDefined();
-  });
-
-  it('wears the Coming soon pill beside the title', () => {
-    renderSection();
-
-    const pill = screen.getByText('Coming soon');
-    const style = getComputedStyle(pill);
-    expect(style.textTransform).toBe('uppercase');
-    expect(style.fontSize).toBe('11px');
-    expect(comesBefore(screen.getByText('Turn on automatically'), pill)).toBe(
-      true
-    );
-    expect(comesBefore(pill, screen.getByText(AUTO_ON_DESC))).toBe(true);
-  });
-
-  it('draws a disabled switch that is off', () => {
-    renderSection();
-
-    const control = autoOnSwitch();
-    expect(control.getAttribute('aria-checked')).toBe('false');
-    expect(control.getAttribute('aria-disabled')).toBe('true');
-  });
-
-  it('stores nothing and presses to nothing', async () => {
-    renderSection();
-    await pillLanded('English');
-
-    fireEvent.click(autoOnSwitch());
-    fireEvent.keyDown(autoOnSwitch(), { key: ' ' });
-
-    expect(autoOnSwitch().getAttribute('aria-checked')).toBe('false');
-    expect(postedValues()).toEqual([]);
-  });
-
-  it('draws a rule between the two rows', async () => {
-    const { container } = renderSection();
-
-    await pillLanded('English');
-    const rule = rules(container).find(
-      (candidate) =>
-        comesBefore(screen.getByText(AUTO_ON_DESC), candidate) &&
-        comesBefore(candidate, screen.getByText('Preferred subtitle language'))
-    );
-    expect(rule).toBeDefined();
-  });
-});
-
 describe('PlaybackSection — Preferred subtitle language, the row', () => {
   it('names the row, in 15px at weight 500, with its description', () => {
     renderSection();
@@ -272,15 +189,12 @@ describe('PlaybackSection — Preferred subtitle language, the row', () => {
     expect(screen.getByText(LANGUAGE_DESC)).toBeDefined();
   });
 
-  it('draws the rows in the prototype’s order', () => {
+  it('draws no Subtitles header and no auto-on row over it', () => {
     renderSection();
 
-    expect(
-      comesBefore(
-        screen.getByText('Turn on automatically'),
-        screen.getByText('Preferred subtitle language')
-      )
-    ).toBe(true);
+    expect(screen.queryByText('Subtitles')).toBeNull();
+    expect(screen.queryByText('Turn on automatically')).toBeNull();
+    expect(screen.queryByText('Coming soon')).toBeNull();
   });
 });
 
@@ -471,7 +385,7 @@ describe('PlaybackSection — choosing a language', () => {
 
 /**
  * 46 — Audio tracks, Phase 3 (issue #401): the Audio block, from the revised
- * `page.SettingsPage.dc.html`. Under _Subtitles_, a divider, then one row —
+ * `page.SettingsPage.dc.html`. Under the subtitle row, a divider, then one row —
  * _Preferred audio language_ over `FilterDropdown` with the pool's seven
  * names, no item title or lede over it. While the settings read is `null` the row draws
  * its title and lede and leaves only the pill out, as the subtitle row does. A choice is shown at once and posted to
@@ -526,7 +440,7 @@ describe('PlaybackSection — the Audio block', () => {
     expect(comesBefore(title, screen.getByText(AUDIO_DESC))).toBe(true);
   });
 
-  it('sits under Subtitles, behind a divider', async () => {
+  it('sits under the subtitle row, behind a divider', async () => {
     const { container } = renderSection();
     await audioPillLanded('English');
 
@@ -573,11 +487,11 @@ describe('PlaybackSection — the Audio block', () => {
     expect(current.map((row) => row.textContent)).toEqual(['Dutch']);
   });
 
-  it('draws no audio on/off toggle — the one switch is auto-on’s', async () => {
+  it('draws no switch at all', async () => {
     renderSection();
     await audioPillLanded('English');
 
-    expect(screen.getAllByRole('switch')).toEqual([autoOnSwitch()]);
+    expect(screen.queryAllByRole('switch')).toEqual([]);
   });
 });
 
