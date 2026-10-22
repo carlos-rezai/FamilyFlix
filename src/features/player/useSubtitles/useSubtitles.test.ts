@@ -359,3 +359,192 @@ describe('useSubtitles — the Preferred subtitle language', () => {
     expect(settingsRequests()).toEqual([]);
   });
 });
+
+/**
+ * 50, Subtitle picker, Phase 4: "useSubtitles chooses" (issue #438).
+ *
+ * The hook gains the choosing within one open: `choose(row)` shows that row
+ * and turns subtitles on, `choose(null)` turns them off, and a hand pick is
+ * the track `toggleSubtitles` flips over from then on. The single held **Cue
+ * list** becomes one per **Subtitle track**, so switching back asks nothing,
+ * and a list that lands for a track no longer showing is never drawn.
+ */
+
+const SPANISH_CUES: Cue[] = [
+  { start: 1, end: 3, text: 'Buenas noches.' },
+  { start: 5, end: 8, text: 'La luz se apagó.' },
+];
+
+const SWEDISH_CUES: Cue[] = [
+  { start: 1, end: 3, text: 'God kväll.' },
+  { start: 5, end: 8, text: 'Ljuset är släckt.' },
+];
+
+/** Each track's own lines, so the line on screen says which track it came off. */
+function answerPerTrack(
+  overrides: Partial<Record<string, () => Promise<Response>>> = {}
+): void {
+  const lists: Record<string, Cue[]> = {
+    s1: CUES,
+    s2: SWEDISH_CUES,
+    s3: SPANISH_CUES,
+  };
+  fetchMock.mockImplementation((input) => {
+    const url = String(input);
+    if (url === '/api/settings') {
+      return settingsAnswer();
+    }
+    const trackId = url.slice(url.lastIndexOf('/') + 1);
+    const override = overrides[trackId];
+    return override
+      ? override()
+      : Promise.resolve(okResponse(lists[trackId] ?? []));
+  });
+}
+
+describe('useSubtitles: the picker', () => {
+  it('has no picker with zero or one row, and one from two', () => {
+    expect(renderSubtitles([]).result.current.hasSubtitlePicker).toBe(false);
+    expect(renderSubtitles([ENGLISH]).result.current.hasSubtitlePicker).toBe(
+      false
+    );
+    expect(
+      renderSubtitles([ENGLISH, SPANISH]).result.current.hasSubtitlePicker
+    ).toBe(true);
+  });
+
+  it('turns subtitles on and draws the chosen row with one call while off', async () => {
+    answerPerTrack();
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 2, 'English');
+
+    act(() => result.current.choose(SPANISH));
+
+    expect(result.current.subtitlesOn).toBe(true);
+    expect(result.current.track).toEqual(SPANISH);
+    await waitFor(() => {
+      expect(result.current.line).toBe('Buenas noches.');
+    });
+  });
+
+  it('clears the line when Off is chosen', async () => {
+    answerPerTrack();
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 2);
+
+    act(() => result.current.choose(ENGLISH));
+    await waitFor(() => {
+      expect(result.current.line).toBe('Good evening.');
+    });
+    act(() => result.current.choose(null));
+
+    expect(result.current.subtitlesOn).toBe(false);
+    expect(result.current.line).toBeNull();
+  });
+
+  it('toggles back on to the picked row, not the preference', async () => {
+    answerPerTrack();
+    const { result } = renderSubtitles([ENGLISH, SWEDISH], 2, 'English');
+
+    act(() => result.current.choose(SWEDISH));
+    await waitFor(() => {
+      expect(result.current.line).toBe('God kväll.');
+    });
+    act(() => result.current.toggleSubtitles());
+    act(() => result.current.toggleSubtitles());
+
+    expect(result.current.track).toEqual(SWEDISH);
+    await waitFor(() => {
+      expect(result.current.line).toBe('God kväll.');
+    });
+  });
+});
+
+describe('useSubtitles: a Cue list held per track', () => {
+  it('asks once per track when switching English, Spanish, English', async () => {
+    answerPerTrack();
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 2);
+
+    act(() => result.current.choose(ENGLISH));
+    await waitFor(() => {
+      expect(result.current.line).toBe('Good evening.');
+    });
+    act(() => result.current.choose(SPANISH));
+    await waitFor(() => {
+      expect(result.current.line).toBe('Buenas noches.');
+    });
+    act(() => result.current.choose(ENGLISH));
+
+    expect(result.current.line).toBe('Good evening.');
+    await settled();
+    expect(cueRequests()).toEqual([
+      '/api/movies/m1/subtitles/s1',
+      '/api/movies/m1/subtitles/s3',
+    ]);
+  });
+
+  it('never draws a late list for a track no longer showing, but keeps it', async () => {
+    let landEnglish: (response: Response) => void = () => undefined;
+    answerPerTrack({
+      s1: () =>
+        new Promise<Response>((resolve) => {
+          landEnglish = resolve;
+        }),
+    });
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 2);
+
+    act(() => result.current.choose(ENGLISH));
+    act(() => result.current.choose(SPANISH));
+    await waitFor(() => {
+      expect(result.current.line).toBe('Buenas noches.');
+    });
+    await act(async () => {
+      landEnglish(okResponse(CUES));
+    });
+    await settled();
+
+    expect(result.current.track).toEqual(SPANISH);
+    expect(result.current.line).toBe('Buenas noches.');
+
+    act(() => result.current.choose(ENGLISH));
+
+    await waitFor(() => {
+      expect(result.current.line).toBe('Good evening.');
+    });
+    expect(cueRequests()).toHaveLength(2);
+  });
+
+  it('draws no line for a failed fetch and keeps working', async () => {
+    answerPerTrack({ s1: () => Promise.reject(new Error('boom')) });
+    const { result } = renderSubtitles([ENGLISH, SPANISH], 2);
+
+    act(() => result.current.choose(ENGLISH));
+    await settled();
+
+    expect(result.current.subtitlesOn).toBe(true);
+    expect(result.current.line).toBeNull();
+
+    act(() => result.current.choose(SPANISH));
+
+    await waitFor(() => {
+      expect(result.current.line).toBe('Buenas noches.');
+    });
+  });
+
+  it('follows the position after a seek on whichever track shows', async () => {
+    answerPerTrack();
+    const { result, rerender } = renderSubtitles([ENGLISH, SPANISH], 2);
+
+    act(() => result.current.choose(SPANISH));
+    await waitFor(() => {
+      expect(result.current.line).toBe('Buenas noches.');
+    });
+    rerender({ at: 6 });
+
+    expect(result.current.line).toBe('La luz se apagó.');
+
+    act(() => result.current.choose(ENGLISH));
+
+    await waitFor(() => {
+      expect(result.current.line).toBe('The light is out.');
+    });
+  });
+});
