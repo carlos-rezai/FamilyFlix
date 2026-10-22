@@ -191,7 +191,7 @@ familyflix/
 │   │   ├── Fab/            # the FAB: the accent circle in the bottom-right corner, one of two glyphs; presentational, as it does not know there is a threshold
 │   │   └── BackToTop/      # the control over a scrolling container: the Scroll threshold, the passive listener, the read on attach, the press; mounts the FAB or nothing
 │   ├── features/       # Domain UI + logic co-located
-│   │   ├── library/        # browse grid, genre rows, and the Movies / Series tabs, with the Series tab under series/
+│   │   ├── library/        # browse grid, genre rows, and the Movies / Series tabs, with the Series tab under series/; StartTabGate and useStartTabSettled, which open the app on the Start tab
 │   │   ├── search/          # search-as-you-type, filters
 │   │   ├── movie-detail/    # the movie page, its ⋯ menu, and the Delete dialog the menu opens
 │   │   │   ├── EditMenu/          # Edit details, and the red Delete row
@@ -203,16 +203,16 @@ familyflix/
 │   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs; MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, useImportMode, useShowFolderPick, readEpisodeTag, titleFromFilename, and createSeries, readShowFolder and containingFolder in its api/; and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView; the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan; and the Export dialog: ExportModal, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
 │   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
-│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins Toggle); CodecManager (the Codecs page's screen) over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
+│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins and TMDB ratings Toggles, and the Start on Pill tabs); CodecManager (the Codecs page's screen) over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture: what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
 │   │   └── collections/     # playlists (roadmap)
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
 │   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage, CodecsPage and LibraryFoldersPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
-│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, and useEnrichmentSummary)
+│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, useEnrichmentSummary, and useLibraryTab, the Library tab the URL names)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks and accentScale among them)
+│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks, accentScale, isLibraryTab and libraryTabOptions among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 ├── release/            # gitignored: the Installer, and win-unpacked/, the Packaged layout
 └── docs/

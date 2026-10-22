@@ -61,7 +61,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Audio tracks — English by default, switch in player | ✅ Done    |
 | Manage library — every title, edit, clear, delete   | ✅ Done    |
 | Add a show folder — a show by its folder, numbered  | ✅ Done    |
-| Start on Series — open FamilyFlix on the Series tab | 🔜 Planned |
+| Start on Series — open FamilyFlix on the Series tab | ✅ Done    |
 | Subtitle picker — choose a track in the player      | 🔜 Planned |
 | Loading states — spinners and an FF loading overlay | 🔜 Planned |
 | Scan new folders — and sync only what a run added   | 🔜 Planned |
@@ -228,3 +228,15 @@ show by hand meant picking its episodes one file at a time. It is done
     numbered for you. Both adds now link by default — the video stays where
     it lies — and copy only a file outside every Library folder. The show's
     or film's folder is recorded, so a later scan never adds it twice.
+
+Step 32 came out of a household that mostly watches series: FamilyFlix
+always opened on Movies, so every evening began with a press of _Series_. It
+is done (design log 49):
+
+32. ✅ **Start on Series**: Settings → Display gains a _Start on_ row, the
+    same Movies / Series switch the library draws, choosing which tab
+    FamilyFlix opens on. With Series chosen the app opens straight onto the
+    Series tab, with nothing of the Movies tab drawn first; until a choice
+    is made, or if it can't be read, it opens on Movies as before. Every
+    link and Back keeps its own destination: the logo and _Back to library_
+    still mean Movies.
