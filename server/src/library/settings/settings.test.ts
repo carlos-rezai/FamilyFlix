@@ -74,6 +74,7 @@ describe('library: settings() — the default applied', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -87,6 +88,7 @@ describe('library: settings() — the default applied', () => {
       'audioLanguage',
       'ultrawideMargins',
       'tmdbRatings',
+      'startTab',
     ]);
   });
 
@@ -110,6 +112,7 @@ describe('library: setSubtitleLanguage — the upsert', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -162,6 +165,7 @@ describe('library: setSubtitleLanguage — the upsert', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 });
@@ -208,6 +212,7 @@ describe('library: tmdbKey / setTmdbKey — the TMDB key', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -271,6 +276,7 @@ describe('library: enrichmentLastSyncedAt — when the library last synced', () 
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
     expect(storage.tmdbKey()).toBe('kept-key');
   });
@@ -387,6 +393,7 @@ describe('library: ultrawideMargins / setUltrawideMargins — the frame preferen
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -494,6 +501,7 @@ describe('library: tmdbRatings / setTmdbRatings — the TMDB ratings preference'
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: false,
+      startTab: 'movies',
     });
   });
 
@@ -648,6 +656,7 @@ describe('library: audioLanguage / setAudioLanguage — the audio preference', (
       audioLanguage: 'German',
       ultrawideMargins: true,
       tmdbRatings: false,
+      startTab: 'movies',
     });
   });
 

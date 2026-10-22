@@ -91,6 +91,8 @@ import {
 } from './importBody/importBody';
 import {
   DEFAULT_MOVIE_SORT,
+  isLibraryTab,
+  LIBRARY_TABS,
   MOVIE_SORTS,
   type EpisodeRead,
   type ExportField,
@@ -2073,6 +2075,19 @@ export function createApiRouter(
     }
 
     storage.setTmdbRatings(value);
+    res.json({ value });
+  });
+
+  router.post('/settings/start-tab', (req: Request, res: Response) => {
+    const { value } = (req.body ?? {}) as { value?: unknown };
+    if (!isLibraryTab(value)) {
+      res
+        .status(400)
+        .json({ error: `Body must be { value: ${LIBRARY_TABS.join(' | ')} }` });
+      return;
+    }
+
+    storage.setStartTab(value);
     res.json({ value });
   });
 

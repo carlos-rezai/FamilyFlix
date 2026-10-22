@@ -1,3 +1,5 @@
+import type { LibraryTab } from './browse';
+
 /**
  * The household's settings — what the Settings hub keeps, on the wire and in
  * the `settings` table of the library's database, so a preference travels with
@@ -46,6 +48,9 @@ export const DEFAULT_ULTRAWIDE_MARGINS = false;
 /** _Fill in ratings from TMDB_ until the household turns it off: on. */
 export const DEFAULT_TMDB_RATINGS = true;
 
+/** The **Start tab** until the household chooses another: Movies. */
+export const DEFAULT_START_TAB: LibraryTab = 'movies';
+
 /**
  * What `GET /api/settings` answers: every preference the household keeps, the
  * default already applied. `subtitleLanguage` and `audioLanguage` are strings
@@ -61,6 +66,8 @@ export interface Settings {
   ultrawideMargins: boolean;
   /** Whether an unrated title draws its TMDB score as its stars. */
   tmdbRatings: boolean;
+  /** Which **Library tab** the app opens on. */
+  startTab: LibraryTab;
 }
 
 /**

@@ -2,11 +2,14 @@ import { useSearchParams } from 'react-router-dom';
 
 import { PillTabs } from '@/components';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
+import { LIBRARY_TABS, type LibraryTab } from '@/types';
 
-const TABS = [
-  { value: 'movies', label: 'Movies' },
-  { value: 'series', label: 'Series' },
-] as const;
+const LABELS: Record<LibraryTab, string> = {
+  movies: 'Movies',
+  series: 'Series',
+};
+
+const TABS = LIBRARY_TABS.map((value) => ({ value, label: LABELS[value] }));
 
 /**
  * The Movies / Series switch — the **Pill tabs**, first in the library

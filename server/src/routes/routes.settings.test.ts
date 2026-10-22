@@ -382,6 +382,7 @@ describe('GET /api/settings', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
     expect(DEFAULT_SUBTITLE_LANGUAGE).toBe('English');
   });
@@ -395,6 +396,7 @@ describe('GET /api/settings', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 });
@@ -421,6 +423,7 @@ describe('POST /api/settings/subtitle-language', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -436,6 +439,7 @@ describe('POST /api/settings/subtitle-language', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -452,6 +456,7 @@ describe('POST /api/settings/subtitle-language', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -467,6 +472,7 @@ describe('POST /api/settings/subtitle-language', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -526,6 +532,7 @@ describe('GET /api/settings — ultrawideMargins', () => {
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 });
@@ -569,6 +576,7 @@ describe('POST /api/settings/ultrawide-margins', () => {
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -638,6 +646,7 @@ describe('GET /api/settings — tmdbRatings', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
   });
 
@@ -697,6 +706,7 @@ describe('POST /api/settings/tmdb-ratings', () => {
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: false,
+      startTab: 'movies',
     });
   });
 
@@ -767,7 +777,7 @@ describe('GET /api/settings — audioLanguage', () => {
     expect((await readSettings(baseUrl)).audioLanguage).toBe('German');
   });
 
-  it('answers exactly the four preferences, in order', async () => {
+  it('answers exactly the five preferences, in order', async () => {
     const { baseUrl } = freshApi();
 
     expect(Object.keys(await readSettings(baseUrl))).toEqual([
@@ -775,6 +785,7 @@ describe('GET /api/settings — audioLanguage', () => {
       'audioLanguage',
       'ultrawideMargins',
       'tmdbRatings',
+      'startTab',
     ]);
   });
 });
@@ -822,6 +833,7 @@ describe('POST /api/settings/audio-language', () => {
       audioLanguage: 'Dutch',
       ultrawideMargins: true,
       tmdbRatings: false,
+      startTab: 'movies',
     });
   });
 

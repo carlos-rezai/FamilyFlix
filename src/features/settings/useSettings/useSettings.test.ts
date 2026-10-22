@@ -54,6 +54,7 @@ const ENGLISH: Settings = {
   audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 
 /** A request that answers only when the test says so. */
@@ -135,6 +136,7 @@ describe('useSettings — the read', () => {
           audioLanguage: 'English',
           ultrawideMargins: false,
           tmdbRatings: true,
+          startTab: 'movies',
         })
       );
     });
@@ -151,6 +153,7 @@ describe('useSettings — the read', () => {
         audioLanguage: 'English',
         ultrawideMargins: true,
         tmdbRatings: true,
+        startTab: 'movies',
       })
     );
 
@@ -159,6 +162,7 @@ describe('useSettings — the read', () => {
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
+      startTab: 'movies',
     });
 
     expect(result.current).not.toHaveProperty('settings');
@@ -251,12 +255,14 @@ describe('useSettings — chooseSubtitleLanguage', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
     const { result } = await renderLanded({
       subtitleLanguage: 'French',
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
 
     await act(async () => {
@@ -336,6 +342,7 @@ const FRENCH_AUDIO: Settings = {
   audioLanguage: 'French',
   ultrawideMargins: false,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 
 describe('useSettings — audioLanguage, the read', () => {

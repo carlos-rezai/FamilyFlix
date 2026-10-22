@@ -53,6 +53,7 @@ const SETTINGS: Settings = {
   audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 
 describe('fetchSettings', () => {

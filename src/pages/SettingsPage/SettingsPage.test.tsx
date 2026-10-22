@@ -30,6 +30,7 @@ const SETTINGS: Settings = {
   audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 
 /** The **Storage report** the Storage card reads on mount. */

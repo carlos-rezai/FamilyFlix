@@ -127,6 +127,7 @@ function household(overrides: Partial<Settings> = {}): Settings {
     audioLanguage: 'English',
     ultrawideMargins: false,
     tmdbRatings: true,
+    startTab: 'movies',
     ...overrides,
   };
 }

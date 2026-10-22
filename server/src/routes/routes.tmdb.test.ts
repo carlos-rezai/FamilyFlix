@@ -266,6 +266,7 @@ describe('GET /api/settings — not widened', () => {
       'audioLanguage',
       'ultrawideMargins',
       'tmdbRatings',
+      'startTab',
     ]);
     expect(JSON.stringify(body)).not.toContain(V3_KEY);
   });

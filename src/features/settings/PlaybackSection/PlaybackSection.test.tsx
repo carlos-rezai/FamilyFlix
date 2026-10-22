@@ -88,6 +88,7 @@ function answerWith(
     audioLanguage: 'English',
     ultrawideMargins: false,
     tmdbRatings: true,
+    startTab: 'movies',
   }
 ) {
   const read = held();
@@ -331,6 +332,7 @@ describe('PlaybackSection — Preferred subtitle language, the pill', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
 
     renderSection();
@@ -345,6 +347,7 @@ describe('PlaybackSection — Preferred subtitle language, the pill', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
 
     renderSection();
@@ -394,6 +397,7 @@ describe('PlaybackSection — Preferred subtitle language, the pill', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
     renderSection();
     const pill = await pillLanded('French');
@@ -567,6 +571,7 @@ describe('PlaybackSection — the Audio block', () => {
       audioLanguage: 'German',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
 
     renderSection();
@@ -591,6 +596,7 @@ describe('PlaybackSection — the Audio block', () => {
       audioLanguage: 'Dutch',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     });
     renderSection();
 

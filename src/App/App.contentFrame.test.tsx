@@ -56,6 +56,7 @@ beforeEach(() => {
     audioLanguage: 'English',
     ultrawideMargins: true,
     tmdbRatings: true,
+    startTab: 'movies',
   };
   fetchMock =
     vi.fn<
@@ -171,6 +172,7 @@ describe('App — the Content frame on a framed route', () => {
         audioLanguage: 'English',
         ultrawideMargins: true,
         tmdbRatings: true,
+        startTab: 'movies',
       });
     });
 
@@ -289,6 +291,7 @@ describe('App — the Toggle on /settings', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: true,
+      startTab: 'movies',
     };
     const user = userEvent.setup();
     renderApp('/settings');

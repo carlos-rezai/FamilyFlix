@@ -10,6 +10,7 @@ import type {
   EpisodeRead,
   HomePayload,
   LibraryQuery,
+  LibraryTab,
   Movie,
   MoviePatch,
   MovieQuery,
@@ -291,6 +292,11 @@ export interface LibraryStorage {
    */
   setTmdbRatings(on: boolean): void;
   /**
+   * Store the **Start tab**: an upsert; `settings()` reads it back with the
+   * default, Movies, applied to an absent or unknown value.
+   */
+  setStartTab(tab: LibraryTab): void;
+  /**
    * The maintainer's TMDB key, `null` when none is stored — no default. Kept
    * in the same `settings` table but not a household preference, so
    * `settings()` never carries it.
@@ -505,6 +511,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setAudioLanguage: settingsRepository.setAudioLanguage,
     setUltrawideMargins: settingsRepository.setUltrawideMargins,
     setTmdbRatings: settingsRepository.setTmdbRatings,
+    setStartTab: settingsRepository.setStartTab,
     tmdbKey: settingsRepository.tmdbKey,
     setTmdbKey: settingsRepository.setTmdbKey,
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,

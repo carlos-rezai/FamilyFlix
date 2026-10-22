@@ -53,12 +53,14 @@ const OFF: Settings = {
   audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 const ON: Settings = {
   subtitleLanguage: 'English',
   audioLanguage: 'English',
   ultrawideMargins: true,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 
 /** A request that answers only when the test says so. */
@@ -290,12 +292,14 @@ const RATINGS_ON: Settings = {
   audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 const RATINGS_OFF: Settings = {
   subtitleLanguage: 'English',
   audioLanguage: 'English',
   ultrawideMargins: true,
   tmdbRatings: false,
+  startTab: 'movies',
 };
 
 /** The values posted to the tmdb-ratings route so far. */

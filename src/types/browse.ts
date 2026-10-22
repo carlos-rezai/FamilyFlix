@@ -46,6 +46,25 @@ export const MOVIE_SORTS = [
 export type MovieSort = (typeof MOVIE_SORTS)[number];
 
 /**
+ * The **Library tabs**: the two halves of the library, Movies then Series,
+ * spelled once. The **Library tabs** switch draws them, and the **Start tab**
+ * is chosen from them; `LibraryTab` is derived from the list, the
+ * `MOVIE_SORTS` precedent.
+ */
+export const LIBRARY_TABS = ['movies', 'series'] as const;
+
+/** One of the tabs in {@link LIBRARY_TABS}. */
+export type LibraryTab = (typeof LIBRARY_TABS)[number];
+
+/** Whether `value` names one of the {@link LIBRARY_TABS}, exactly. */
+export function isLibraryTab(value: unknown): value is LibraryTab {
+  return (
+    typeof value === 'string' &&
+    (LIBRARY_TABS as readonly string[]).includes(value)
+  );
+}
+
+/**
  * Every order `listMovies` can be asked for — the wire's five plus
  * `last-watched`, which orders by the resume shelf's stamp: most recently
  * watched first, then every unstamped movie in {@link MOVIE_SORTS}'

@@ -1,9 +1,12 @@
 import type { SqliteDatabase } from '../../db';
 import {
   DEFAULT_AUDIO_LANGUAGE,
+  DEFAULT_START_TAB,
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
+  isLibraryTab,
+  type LibraryTab,
   type Settings,
 } from '@/types';
 
@@ -15,6 +18,8 @@ const AUDIO_LANGUAGE_KEY = 'audio-language';
 const ULTRAWIDE_MARGINS_KEY = 'ultrawide-margins';
 /** Whether an unrated title draws its TMDB score — `'1'` / `'0'`. */
 const TMDB_RATINGS_KEY = 'tmdb-ratings';
+/** The **Start tab**, stored as the tab's own name. */
+const START_TAB_KEY = 'start-tab';
 /** The maintainer's TMDB key — beside the preferences, never one of them. */
 const TMDB_KEY = 'tmdb-api-key';
 /** When a Sync last reached review — the library's, not a preference. */
@@ -31,6 +36,7 @@ export interface SettingsRepository {
   setAudioLanguage(language: string): void;
   setUltrawideMargins(on: boolean): void;
   setTmdbRatings(on: boolean): void;
+  setStartTab(tab: LibraryTab): void;
   tmdbKey(): string | null;
   setTmdbKey(key: string): void;
   enrichmentLastSyncedAt(): string | null;
@@ -74,7 +80,18 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
         DEFAULT_ULTRAWIDE_MARGINS
       ),
       tmdbRatings: flagOf(TMDB_RATINGS_KEY, DEFAULT_TMDB_RATINGS),
+      startTab: startTab(),
     };
+  }
+
+  /** The stored **Start tab**, or Movies when none, or no tab, is stored. */
+  function startTab(): LibraryTab {
+    const stored = valueOf(START_TAB_KEY);
+    return isLibraryTab(stored) ? stored : DEFAULT_START_TAB;
+  }
+
+  function setStartTab(tab: LibraryTab): void {
+    upsertValue.run(START_TAB_KEY, tab);
   }
 
   function setUltrawideMargins(on: boolean): void {
@@ -115,6 +132,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     setAudioLanguage,
     setUltrawideMargins,
     setTmdbRatings,
+    setStartTab,
     tmdbKey,
     setTmdbKey,
     enrichmentLastSyncedAt,

@@ -15,7 +15,12 @@
  * can have and the names it can be checked against are one declaration. Both
  * build targets import them as values.
  */
-export { MOVIE_SORTS, DEFAULT_MOVIE_SORT } from './browse';
+export {
+  MOVIE_SORTS,
+  DEFAULT_MOVIE_SORT,
+  LIBRARY_TABS,
+  isLibraryTab,
+} from './browse';
 export {
   EXPORT_FORMATS,
   EXPORT_COLUMNS,
@@ -35,6 +40,7 @@ export {
   DEFAULT_AUDIO_LANGUAGE,
   DEFAULT_ULTRAWIDE_MARGINS,
   DEFAULT_TMDB_RATINGS,
+  DEFAULT_START_TAB,
 } from './settings';
 export {
   ENRICH_FIELDS,
@@ -59,6 +65,7 @@ export type {
 } from './series';
 export type {
   MovieSort,
+  LibraryTab,
   ListSort,
   MovieQuery,
   LibraryQuery,

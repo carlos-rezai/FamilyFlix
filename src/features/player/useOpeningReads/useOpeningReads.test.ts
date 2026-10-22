@@ -57,6 +57,7 @@ const DEFAULT_SETTINGS: Settings = {
   audioLanguage: 'English',
   ultrawideMargins: false,
   tmdbRatings: true,
+  startTab: 'movies',
 };
 
 /** Answer each of the three endpoints with what the test says it says. */

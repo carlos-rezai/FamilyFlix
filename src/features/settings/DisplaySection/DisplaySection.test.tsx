@@ -50,6 +50,7 @@ beforeEach(() => {
     audioLanguage: 'English',
     ultrawideMargins: false,
     tmdbRatings: true,
+    startTab: 'movies',
   };
   fetchMock = vi
     .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
@@ -140,6 +141,7 @@ describe('DisplaySection — the Toggle', () => {
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
+      startTab: 'movies',
     };
     renderSection();
 
@@ -162,6 +164,7 @@ describe('DisplaySection — the Toggle', () => {
       audioLanguage: 'English',
       ultrawideMargins: true,
       tmdbRatings: true,
+      startTab: 'movies',
     };
     const user = userEvent.setup();
     renderSection();
@@ -287,6 +290,7 @@ describe('DisplaySection — Fill in ratings from TMDB, the Toggle', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: false,
+      startTab: 'movies',
     };
     renderSection();
 
@@ -310,6 +314,7 @@ describe('DisplaySection — Fill in ratings from TMDB, the Toggle', () => {
       audioLanguage: 'English',
       ultrawideMargins: false,
       tmdbRatings: false,
+      startTab: 'movies',
     };
     const user = userEvent.setup();
     renderSection();
