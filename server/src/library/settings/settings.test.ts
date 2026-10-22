@@ -33,7 +33,6 @@ import {
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
-  isLibraryTab,
   LANGUAGE_POOL,
   LIBRARY_TABS,
   type PoolLanguage,
@@ -682,33 +681,11 @@ describe('library: audioLanguage / setAudioLanguage — the audio preference', (
 
 // 49 — Start on Series, Phase 3 (issue #428): the **Start tab**. A fifth
 // preference under the key `start-tab`, a choice of two rather than a flag:
-// the **Library tabs** are spelled once as `LIBRARY_TABS`, `LibraryTab` is
-// derived from it, and `isLibraryTab` is the guard the read and the route
-// share. `settings()` answers `startTab`, reading nothing, or a stored value
-// outside the list, as `DEFAULT_START_TAB` (Movies); `setStartTab` is an
-// upsert. A Factory reset empties the table, so Movies returns.
-describe('the Library tabs — LIBRARY_TABS, LibraryTab and isLibraryTab', () => {
-  it.each(['movies', 'series'])('recognises %s as a Library tab', (tab) => {
-    expect(isLibraryTab(tab)).toBe(true);
-  });
-
-  it.each([
-    ['an unknown name', 'documentaries'],
-    ['a different case', 'Series'],
-    ['an empty string', ''],
-    ['a number', 1],
-    ['a null', null],
-    ['an absent value', undefined],
-  ])('refuses %s', (_, value) => {
-    expect(isLibraryTab(value)).toBe(false);
-  });
-
-  it('defaults the Start tab to Movies, a member of the list', () => {
-    expect(DEFAULT_START_TAB).toBe('movies');
-    expect(LIBRARY_TABS).toContain(DEFAULT_START_TAB);
-  });
-});
-
+// the **Library tabs** are spelled once as `LIBRARY_TABS`, and `LibraryTab`
+// is derived from it. `settings()` answers `startTab`, reading nothing, or a
+// stored value outside the list, as `DEFAULT_START_TAB` (Movies);
+// `setStartTab` is an upsert. A Factory reset empties the table, so Movies
+// returns.
 describe('library: startTab / setStartTab — the Start tab preference', () => {
   /** A migrated in-memory handle and the repository over it. */
   function repositoryOverRawDb() {
@@ -730,6 +707,7 @@ describe('library: startTab / setStartTab — the Start tab preference', () => {
 
     expect(storage.settings().startTab).toBe('movies');
     expect(storage.settings().startTab).toBe(DEFAULT_START_TAB);
+    expect(LIBRARY_TABS).toContain(DEFAULT_START_TAB);
   });
 
   it('does not write the default down when it is read', () => {

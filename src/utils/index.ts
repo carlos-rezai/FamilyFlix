@@ -24,6 +24,7 @@ export { spellYearSpan } from './spellYearSpan/spellYearSpan';
 export { toScalarPercent } from './toScalarPercent/toScalarPercent';
 export { toRuntimeSeconds } from './toRuntimeSeconds/toRuntimeSeconds';
 export { isMovieSort } from './isMovieSort/isMovieSort';
+export { isLibraryTab } from './isLibraryTab/isLibraryTab';
 export { libraryTabOptions } from './libraryTabOptions/libraryTabOptions';
 export { range } from './range/range';
 export {

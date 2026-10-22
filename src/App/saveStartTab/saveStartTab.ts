@@ -1,5 +1,6 @@
 import { postValue } from '@/api/postValue/postValue';
-import { isLibraryTab, type LibraryTab } from '@/types';
+import type { LibraryTab } from '@/types';
+import { isLibraryTab } from '@/utils';
 
 /** Where the **Start tab** is written. */
 const START_TAB_ENDPOINT = '/api/settings/start-tab';

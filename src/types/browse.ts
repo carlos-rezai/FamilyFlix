@@ -56,14 +56,6 @@ export const LIBRARY_TABS = ['movies', 'series'] as const;
 /** One of the tabs in {@link LIBRARY_TABS}. */
 export type LibraryTab = (typeof LIBRARY_TABS)[number];
 
-/** Whether `value` names one of the {@link LIBRARY_TABS}, exactly. */
-export function isLibraryTab(value: unknown): value is LibraryTab {
-  return (
-    typeof value === 'string' &&
-    (LIBRARY_TABS as readonly string[]).includes(value)
-  );
-}
-
 /**
  * Every order `listMovies` can be asked for — the wire's five plus
  * `last-watched`, which orders by the resume shelf's stamp: most recently
