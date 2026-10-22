@@ -5,7 +5,7 @@ import {
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
-  isLibraryTab,
+  LIBRARY_TABS,
   type LibraryTab,
   type Settings,
 } from '@/types';
@@ -64,6 +64,19 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     return stored === null ? fallback : stored === '1';
   }
 
+  /**
+   * The choice stored under `key` when it is one of `choices`, else
+   * `fallback`: a stored value no longer on the list reads as the default.
+   */
+  function choiceOf<T extends string>(
+    key: string,
+    choices: readonly T[],
+    fallback: T
+  ): T {
+    const stored = valueOf(key);
+    return choices.find((choice) => choice === stored) ?? fallback;
+  }
+
   /** The flag under `key` written as `'1'` / `'0'`. */
   function setFlag(key: string, on: boolean): void {
     upsertValue.run(key, on ? '1' : '0');
@@ -80,18 +93,8 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
         DEFAULT_ULTRAWIDE_MARGINS
       ),
       tmdbRatings: flagOf(TMDB_RATINGS_KEY, DEFAULT_TMDB_RATINGS),
-      startTab: startTab(),
+      startTab: choiceOf(START_TAB_KEY, LIBRARY_TABS, DEFAULT_START_TAB),
     };
-  }
-
-  /** The stored **Start tab**, or Movies when none, or no tab, is stored. */
-  function startTab(): LibraryTab {
-    const stored = valueOf(START_TAB_KEY);
-    return isLibraryTab(stored) ? stored : DEFAULT_START_TAB;
-  }
-
-  function setStartTab(tab: LibraryTab): void {
-    upsertValue.run(START_TAB_KEY, tab);
   }
 
   function setUltrawideMargins(on: boolean): void {
@@ -100,6 +103,10 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
 
   function setTmdbRatings(on: boolean): void {
     setFlag(TMDB_RATINGS_KEY, on);
+  }
+
+  function setStartTab(tab: LibraryTab): void {
+    upsertValue.run(START_TAB_KEY, tab);
   }
 
   function setSubtitleLanguage(language: string): void {
