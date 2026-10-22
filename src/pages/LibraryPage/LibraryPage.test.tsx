@@ -12,9 +12,18 @@ import { MemoryRouter } from 'react-router-dom';
 
 import LibraryPage from './LibraryPage';
 import { theme } from '@/styles/theme';
-import type { HomePayload, HomeRow, SeriesHomePayload } from '@/types';
+import type {
+  HomePayload,
+  HomeRow,
+  LibraryTab,
+  SeriesHomePayload,
+  Settings,
+} from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 
 const HOME_PAYLOAD: HomeRow[] = [
@@ -69,6 +78,10 @@ beforeEach(() => {
   // per genre fails loudly.
   fetchMock.mockImplementation((input) => {
     const url = String(input);
+    // The Start tab's read on the Launch entry, refused: the Movies tab draws.
+    if (url === '/api/settings') {
+      return Promise.resolve(serverErrorResponse());
+    }
     if (url.includes('/api/genres')) {
       return Promise.resolve(genreListResponse());
     }
@@ -97,7 +110,7 @@ function failNextHome() {
   homeQueue.push(() => Promise.reject(new Error('network down')));
 }
 
-function renderPage(url = '/') {
+function mountPage(url = '/') {
   return render(
     <MemoryRouter initialEntries={[url]}>
       <ThemeProvider theme={theme}>
@@ -105,6 +118,16 @@ function renderPage(url = '/') {
       </ThemeProvider>
     </MemoryRouter>
   );
+}
+
+/**
+ * Mounts the page and waits for the **Launch entry**'s settings read to settle
+ * (refused here unless a test says otherwise), so the header is drawn.
+ */
+async function renderPage(url = '/') {
+  const view = mountPage(url);
+  await screen.findByRole('button', { name: /familyflix/i });
+  return view;
 }
 
 const logo = () => screen.getByRole('button', { name: /familyflix/i });
@@ -131,7 +154,7 @@ describe('LibraryPage', () => {
   it('mounts the genre rows inside the layout chrome', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
 
     expect(logo()).toBeDefined();
     expect(gear()).toBeDefined();
@@ -141,7 +164,7 @@ describe('LibraryPage', () => {
   it('mounts the search bar in the header, beside the chrome that was always there', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
 
     expect(searchBox()).toBeDefined();
     expect(logo()).toBeDefined();
@@ -154,7 +177,7 @@ describe('LibraryPage', () => {
     // in the URL reaches both without the page storing anything.
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage('/?q=northwind');
+    await renderPage('/?q=northwind');
 
     expect(searchBox().value).toBe('northwind');
     await waitFor(() => expect(requestedQuery().get('q')).toBe('northwind'));
@@ -164,7 +187,7 @@ describe('LibraryPage', () => {
     failNextHome();
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
 
     // Loading.
     expect(logo()).toBeDefined();
@@ -196,7 +219,7 @@ describe('LibraryPage — the header controls', () => {
   it('mounts the sort dropdown in the header, beside the search box and the gear', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
 
     expect(sortPill()).toBeDefined();
     expect(searchBox()).toBeDefined();
@@ -209,16 +232,21 @@ describe('LibraryPage — the header controls', () => {
     // holding anything.
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage('/?sort=a-z');
+    await renderPage('/?sort=a-z');
 
     expect(sortPill('Title (A–Z)')).toBeDefined();
     await waitFor(() => expect(requestedQuery().get('sort')).toBe('a-z'));
   });
 
   it('keeps the sort dropdown rendered while the library is still loading', async () => {
-    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    // Everything but the settings read, which is refused, stays in flight.
+    fetchMock.mockImplementation((input) =>
+      String(input) === '/api/settings'
+        ? Promise.resolve(serverErrorResponse())
+        : new Promise<Response>(() => undefined)
+    );
 
-    renderPage();
+    await renderPage();
 
     expect(sortPill()).toBeDefined();
     expect(searchBox()).toBeDefined();
@@ -250,6 +278,9 @@ describe('LibraryPage — the genre dropdown in the header', () => {
   function serveBoth(rows: HomeRow[] = HOME_PAYLOAD) {
     fetchMock.mockImplementation((input) => {
       const url = String(input);
+      if (url === '/api/settings') {
+        return Promise.resolve(serverErrorResponse());
+      }
       if (url.includes('/api/genres')) {
         return Promise.resolve(genreListResponse());
       }
@@ -271,7 +302,7 @@ describe('LibraryPage — the genre dropdown in the header', () => {
   it('mounts all three controls in the header, beside the gear', async () => {
     serveBoth();
 
-    renderPage();
+    await renderPage();
 
     expect(genrePill()).toBeDefined();
     expect(sortPill()).toBeDefined();
@@ -285,7 +316,7 @@ describe('LibraryPage — the genre dropdown in the header', () => {
     // holding anything.
     serveBoth();
 
-    renderPage('/?genre=Action');
+    await renderPage('/?genre=Action');
 
     expect(genrePill('Action')).toBeDefined();
     await waitFor(() => expect(homeQuery().get('genre')).toBe('Action'));
@@ -296,13 +327,16 @@ describe('LibraryPage — the genre dropdown in the header', () => {
     // the library's.
     fetchMock.mockImplementation((input) => {
       const url = String(input);
+      if (url === '/api/settings') {
+        return Promise.resolve(serverErrorResponse());
+      }
       if (url.includes('/api/genres')) {
         return Promise.reject(new Error('offline'));
       }
       return Promise.resolve(homeResponse(HOME_PAYLOAD));
     });
 
-    renderPage();
+    await renderPage();
 
     expect(await screen.findByRole('region', { name: 'Action' })).toBeDefined();
     expect(genrePill()).toBeDefined();
@@ -327,7 +361,7 @@ describe('LibraryPage — the rating dropdown in the header', () => {
   it('mounts all four controls in the header, beside the gear', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
 
     expect(searchBox()).toBeDefined();
     expect(genrePill()).toBeDefined();
@@ -342,7 +376,7 @@ describe('LibraryPage — the rating dropdown in the header', () => {
     // holding anything.
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage('/?rating=6');
+    await renderPage('/?rating=6');
 
     expect(ratingPill('3+ stars')).toBeDefined();
     await waitFor(() => expect(requestedQuery().get('rating')).toBe('6'));
@@ -352,7 +386,7 @@ describe('LibraryPage — the rating dropdown in the header', () => {
     // "Highest rated comedies with a lighthouse in them" is a single request.
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage('/?q=lighthouse&genre=Action&sort=a-z&rating=8');
+    await renderPage('/?q=lighthouse&genre=Action&sort=a-z&rating=8');
 
     await screen.findByRole('region', { name: 'Action' });
     const asked = requestedQuery();
@@ -368,7 +402,7 @@ describe('LibraryPage — the rating dropdown in the header', () => {
       { genre: 'Action', count: 214, movies: [makeMovie({ id: 'a1' })] },
     ]);
 
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Action' });
 
     fireEvent.click(ratingPill());
@@ -385,9 +419,14 @@ describe('LibraryPage — the rating dropdown in the header', () => {
   });
 
   it('keeps the rating dropdown rendered while the library is still loading', async () => {
-    fetchMock.mockImplementation(() => new Promise<Response>(() => undefined));
+    // Everything but the settings read, which is refused, stays in flight.
+    fetchMock.mockImplementation((input) =>
+      String(input) === '/api/settings'
+        ? Promise.resolve(serverErrorResponse())
+        : new Promise<Response>(() => undefined)
+    );
 
-    renderPage();
+    await renderPage();
 
     expect(ratingPill()).toBeDefined();
   });
@@ -407,7 +446,7 @@ describe('LibraryPage — the gear is the only maintainer door', () => {
   it('offers exactly one control that leads to Settings', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Action' });
 
     expect(screen.getAllByRole('button', { name: 'Settings' })).toHaveLength(1);
@@ -416,7 +455,7 @@ describe('LibraryPage — the gear is the only maintainer door', () => {
   it('offers no route to the movie form at all', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Action' });
 
     expect(screen.queryByRole('button', { name: /add a movie/i })).toBeNull();
@@ -426,7 +465,7 @@ describe('LibraryPage — the gear is the only maintainer door', () => {
   it('links to neither /add nor /settings from anywhere in the body', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Action' });
 
     // The gear navigates rather than linking, so any anchor pointing at a
@@ -444,7 +483,7 @@ describe('LibraryPage — the gear is the only maintainer door', () => {
   it('offers no export control', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
     await screen.findByRole('region', { name: 'Action' });
 
     expect(screen.queryByRole('button', { name: /export/i })).toBeNull();
@@ -490,6 +529,9 @@ describe('LibraryPage — the Series tab', () => {
     // The Series tab reads its own endpoint; the Movies tab keeps its queue.
     fetchMock.mockImplementation((input) => {
       const url = String(input);
+      if (url === '/api/settings') {
+        return Promise.resolve(serverErrorResponse());
+      }
       if (url.includes('/api/genres') || url.includes('/api/series/genres')) {
         return Promise.resolve(genreListResponse());
       }
@@ -515,7 +557,7 @@ describe('LibraryPage — the Series tab', () => {
   it('mounts the switch first in the header, ahead of the search box', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage();
+    await renderPage();
 
     expect(comesBefore(tabs(), searchBox())).toBe(true);
     expect(
@@ -527,7 +569,7 @@ describe('LibraryPage — the Series tab', () => {
   });
 
   it('draws All series under the Series tab, and no genre rows', async () => {
-    renderPage('/?tab=series');
+    await renderPage('/?tab=series');
 
     expect(
       await screen.findByRole('heading', { name: 'All series' })
@@ -542,7 +584,7 @@ describe('LibraryPage — the Series tab', () => {
   it('switches to Series, clearing the search box and renaming it', async () => {
     respondWithRows(HOME_PAYLOAD);
 
-    renderPage('/?q=northwind');
+    await renderPage('/?q=northwind');
     expect(searchBox().value).toBe('northwind');
 
     act(() => {
@@ -553,5 +595,221 @@ describe('LibraryPage — the Series tab', () => {
       await screen.findByRole('heading', { name: 'All series' })
     ).toBeDefined();
     expect(seriesBox().value).toBe('');
+  });
+});
+
+/**
+ * 49 — Start on Series, Phase 7 (issue #432): the launch, gated. The page
+ * composes `StartTabGate` around its `MainLayout`, so on the **Launch entry**
+ * (bare `/`, the router's first entry) nothing is drawn, the header included,
+ * until the settings read settles: the **Start tab** Series opens on the
+ * Series tab with no Movies frame before it; Movies, or a refused read, opens
+ * on the Movies tab as always.
+ */
+describe('LibraryPage — the launch on the Start tab', () => {
+  const tabs = () => screen.getByRole('group', { name: 'Library' });
+  const pill = (label: 'Movies' | 'Series') =>
+    within(tabs()).getByRole('button', { name: label });
+
+  /** What `GET /api/settings` answers this test: a Start tab, or a refusal. */
+  type SettingsAnswer = LibraryTab | 'refused';
+
+  function settingsWith(startTab: LibraryTab): Settings {
+    return {
+      subtitleLanguage: 'English',
+      audioLanguage: 'English',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+      startTab,
+    };
+  }
+
+  const ONE_SERIES: SeriesHomePayload = {
+    series: [
+      {
+        id: 's1',
+        tmdbId: null,
+        title: 'Harbor & Vine',
+        year: 2021,
+        endYear: null,
+        synopsis: null,
+        creator: 'Mara Quinn',
+        cast: [],
+        rating: 8,
+        isFavorite: false,
+        posterPath: null,
+        backdropPath: null,
+        originalTitle: null,
+        tmdbScore: null,
+        genres: [],
+        watched: false,
+        createdAt: '2026-09-23T00:00:00.000Z',
+        updatedAt: '2026-09-23T00:00:00.000Z',
+      },
+    ],
+    episodeCount: 2,
+    continueWatching: [],
+  };
+
+  /**
+   * Serves the settings read, held until the returned `land` is called, and
+   * the two tabs' own endpoints; the Movies tab keeps its queue.
+   */
+  function serveLaunch(
+    answer: SettingsAnswer,
+    seriesPayload: SeriesHomePayload = ONE_SERIES
+  ): { land: () => Promise<void> } {
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url === '/api/settings') {
+        return held.then(() =>
+          answer === 'refused'
+            ? serverErrorResponse()
+            : okResponse(settingsWith(answer))
+        );
+      }
+      if (url.includes('/api/genres') || url.includes('/api/series/genres')) {
+        return Promise.resolve(genreListResponse());
+      }
+      if (url.includes('/api/series')) {
+        return Promise.resolve(okResponse(seriesPayload));
+      }
+      if (url.includes('/api/home')) {
+        const next = homeQueue.shift();
+        return next
+          ? next()
+          : Promise.reject(new Error(`Unqueued home request: ${url}`));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    return {
+      land: () =>
+        act(async () => {
+          release();
+        }),
+    };
+  }
+
+  function homeRequests(): number {
+    return fetchMock.mock.calls
+      .map(([input]) => String(input))
+      .filter((asked) => asked.includes('/api/home')).length;
+  }
+
+  /**
+   * Watches the document for the Movies pill pressed or a Movies genre row,
+   * from before the first render to the end of the test: "at any point" is
+   * every frame, not only the ones the test happens to look at.
+   */
+  function watchForMovies(): { seen: () => boolean; stop: () => void } {
+    let seen = false;
+    const look = () => {
+      const pressedMovies = Array.from(
+        document.querySelectorAll('button[aria-pressed="true"]')
+      ).some((button) => button.textContent?.trim() === 'Movies');
+      const actionRow = screen.queryByRole('region', { name: 'Action' });
+      if (pressedMovies || actionRow !== null) {
+        seen = true;
+      }
+    };
+    const observer = new MutationObserver(look);
+    observer.observe(document.body, {
+      subtree: true,
+      childList: true,
+      attributes: true,
+    });
+    return {
+      seen: () => {
+        look();
+        return seen;
+      },
+      stop: () => observer.disconnect(),
+    };
+  }
+
+  it('draws nothing, header included, while the settings read is pending', () => {
+    serveLaunch('series');
+
+    mountPage();
+
+    expect(screen.queryByRole('banner')).toBeNull();
+    expect(screen.queryByRole('button', { name: /familyflix/i })).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Library' })).toBeNull();
+  });
+
+  it('with Series stored, draws the Series tab first and never a Movies row or a pressed Movies pill', async () => {
+    const { land } = serveLaunch('series');
+    const movies = watchForMovies();
+
+    mountPage();
+    await land();
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(
+      await screen.findByRole('button', { name: 'Harbor & Vine' })
+    ).toBeDefined();
+    expect(pill('Series').getAttribute('aria-pressed')).toBe('true');
+    expect(pill('Movies').getAttribute('aria-pressed')).toBe('false');
+    expect(homeRequests()).toBe(0);
+    expect(movies.seen()).toBe(false);
+    movies.stop();
+  });
+
+  it('with Movies stored, draws the Movies tab', async () => {
+    respondWithRows(HOME_PAYLOAD);
+    const { land } = serveLaunch('movies');
+
+    mountPage();
+    await land();
+
+    expect(await screen.findByRole('region', { name: 'Action' })).toBeDefined();
+    expect(pill('Movies').getAttribute('aria-pressed')).toBe('true');
+    expect(screen.queryByRole('heading', { name: 'All series' })).toBeNull();
+  });
+
+  it('with the read refused, draws the Movies tab', async () => {
+    respondWithRows(HOME_PAYLOAD);
+    const { land } = serveLaunch('refused');
+
+    mountPage();
+    await land();
+
+    expect(await screen.findByRole('region', { name: 'Action' })).toBeDefined();
+    expect(pill('Movies').getAttribute('aria-pressed')).toBe('true');
+  });
+
+  it('with Movies stored, a library that fails to load shows its usual RetryableFailure', async () => {
+    failNextHome();
+    const { land } = serveLaunch('movies');
+
+    mountPage();
+    await land();
+
+    expect(await screen.findByText('Couldn’t load your library')).toBeDefined();
+    expect(screen.getByRole('button', { name: /retry/i })).toBeDefined();
+  });
+
+  it('with Series stored and no series, draws the Series tab’s own empty face', async () => {
+    const { land } = serveLaunch('series', {
+      series: [],
+      episodeCount: 0,
+      continueWatching: [],
+    });
+
+    mountPage();
+    await land();
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(await screen.findByText('0 series · 0 episodes')).toBeDefined();
+    expect(pill('Series').getAttribute('aria-pressed')).toBe('true');
+    expect(homeRequests()).toBe(0);
   });
 });

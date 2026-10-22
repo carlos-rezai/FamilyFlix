@@ -1940,3 +1940,268 @@ describe('App — the enrichment screen', () => {
     expect(pathname()).toBe('/enrich');
   });
 });
+
+/**
+ * 49 — Start on Series, Phase 7 (issue #432): the launch, gated, through the
+ * real route table. With the **Start tab** Series stored, the **Launch entry**
+ * opens on the Series tab with nothing behind it; every other way onto `/`
+ * keeps its own destination and draws at once, with no settings read to wait
+ * on: the logo, _Back to library_ and the movie page's **Landing** on the
+ * Movies tab, a series delete, the series add and the series page's
+ * no-history Back on the Series tab.
+ */
+describe('App — the launch on the Start tab', () => {
+  const SERIES: Series[] = [
+    {
+      id: 'sv1',
+      tmdbId: null,
+      title: 'Harbor & Vine',
+      year: 2019,
+      endYear: 2023,
+      synopsis: null,
+      creator: 'Mara Quinn',
+      cast: [],
+      rating: 8,
+      isFavorite: false,
+      posterPath: null,
+      backdropPath: null,
+      originalTitle: null,
+      tmdbScore: null,
+      genres: [],
+      watched: false,
+      createdAt: '2026-09-23T00:00:00.000Z',
+      updatedAt: '2026-09-23T00:00:00.000Z',
+    },
+  ];
+
+  /**
+   * Every settings read answers Series once `settingsOpen` is true; until
+   * then each is held. The tests that are about "no wait" leave later reads
+   * held, so a destination that waited on one would never draw.
+   */
+  let holdLaterReads: boolean;
+  let settingsAnswered: number;
+
+  beforeEach(() => {
+    holdLaterReads = false;
+    settingsAnswered = 0;
+    const movies = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (url === '/api/settings') {
+        if (holdLaterReads && settingsAnswered > 0) {
+          return new Promise<Response>(() => undefined);
+        }
+        settingsAnswered += 1;
+        return Promise.resolve(
+          okResponse({
+            subtitleLanguage: 'English',
+            audioLanguage: 'English',
+            ultrawideMargins: false,
+            tmdbRatings: true,
+            startTab: 'series',
+          })
+        );
+      }
+      if (url === '/api/series' && method === 'POST') {
+        return Promise.resolve(createdResponse(SERIES[0]));
+      }
+      if (url.includes('/api/series/genres')) {
+        return Promise.resolve(okResponse({ total: 0, genres: [] }));
+      }
+      if (url === '/api/movies/gone') {
+        return Promise.resolve(
+          new Response(JSON.stringify({ error: 'Movie not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' },
+          })
+        );
+      }
+      const detail = url.match(/\/api\/series\/([^/?]+)$/);
+      if (detail) {
+        if (method === 'DELETE') {
+          return Promise.resolve(new Response(null, { status: 204 }));
+        }
+        const series = SERIES.find((candidate) => candidate.id === detail[1]);
+        const payload: SeriesDetail | undefined = series && {
+          series,
+          seasons: [],
+          next: null,
+        };
+        return Promise.resolve(
+          payload ? okResponse(payload) : new Response(null, { status: 404 })
+        );
+      }
+      if (url.includes('/api/series')) {
+        const payload: SeriesHomePayload = {
+          series: SERIES,
+          episodeCount: 0,
+          continueWatching: [],
+        };
+        return Promise.resolve(okResponse(payload));
+      }
+      if (movies === undefined) {
+        return Promise.reject(new Error(`Unexpected request: ${url}`));
+      }
+      return movies(input, init);
+    });
+  });
+
+  const libraryTabs = () => screen.getByRole('group', { name: 'Library' });
+  const pressed = (label: 'Movies' | 'Series') =>
+    within(libraryTabs())
+      .getByRole('button', { name: label })
+      .getAttribute('aria-pressed');
+
+  it('opens on the Series tab with Series stored, and draws no Movies row', async () => {
+    renderApp();
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('?tab=series');
+    expect(pressed('Series')).toBe('true');
+    expect(screen.queryByRole('region', { name: 'Action' })).toBeNull();
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes('/api/home')
+      )
+    ).toBe(false);
+  });
+
+  it('after opening on Series, Back from a series lands on the Series tab', async () => {
+    renderApp();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Harbor & Vine' })
+    );
+    await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' });
+
+    await pressBack();
+
+    await waitFor(() => expect(search()).toBe('?tab=series'));
+    expect(pathname()).toBe('/');
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+  });
+
+  it('after opening on Series, switches to Movies as always', async () => {
+    renderApp();
+    await screen.findByRole('heading', { name: 'All series' });
+
+    act(() => {
+      within(libraryTabs()).getByRole('button', { name: 'Movies' }).click();
+    });
+
+    expect(
+      await screen.findByRole('heading', { name: 'Action' })
+    ).toBeDefined();
+    expect(pressed('Movies')).toBe('true');
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('');
+  });
+
+  it('lands the logo on the Movies tab, with no wait', async () => {
+    renderApp('/?tab=series');
+    await screen.findByRole('heading', { name: 'All series' });
+    holdLaterReads = true;
+
+    fireEvent.click(screen.getByRole('button', { name: /familyflix/i }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Action' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('');
+    expect(pressed('Movies')).toBe('true');
+  });
+
+  it('lands Back to library on the Movies tab, with no wait', async () => {
+    renderApp('/movie/gone');
+    holdLaterReads = true;
+
+    fireEvent.click(
+      await screen.findByRole('link', { name: 'Back to library' })
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'Action' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('');
+  });
+
+  it('lands the movie page’s Landing on the Movies tab, with no wait', async () => {
+    renderApp('/movie/a1');
+    await screen.findByRole('heading', { level: 1, name: 'Northwind' });
+    holdLaterReads = true;
+
+    await pressBack();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Action' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('');
+  });
+
+  it('lands the series page’s no-history Back on the Series tab, with no wait', async () => {
+    renderApp('/series/sv1');
+    await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' });
+    holdLaterReads = true;
+
+    await pressBack();
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('?tab=series');
+  });
+
+  it('lands a series delete on the Series tab, with no wait', async () => {
+    renderApp('/series/sv1');
+    await screen.findByRole('heading', { level: 1, name: 'Harbor & Vine' });
+    holdLaterReads = true;
+
+    fireEvent.click(screen.getByRole('button', { name: 'More options' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Delete series' }));
+    const dialog = screen.getByRole('dialog', {
+      name: 'Delete “Harbor & Vine”?',
+    });
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Delete series' })
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('?tab=series');
+  });
+
+  it('lands the series add on the Series tab, with no wait', async () => {
+    renderApp('/add?kind=series');
+    await screen.findByLabelText(/add episode files/i);
+    holdLaterReads = true;
+
+    await userEvent.upload(
+      screen.getByLabelText(/add episode files/i),
+      [
+        new File(['video bytes'], 'Harbor.and.Vine.S01E01.Pilot.mkv', {
+          type: 'video/x-matroska',
+        }),
+      ],
+      { applyAccept: false }
+    );
+    fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'All series' })
+    ).toBeDefined();
+    expect(pathname()).toBe('/');
+    expect(search()).toBe('?tab=series');
+  });
+});

@@ -161,7 +161,9 @@ describe('App — the Content frame on a framed route', () => {
 
   it('draws no cap while the read has not landed, and the cap once it lands on', async () => {
     settingsRead = 'held';
-    renderApp('/');
+    // The library off the Launch entry: on bare `/` the held read would also
+    // hold the Start tab's gate, and nothing would be drawn to look at.
+    renderApp('/?tab=movies');
     const title = (await screen.findAllByText('Northwind'))[0];
 
     expect(framesAround(title)).toEqual([]);
