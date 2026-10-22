@@ -91,7 +91,6 @@ import {
 } from './importBody/importBody';
 import {
   DEFAULT_MOVIE_SORT,
-  isLibraryTab,
   LIBRARY_TABS,
   MOVIE_SORTS,
   type EpisodeRead,
@@ -102,6 +101,7 @@ import {
   type GenreQuery,
   type LibraryFolder,
   type LibraryQuery,
+  type LibraryTab,
   type Movie,
   type MovieSort,
   type NewEpisode,
@@ -398,17 +398,25 @@ function queryString(value: unknown): string | undefined {
 }
 
 /**
- * Whether a query parameter names a sort this API accepts.
+ * Whether a query parameter names a sort this API accepts, and whether a body
+ * names one of the **Library tabs**.
  *
- * The list is the shared one, so a sort order the repository can order by can
- * never be one this layer rejects. The guard itself stays local rather than
- * importing `src/utils/isMovieSort`: the server build includes the shared types
- * and nothing else of the frontend, and widening it to share one `.includes()`
- * would couple both build targets for less than it costs. The vocabulary was
- * the duplication that mattered.
+ * Each list is the shared one, so a value the repository can store can never
+ * be one this layer rejects. The guards themselves stay local rather than
+ * importing `src/utils/isMovieSort` and `src/utils/isLibraryTab`: the server
+ * build includes the shared types and nothing else of the frontend, and
+ * widening it to share one `.includes()` would couple both build targets for
+ * less than it costs. The vocabulary was the duplication that mattered.
  */
 function isMovieSort(value: string): value is MovieSort {
   return (MOVIE_SORTS as readonly string[]).includes(value);
+}
+
+function isLibraryTab(value: unknown): value is LibraryTab {
+  return (
+    typeof value === 'string' &&
+    (LIBRARY_TABS as readonly string[]).includes(value)
+  );
 }
 
 /**
@@ -2078,6 +2086,10 @@ export function createApiRouter(
     res.json({ value });
   });
 
+  // The **Start tab**: the `tmdb-ratings` route's sibling, the same
+  // Single-signal write. A valid body is exactly one of the **Library tabs**,
+  // so a different case, an unknown name and a non-string are refused rather
+  // than coerced, and the refusal names the list it checked.
   router.post('/settings/start-tab', (req: Request, res: Response) => {
     const { value } = (req.body ?? {}) as { value?: unknown };
     if (!isLibraryTab(value)) {
