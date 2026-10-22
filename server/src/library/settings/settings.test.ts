@@ -29,10 +29,14 @@ import {
 } from '@/test-support/shippingSources/shippingSources';
 import {
   DEFAULT_AUDIO_LANGUAGE,
+  DEFAULT_START_TAB,
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
+  isLibraryTab,
   LANGUAGE_POOL,
+  LIBRARY_TABS,
+  type LibraryTab,
   type PoolLanguage,
   type Settings,
 } from '@/types';
@@ -665,5 +669,160 @@ describe('library: audioLanguage / setAudioLanguage — the audio preference', (
     storage.reset();
 
     expect(storage.settings().audioLanguage).toBe('English');
+  });
+});
+
+// 49 — Start on Series, Phase 3 (issue #428): the **Start tab**. A fifth
+// preference under the key `start-tab`, a choice of two rather than a flag:
+// the **Library tabs** are spelled once as `LIBRARY_TABS`, `LibraryTab` is
+// derived from it, and `isLibraryTab` is the guard the read and the route
+// share. `settings()` answers `startTab`, reading nothing, or a stored value
+// outside the list, as `DEFAULT_START_TAB` (Movies); `setStartTab` is an
+// upsert. A Factory reset empties the table, so Movies returns.
+describe('the Library tabs — LIBRARY_TABS, LibraryTab and isLibraryTab', () => {
+  it('lists Movies then Series', () => {
+    const tabs: readonly LibraryTab[] = LIBRARY_TABS;
+
+    expect(tabs).toEqual(['movies', 'series']);
+  });
+
+  it.each(['movies', 'series'])('recognises %s as a Library tab', (tab) => {
+    expect(isLibraryTab(tab)).toBe(true);
+  });
+
+  it.each([
+    ['an unknown name', 'documentaries'],
+    ['a different case', 'Series'],
+    ['an empty string', ''],
+    ['a number', 1],
+    ['a null', null],
+    ['an absent value', undefined],
+  ])('refuses %s', (_, value) => {
+    expect(isLibraryTab(value)).toBe(false);
+  });
+
+  it('defaults the Start tab to Movies, a member of the list', () => {
+    expect(DEFAULT_START_TAB).toBe('movies');
+    expect(LIBRARY_TABS).toContain(DEFAULT_START_TAB);
+  });
+});
+
+describe('library: startTab / setStartTab — the Start tab preference', () => {
+  /** A migrated in-memory handle and the repository over it. */
+  function repositoryOverRawDb() {
+    const db = track(openDatabase(':memory:'));
+    return { db, repository: createSettings(db) };
+  }
+
+  /** How many rows the settings table holds under `key`. */
+  function rowsUnder(db: SqliteDatabase, key: string): number {
+    return (
+      db
+        .prepare('SELECT COUNT(*) AS count FROM settings WHERE key = ?')
+        .get(key) as { count: number }
+    ).count;
+  }
+
+  it('answers movies on a fresh database — the shared default', () => {
+    const storage = freshStorage();
+
+    expect(storage.settings().startTab).toBe('movies');
+    expect(storage.settings().startTab).toBe(DEFAULT_START_TAB);
+  });
+
+  it('does not write the default down when it is read', () => {
+    const { db, repository } = repositoryOverRawDb();
+
+    expect(repository.settings().startTab).toBe('movies');
+
+    expect(rowsUnder(db, 'start-tab')).toBe(0);
+  });
+
+  it('stores series and reads it back', () => {
+    const storage = freshStorage();
+
+    storage.setStartTab('series');
+
+    expect(storage.settings().startTab).toBe('series');
+  });
+
+  it('round-trips series then movies', () => {
+    const storage = freshStorage();
+    storage.setStartTab('series');
+
+    storage.setStartTab('movies');
+
+    expect(storage.settings().startTab).toBe('movies');
+  });
+
+  it("stores the value under 'start-tab' as the tab's own name", () => {
+    const { db, repository } = repositoryOverRawDb();
+
+    repository.setStartTab('series');
+
+    const row = db
+      .prepare('SELECT value FROM settings WHERE key = ?')
+      .get('start-tab') as { value: string } | undefined;
+    expect(row?.value).toBe('series');
+  });
+
+  it('upserts a repeated write rather than failing on the key', () => {
+    const { db, repository } = repositoryOverRawDb();
+    repository.setStartTab('series');
+
+    expect(() => repository.setStartTab('series')).not.toThrow();
+    expect(repository.settings().startTab).toBe('series');
+    expect(rowsUnder(db, 'start-tab')).toBe(1);
+  });
+
+  it.each(['documentaries', 'Series', ''])(
+    'reads a hand-stored %j as movies',
+    (nonsense) => {
+      const { db, repository } = repositoryOverRawDb();
+      db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
+        'start-tab',
+        nonsense
+      );
+
+      expect(repository.settings().startTab).toBe('movies');
+    }
+  );
+
+  it('leaves the other preferences untouched', () => {
+    const storage = freshStorage();
+    storage.setSubtitleLanguage('French');
+    storage.setAudioLanguage('German');
+    storage.setUltrawideMargins(true);
+    storage.setTmdbRatings(false);
+
+    storage.setStartTab('series');
+
+    expect(storage.settings()).toEqual({
+      subtitleLanguage: 'French',
+      audioLanguage: 'German',
+      ultrawideMargins: true,
+      tmdbRatings: false,
+      startTab: 'series',
+    });
+  });
+
+  it('survives closing and reopening the database — it is in the backup', () => {
+    const path = tempDbPath();
+    const first = track(createSqliteStorage(path));
+    first.setStartTab('series');
+    first.close();
+
+    const second = track(createSqliteStorage(path));
+
+    expect(second.settings().startTab).toBe('series');
+  });
+
+  it('returns to movies after a Factory reset', () => {
+    const storage = freshStorage();
+    storage.setStartTab('series');
+
+    storage.reset();
+
+    expect(storage.settings().startTab).toBe('movies');
   });
 });

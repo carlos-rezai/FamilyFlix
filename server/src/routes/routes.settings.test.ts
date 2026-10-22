@@ -1548,3 +1548,115 @@ describe('DELETE /api/playback/component — what the slot refuses', () => {
     );
   });
 });
+
+// 49 — Start on Series, Phase 3 (issue #428): the **Start tab** on the same
+// pair. `GET /api/settings` carries `startTab`, Movies when no row is stored;
+// `POST /api/settings/start-tab { value }` is a **Single-signal write**, the
+// `tmdb-ratings` route's sibling, answering `200 { value }` for a **Library
+// tab** and `400` for anything else, leaving the stored value as it was. (A
+// Factory reset putting Movies back is the library suite's: this harness's
+// fixed slot cannot be emptied.)
+
+/** The write, with whatever body the test wants on the wire. */
+const postStartTab = (baseUrl: string, body: unknown) =>
+  fetch(`${baseUrl}/api/settings/start-tab`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+/** The write with no body on the wire at all. */
+const postStartTabBare = (baseUrl: string) =>
+  fetch(`${baseUrl}/api/settings/start-tab`, { method: 'POST' });
+
+describe('GET /api/settings — startTab', () => {
+  it('answers movies when no row is stored', async () => {
+    const { baseUrl } = freshApi();
+
+    expect(await readSettings(baseUrl)).toEqual({
+      subtitleLanguage: DEFAULT_SUBTITLE_LANGUAGE,
+      audioLanguage: 'English',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+      startTab: 'movies',
+    });
+  });
+
+  it('answers the stored tab when the row is there', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setStartTab('series');
+
+    expect((await readSettings(baseUrl)).startTab).toBe('series');
+  });
+});
+
+describe('POST /api/settings/start-tab', () => {
+  it.each(['movies', 'series'])('echoes %s as JSON', async (value) => {
+    const { baseUrl } = freshApi();
+
+    const response = await postStartTab(baseUrl, { value });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({ value });
+  });
+
+  it('shows series on the next GET', async () => {
+    const { baseUrl } = freshApi();
+
+    await postStartTab(baseUrl, { value: 'series' });
+
+    expect((await readSettings(baseUrl)).startTab).toBe('series');
+  });
+
+  it('shows movies on the next GET after series', async () => {
+    const { baseUrl } = freshApi();
+    await postStartTab(baseUrl, { value: 'series' });
+
+    await postStartTab(baseUrl, { value: 'movies' });
+
+    expect((await readSettings(baseUrl)).startTab).toBe('movies');
+  });
+
+  it('persists — the repository answers what was written', async () => {
+    const { storage, baseUrl } = freshApi();
+
+    await postStartTab(baseUrl, { value: 'series' });
+
+    expect(storage.settings().startTab).toBe('series');
+  });
+
+  it('answers 400 with an error for a missing body, storing nothing', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setStartTab('series');
+
+    const response = await postStartTabBare(baseUrl);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: unknown };
+    expect(typeof payload.error).toBe('string');
+    expect((payload.error as string).length).toBeGreaterThan(0);
+    expect(storage.settings().startTab).toBe('series');
+  });
+
+  it.each([
+    ['a missing value', {}],
+    ['an unknown tab', { value: 'documentaries' }],
+    ['a different case', { value: 'Movies' }],
+    ['an empty string', { value: '' }],
+    ['a number', { value: 1 }],
+    ['a boolean', { value: true }],
+    ['a null', { value: null }],
+  ])('answers 400 with an error for %s, storing nothing', async (_, body) => {
+    const { storage, baseUrl } = freshApi();
+    storage.setStartTab('series');
+
+    const response = await postStartTab(baseUrl, body);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: unknown };
+    expect(typeof payload.error).toBe('string');
+    expect((payload.error as string).length).toBeGreaterThan(0);
+    expect(storage.settings().startTab).toBe('series');
+  });
+});
