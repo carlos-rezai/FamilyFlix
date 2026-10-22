@@ -19,17 +19,18 @@ import {
   url,
 } from '@/test-support/LocationProbe/LocationProbe';
 
-import { useStartTab } from './useStartTab';
+import { useStartTabSettled } from './useStartTabSettled';
 
 /**
  * 49 — Start on Series, Phase 6 (issue #431): the **Launch entry**'s decision.
  *
- * `useStartTab()` answers whether the browse home may draw. Off the Launch
- * entry (a deep link, `/?tab=movies`, a search query, a non-default location
- * key) it answers `true` at once and reads nothing. On it (bare `/`, no query,
- * `location.key === 'default'`) it reads the settings route itself, once, and
- * answers `false` until the read settles: the **Start tab** Series replaces the
- * entry with `/?tab=series`; Movies, or a refused read, leaves `/` alone.
+ * `useStartTabSettled()` answers whether the Launch entry is settled. Off
+ * the Launch entry (a deep link, `/?tab=movies`, a search query, a
+ * non-default location key) it answers `true` at once and reads nothing. On it
+ * (bare `/`, no query, `location.key === 'default'`) it reads the settings
+ * route itself, once, and answers `false` until the read settles: the
+ * **Start tab** Series replaces the entry with `/?tab=series`; Movies, or a
+ * refused read, leaves `/` alone.
  *
  * It reads the route rather than the provider's value because it must tell a
  * refusal from a value still on its way (log 49 Q13), `useOpeningReads`'s
@@ -91,7 +92,7 @@ function settingsReads(): number {
 
 /** Draws the hook's answer beside where the router is. */
 function Harness() {
-  const allowed = useStartTab();
+  const allowed = useStartTabSettled();
   return <div data-testid="allowed">{String(allowed)}</div>;
 }
 
@@ -113,7 +114,7 @@ async function settle() {
   });
 }
 
-describe('useStartTab — off the Launch entry', () => {
+describe('useStartTabSettled — off the Launch entry', () => {
   it.each([
     ['a deep link', '/?genre=Drama&sort=year'],
     ['the Movies tab named on the URL', '/?tab=movies'],
@@ -141,7 +142,7 @@ describe('useStartTab — off the Launch entry', () => {
   });
 });
 
-describe('useStartTab — on the Launch entry', () => {
+describe('useStartTabSettled — on the Launch entry', () => {
   it('answers false until the read settles, then true', async () => {
     const answer = servePending();
 

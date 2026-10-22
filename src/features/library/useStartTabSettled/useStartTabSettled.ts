@@ -5,7 +5,9 @@ import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
 import { seriesTabPath } from '@/utils';
 
 /**
- * Whether the browse home may draw, honouring the household's **Start tab**.
+ * Whether the **Launch entry** is settled: `true` once it has been read and,
+ * for a Series **Start tab**, replaced, or at once when there is none to
+ * settle. The browse home draws only then.
  *
  * Off the **Launch entry** (a deep link, a named tab, a search query, any
  * location the history put there) it answers `true` at once and reads nothing.
@@ -18,7 +20,7 @@ import { seriesTabPath } from '@/utils';
  * refusal from a value still on its way (log 49 Q13), as `useOpeningReads`
  * does.
  */
-export function useStartTab(): boolean {
+export function useStartTabSettled(): boolean {
   const location = useLocation();
   const navigate = useNavigate();
 

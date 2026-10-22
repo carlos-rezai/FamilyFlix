@@ -14,10 +14,10 @@ import { StartTabGate } from './StartTabGate';
 /**
  * 49 — Start on Series, Phase 7 (issue #432): the launch, gated.
  *
- * `StartTabGate` draws its children only once `useStartTab()` allows the browse
- * home to draw, and nothing before. On the **Launch entry** that is after the
- * settings read settles (and, for the **Start tab** Series, after the entry is
- * replaced with `/?tab=series`); anywhere else it is at once.
+ * `StartTabGate` draws its children only once `useStartTabSettled()` allows
+ * the browse home to draw, and nothing before. On the **Launch entry** that is
+ * after the settings read settles (and, for the **Start tab** Series, after
+ * the entry is replaced with `/?tab=series`); anywhere else it is at once.
  */
 
 let fetchMock: ReturnType<
