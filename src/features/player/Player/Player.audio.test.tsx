@@ -18,7 +18,6 @@ import type {
   Movie,
   PlaybackRead,
   Playable,
-  Settings,
   Subtitle,
 } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
@@ -28,6 +27,7 @@ import {
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 46 — Audio tracks, Phase 4: "the opening" (issue #402).
@@ -97,18 +97,7 @@ const ENGLISH_SPANISH: PlaybackRead = {
   audioTracks: [ENGLISH, SPANISH],
 };
 
-function household(overrides: Partial<Settings> = {}): Settings {
-  return {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: false,
-    tmdbRatings: true,
-    startTab: 'movies',
-    ...overrides,
-  };
-}
-
-const SPANISH_HOUSEHOLD = household({
+const SPANISH_HOUSEHOLD = makeSettings({
   subtitleLanguage: 'Spanish',
   audioLanguage: 'Spanish',
 });
@@ -147,7 +136,7 @@ function answerWith({
   movie = NORTHWIND,
   episode = makeRead(),
   playback = ENGLISH_SPANISH,
-  settings = () => Promise.resolve(okResponse(household())),
+  settings = () => Promise.resolve(okResponse(makeSettings())),
 }: {
   movie?: Movie;
   episode?: EpisodeRead;
@@ -398,7 +387,7 @@ describe('Player — the track it opens on', () => {
   });
 
   it('keeps an English-first MP4 opened in English on Direct play, with no a', async () => {
-    answerWith({ settings: () => Promise.resolve(okResponse(household())) });
+    answerWith({ settings: () => Promise.resolve(okResponse(makeSettings())) });
 
     const { video, repoints } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
@@ -483,7 +472,7 @@ describe('Player — an episode, by the same rule', () => {
   });
 
   it('opens an episode in English on the plain stream', async () => {
-    answerWith({ settings: () => Promise.resolve(okResponse(household())) });
+    answerWith({ settings: () => Promise.resolve(okResponse(makeSettings())) });
 
     const { video } = await renderPlayer({ kind: 'episode', id: EPISODE_ID });
 

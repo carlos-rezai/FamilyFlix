@@ -8,7 +8,7 @@ import {
 } from '@testing-library/react';
 import { MemoryRouter, type MemoryRouterProps } from 'react-router-dom';
 
-import type { LibraryTab, Settings } from '@/types';
+import type { LibraryTab } from '@/types';
 import {
   okResponse,
   serverErrorResponse,
@@ -18,6 +18,7 @@ import {
   navigationType,
   url,
 } from '@/test-support/LocationProbe/LocationProbe';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 import { useStartTabSettled } from './useStartTabSettled';
 
@@ -55,20 +56,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function settingsWith(startTab: LibraryTab): Settings {
-  return {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: false,
-    tmdbRatings: true,
-    startTab,
-  };
-}
-
 /** Answer `GET /api/settings` with the given Start tab. */
 function serveStartTab(startTab: LibraryTab) {
   fetchMock.mockImplementation(() =>
-    Promise.resolve(okResponse(settingsWith(startTab)))
+    Promise.resolve(okResponse(makeSettings({ startTab: startTab })))
   );
 }
 
@@ -152,7 +143,7 @@ describe('useStartTabSettled: on the Launch entry', () => {
     await settle();
     expect(allowed()).toBe('false');
 
-    answer(okResponse(settingsWith('movies')));
+    answer(okResponse(makeSettings({ startTab: 'movies' })));
     await waitFor(() => {
       expect(allowed()).toBe('true');
     });
@@ -178,7 +169,7 @@ describe('useStartTabSettled: on the Launch entry', () => {
     const answer = servePending();
 
     renderAt('/');
-    answer(okResponse(settingsWith('series')));
+    answer(okResponse(makeSettings({ startTab: 'series' })));
 
     await waitFor(() => {
       expect(allowed()).toBe('true');

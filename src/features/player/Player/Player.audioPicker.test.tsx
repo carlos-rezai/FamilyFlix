@@ -24,6 +24,7 @@ import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 46 — Audio tracks, Phase 5: "the picker" (issue #403).
@@ -94,17 +95,6 @@ const ENGLISH_SPANISH: PlaybackRead = {
   audioTracks: [ENGLISH, SPANISH],
 };
 
-function household(overrides: Partial<Settings> = {}): Settings {
-  return {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: false,
-    tmdbRatings: true,
-    startTab: 'movies',
-    ...overrides,
-  };
-}
-
 let fetchMock: ReturnType<
   typeof vi.fn<
     (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -114,7 +104,7 @@ let fetchMock: ReturnType<
 function answerWith({
   movie = NORTHWIND,
   playback = ENGLISH_SPANISH,
-  settings = household(),
+  settings = makeSettings(),
 }: {
   movie?: Movie;
   playback?: PlaybackRead;
@@ -328,7 +318,7 @@ describe('Player — switching track', () => {
 
   it('drops the offset onto the first track of a native file, and winds the element once metadata lands', async () => {
     answerWith({
-      settings: household({ audioLanguage: 'Spanish' }),
+      settings: makeSettings({ audioLanguage: 'Spanish' }),
     });
     const view = renderScreen();
     const video = await waitFor(() => pointedPicture(view.container));

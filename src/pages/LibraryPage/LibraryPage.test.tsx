@@ -17,7 +17,6 @@ import type {
   HomeRow,
   LibraryTab,
   SeriesHomePayload,
-  Settings,
 } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
@@ -25,6 +24,7 @@ import {
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 const HOME_PAYLOAD: HomeRow[] = [
   {
@@ -614,16 +614,6 @@ describe('LibraryPage: the launch on the Start tab', () => {
   /** What `GET /api/settings` answers this test: a Start tab, or a refusal. */
   type SettingsAnswer = LibraryTab | 'refused';
 
-  function settingsWith(startTab: LibraryTab): Settings {
-    return {
-      subtitleLanguage: 'English',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab,
-    };
-  }
-
   const ONE_SERIES: SeriesHomePayload = {
     series: [
       {
@@ -669,7 +659,7 @@ describe('LibraryPage: the launch on the Start tab', () => {
         return held.then(() =>
           answer === 'refused'
             ? serverErrorResponse()
-            : okResponse(settingsWith(answer))
+            : okResponse(makeSettings({ startTab: answer }))
         );
       }
       if (url.includes('/api/genres') || url.includes('/api/series/genres')) {

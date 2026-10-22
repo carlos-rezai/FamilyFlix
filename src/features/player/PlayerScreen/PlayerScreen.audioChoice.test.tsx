@@ -26,6 +26,7 @@ import {
 } from '@/test-support/LocationProbe/LocationProbe';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 46 — Audio tracks, Phase 6: "the sitting" (issue #404).
@@ -121,17 +122,6 @@ const READS: Record<string, EpisodeRead> = {
   },
 };
 
-function household(overrides: Partial<Settings> = {}): Settings {
-  return {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: false,
-    tmdbRatings: true,
-    startTab: 'movies',
-    ...overrides,
-  };
-}
-
 let fetchMock: ReturnType<
   typeof vi.fn<
     (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -140,7 +130,7 @@ let fetchMock: ReturnType<
 
 function answerWith({
   playback = { e24: E24_TRACKS, e25: E25_TRACKS, e26: E26_NO_SPANISH },
-  settings = household(),
+  settings = makeSettings(),
 }: {
   playback?: Record<string, PlaybackRead>;
   settings?: Settings;
@@ -324,7 +314,7 @@ describe('PlayerScreen — the Audio choice lasts the sitting', () => {
   it('opens an episode with no track in the carried language by the usual rule', async () => {
     // A French household, so the usual rule (French) and a stray fall-back to
     // the file's default (English) are told apart.
-    answerWith({ settings: household({ audioLanguage: 'French' }) });
+    answerWith({ settings: makeSettings({ audioLanguage: 'French' }) });
     const { container } = await playingE24();
 
     chooseTrack('Spanish');
@@ -340,7 +330,7 @@ describe('PlayerScreen — the Audio choice lasts the sitting', () => {
   it('carries nothing without a hand pick: the household preference decides the next episode', async () => {
     // A French household over an episode with no French: it opens on the
     // file's default, English — which nobody picked, so nothing is carried.
-    answerWith({ settings: household({ audioLanguage: 'French' }) });
+    answerWith({ settings: makeSettings({ audioLanguage: 'French' }) });
     const { container } = await playingE24();
 
     await playNow(container);

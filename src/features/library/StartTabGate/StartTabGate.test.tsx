@@ -2,12 +2,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 
-import type { LibraryTab, Settings } from '@/types';
 import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 import { StartTabGate } from './StartTabGate';
 
@@ -37,16 +37,6 @@ beforeEach(() => {
 afterEach(() => {
   vi.unstubAllGlobals();
 });
-
-function settingsWith(startTab: LibraryTab): Settings {
-  return {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: false,
-    tmdbRatings: true,
-    startTab,
-  };
-}
 
 /** A settings read that answers only when the test says so. */
 function servePending(): (value: Response) => void {
@@ -94,7 +84,7 @@ describe('StartTabGate', () => {
     expect(drawnAt).toEqual([]);
 
     await act(async () => {
-      answer(okResponse(settingsWith('movies')));
+      answer(okResponse(makeSettings({ startTab: 'movies' })));
     });
 
     expect(await screen.findByText('browse home')).toBeDefined();
@@ -108,7 +98,7 @@ describe('StartTabGate', () => {
     expect(screen.queryByText('browse home')).toBeNull();
 
     await act(async () => {
-      answer(okResponse(settingsWith('series')));
+      answer(okResponse(makeSettings({ startTab: 'series' })));
     });
 
     expect(await screen.findByText('browse home')).toBeDefined();
