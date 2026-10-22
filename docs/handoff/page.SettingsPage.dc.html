@@ -512,6 +512,59 @@
                 hint-size="46px,26px"
               ></dc-import>
             </div>
+
+            <div
+              style="
+                height: 1px;
+                background: var(--color-border-soft);
+                margin: 6px 0;
+              "
+            ></div>
+
+            <!-- Start on: which Library tab FamilyFlix opens on (design log
+                 49). Drawn whether or not the library holds a series; a
+                 press presses the pill and shows no snackbar. -->
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 12px 0 2px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: var(--color-text);
+                  "
+                >
+                  Start on
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                  "
+                >
+                  Which shelf FamilyFlix opens on. You can still switch between
+                  Movies and Series at the top of the library.
+                </div>
+              </div>
+              <dc-import
+                name="mol.PillTabs"
+                label="Start on"
+                options="{{ settings.startTabOptions }}"
+                value="{{ settings.startTab }}"
+                on-change="{{ settings.onStartTab }}"
+                hint-size="196px,48px"
+              ></dc-import>
+            </div>
           </div>
 
           <!-- NETWORK -->
