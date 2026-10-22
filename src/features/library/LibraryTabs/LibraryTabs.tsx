@@ -2,14 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 
 import { PillTabs } from '@/components';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
-import { LIBRARY_TABS, type LibraryTab } from '@/types';
-
-const LABELS: Record<LibraryTab, string> = {
-  movies: 'Movies',
-  series: 'Series',
-};
-
-const TABS = LIBRARY_TABS.map((value) => ({ value, label: LABELS[value] }));
+import { libraryTabOptions } from '@/utils';
 
 /**
  * The Movies / Series switch — the **Pill tabs**, first in the library
@@ -25,7 +18,7 @@ export function LibraryTabs() {
   return (
     <PillTabs
       label="Library"
-      options={TABS}
+      options={libraryTabOptions()}
       value={current}
       onChange={(tab) => setParam('tab', tab, 'movies', ['q'])}
     />

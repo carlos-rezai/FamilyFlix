@@ -1,14 +1,9 @@
 import { PillTabs } from '@/components';
 import { Toggle } from '@/primitives';
 import { useDisplayPreference } from '@/App/useDisplayPreference/useDisplayPreference';
-import type { LibraryTab } from '@/types';
+import { libraryTabOptions } from '@/utils';
 
 import { Card, GroupHeading, Row, RowDesc, RowTitle } from '../section.styles';
-
-const START_TABS: readonly { value: LibraryTab; label: string }[] = [
-  { value: 'movies', label: 'Movies' },
-  { value: 'series', label: 'Series' },
-];
 
 /**
  * The Settings hub's Display **Settings group**: the `Display` **Group
@@ -82,7 +77,7 @@ export function DisplaySection() {
           {startTab === null ? null : (
             <PillTabs
               label="Start on"
-              options={START_TABS}
+              options={libraryTabOptions()}
               value={startTab}
               onChange={(tab) => {
                 void setStartTab(tab);

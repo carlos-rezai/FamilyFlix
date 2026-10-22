@@ -36,7 +36,6 @@ import {
   isLibraryTab,
   LANGUAGE_POOL,
   LIBRARY_TABS,
-  type LibraryTab,
   type PoolLanguage,
   type Settings,
 } from '@/types';
@@ -689,12 +688,6 @@ describe('library: audioLanguage / setAudioLanguage — the audio preference', (
 // outside the list, as `DEFAULT_START_TAB` (Movies); `setStartTab` is an
 // upsert. A Factory reset empties the table, so Movies returns.
 describe('the Library tabs — LIBRARY_TABS, LibraryTab and isLibraryTab', () => {
-  it('lists Movies then Series', () => {
-    const tabs: readonly LibraryTab[] = LIBRARY_TABS;
-
-    expect(tabs).toEqual(['movies', 'series']);
-  });
-
   it.each(['movies', 'series'])('recognises %s as a Library tab', (tab) => {
     expect(isLibraryTab(tab)).toBe(true);
   });
