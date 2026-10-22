@@ -8,6 +8,10 @@ import { isLibraryTab } from '@/utils';
  * **Library tabs**, else Movies. The URL writer omits `tab` at `movies`, so
  * its absence is the Movies tab, and a hand-edited name the guard refuses
  * reads the same way.
+ *
+ * A global hook rather than a feature module: the library feature picks its
+ * body and its switch off it, and the search feature its placeholder and its
+ * genre list, so the reading must not exist twice.
  */
 export function useLibraryTab(): LibraryTab {
   const [searchParams] = useSearchParams();

@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-
+import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
 import type { GenreListPayload } from '@/types';
 import { fetchGenreList, fetchSeriesGenreList } from '../api/api';
 
@@ -25,8 +24,7 @@ const NO_GENRES: GenreListPayload = { total: 0, genres: [] };
  * second try, and hammering a broken endpoint helps no one.
  */
 export function useGenreList(): GenreListPayload {
-  const [searchParams] = useSearchParams();
-  const series = searchParams.get('tab') === 'series';
+  const series = useLibraryTab() === 'series';
   const [list, setList] = useState<GenreListPayload>(NO_GENRES);
 
   useEffect(() => {
