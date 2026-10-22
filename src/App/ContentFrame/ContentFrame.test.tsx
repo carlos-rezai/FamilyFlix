@@ -30,6 +30,8 @@ function renderFramed(ultrawideMargins: boolean | null) {
           setUltrawideMargins: async () => undefined,
           tmdbRatings: null,
           setTmdbRatings: async () => undefined,
+          startTab: null,
+          setStartTab: async () => undefined,
         }}
       >
         <MemoryRouter initialEntries={['/']}>

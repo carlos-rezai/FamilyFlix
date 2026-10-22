@@ -1332,6 +1332,8 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
       setUltrawideMargins: () => Promise.resolve(),
       tmdbRatings,
       setTmdbRatings: () => Promise.resolve(),
+      startTab: null,
+      setStartTab: () => Promise.resolve(),
     };
     return (
       <DisplayPreferenceContext.Provider value={preference}>

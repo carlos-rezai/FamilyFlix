@@ -725,6 +725,8 @@ describe('SeriesHome — TMDB ratings on the cards', () => {
       setUltrawideMargins: () => Promise.resolve(),
       tmdbRatings,
       setTmdbRatings: () => Promise.resolve(),
+      startTab: null,
+      setStartTab: () => Promise.resolve(),
     };
   }
 

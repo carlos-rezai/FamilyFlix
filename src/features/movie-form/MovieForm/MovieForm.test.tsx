@@ -4824,6 +4824,8 @@ describe('MovieForm — no TMDB placeholder on Your rating', () => {
       setUltrawideMargins: () => Promise.resolve(),
       tmdbRatings: true,
       setTmdbRatings: () => Promise.resolve(),
+      startTab: null,
+      setStartTab: () => Promise.resolve(),
     };
 
     render(

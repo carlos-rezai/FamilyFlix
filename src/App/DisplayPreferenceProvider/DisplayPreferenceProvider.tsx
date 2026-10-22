@@ -13,33 +13,35 @@ import {
 } from '@/App/useDisplayPreference/useDisplayPreference';
 import { saveUltrawideMargins } from '@/App/saveUltrawideMargins/saveUltrawideMargins';
 import { saveTmdbRatings } from '@/App/saveTmdbRatings/saveTmdbRatings';
+import { saveStartTab } from '@/App/saveStartTab/saveStartTab';
+import type { LibraryTab } from '@/types';
 
 /** One held display preference: its value, what lands it, and its setter. */
-interface HeldFlag {
+interface HeldValue<T> {
   /** `null` until the read lands, the stored value after. */
-  value: boolean | null;
+  value: T | null;
   /** The read's answer, taken as it is. */
-  land: (value: boolean) => void;
+  land: (value: T) => void;
   /** Shown at once, posted, the echo kept, put back on refusal. Never rejects. */
-  set: (on: boolean) => Promise<void>;
+  set: (next: T) => Promise<void>;
 }
 
 /**
- * The bargain both preferences keep, written once over the save it is handed —
- * `useSettings`' bargain: shown at once, posted, the echo kept, the previous
- * value put back on a refusal, never rejecting. The two differ only in the
- * route they post to.
+ * The bargain every preference keeps, written once over the save it is
+ * handed: `useSettings`' bargain. Shown at once, posted, the echo kept, the
+ * previous value put back on a refusal, never rejecting. The preferences
+ * differ only in the route they post to and the value they carry.
  */
-function useHeldFlag(save: (on: boolean) => Promise<boolean>): HeldFlag {
-  const [value, setValue] = useState<boolean | null>(null);
+function useHeldValue<T>(save: (next: T) => Promise<T>): HeldValue<T> {
+  const [value, setValue] = useState<T | null>(null);
 
   const set = useCallback(
-    async (on: boolean): Promise<void> => {
+    async (next: T): Promise<void> => {
       const previous = value;
-      setValue(on);
+      setValue(next);
 
       try {
-        setValue(await save(on));
+        setValue(await save(next));
       } catch {
         setValue(previous);
       }
@@ -51,22 +53,25 @@ function useHeldFlag(save: (on: boolean) => Promise<boolean>): HeldFlag {
 }
 
 /**
- * The household's display preferences — **Ultrawide margins** and _Fill in
- * ratings from TMDB_ — held app-wide so a flip on the Settings page reaches
+ * The household's display preferences — **Ultrawide margins**, _Fill in
+ * ratings from TMDB_ and the **Start tab** — held app-wide so a flip on the
+ * Settings page reaches
  * the **Content frame** and every star at once, `SnackbarProvider`'s shape. It
  * reads the shared `fetchSettings` once on mount (**Blank until it lands**:
- * `null` until then, `null` still after a refusal), and one read lands both.
- * Its setters are one bargain, `useHeldFlag`'s, each over its own save.
+ * `null` until then, `null` still after a refusal), and one read lands all three.
+ * Its setters are one bargain, `useHeldValue`'s, each over its own save.
  */
 export function DisplayPreferenceProvider({
   children,
 }: {
   children: ReactNode;
 }) {
-  const margins = useHeldFlag(saveUltrawideMargins);
-  const ratings = useHeldFlag(saveTmdbRatings);
+  const margins = useHeldValue<boolean>(saveUltrawideMargins);
+  const ratings = useHeldValue<boolean>(saveTmdbRatings);
+  const startTab = useHeldValue<LibraryTab>(saveStartTab);
   const { land: landMargins } = margins;
   const { land: landRatings } = ratings;
+  const { land: landStartTab } = startTab;
 
   useEffect(() => {
     let wanted = true;
@@ -76,6 +81,7 @@ export function DisplayPreferenceProvider({
         if (wanted) {
           landMargins(landed.ultrawideMargins);
           landRatings(landed.tmdbRatings);
+          landStartTab(landed.startTab);
         }
       },
       () => undefined
@@ -84,7 +90,7 @@ export function DisplayPreferenceProvider({
     return () => {
       wanted = false;
     };
-  }, [landMargins, landRatings]);
+  }, [landMargins, landRatings, landStartTab]);
 
   const api = useMemo<DisplayPreferenceApi>(
     () => ({
@@ -92,8 +98,17 @@ export function DisplayPreferenceProvider({
       setUltrawideMargins: margins.set,
       tmdbRatings: ratings.value,
       setTmdbRatings: ratings.set,
+      startTab: startTab.value,
+      setStartTab: startTab.set,
     }),
-    [margins.value, margins.set, ratings.value, ratings.set]
+    [
+      margins.value,
+      margins.set,
+      ratings.value,
+      ratings.set,
+      startTab.value,
+      startTab.set,
+    ]
   );
 
   return (

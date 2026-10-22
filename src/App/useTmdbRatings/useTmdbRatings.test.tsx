@@ -14,6 +14,8 @@ function withPreference(tmdbRatings: boolean | null) {
     setUltrawideMargins: () => Promise.resolve(),
     tmdbRatings,
     setTmdbRatings: () => Promise.resolve(),
+    startTab: null,
+    setStartTab: () => Promise.resolve(),
   };
   return function Wrapper({ children }: { children: ReactNode }) {
     return (

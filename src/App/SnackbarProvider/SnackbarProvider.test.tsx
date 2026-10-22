@@ -738,6 +738,8 @@ describe('SnackbarProvider — Ultrawide margins', () => {
           setTmdbRatings: async () => undefined,
           ultrawideMargins,
           setUltrawideMargins: async () => undefined,
+          startTab: null,
+          setStartTab: async () => undefined,
         }}
       >
         {children}

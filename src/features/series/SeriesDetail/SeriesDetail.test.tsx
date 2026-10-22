@@ -827,6 +827,8 @@ describe('SeriesDetail — the Shown rating', () => {
       setUltrawideMargins: () => Promise.resolve(),
       tmdbRatings,
       setTmdbRatings: () => Promise.resolve(),
+      startTab: null,
+      setStartTab: () => Promise.resolve(),
     };
     return (
       <DisplayPreferenceContext.Provider value={preference}>

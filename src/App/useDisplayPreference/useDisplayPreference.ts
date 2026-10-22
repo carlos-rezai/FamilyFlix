@@ -1,5 +1,7 @@
 import { createContext, useContext } from 'react';
 
+import type { LibraryTab } from '@/types';
+
 /** What `useDisplayPreference()` hands a consumer. */
 export interface DisplayPreferenceApi {
   /**
@@ -19,6 +21,13 @@ export interface DisplayPreferenceApi {
   tmdbRatings: boolean | null;
   /** Turn it on or off, on `setUltrawideMargins`' bargain. Never rejects. */
   setTmdbRatings: (on: boolean) => Promise<void>;
+  /**
+   * The household's **Start tab**: `null` until the same read lands, the
+   * stored tab after.
+   */
+  startTab: LibraryTab | null;
+  /** Choose it, on `setUltrawideMargins`' bargain. Never rejects. */
+  setStartTab: (tab: LibraryTab) => Promise<void>;
 }
 
 /**
@@ -29,7 +38,8 @@ export const DisplayPreferenceContext =
   createContext<DisplayPreferenceApi | null>(null);
 
 /**
- * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings }` off
+ * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings,
+ * startTab, setStartTab }` off
  * the app-level `DisplayPreferenceProvider`. The provider is mounted in `App`, so a consumer
  * outside one is a wiring mistake, and a silent `null` would hide it: it
  * throws, naming itself.
