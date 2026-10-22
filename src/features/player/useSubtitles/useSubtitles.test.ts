@@ -548,3 +548,132 @@ describe('useSubtitles: a Cue list held per track', () => {
     });
   });
 });
+
+/**
+ * 50, Subtitle picker, Phase 6: "the choice, decided in the hook" (issue #440).
+ *
+ * The hook takes the **Subtitle choice** carried from an earlier player in the
+ * sitting, `choice`, and tells the sitting of every hand action, `onChoice`:
+ * the names `useAudioTracks` uses. A language opens subtitles on, on the row
+ * `preferredSubtitle` answers for it; `null` or no choice opens them off, as
+ * every film did before. `choose`, the pill's toggle and `c` (which is the
+ * toggle) each report the showing track's language, or `null` for off.
+ * Nothing is reported at open: an open is not a hand action.
+ */
+function renderChoosing({
+  subtitles = [ENGLISH, SPANISH],
+  position = 2,
+  language,
+  choice,
+}: {
+  subtitles?: Subtitle[];
+  position?: number;
+  language?: string;
+  choice?: string | null;
+} = {}) {
+  const onChoice = vi.fn<(language: string | null) => void>();
+  const view = renderHook(
+    ({ at }) =>
+      useSubtitles({
+        playable: { kind: 'movie', id: 'm1' },
+        subtitles,
+        position: at,
+        language,
+        choice,
+        onChoice,
+      }),
+    { initialProps: { at: position } }
+  );
+  return { ...view, onChoice };
+}
+
+describe('useSubtitles: the Subtitle choice at open', () => {
+  it('opens off with no choice', () => {
+    const { result } = renderChoosing({ language: 'Spanish' });
+
+    expect(result.current.subtitlesOn).toBe(false);
+  });
+
+  it('opens off with a null choice', () => {
+    const { result } = renderChoosing({ language: 'Spanish', choice: null });
+
+    expect(result.current.subtitlesOn).toBe(false);
+  });
+
+  it('opens on, on the row the choice speaks, over the preference', async () => {
+    answerPerTrack();
+    const { result } = renderChoosing({
+      language: 'English',
+      choice: 'Spanish',
+    });
+
+    expect(result.current.subtitlesOn).toBe(true);
+    expect(result.current.track).toEqual(SPANISH);
+    await waitFor(() => {
+      expect(result.current.line).toBe('Buenas noches.');
+    });
+  });
+
+  it('opens on, on the preference’s row, when no row speaks the choice', () => {
+    answerPerTrack();
+    const { result } = renderChoosing({
+      language: 'Spanish',
+      choice: 'German',
+    });
+
+    expect(result.current.subtitlesOn).toBe(true);
+    expect(result.current.track).toEqual(SPANISH);
+  });
+
+  it('reports nothing at open without a choice', async () => {
+    const { onChoice } = renderChoosing();
+    await settled();
+
+    expect(onChoice).not.toHaveBeenCalled();
+  });
+
+  it('reports nothing at open with a choice', async () => {
+    answerPerTrack();
+    const { onChoice } = renderChoosing({ choice: 'Spanish' });
+    await settled();
+
+    expect(onChoice).not.toHaveBeenCalled();
+  });
+});
+
+describe('useSubtitles: every hand action reported as the Subtitle choice', () => {
+  it('reports a chosen row as its language', () => {
+    answerPerTrack();
+    const { result, onChoice } = renderChoosing();
+
+    act(() => result.current.choose(SPANISH));
+
+    expect(onChoice).toHaveBeenCalledTimes(1);
+    expect(onChoice).toHaveBeenLastCalledWith('Spanish');
+  });
+
+  it('reports Off as null', () => {
+    answerPerTrack();
+    const { result, onChoice } = renderChoosing({ choice: 'Spanish' });
+
+    act(() => result.current.choose(null));
+
+    expect(onChoice).toHaveBeenCalledTimes(1);
+    expect(onChoice).toHaveBeenLastCalledWith(null);
+  });
+
+  it('reports a toggle on as the track’s language, and off as null', () => {
+    answerPerTrack();
+    const { result, onChoice } = renderChoosing({ language: 'Spanish' });
+
+    act(() => result.current.toggleSubtitles());
+
+    expect(onChoice).toHaveBeenCalledTimes(1);
+    expect(onChoice).toHaveBeenLastCalledWith('Spanish');
+
+    act(() => result.current.toggleSubtitles());
+
+    expect(onChoice).toHaveBeenCalledTimes(2);
+    expect(onChoice).toHaveBeenLastCalledWith(null);
+  });
+});

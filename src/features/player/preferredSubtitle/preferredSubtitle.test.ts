@@ -98,3 +98,44 @@ describe('preferredSubtitle', () => {
     expect(preferredSubtitle([])).toBeNull();
   });
 });
+
+/**
+ * 50, Subtitle picker, Phase 6: "the choice, decided in the hook" (issue #440).
+ *
+ * A third argument, the **Subtitle choice** carried from an earlier player in
+ * the sitting, as `preferredAudio` has: the first row in track order in the
+ * choice's language, else the preference's, else the first. `null` and absent
+ * are no choice, and the answer is as before.
+ */
+describe('preferredSubtitle: the Subtitle choice ahead of the preference', () => {
+  it('picks the track the choice speaks, over the preference', () => {
+    expect(preferredSubtitle(TRACKS, 'en', 'nl')?.id).toBe('s3');
+  });
+
+  it('falls to the preference when no row speaks the choice', () => {
+    expect(preferredSubtitle(TRACKS, 'en', 'de')?.id).toBe('s2');
+  });
+
+  it('falls to track order when neither the choice nor the preference is spoken', () => {
+    expect(preferredSubtitle(TRACKS, 'fr', 'de')?.id).toBe('s1');
+  });
+
+  it('picks the lowest-positioned of two rows in the choice', () => {
+    const twoDutch: Subtitle[] = [
+      ...TRACKS,
+      track({ id: 'nl-forced', language: 'nl', position: 7 }),
+      track({ id: 'nl-full', language: 'nl', position: 1.5 }),
+    ];
+
+    expect(preferredSubtitle(twoDutch, 'en', 'nl')?.id).toBe('nl-full');
+  });
+
+  it('matches a choice however either side is capitalised', () => {
+    expect(preferredSubtitle(TRACKS, 'en', 'NL')?.id).toBe('s3');
+  });
+
+  it('reads a null choice as no choice', () => {
+    expect(preferredSubtitle(TRACKS, 'en', null)?.id).toBe('s2');
+    expect(preferredSubtitle(TRACKS, undefined, null)?.id).toBe('s1');
+  });
+});
