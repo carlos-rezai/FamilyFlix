@@ -31,10 +31,8 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-import {
-  DisplayPreferenceContext,
-  type DisplayPreferenceApi,
-} from '@/App/useDisplayPreference/useDisplayPreference';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 /**
  * 22 — Series (TV), Phase 2 (issue #191): the series page's organism.
@@ -822,14 +820,7 @@ describe('SeriesDetail — the ⋯ menu', () => {
  */
 describe('SeriesDetail — the Shown rating', () => {
   function tree(tmdbRatings: boolean | null) {
-    const preference: DisplayPreferenceApi = {
-      ultrawideMargins: null,
-      setUltrawideMargins: () => Promise.resolve(),
-      tmdbRatings,
-      setTmdbRatings: () => Promise.resolve(),
-      startTab: null,
-      setStartTab: () => Promise.resolve(),
-    };
+    const preference = makeDisplayPreferenceApi({ tmdbRatings });
     return (
       <DisplayPreferenceContext.Provider value={preference}>
         <MemoryRouter initialEntries={['/series/harbor']}>

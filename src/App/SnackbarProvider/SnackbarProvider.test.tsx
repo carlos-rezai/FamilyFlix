@@ -21,6 +21,7 @@ import {
   resolvedStyle,
 } from '@/test-support/resolvedStyle/resolvedStyle';
 import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 /**
  * 18 — Snackbar system, Phase 2: "the tracer bullet" (issue #161).
@@ -733,14 +734,7 @@ describe('SnackbarProvider — Ultrawide margins', () => {
     setPreference = setValue;
     return (
       <DisplayPreferenceContext.Provider
-        value={{
-          tmdbRatings: null,
-          setTmdbRatings: async () => undefined,
-          ultrawideMargins,
-          setUltrawideMargins: async () => undefined,
-          startTab: null,
-          setStartTab: async () => undefined,
-        }}
+        value={makeDisplayPreferenceApi({ ultrawideMargins })}
       >
         {children}
       </DisplayPreferenceContext.Provider>

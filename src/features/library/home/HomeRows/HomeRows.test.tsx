@@ -25,14 +25,12 @@ import {
   search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-import {
-  DisplayPreferenceContext,
-  type DisplayPreferenceApi,
-} from '@/App/useDisplayPreference/useDisplayPreference';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 /**
  * A library as `GET /api/home` returns it: alphabetical by genre, each row
@@ -1346,15 +1344,8 @@ describe('HomeRows — a heart from a genre row reaches the shelf', () => {
  * draws no stars and is unchanged.
  */
 describe('HomeRows — TMDB ratings on the cards', () => {
-  function preference(tmdbRatings: boolean | null): DisplayPreferenceApi {
-    return {
-      ultrawideMargins: null,
-      setUltrawideMargins: () => Promise.resolve(),
-      tmdbRatings,
-      setTmdbRatings: () => Promise.resolve(),
-      startTab: null,
-      setStartTab: () => Promise.resolve(),
-    };
+  function preference(tmdbRatings: boolean | null) {
+    return makeDisplayPreferenceApi({ tmdbRatings });
   }
 
   function tree(tmdbRatings: boolean | null) {

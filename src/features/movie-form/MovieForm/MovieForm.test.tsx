@@ -21,10 +21,7 @@ import {
   search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-import {
-  DisplayPreferenceContext,
-  type DisplayPreferenceApi,
-} from '@/App/useDisplayPreference/useDisplayPreference';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import { makeSeries } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
@@ -34,6 +31,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -4819,14 +4817,7 @@ describe('MovieForm — no TMDB placeholder on Your rating', () => {
   it('opens an unrated film with a TMDB score on Not rated', async () => {
     answerMovie = () =>
       Promise.resolve(okResponse({ ...STORED, rating: null, tmdbScore: 7.4 }));
-    const preference: DisplayPreferenceApi = {
-      ultrawideMargins: null,
-      setUltrawideMargins: () => Promise.resolve(),
-      tmdbRatings: true,
-      setTmdbRatings: () => Promise.resolve(),
-      startTab: null,
-      setStartTab: () => Promise.resolve(),
-    };
+    const preference = makeDisplayPreferenceApi({ tmdbRatings: true });
 
     render(
       <DisplayPreferenceContext.Provider value={preference}>

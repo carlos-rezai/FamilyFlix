@@ -13,14 +13,12 @@ import { GenreMoviesProvider, useGenreMovies } from './GenreMovies';
 import { gradientFromId } from '@/utils';
 import type { GenrePayload, PosterCardMovie } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-import {
-  DisplayPreferenceContext,
-  type DisplayPreferenceApi,
-} from '@/App/useDisplayPreference/useDisplayPreference';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 /**
  * Action as the route answers it: 214 movies on the shelf and 214 in the
@@ -691,14 +689,7 @@ describe('GenreMovies — TMDB ratings on the cards', () => {
   function preferenceAt(url: string) {
     const Router = providerAt(url);
     return function Wrapper({ children }: { children: ReactNode }) {
-      const value: DisplayPreferenceApi = {
-        ultrawideMargins: null,
-        setUltrawideMargins: () => Promise.resolve(),
-        tmdbRatings,
-        setTmdbRatings: () => Promise.resolve(),
-        startTab: null,
-        setStartTab: () => Promise.resolve(),
-      };
+      const value = makeDisplayPreferenceApi({ tmdbRatings });
       return (
         <DisplayPreferenceContext.Provider value={value}>
           <Router>{children}</Router>

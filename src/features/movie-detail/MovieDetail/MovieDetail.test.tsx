@@ -25,10 +25,7 @@ import {
   search,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
-import {
-  DisplayPreferenceContext,
-  type DisplayPreferenceApi,
-} from '@/App/useDisplayPreference/useDisplayPreference';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 import {
   conflictResponse,
@@ -36,6 +33,7 @@ import {
   notFoundResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 const SYNOPSIS =
   'A lighthouse keeper on a fading coast takes in a runaway girl, and the two ' +
@@ -1327,14 +1325,7 @@ describe('MovieDetail — the Detail backdrop', () => {
  */
 describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => {
   function tree(tmdbRatings: boolean | null) {
-    const preference: DisplayPreferenceApi = {
-      ultrawideMargins: null,
-      setUltrawideMargins: () => Promise.resolve(),
-      tmdbRatings,
-      setTmdbRatings: () => Promise.resolve(),
-      startTab: null,
-      setStartTab: () => Promise.resolve(),
-    };
+    const preference = makeDisplayPreferenceApi({ tmdbRatings });
     return (
       <DisplayPreferenceContext.Provider value={preference}>
         <MemoryRouter initialEntries={['/movie/m1']}>

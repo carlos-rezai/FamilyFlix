@@ -3,20 +3,11 @@ import type { ReactNode } from 'react';
 import { renderHook } from '@testing-library/react';
 
 import { useTmdbRatings } from './useTmdbRatings';
-import {
-  DisplayPreferenceContext,
-  type DisplayPreferenceApi,
-} from '@/App/useDisplayPreference/useDisplayPreference';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 function withPreference(tmdbRatings: boolean | null) {
-  const value: DisplayPreferenceApi = {
-    ultrawideMargins: null,
-    setUltrawideMargins: () => Promise.resolve(),
-    tmdbRatings,
-    setTmdbRatings: () => Promise.resolve(),
-    startTab: null,
-    setStartTab: () => Promise.resolve(),
-  };
+  const value = makeDisplayPreferenceApi({ tmdbRatings });
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <DisplayPreferenceContext.Provider value={value}>

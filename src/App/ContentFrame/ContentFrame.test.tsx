@@ -6,6 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ContentFrame } from './ContentFrame';
 import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import { theme } from '@/styles/theme';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 /**
  * 27 — Ultrawide margins: the **Content frame**'s own rule (refactor 252).
@@ -25,14 +26,7 @@ function renderFramed(ultrawideMargins: boolean | null) {
   return render(
     <ThemeProvider theme={theme}>
       <DisplayPreferenceContext.Provider
-        value={{
-          ultrawideMargins,
-          setUltrawideMargins: async () => undefined,
-          tmdbRatings: null,
-          setTmdbRatings: async () => undefined,
-          startTab: null,
-          setStartTab: async () => undefined,
-        }}
+        value={makeDisplayPreferenceApi({ ultrawideMargins })}
       >
         <MemoryRouter initialEntries={['/']}>
           <Routes>

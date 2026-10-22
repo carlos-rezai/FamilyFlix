@@ -21,10 +21,8 @@ import {
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-import {
-  DisplayPreferenceContext,
-  type DisplayPreferenceApi,
-} from '@/App/useDisplayPreference/useDisplayPreference';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
 /**
  * 22 — Series (TV), Phase 1 (issue #190): the Series tab's body.
@@ -719,15 +717,8 @@ describe('SeriesHome — Favorites', () => {
  * cards. Off, or before the read lands, every card draws as it did before.
  */
 describe('SeriesHome — TMDB ratings on the cards', () => {
-  function preference(tmdbRatings: boolean | null): DisplayPreferenceApi {
-    return {
-      ultrawideMargins: null,
-      setUltrawideMargins: () => Promise.resolve(),
-      tmdbRatings,
-      setTmdbRatings: () => Promise.resolve(),
-      startTab: null,
-      setStartTab: () => Promise.resolve(),
-    };
+  function preference(tmdbRatings: boolean | null) {
+    return makeDisplayPreferenceApi({ tmdbRatings });
   }
 
   function tree(tmdbRatings: boolean | null) {
