@@ -281,6 +281,11 @@
           20:{dir:'Dot Ferreira',cast:['Mae Solis','Rob Ansel','Cara Im','Lou Tate']},
         };
 
+        // The stored Start tab as the Launch entry reads it (design log 49):
+        // the first library screen opens on it. Set it to 'series' to see a
+        // Series launch; a press of the Start on row applies at the next launch.
+        launchStartTab = 'movies';
+
         state = {
           screen:'browse', selectedId:null,
           search:'', genre:'All Genres', sort:'recent', ratingFilter:'0',
@@ -296,7 +301,7 @@
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
           seriesMenuOpen:false, seriesDeleteOpen:false, seriesDeleting:false, enSingleKind:'movie', fFound:[], fFoundPick:0,
-          settingsSubAuto:false, settingsSubLang:'English', settingsAudioLang:'English', settingsUltrawide:false,
+          settingsSubAuto:false, settingsSubLang:'English', settingsAudioLang:'English', settingsUltrawide:false, settingsStartTab:this.launchStartTab,
           codecs:[
             {id:1,name:'H.264 / AVC',exts:['.mp4','.mov','.m4v'],kind:'built-in',size:'—'},
             {id:2,name:'AAC Audio',exts:['.mp4','.m4a'],kind:'built-in',size:'—'},
@@ -306,7 +311,7 @@
             {id:6,name:'AC-3 / Dolby Digital',exts:['.mkv','.avi'],kind:'installed',size:'1.1 MB'},
           ],
           codecJustAdded:null,
-          tab:'movies', seriesId:null, seasonN:null, playingEp:null, autoNextCancelled:false, seriesFavs:['s2'],
+          tab:this.launchStartTab, seriesId:null, seasonN:null, playingEp:null, autoNextCancelled:false, seriesFavs:['s2'],
           epState:{'s1-1-1':{watched:true},'s1-1-2':{watched:true},'s1-1-3':{watched:true},'s1-1-4':{watched:true},'s1-1-5':{watched:true},'s1-1-6':{watched:true},'s1-1-7':{watched:true},'s1-1-8':{watched:true},
             's1-2-1':{watched:true},'s1-2-2':{watched:true},'s1-2-3':{watched:true},'s1-2-4':{watched:false,progress:45},
             's2-1-1':{watched:true},'s2-1-2':{watched:true},'s3-1-1':{watched:false,progress:22}},
@@ -408,7 +413,7 @@
 
         // ---- nav ----
         openDetail(id){ this.setState(s=>({screen:'detail',selectedId:id,openDrop:null,gearOpen:false,editMenuOpen:false,detailReturn:s.screen==='genre'?'genre':'browse'})); }
-        backFromDetail(){ this.setState(s=>({screen:s.detailReturn==='genre'?'genre':s.detailReturn==='settings'?'settings':'browse',detailReturn:s.detailReturn==='settings'?'browse':s.detailReturn,playing:false,editMenuOpen:false})); }
+        backFromDetail(){ this.setState(s=>({...(s.detailReturn==='browse'?{tab:'movies'}:{}),screen:s.detailReturn==='genre'?'genre':s.detailReturn==='settings'?'settings':'browse',detailReturn:s.detailReturn==='settings'?'browse':s.detailReturn,playing:false,editMenuOpen:false})); }
         goBrowse(){ this.setState({screen:'browse',playing:false,gearOpen:false,openDrop:null,editMenuOpen:false,impStep:'setup',impProgress:0,addContext:null}); }
         goAdd(){ this.resetForm(); this.setState({screen:'add',gearOpen:false,addContext:'settings',resolveId:null}); }
         // Link is chosen on every visit to either start, never remembered (log 41 Q11).
@@ -452,6 +457,7 @@
         setAudioLang(v){ this.setState({settingsAudioLang:v,openDrop:null}); }
         toggleSubAuto(){ this.setState(s=>({settingsSubAuto:!s.settingsSubAuto})); }
         toggleUltrawide(){ this.setState(s=>({settingsUltrawide:!s.settingsUltrawide})); }
+        setStartTab(t){ this.setState({settingsStartTab:t}); }
 
         // ---- snackbars ----
         pushSnack(snack){ const id=++this._snackSeq; this.setState(s=>({snackbars:[...s.snackbars, {...snack, id}]})); if(snack.duration){ setTimeout(()=>this.dismissSnack(id), snack.duration); } return id; }
@@ -957,7 +963,7 @@
             // body
             showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:rows.length===0,
             libModel:{
-              onLogo:()=>this.goBrowse(), search:s.search, onSearch:(e)=>this.onSearch(e),
+              onLogo:()=>{ this.setState({tab:'movies'}); this.goBrowse(); }, search:s.search, onSearch:(e)=>this.onSearch(e),
               isMoviesTab:s.tab==='movies', isSeriesTab:s.tab==='series',
               tabOptions:[{value:'movies',label:'Movies'},{value:'series',label:'Series'}], tab:s.tab, onTab:(t)=>this.setTab(t),
 
@@ -1020,6 +1026,7 @@
               codecRow:{ summary:s.codecs.length+' formats enabled · '+s.codecs.filter(c=>c.kind==='installed').length+' added by you', onOpen:()=>this.goCodecs() },
               subAutoOn:s.settingsSubAuto, onToggleSubAuto:()=>this.toggleSubAuto(),
               ultrawideMargins:s.settingsUltrawide, onToggleUltrawide:()=>this.toggleUltrawide(),
+              startTab:s.settingsStartTab, startTabOptions:[{value:'movies',label:'Movies'},{value:'series',label:'Series'}], onStartTab:(t)=>this.setStartTab(t),
               subLang:s.settingsSubLang, subLangOpen:s.openDrop==='subLang', onToggleSubLang:()=>this.setState(st=>({openDrop:st.openDrop==='subLang'?null:'subLang'})),
               subLangOptions:['English','Spanish','French','German'].map(l=>({label:l,selected:l===s.settingsSubLang,onSelect:()=>this.setSubLang(l)})),
               audioLang:s.settingsAudioLang, audioLangOpen:s.openDrop==='audioLang', onToggleAudioLang:()=>this.setState(st=>({openDrop:st.openDrop==='audioLang'?null:'audioLang'})),
