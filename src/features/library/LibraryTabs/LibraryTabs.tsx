@@ -1,6 +1,5 @@
-import { useSearchParams } from 'react-router-dom';
-
 import { PillTabs } from '@/components';
+import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { libraryTabOptions } from '@/utils';
 
@@ -11,8 +10,7 @@ import { libraryTabOptions } from '@/utils';
  * write and keeps genre, rating and sort.
  */
 export function LibraryTabs() {
-  const [searchParams] = useSearchParams();
-  const current = searchParams.get('tab') === 'series' ? 'series' : 'movies';
+  const current = useLibraryTab();
   const setParam = useQueryParamWriter();
 
   return (
