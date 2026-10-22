@@ -60,6 +60,13 @@ interface PlayerProps {
   audioChoice: string | null;
   /** Told of every pick made by hand, so the surface can carry it on. */
   onAudioChoice: (language: string | null) => void;
+  /**
+   * The **Subtitle choice** the surface holds for the sitting: the showing
+   * Subtitle's language after a hand action, or `null` for off.
+   */
+  subtitleChoice: string | null;
+  /** Told of every hand action on the subtitles, so the surface carries it. */
+  onSubtitleChoice: (language: string | null) => void;
 }
 
 /**
@@ -178,6 +185,8 @@ export function Player({
   surfaceRef,
   audioChoice,
   onAudioChoice,
+  subtitleChoice,
+  onSubtitleChoice,
 }: PlayerProps) {
   const { kind, id } = playable;
   // The element is held in state rather than in a plain ref, because it arrives
@@ -302,6 +311,8 @@ export function Player({
     subtitles: record?.subtitles ?? [],
     position,
     language: settings?.subtitleLanguage,
+    choice: subtitleChoice,
+    onChoice: onSubtitleChoice,
   });
 
   // A film this build cannot decode. The read answered 200 — the file is right

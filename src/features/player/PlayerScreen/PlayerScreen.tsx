@@ -23,12 +23,16 @@ interface PlayerScreenProps {
  *
  * It holds the **Audio choice** for the same reason: the language of the track
  * last picked by hand, handed to each player it keys so the next episode opens
- * on its own track in that language. Leaving the player forgets it; it is
- * never persisted and never posted.
+ * on its own track in that language. Beside it sits the **Subtitle choice**:
+ * the showing Subtitle's language after a hand action, or `null` for off, so
+ * the next episode opens its subtitles on in that language, or off. An episode
+ * with no Subtitles reports nothing, so the choice passes through it. Leaving
+ * the player forgets both; neither is persisted or posted.
  */
 export function PlayerScreen({ playable }: PlayerScreenProps) {
   const surfaceRef = useRef<HTMLDivElement>(null);
   const [audioChoice, setAudioChoice] = useState<string | null>(null);
+  const [subtitleChoice, setSubtitleChoice] = useState<string | null>(null);
 
   return (
     <Surface ref={surfaceRef}>
@@ -38,6 +42,8 @@ export function PlayerScreen({ playable }: PlayerScreenProps) {
         surfaceRef={surfaceRef}
         audioChoice={audioChoice}
         onAudioChoice={setAudioChoice}
+        subtitleChoice={subtitleChoice}
+        onSubtitleChoice={setSubtitleChoice}
       />
     </Surface>
   );

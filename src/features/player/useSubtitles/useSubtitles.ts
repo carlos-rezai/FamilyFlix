@@ -95,9 +95,10 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
     choice,
     onChoice,
   } = options;
-  const [subtitlesOn, setSubtitlesOn] = useState(
-    () => typeof choice === 'string' && rows.length > 0
-  );
+  // `null` until a hand action: until then the box opens as the sitting's
+  // choice says, read once the rows have landed rather than at first render.
+  const [handOn, setSubtitlesOn] = useState<boolean | null>(null);
+  const subtitlesOn = handOn ?? (typeof choice === 'string' && rows.length > 0);
   const [picked, setPicked] = useState<Subtitle | null>(null);
   const [cues, setCues] = useState<ReadonlyMap<string, Cue[]>>(new Map());
   // Every track asked for this open, landed or not, so a list in flight is
