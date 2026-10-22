@@ -40,6 +40,17 @@ export interface SubtitlesOptions {
    * read: `undefined` while it has not landed, and for a read refused.
    */
   language?: string;
+  /**
+   * The **Subtitle choice** carried from an earlier player in the sitting: a
+   * language opens subtitles on, on the row `preferredSubtitle` answers for
+   * it; `null` (chosen off) or absent opens them off.
+   */
+  choice?: string | null;
+  /**
+   * Told of every hand action as the new **Subtitle choice**: the showing
+   * track's language, or `null` for off. Never told at open.
+   */
+  onChoice?: (language: string | null) => void;
 }
 
 /**
@@ -47,8 +58,8 @@ export interface SubtitlesOptions {
  * and what line is on screen.
  *
  * Until a row is picked by hand the track is the deterministic answer
- * `preferredSubtitle` gives from the household's **Preferred subtitle
- * language** then track order. `choose(row)` shows that row and turns
+ * `preferredSubtitle` gives from the sitting's **Subtitle choice**, the
+ * household's **Preferred subtitle language**, then track order. `choose(row)` shows that row and turns
  * subtitles on; `choose(null)` turns them off. The last hand pick is the track
  * `toggleSubtitles` flips over from then on, for the rest of this open.
  *
@@ -56,10 +67,12 @@ export interface SubtitlesOptions {
  * read is the one `GET /api/settings` an open makes; without a preference
  * (refused, unreachable) the track is the first in track order.
  *
- * **They start off on every film.** The prototype's `playMovie()` sets
- * `subsOn: true`; we ship them off, and that is a recorded divergence rather
- * than an oversight: auto-on subtitles are a roadmap item, and defaulting them
- * on would implement it by accident.
+ * **They start off without a choice.** The prototype's `playMovie()` sets
+ * `subsOn: true`; we open them off unless the sitting's **Subtitle choice** is
+ * a language, and that is a recorded divergence rather than an oversight:
+ * auto-on subtitles are a roadmap item, and defaulting them on would
+ * implement it by accident. Every hand action (`choose`, the toggle) is
+ * reported through `onChoice`; an open is not a hand action.
  *
  * **A Cue list is fetched once per track and held for the session**, keyed by
  * Subtitle id. Switching back to a track already read asks nothing, and
@@ -79,8 +92,12 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
     subtitles: rows,
     position,
     language,
+    choice,
+    onChoice,
   } = options;
-  const [subtitlesOn, setSubtitlesOn] = useState(false);
+  const [subtitlesOn, setSubtitlesOn] = useState(
+    () => typeof choice === 'string' && rows.length > 0
+  );
   const [picked, setPicked] = useState<Subtitle | null>(null);
   const [cues, setCues] = useState<ReadonlyMap<string, Cue[]>>(new Map());
   // Every track asked for this open, landed or not, so a list in flight is
@@ -94,17 +111,27 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
 
   const track =
     (picked && subtitles.find((row) => row.id === picked.id)) ??
-    preferredSubtitle(subtitles, language);
+    preferredSubtitle(subtitles, language, choice);
 
-  const toggleSubtitles = useCallback(() => setSubtitlesOn((on) => !on), []);
+  // The callbacks stay stable while reading what is showing now.
+  const latest = useRef({ track, subtitlesOn, onChoice });
+  latest.current = { track, subtitlesOn, onChoice };
+
+  const toggleSubtitles = useCallback(() => {
+    const { track: showing, subtitlesOn: on, onChoice: tell } = latest.current;
+    setSubtitlesOn(!on);
+    tell?.(on ? null : (showing?.language ?? null));
+  }, []);
 
   const choose = useCallback((row: Subtitle | null) => {
     if (row === null) {
       setSubtitlesOn(false);
+      latest.current.onChoice?.(null);
       return;
     }
     setPicked(row);
     setSubtitlesOn(true);
+    latest.current.onChoice?.(row.language);
   }, []);
 
   const trackId = track?.id ?? null;
