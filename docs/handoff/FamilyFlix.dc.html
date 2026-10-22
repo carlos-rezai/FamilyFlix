@@ -1047,7 +1047,7 @@
               posterStyle:playerPoster, title:playerTitle,
               wrapStyle:playerWrap, chromeTop:chromeT, chromeBot:chromeB,
               onMove:()=>this.onPlayerMove(), togglePlay:()=>this.togglePlay(), onExit:()=>this.exitPlayer(),
-              skipBack:()=>this.skipBack(), skipFwd:()=>this.skipFwd(), toggleMute:()=>this.toggleMute(), toggleSubs:()=>this.toggleSubs(),
+              skipBack:()=>this.skipBack(), skipFwd:()=>this.skipFwd(), toggleMute:()=>this.toggleMute(), toggleSubs:()=>this.toggleSubs(), onSubsPress:()=>this.toggleSubs(),
               onSeek:(e)=>this.onSeekClick(e), onVol:(e)=>this.onVolClick(e),
               curTime:this.fmtClock(ct), duration:this.fmtClock(dur),
               seekStyle:{position:'absolute',left:0,top:0,bottom:0,width:pct+'%',background:'var(--color-accent)',borderRadius:'99px'},

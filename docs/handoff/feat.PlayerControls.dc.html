@@ -595,26 +595,74 @@
                 </sc-if>
               </div>
             </sc-if>
+            <!-- The CC pill has two faces, the same pill in both, lit while subtitles show. With one subtitle file it is the plain on/off toggle. With hasSubtitlePicker (two or more files) it is the Subtitle picker: a press opens a menu upward, the Audio picker's panel, listing Off then one item per file in track order, each named by its language with " · Track N" when two share one. The showing track is marked, or Off while off. A pick switches and shuts; Escape or a press outside shuts with no change; while open it holds the chrome up, as the Audio picker's does. Without hasSubs it is not drawn. -->
             <sc-if value="{{ p.hasSubs }}" hint-placeholder-val="{{ false }}">
-              <button onClick="{{ p.toggleSubs }}" style="{{ p.subBtnStyle }}">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                  <rect
-                    x="3"
-                    y="6"
-                    width="18"
-                    height="13"
-                    rx="2.5"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                  />
-                  <path
-                    d="M7 13.5h3M13 13.5h4"
-                    stroke="currentColor"
-                    stroke-width="1.8"
-                    stroke-linecap="round"
-                  /></svg
-                >CC
-              </button>
+              <div style="position: relative">
+                <sc-if
+                  value="{{ p.subtitleMenuOpen }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div
+                    role="menu"
+                    style="
+                      position: absolute;
+                      bottom: 54px;
+                      right: 0;
+                      min-width: 220px;
+                      max-height: 340px;
+                      overflow-y: auto;
+                      background: var(--color-surface-2);
+                      border: 1px solid var(--color-border);
+                      border-radius: var(--radius-md);
+                      padding: 6px;
+                      box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+                      animation: ffPop 0.14s ease;
+                      z-index: 50;
+                    "
+                  >
+                    <sc-for
+                      list="{{ p.subtitleItems }}"
+                      as="t"
+                      hint-placeholder-count="3"
+                    >
+                      <div
+                        role="menuitemradio"
+                        aria-checked="{{ t.selected }}"
+                        onClick="{{ t.onSelect }}"
+                        style="{{ t.style }}"
+                        style-hover="background:var(--color-surface-3)"
+                      >
+                        {{ t.label }}
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+                <button
+                  onClick="{{ p.onSubsPress }}"
+                  title="Subtitles"
+                  aria-label="Subtitles"
+                  aria-haspopup="{{ p.hasSubtitlePicker }}"
+                  style="{{ p.subBtnStyle }}"
+                >
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <rect
+                      x="3"
+                      y="6"
+                      width="18"
+                      height="13"
+                      rx="2.5"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                    />
+                    <path
+                      d="M7 13.5h3M13 13.5h4"
+                      stroke="currentColor"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                    /></svg
+                  >CC
+                </button>
+              </div>
             </sc-if>
             <button
               title="Fullscreen"
