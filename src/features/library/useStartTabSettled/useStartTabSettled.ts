@@ -5,6 +5,14 @@ import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
 import { seriesTabPath } from '@/utils';
 
 /**
+ * The key React Router gives the first entry of a session: the app was just
+ * opened, or reloaded, rather than navigated to. `useGoBack` reads the same
+ * fact as having no history behind it; here it is half of what makes the
+ * **Launch entry**.
+ */
+const FIRST_ENTRY = 'default';
+
+/**
  * Whether the **Launch entry** is settled: `true` once it has been read and,
  * for a Series **Start tab**, replaced, or at once when there is none to
  * settle. The browse home draws only then.
@@ -30,7 +38,7 @@ export function useStartTabSettled(): boolean {
     () =>
       location.pathname === '/' &&
       location.search === '' &&
-      location.key === 'default'
+      location.key === FIRST_ENTRY
   );
   const [settled, setSettled] = useState(!onLaunchEntry);
 
@@ -57,8 +65,7 @@ export function useStartTabSettled(): boolean {
     return () => {
       cancelled = true;
     };
-    // The read belongs to the mount, not to each navigate identity.
-  }, [onLaunchEntry]);
+  }, [onLaunchEntry, navigate]);
 
   return settled;
 }
