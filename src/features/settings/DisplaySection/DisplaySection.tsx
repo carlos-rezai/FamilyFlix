@@ -12,7 +12,7 @@ import { Card, GroupHeading, Row, RowDesc, RowTitle } from '../section.styles';
  * `Toggle` on the right) and _Start on_, whose **Pill tabs** choose the
  * **Start tab** with no snackbar; all reading and writing through
  * `useDisplayPreference`, so the **Content frame** follows a press at once.
- * Each control is not drawn while its value is `null` — **Blank until it
+ * Each control is not drawn while its value is `null`: **Blank until it
  * lands**.
  */
 export function DisplaySection() {

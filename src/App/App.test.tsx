@@ -1942,7 +1942,7 @@ describe('App — the enrichment screen', () => {
 });
 
 /**
- * 49 — Start on Series, Phase 7 (issue #432): the launch, gated, through the
+ * 49, Start on Series, Phase 7 (issue #432): the launch, gated, through the
  * real route table. With the **Start tab** Series stored, the **Launch entry**
  * opens on the Series tab with nothing behind it; every other way onto `/`
  * keeps its own destination and draws at once, with no settings read to wait
@@ -1950,7 +1950,7 @@ describe('App — the enrichment screen', () => {
  * Movies tab, a series delete, the series add and the series page's
  * no-history Back on the Series tab.
  */
-describe('App — the launch on the Start tab', () => {
+describe('App: the launch on the Start tab', () => {
   const SERIES: Series[] = [
     {
       id: 'sv1',

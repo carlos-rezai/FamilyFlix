@@ -599,14 +599,14 @@ describe('LibraryPage — the Series tab', () => {
 });
 
 /**
- * 49 — Start on Series, Phase 7 (issue #432): the launch, gated. The page
+ * 49, Start on Series, Phase 7 (issue #432): the launch, gated. The page
  * composes `StartTabGate` around its `MainLayout`, so on the **Launch entry**
  * (bare `/`, the router's first entry) nothing is drawn, the header included,
  * until the settings read settles: the **Start tab** Series opens on the
  * Series tab with no Movies frame before it; Movies, or a refused read, opens
  * on the Movies tab as always.
  */
-describe('LibraryPage — the launch on the Start tab', () => {
+describe('LibraryPage: the launch on the Start tab', () => {
   const tabs = () => screen.getByRole('group', { name: 'Library' });
   const pill = (label: 'Movies' | 'Series') =>
     within(tabs()).getByRole('button', { name: label });

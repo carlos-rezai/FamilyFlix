@@ -351,12 +351,12 @@ describe('DisplaySection — Fill in ratings from TMDB, the Toggle', () => {
 });
 
 /**
- * 49 — Start on Series, Phase 5 (issue #430).
+ * 49, Start on Series, Phase 5 (issue #430).
  *
  * The Display card's third row, _Start on_: its title, its line, and the
  * **Pill tabs** (`Movies`, `Series`) on the right, a group named for the
  * title, reading and writing the **Start tab** through
- * `useDisplayPreference`. Not drawn while `startTab` is `null` — **Blank
+ * `useDisplayPreference`. Not drawn while `startTab` is `null`: **Blank
  * until it lands**. A refused save puts the old pill back; no snackbar on
  * either outcome. The row knows nothing of the library, so an empty one
  * draws it all the same.
@@ -405,7 +405,7 @@ const pill = (name: 'Movies' | 'Series') =>
 const pressed = async (name: 'Movies' | 'Series') =>
   (await pill(name)).getAttribute('aria-pressed');
 
-describe('DisplaySection — Start on, the copy', () => {
+describe('DisplaySection: Start on, the copy', () => {
   it('draws the third row’s title and line, verbatim, under Fill in ratings from TMDB', () => {
     renderSection();
 
@@ -428,7 +428,7 @@ describe('DisplaySection — Start on, the copy', () => {
   });
 });
 
-describe('DisplaySection — Start on, the Pill tabs', () => {
+describe('DisplaySection: Start on, the Pill tabs', () => {
   it('draws no pills while the read is pending', () => {
     settingsRead = 'held';
     renderSection();

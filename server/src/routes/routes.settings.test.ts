@@ -1561,7 +1561,7 @@ describe('DELETE /api/playback/component — what the slot refuses', () => {
   });
 });
 
-// 49 — Start on Series, Phase 3 (issue #428): the **Start tab** on the same
+// 49, Start on Series, Phase 3 (issue #428): the **Start tab** on the same
 // pair. `GET /api/settings` carries `startTab`, Movies when no row is stored;
 // `POST /api/settings/start-tab { value }` is a **Single-signal write**, the
 // `tmdb-ratings` route's sibling, answering `200 { value }` for a **Library
@@ -1581,7 +1581,7 @@ const postStartTab = (baseUrl: string, body: unknown) =>
 const postStartTabBare = (baseUrl: string) =>
   fetch(`${baseUrl}/api/settings/start-tab`, { method: 'POST' });
 
-describe('GET /api/settings — startTab', () => {
+describe('GET /api/settings: startTab', () => {
   it('answers movies when no row is stored', async () => {
     const { baseUrl } = freshApi();
 
@@ -1630,7 +1630,7 @@ describe('POST /api/settings/start-tab', () => {
     expect((await readSettings(baseUrl)).startTab).toBe('movies');
   });
 
-  it('persists — the repository answers what was written', async () => {
+  it('persists: the repository answers what was written', async () => {
     const { storage, baseUrl } = freshApi();
 
     await postStartTab(baseUrl, { value: 'series' });

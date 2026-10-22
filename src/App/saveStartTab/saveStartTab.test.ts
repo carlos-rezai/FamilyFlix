@@ -7,7 +7,7 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 49 — Start on Series, Phase 4 (issue #429): `saveTmdbRatings`' twin. The
+ * 49, Start on Series, Phase 4 (issue #429): `saveTmdbRatings`' twin. The
  * contract is `postValue`'s (POST the value, take the route's echo as the
  * truth, reject on anything but a 2xx) over the `start-tab` route, whose echo
  * is a **Library tab** and nothing looser.

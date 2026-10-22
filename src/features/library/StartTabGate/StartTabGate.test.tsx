@@ -12,7 +12,7 @@ import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import { StartTabGate } from './StartTabGate';
 
 /**
- * 49 — Start on Series, Phase 7 (issue #432): the launch, gated.
+ * 49, Start on Series, Phase 7 (issue #432): the launch, gated.
  *
  * `StartTabGate` draws its children only once `useStartTabSettled()` allows
  * the browse home to draw, and nothing before. On the **Launch entry** that is

@@ -679,14 +679,14 @@ describe('library: audioLanguage / setAudioLanguage — the audio preference', (
   });
 });
 
-// 49 — Start on Series, Phase 3 (issue #428): the **Start tab**. A fifth
+// 49, Start on Series, Phase 3 (issue #428): the **Start tab**. A fifth
 // preference under the key `start-tab`, a choice of two rather than a flag:
 // the **Library tabs** are spelled once as `LIBRARY_TABS`, and `LibraryTab`
 // is derived from it. `settings()` answers `startTab`, reading nothing, or a
 // stored value outside the list, as `DEFAULT_START_TAB` (Movies);
 // `setStartTab` is an upsert. A Factory reset empties the table, so Movies
 // returns.
-describe('library: startTab / setStartTab — the Start tab preference', () => {
+describe('library: startTab / setStartTab, the Start tab preference', () => {
   /** A migrated in-memory handle and the repository over it. */
   function repositoryOverRawDb() {
     const db = track(openDatabase(':memory:'));
@@ -702,7 +702,7 @@ describe('library: startTab / setStartTab — the Start tab preference', () => {
     ).count;
   }
 
-  it('answers movies on a fresh database — the shared default', () => {
+  it('answers movies on a fresh database, the shared default', () => {
     const storage = freshStorage();
 
     expect(storage.settings().startTab).toBe('movies');
@@ -786,7 +786,7 @@ describe('library: startTab / setStartTab — the Start tab preference', () => {
     });
   });
 
-  it('survives closing and reopening the database — it is in the backup', () => {
+  it('survives closing and reopening the database: it is in the backup', () => {
     const path = tempDbPath();
     const first = track(createSqliteStorage(path));
     first.setStartTab('series');

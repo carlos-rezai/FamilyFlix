@@ -22,7 +22,7 @@ import {
 import { useStartTabSettled } from './useStartTabSettled';
 
 /**
- * 49 — Start on Series, Phase 6 (issue #431): the **Launch entry**'s decision.
+ * 49, Start on Series, Phase 6 (issue #431): the **Launch entry**'s decision.
  *
  * `useStartTabSettled()` answers whether the Launch entry is settled. Off
  * the Launch entry (a deep link, `/?tab=movies`, a search query, a
@@ -114,7 +114,7 @@ async function settle() {
   });
 }
 
-describe('useStartTabSettled — off the Launch entry', () => {
+describe('useStartTabSettled: off the Launch entry', () => {
   it.each([
     ['a deep link', '/?genre=Drama&sort=year'],
     ['the Movies tab named on the URL', '/?tab=movies'],
@@ -142,7 +142,7 @@ describe('useStartTabSettled — off the Launch entry', () => {
   });
 });
 
-describe('useStartTabSettled — on the Launch entry', () => {
+describe('useStartTabSettled: on the Launch entry', () => {
   it('answers false until the read settles, then true', async () => {
     const answer = servePending();
 
