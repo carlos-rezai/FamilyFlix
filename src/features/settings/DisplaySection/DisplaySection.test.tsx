@@ -11,7 +11,10 @@ import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/Displ
 import type { Settings } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import * as sectionStyles from '../section.styles';
 import * as playbackStyles from '../PlaybackSection/PlaybackSection.styles';
 
@@ -344,5 +347,172 @@ describe('DisplaySection — Fill in ratings from TMDB, the Toggle', () => {
     renderSection();
 
     expect((await tmdbToggle()).getAttribute('aria-checked')).toBe('false');
+  });
+});
+
+/**
+ * 49 — Start on Series, Phase 5 (issue #430).
+ *
+ * The Display card's third row, _Start on_: its title, its line, and the
+ * **Pill tabs** (`Movies`, `Series`) on the right, a group named for the
+ * title, reading and writing the **Start tab** through
+ * `useDisplayPreference`. Not drawn while `startTab` is `null` — **Blank
+ * until it lands**. A refused save puts the old pill back; no snackbar on
+ * either outcome. The row knows nothing of the library, so an empty one
+ * draws it all the same.
+ */
+const START_ROUTE = '/api/settings/start-tab';
+const START_TITLE = 'Start on';
+const START_LINE =
+  'Which shelf FamilyFlix opens on. You can still switch between Movies and Series at the top of the library.';
+
+/** Wraps the shared stub so the start-tab route answers, or refuses. */
+function answerStartTab(outcome: 'keep' | 'refuse') {
+  const base = fetchMock.getMockImplementation();
+  fetchMock.mockImplementation((input, init) => {
+    const url = String(input);
+    if (url === START_ROUTE && init?.method === 'POST') {
+      if (outcome === 'refuse') {
+        return Promise.resolve(serverErrorResponse());
+      }
+      const { value } = JSON.parse(String(init.body)) as { value: string };
+      return Promise.resolve(okResponse({ value }));
+    }
+    if (url.startsWith('/api/movies') || url.startsWith('/api/series')) {
+      return Promise.resolve(okResponse([]));
+    }
+    return base
+      ? base(input, init)
+      : Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+/** The posts issued to the start-tab route so far. */
+function postedStartTabs(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) =>
+        String(input) === START_ROUTE && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+const pill = (name: 'Movies' | 'Series') =>
+  screen.findByRole('button', { name });
+
+const pressed = async (name: 'Movies' | 'Series') =>
+  (await pill(name)).getAttribute('aria-pressed');
+
+describe('DisplaySection — Start on, the copy', () => {
+  it('draws the third row’s title and line, verbatim, under Fill in ratings from TMDB', () => {
+    renderSection();
+
+    const tmdbLine = screen.getByText(TMDB_LINE);
+    const title = screen.getByText(START_TITLE);
+    const line = screen.getByText(START_LINE);
+
+    expect(comesBefore(tmdbLine, title)).toBe(true);
+    expect(comesBefore(title, line)).toBe(true);
+  });
+
+  it('draws the title on the same row furniture as the other rows', () => {
+    renderSection();
+
+    const first = screen.getByText('Ultrawide margins');
+    const title = screen.getByText(START_TITLE);
+
+    expect(title.tagName).toBe(first.tagName);
+    expect(title.className).toBe(first.className);
+  });
+});
+
+describe('DisplaySection — Start on, the Pill tabs', () => {
+  it('draws no pills while the read is pending', () => {
+    settingsRead = 'held';
+    renderSection();
+
+    expect(screen.getByText(START_TITLE)).toBeDefined();
+    expect(screen.queryByRole('group', { name: START_TITLE })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Movies' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Series' })).toBeNull();
+  });
+
+  it('is a group named Start on with the stored Movies pill pressed', async () => {
+    renderSection();
+
+    expect(
+      await screen.findByRole('group', { name: START_TITLE })
+    ).toBeDefined();
+    expect(await pressed('Movies')).toBe('true');
+    expect(await pressed('Series')).toBe('false');
+  });
+
+  it('presses the Series pill when Series is stored', async () => {
+    settingsRead = {
+      subtitleLanguage: 'English',
+      audioLanguage: 'English',
+      ultrawideMargins: false,
+      tmdbRatings: true,
+      startTab: 'series',
+    };
+    renderSection();
+
+    expect(await pressed('Series')).toBe('true');
+    expect(await pressed('Movies')).toBe('false');
+  });
+
+  it('posts the other pill when pressed, and presses it', async () => {
+    answerStartTab('keep');
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.click(await pill('Series'));
+
+    expect(await pressed('Series')).toBe('true');
+    expect(await pressed('Movies')).toBe('false');
+    await waitFor(() => expect(postedStartTabs()).toEqual(['series']));
+  });
+
+  it('presses the old pill again when the save is refused', async () => {
+    answerStartTab('refuse');
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.click(await pill('Series'));
+
+    await waitFor(() => expect(postedStartTabs()).toEqual(['series']));
+    await waitFor(async () => expect(await pressed('Movies')).toBe('true'));
+    expect(await pressed('Series')).toBe('false');
+  });
+
+  it.each(['keep', 'refuse'] as const)(
+    'shows no snackbar when the save is answered %s',
+    async (outcome) => {
+      answerStartTab(outcome);
+      const user = userEvent.setup();
+      renderSection();
+
+      await user.click(await pill('Series'));
+      await waitFor(() => expect(postedStartTabs()).toEqual(['series']));
+      await waitFor(async () =>
+        expect(await pressed(outcome === 'keep' ? 'Series' : 'Movies')).toBe(
+          'true'
+        )
+      );
+
+      expect(screen.queryByRole('status')).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+    }
+  );
+
+  it('draws the row with an empty library', async () => {
+    answerStartTab('keep');
+    renderSection();
+
+    expect(screen.getByText(START_TITLE)).toBeDefined();
+    expect(screen.getByText(START_LINE)).toBeDefined();
+    expect(await pressed('Movies')).toBe('true');
   });
 });
