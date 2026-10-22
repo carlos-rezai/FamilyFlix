@@ -538,9 +538,9 @@
         // ---- subtitles ----
         // The Subtitle rows: a title's files in track order; one English file where the sample names none.
         subtitlesOf(m,ep){ const x=ep?this.seriesById(ep.sid):m; return (x&&x.subs)||[{language:'English'}]; }
-        // The language, with " · Track N" when another row shares it, N by track order from 1.
+        // The language, with " · Track N" when another row shares it, N its place in track order from 1, as the audio labels count.
         subtitleLabel(rows,i){ const lang=rows[i].language.toLowerCase(); const same=rows.filter(r=>r.language.toLowerCase()===lang).length;
-          return same<2 ? rows[i].language : rows[i].language+' · Track '+rows.slice(0,i+1).filter(r=>r.language.toLowerCase()===lang).length; }
+          return same<2 ? rows[i].language : rows[i].language+' · Track '+(i+1); }
         // The rule: the Subtitle choice's language where a file speaks it, else the Preferred subtitle language, else the first.
         pickSubtitle(rows,choice){ const by=(l)=>rows.findIndex(r=>r.language.toLowerCase()===String(l).toLowerCase());
           const c=choice?by(choice):-1; if(c>=0) return c; const p=by(this.state.settingsSubLang); return p>=0?p:0; }
