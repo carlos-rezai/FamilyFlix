@@ -299,13 +299,13 @@ describe('SettingsPage', () => {
     // and audio language pills once the settings land (issue #401), and the Codecs row; Network adds Test connection and Sync
     // metadata & posters; About adds none; Library folders (issue #268) adds
     // one; Storage adds Reset… (issue #299); and Manage library (issue #407)
-    // adds one.
+    // adds one; Display's Start on row (issue #430) adds Movies and Series.
     await waitFor(() =>
       expect(
         screen.getByRole('button', { name: /^Preferred subtitle language: / })
       ).toBeDefined()
     );
-    expect(screen.getAllByRole('button')).toHaveLength(12);
+    expect(screen.getAllByRole('button')).toHaveLength(14);
     // Six Group headings, and only six — Display joined in log 27.
     const groupHeadings = [
       'Library',

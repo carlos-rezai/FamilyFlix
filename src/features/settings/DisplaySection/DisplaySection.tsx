@@ -1,20 +1,34 @@
+import { PillTabs } from '@/components';
 import { Toggle } from '@/primitives';
 import { useDisplayPreference } from '@/App/useDisplayPreference/useDisplayPreference';
+import type { LibraryTab } from '@/types';
 
 import { Card, GroupHeading, Row, RowDesc, RowTitle } from '../section.styles';
 
+const START_TABS: readonly { value: LibraryTab; label: string }[] = [
+  { value: 'movies', label: 'Movies' },
+  { value: 'series', label: 'Series' },
+];
+
 /**
  * The Settings hub's Display **Settings group**: the `Display` **Group
- * heading** over one **Section card** holding two rows — _Ultrawide
- * margins_ and, under it, _Fill in ratings from TMDB_ — each a title, its line
- * and the `Toggle` on the right, reading and writing through
+ * heading** over one **Section card** holding three rows: _Ultrawide
+ * margins_, _Fill in ratings from TMDB_ (each a title, its line and the
+ * `Toggle` on the right) and _Start on_, whose **Pill tabs** choose the
+ * **Start tab** with no snackbar; all reading and writing through
  * `useDisplayPreference`, so the **Content frame** follows a press at once.
- * Each Toggle is not drawn while its value is `null` — **Blank until it
+ * Each control is not drawn while its value is `null` — **Blank until it
  * lands**.
  */
 export function DisplaySection() {
-  const { ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings } =
-    useDisplayPreference();
+  const {
+    ultrawideMargins,
+    setUltrawideMargins,
+    tmdbRatings,
+    setTmdbRatings,
+    startTab,
+    setStartTab,
+  } = useDisplayPreference();
 
   return (
     <>
@@ -39,7 +53,7 @@ export function DisplaySection() {
             />
           )}
         </Row>
-        <Row $last>
+        <Row>
           <div>
             <RowTitle>Fill in ratings from TMDB</RowTitle>
             <RowDesc>
@@ -53,6 +67,25 @@ export function DisplaySection() {
               label="Fill in ratings from TMDB"
               onToggle={() => {
                 void setTmdbRatings(!tmdbRatings);
+              }}
+            />
+          )}
+        </Row>
+        <Row $last>
+          <div>
+            <RowTitle>Start on</RowTitle>
+            <RowDesc>
+              Which shelf FamilyFlix opens on. You can still switch between
+              Movies and Series at the top of the library.
+            </RowDesc>
+          </div>
+          {startTab === null ? null : (
+            <PillTabs
+              label="Start on"
+              options={START_TABS}
+              value={startTab}
+              onChange={(tab) => {
+                void setStartTab(tab);
               }}
             />
           )}
