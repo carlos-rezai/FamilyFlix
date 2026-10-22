@@ -14,5 +14,5 @@ interface StartTabGateProps {
  */
 export function StartTabGate({ children }: StartTabGateProps) {
   const allowed = useStartTabSettled();
-  return allowed ? <>{children}</> : null;
+  return allowed ? children : null;
 }
