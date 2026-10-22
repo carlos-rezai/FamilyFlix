@@ -12,7 +12,8 @@ const START_TAB_ENDPOINT = '/api/settings/start-tab';
  * put the previous tab back.
  *
  * One caller, `DisplayPreferenceProvider`, so it stays beside it in `App/`,
- * `saveTmdbRatings`' twin.
+ * `saveTmdbRatings`' twin. The read it pairs with, `fetchSettings`, lives in
+ * `src/api/` because the player and the **Start tab** gate ask for it too.
  */
 export function saveStartTab(tab: LibraryTab): Promise<LibraryTab> {
   return postValue(START_TAB_ENDPOINT, tab, isLibraryTab);

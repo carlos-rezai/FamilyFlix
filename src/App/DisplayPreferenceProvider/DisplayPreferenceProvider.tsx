@@ -53,13 +53,13 @@ function useHeldValue<T>(save: (next: T) => Promise<T>): HeldValue<T> {
 }
 
 /**
- * The household's display preferences — **Ultrawide margins**, _Fill in
- * ratings from TMDB_ and the **Start tab** — held app-wide so a flip on the
- * Settings page reaches
- * the **Content frame** and every star at once, `SnackbarProvider`'s shape. It
- * reads the shared `fetchSettings` once on mount (**Blank until it lands**:
- * `null` until then, `null` still after a refusal), and one read lands all three.
- * Its setters are one bargain, `useHeldValue`'s, each over its own save.
+ * The household's display preferences (**Ultrawide margins**, _Fill in
+ * ratings from TMDB_ and the **Start tab**), held app-wide so a change on the
+ * Settings page reaches the **Content frame** and every star at once,
+ * `SnackbarProvider`'s shape. It reads the shared `fetchSettings` once on
+ * mount (**Blank until it lands**: `null` until then, `null` still after a
+ * refusal), and one read lands all three. Its setters are one bargain,
+ * `useHeldValue`'s, each over its own save.
  */
 export function DisplayPreferenceProvider({
   children,
