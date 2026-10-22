@@ -353,7 +353,8 @@ describe('Player — one settings read per open', () => {
     const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    // Two files draw the picker; `c` stays the toggle.
+    fireEvent.keyDown(window, { key: 'c' });
 
     await waitFor(() => {
       expect(

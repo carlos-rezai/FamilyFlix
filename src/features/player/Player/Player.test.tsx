@@ -980,7 +980,7 @@ const CUES: Cue[] = [
 const FIRST_LINE = CUES[0].text;
 const LATER_LINE = CUES[1].text;
 
-/** The film with subtitle files beside it — two, so a track has to be chosen. */
+/** The film with one subtitle file beside it, so CC is the plain toggle. */
 const SUBTITLED: Movie = makeMovie({
   id: 'm1',
   title: FILM,
@@ -989,17 +989,25 @@ const SUBTITLED: Movie = makeMovie({
   videoPath: 'Northwind (1994)/northwind.mp4',
   subtitles: [
     {
-      id: 'sub-pt',
-      path: 'Northwind (1994)/pt.srt',
-      language: 'pt',
-      position: 1,
-    },
-    {
       id: 'sub-en',
       path: 'Northwind (1994)/en.srt',
       language: 'en',
       position: 0,
     },
+  ],
+});
+
+/** The same film with two files, so a track has to be chosen. */
+const TWO_SUBTITLED: Movie = makeMovie({
+  ...SUBTITLED,
+  subtitles: [
+    {
+      id: 'sub-pt',
+      path: 'Northwind (1994)/pt.srt',
+      language: 'pt',
+      position: 1,
+    },
+    ...SUBTITLED.subtitles,
   ],
 });
 
@@ -1138,11 +1146,12 @@ describe('Player — turning subtitles on and off', () => {
   it('reads the track preferredSubtitle picked, not whichever row came back first', async () => {
     // The rows arrive Portuguese-first; `position` says English is track one.
     // Nobody chooses, so the choice has to be the deterministic one.
-    answerWith({ movie: SUBTITLED, cues: CUES });
+    answerWith({ movie: TWO_SUBTITLED, cues: CUES });
     const { video } = await renderPlayer();
     await waitFor(() => expect(video.paused).toBe(false));
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    // Two files draw the picker; `c` stays the toggle.
+    fireEvent.keyDown(window, { key: 'c' });
 
     await waitFor(() => expect(cueRequests()).toEqual(['sub-en']));
   });

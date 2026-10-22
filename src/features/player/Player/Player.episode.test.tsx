@@ -474,7 +474,8 @@ describe('Player — an episode’s subtitles', () => {
     await started(video);
     moveTo(video, 2);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'Subtitles' }));
+    // Two files draw the picker; `c` stays the toggle.
+    fireEvent.keyDown(window, { key: 'c' });
 
     expect(await screen.findByText(CUES[0].text)).toBeDefined();
     expect(requested().filter((url) => url.includes('/subtitles/'))).toEqual([
