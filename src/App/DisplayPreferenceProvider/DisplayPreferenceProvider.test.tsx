@@ -9,6 +9,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 27 — Ultrawide margins, Phase 1 (issue #249).
@@ -48,20 +49,8 @@ afterEach(() => {
 const SETTINGS_ROUTE = '/api/settings';
 const WRITE_ROUTE = '/api/settings/ultrawide-margins';
 
-const OFF: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
-const ON: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: true,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
+const OFF = makeSettings({ ultrawideMargins: false });
+const ON = makeSettings({ ultrawideMargins: true });
 
 /** A request that answers only when the test says so. */
 function held() {
@@ -287,20 +276,11 @@ describe('DisplayPreferenceProvider — setUltrawideMargins', () => {
 
 const TMDB_ROUTE = '/api/settings/tmdb-ratings';
 
-const RATINGS_ON: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
-const RATINGS_OFF: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
+const RATINGS_ON = makeSettings({ tmdbRatings: true });
+const RATINGS_OFF = makeSettings({
   ultrawideMargins: true,
   tmdbRatings: false,
-  startTab: 'movies',
-};
+});
 
 /** The values posted to the tmdb-ratings route so far. */
 function postedTmdbValues(): unknown[] {
@@ -484,20 +464,12 @@ describe('DisplayPreferenceProvider — setTmdbRatings', () => {
 
 const START_TAB_ROUTE = '/api/settings/start-tab';
 
-const STARTS_ON_MOVIES: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
+const STARTS_ON_MOVIES = makeSettings({
   ultrawideMargins: true,
   tmdbRatings: false,
   startTab: 'movies',
-};
-const STARTS_ON_SERIES: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'series',
-};
+});
+const STARTS_ON_SERIES = makeSettings({ startTab: 'series' });
 
 /** The values posted to the start-tab route so far. */
 function postedStartTabs(): unknown[] {

@@ -7,6 +7,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144).
@@ -49,13 +50,7 @@ afterEach(() => {
 const SETTINGS_ROUTE = '/api/settings';
 const WRITE_ROUTE = '/api/settings/subtitle-language';
 
-const ENGLISH: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
+const ENGLISH = makeSettings({ subtitleLanguage: 'English' });
 
 /** A request that answers only when the test says so. */
 function held() {
@@ -130,15 +125,7 @@ describe('useSettings — the read', () => {
     const { result } = renderHook(() => useSettings());
 
     await act(async () => {
-      read.settle(
-        okResponse({
-          subtitleLanguage: 'Spanish',
-          audioLanguage: 'English',
-          ultrawideMargins: false,
-          tmdbRatings: true,
-          startTab: 'movies',
-        })
-      );
+      read.settle(okResponse(makeSettings({ subtitleLanguage: 'Spanish' })));
     });
 
     await waitFor(() =>
@@ -148,22 +135,14 @@ describe('useSettings — the read', () => {
 
   it('keeps the subtitle language alone, not the rest of the settings', async () => {
     fetchMock.mockResolvedValue(
-      okResponse({
-        subtitleLanguage: 'Spanish',
-        audioLanguage: 'English',
-        ultrawideMargins: true,
-        tmdbRatings: true,
-        startTab: 'movies',
-      })
+      okResponse(
+        makeSettings({ subtitleLanguage: 'Spanish', ultrawideMargins: true })
+      )
     );
 
-    const { result } = await renderLanded({
-      subtitleLanguage: 'Spanish',
-      audioLanguage: 'English',
-      ultrawideMargins: true,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
+    const { result } = await renderLanded(
+      makeSettings({ subtitleLanguage: 'Spanish', ultrawideMargins: true })
+    );
 
     expect(result.current).not.toHaveProperty('settings');
     expect(result.current).not.toHaveProperty('ultrawideMargins');
@@ -250,20 +229,12 @@ describe('useSettings — chooseSubtitleLanguage', () => {
   });
 
   it('puts the previous value back when the route refuses', async () => {
-    const write = settledReadHeldWrite({
-      subtitleLanguage: 'French',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
-    const { result } = await renderLanded({
-      subtitleLanguage: 'French',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
+    const write = settledReadHeldWrite(
+      makeSettings({ subtitleLanguage: 'French' })
+    );
+    const { result } = await renderLanded(
+      makeSettings({ subtitleLanguage: 'French' })
+    );
 
     await act(async () => {
       const chosen = result.current.chooseSubtitleLanguage('Spanish');
@@ -337,13 +308,7 @@ function postedAudioValues(): unknown[] {
     );
 }
 
-const FRENCH_AUDIO: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'French',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
+const FRENCH_AUDIO = makeSettings({ audioLanguage: 'French' });
 
 describe('useSettings — audioLanguage, the read', () => {
   it('holds null until the read lands', () => {

@@ -19,6 +19,7 @@ import {
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 27 — Ultrawide margins, Phase 1 (issue #249): the route table's shape,
@@ -51,13 +52,7 @@ let settingsRead: Settings | 'held';
 let landRead: (settings: Settings) => void = () => undefined;
 
 beforeEach(() => {
-  settingsRead = {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: true,
-    tmdbRatings: true,
-    startTab: 'movies',
-  };
+  settingsRead = makeSettings({ ultrawideMargins: true });
   fetchMock =
     vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -169,13 +164,7 @@ describe('App — the Content frame on a framed route', () => {
     expect(framesAround(title)).toEqual([]);
 
     await act(async () => {
-      landRead({
-        subtitleLanguage: 'English',
-        audioLanguage: 'English',
-        ultrawideMargins: true,
-        tmdbRatings: true,
-        startTab: 'movies',
-      });
+      landRead(makeSettings({ ultrawideMargins: true }));
     });
 
     await waitFor(() => expect(framesAround(title)).toHaveLength(1));
@@ -288,13 +277,7 @@ describe('App — the player outside the frame', () => {
 
 describe('App — the Toggle on /settings', () => {
   it('re-frames the page at once when pressed, with no navigation', async () => {
-    settingsRead = {
-      subtitleLanguage: 'English',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    };
+    settingsRead = makeSettings({ ultrawideMargins: false });
     const user = userEvent.setup();
     renderApp('/settings');
     const toggle = await screen.findByRole('switch', {

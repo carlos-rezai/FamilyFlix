@@ -4,12 +4,13 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import SettingsPage from './SettingsPage';
-import type { PlaybackCapabilities, Settings, StorageReport } from '@/types';
+import type { PlaybackCapabilities, StorageReport } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/DisplayPreferenceProvider';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /** The **Codec report** the Playback card reads on mount. */
 const REPORT: PlaybackCapabilities = {
@@ -25,13 +26,7 @@ const REPORT: PlaybackCapabilities = {
 };
 
 /** The household's settings the Playback card's Subtitles half reads. */
-const SETTINGS: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
+const SETTINGS = makeSettings();
 
 /** The **Storage report** the Storage card reads on mount. */
 const STORAGE: StorageReport = {

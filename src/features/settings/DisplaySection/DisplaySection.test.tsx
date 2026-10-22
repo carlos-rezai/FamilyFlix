@@ -15,6 +15,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 import * as sectionStyles from '../section.styles';
 import * as playbackStyles from '../PlaybackSection/PlaybackSection.styles';
 
@@ -48,13 +49,7 @@ let fetchMock: ReturnType<
 let settingsRead: Settings | 'held';
 
 beforeEach(() => {
-  settingsRead = {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: false,
-    tmdbRatings: true,
-    startTab: 'movies',
-  };
+  settingsRead = makeSettings();
   fetchMock = vi
     .fn<(input: RequestInfo | URL, init?: RequestInit) => Promise<Response>>()
     .mockImplementation((input, init) => {
@@ -139,13 +134,7 @@ describe('DisplaySection — the Toggle', () => {
   });
 
   it('reads on when the stored value is on', async () => {
-    settingsRead = {
-      subtitleLanguage: 'English',
-      audioLanguage: 'English',
-      ultrawideMargins: true,
-      tmdbRatings: true,
-      startTab: 'movies',
-    };
+    settingsRead = makeSettings({ ultrawideMargins: true });
     renderSection();
 
     expect((await toggle()).getAttribute('aria-checked')).toBe('true');
@@ -162,13 +151,7 @@ describe('DisplaySection — the Toggle', () => {
   });
 
   it('writes false when pressed from on', async () => {
-    settingsRead = {
-      subtitleLanguage: 'English',
-      audioLanguage: 'English',
-      ultrawideMargins: true,
-      tmdbRatings: true,
-      startTab: 'movies',
-    };
+    settingsRead = makeSettings({ ultrawideMargins: true });
     const user = userEvent.setup();
     renderSection();
 
@@ -288,13 +271,7 @@ describe('DisplaySection — Fill in ratings from TMDB, the Toggle', () => {
   });
 
   it('reads off when the stored value is off', async () => {
-    settingsRead = {
-      subtitleLanguage: 'English',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: false,
-      startTab: 'movies',
-    };
+    settingsRead = makeSettings({ tmdbRatings: false });
     renderSection();
 
     expect((await tmdbToggle()).getAttribute('aria-checked')).toBe('false');
@@ -312,13 +289,7 @@ describe('DisplaySection — Fill in ratings from TMDB, the Toggle', () => {
   });
 
   it('writes true when pressed from off', async () => {
-    settingsRead = {
-      subtitleLanguage: 'English',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: false,
-      startTab: 'movies',
-    };
+    settingsRead = makeSettings({ tmdbRatings: false });
     const user = userEvent.setup();
     renderSection();
 
@@ -450,13 +421,7 @@ describe('DisplaySection: Start on, the Pill tabs', () => {
   });
 
   it('presses the Series pill when Series is stored', async () => {
-    settingsRead = {
-      subtitleLanguage: 'English',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'series',
-    };
+    settingsRead = makeSettings({ startTab: 'series' });
     renderSection();
 
     expect(await pressed('Series')).toBe('true');

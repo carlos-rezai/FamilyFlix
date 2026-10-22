@@ -8,6 +8,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 import { useOpeningReads } from './useOpeningReads';
 
@@ -52,13 +53,7 @@ afterEach(() => {
 });
 
 /** What `GET /api/settings` answers on a fresh database. */
-const DEFAULT_SETTINGS: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
+const DEFAULT_SETTINGS = makeSettings();
 
 /** Answer each of the three endpoints with what the test says it says. */
 function serve(

@@ -1,8 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
-import type { Cue, Settings, Subtitle } from '@/types';
+import type { Cue, Subtitle } from '@/types';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 import { useSubtitles } from './useSubtitles';
 
@@ -56,13 +57,7 @@ const CUES: Cue[] = [
 ];
 
 /** What `GET /api/settings` answers on a fresh database. */
-const DEFAULT_SETTINGS: Settings = {
-  subtitleLanguage: 'English',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
+const DEFAULT_SETTINGS = makeSettings();
 
 let fetchMock: ReturnType<
   typeof vi.fn<(input: RequestInfo | URL) => Promise<Response>>

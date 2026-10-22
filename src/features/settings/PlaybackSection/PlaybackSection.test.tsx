@@ -15,6 +15,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 15 — Settings hub, Phase 1: "the tracer bullet" (issue #143), and Phase 2:
@@ -82,15 +83,7 @@ function held() {
  * `settings` — and the write held until the test says. A settings read that
  * is `null` is held instead.
  */
-function answerWith(
-  settings: Settings | null = {
-    subtitleLanguage: 'English',
-    audioLanguage: 'English',
-    ultrawideMargins: false,
-    tmdbRatings: true,
-    startTab: 'movies',
-  }
-) {
+function answerWith(settings: Settings | null = makeSettings()) {
   const read = held();
   const write = held();
   const audioWrite = held();
@@ -327,13 +320,7 @@ describe('PlaybackSection — Preferred subtitle language, the pill', () => {
   });
 
   it('shows the fetched value once the settings land', async () => {
-    answerWith({
-      subtitleLanguage: 'Spanish',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
+    answerWith(makeSettings({ subtitleLanguage: 'Spanish' }));
 
     renderSection();
 
@@ -342,13 +329,7 @@ describe('PlaybackSection — Preferred subtitle language, the pill', () => {
   });
 
   it('is named Preferred subtitle language, with no caption on screen', async () => {
-    answerWith({
-      subtitleLanguage: 'Spanish',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
+    answerWith(makeSettings({ subtitleLanguage: 'Spanish' }));
 
     renderSection();
 
@@ -392,13 +373,7 @@ describe('PlaybackSection — Preferred subtitle language, the pill', () => {
   });
 
   it('marks the fetched value as the current option', async () => {
-    answerWith({
-      subtitleLanguage: 'French',
-      audioLanguage: 'English',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
+    answerWith(makeSettings({ subtitleLanguage: 'French' }));
     renderSection();
     const pill = await pillLanded('French');
 
@@ -566,13 +541,9 @@ describe('PlaybackSection — the Audio block', () => {
   });
 
   it('shows the fetched audio language, not the subtitle one', async () => {
-    answerWith({
-      subtitleLanguage: 'Spanish',
-      audioLanguage: 'German',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
+    answerWith(
+      makeSettings({ subtitleLanguage: 'Spanish', audioLanguage: 'German' })
+    );
 
     renderSection();
 
@@ -591,13 +562,7 @@ describe('PlaybackSection — the Audio block', () => {
   });
 
   it('marks the fetched value as the current option', async () => {
-    answerWith({
-      subtitleLanguage: 'English',
-      audioLanguage: 'Dutch',
-      ultrawideMargins: false,
-      tmdbRatings: true,
-      startTab: 'movies',
-    });
+    answerWith(makeSettings({ audioLanguage: 'Dutch' }));
     renderSection();
 
     fireEvent.click(await audioPillLanded('Dutch'));

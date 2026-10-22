@@ -37,6 +37,7 @@ import {
 import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaElement';
 import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /** The two of Action the home row ships, of however many the genre holds. */
 const ACTION_SHIPPED: Movie[] = [
@@ -1995,13 +1996,7 @@ describe('App: the launch on the Start tab', () => {
         }
         settingsAnswered += 1;
         return Promise.resolve(
-          okResponse({
-            subtitleLanguage: 'English',
-            audioLanguage: 'English',
-            ultrawideMargins: false,
-            tmdbRatings: true,
-            startTab: 'series',
-          })
+          okResponse(makeSettings({ startTab: 'series' }))
         );
       }
       if (url === '/api/series' && method === 'POST') {

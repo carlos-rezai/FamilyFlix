@@ -1,11 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 import { fetchSettings } from './fetchSettings';
-import type { Settings } from '@/types';
 import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
  * 15 — Settings hub, Phase 2: "the Subtitles rows" (issue #144).
@@ -48,13 +48,7 @@ function onlyRequest() {
   return { url: String(input), method: init?.method };
 }
 
-const SETTINGS: Settings = {
-  subtitleLanguage: 'Spanish',
-  audioLanguage: 'English',
-  ultrawideMargins: false,
-  tmdbRatings: true,
-  startTab: 'movies',
-};
+const SETTINGS = makeSettings({ subtitleLanguage: 'Spanish' });
 
 describe('fetchSettings', () => {
   it('GETs the settings route', async () => {
