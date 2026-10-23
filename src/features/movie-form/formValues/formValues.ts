@@ -10,7 +10,12 @@ import type {
   SeasonPosterSlot,
   ShowFolderRead,
 } from '@/types';
-import { spellYearSpan, toRatingPercent, toRatingUnits } from '@/utils';
+import {
+  inTrackOrder,
+  spellYearSpan,
+  toRatingPercent,
+  toRatingUnits,
+} from '@/utils';
 
 import { castNames, castText } from '../castNames/castNames';
 import { readEpisodeTag } from '../readEpisodeTag/readEpisodeTag';
@@ -145,20 +150,17 @@ export function movieFormValues(movie: Movie): MovieFormValues {
     rating: toRatingPercent(movie.rating),
     video: storedFile(movie.videoPath),
     poster: storedFile(movie.posterPath),
-    // In track order rather than in array order: `position` is what
-    // `preferredSubtitle` falls back through, so the order the rows come back
-    // in is the order the family already has.
-    subtitles: [...movie.subtitles]
-      .sort((a, b) => a.position - b.position)
-      .map((track) => ({
-        key: `${STORED_KEY}${track.id}`,
-        file: {
-          kind: 'stored' as const,
-          path: track.path,
-          filename: filenameOf(track.path),
-        },
-        language: track.language,
-      })),
+    // In track order, so the rows are listed in the order the family
+    // already has.
+    subtitles: inTrackOrder(movie.subtitles).map((track) => ({
+      key: `${STORED_KEY}${track.id}`,
+      file: {
+        kind: 'stored' as const,
+        path: track.path,
+        filename: filenameOf(track.path),
+      },
+      language: track.language,
+    })),
   };
 }
 
@@ -222,17 +224,15 @@ export function heldEpisodeRows({ seasons }: SeriesDetail): EpisodeFormRow[] {
       season: String(episode.season),
       number: String(episode.number),
       title: episode.title ?? '',
-      subtitles: [...episode.subtitles]
-        .sort((a, b) => a.position - b.position)
-        .map((track) => ({
-          key: `${STORED_KEY}${track.id}`,
-          file: {
-            kind: 'stored' as const,
-            path: track.path,
-            filename: filenameOf(track.path),
-          },
-          language: track.language,
-        })),
+      subtitles: inTrackOrder(episode.subtitles).map((track) => ({
+        key: `${STORED_KEY}${track.id}`,
+        file: {
+          kind: 'stored' as const,
+          path: track.path,
+          filename: filenameOf(track.path),
+        },
+        language: track.language,
+      })),
       still: storedFile(episode.stillPath),
     }));
 }
