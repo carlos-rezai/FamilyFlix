@@ -95,7 +95,7 @@ export interface PlayerControlsProps {
    * drawn in the CC pill's place only then; with one the pill is the toggle.
    */
   hasSubtitlePicker: boolean;
-  /** The film's **Subtitles**, the picker's rows. */
+  /** The film's **Subtitles** in track order, the picker's rows. */
   subtitles: Subtitle[];
   /** The **Subtitle track**, marked in the picker's menu while subtitles show. */
   subtitleTrack: Subtitle | null;

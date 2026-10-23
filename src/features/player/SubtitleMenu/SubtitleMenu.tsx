@@ -7,7 +7,10 @@ import { subtitleLabel } from '../subtitleLabel/subtitleLabel';
 import { Root } from './SubtitleMenu.styles';
 
 export interface SubtitleMenuProps {
-  /** The film's **Subtitles**, listed in track order. */
+  /**
+   * The film's **Subtitles**, listed in the order handed: track order, as
+   * `useSubtitles` answers them.
+   */
   subtitles: Subtitle[];
   /** The Subtitle showing now, or `null` while subtitles are off. */
   showing: Subtitle | null;
@@ -35,8 +38,6 @@ export function SubtitleMenu({
   onChoose,
   onOpenChange,
 }: SubtitleMenuProps) {
-  const ordered = [...subtitles].sort((a, b) => a.position - b.position);
-
   return (
     <Root
       onOpenChange={onOpenChange}
@@ -55,7 +56,7 @@ export function SubtitleMenu({
       <MenuItem selected={showing === null} onSelect={() => onChoose(null)}>
         Off
       </MenuItem>
-      {ordered.map((subtitle) => (
+      {subtitles.map((subtitle) => (
         <MenuItem
           key={subtitle.id}
           selected={showing?.id === subtitle.id}
