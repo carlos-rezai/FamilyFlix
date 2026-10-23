@@ -828,7 +828,7 @@ in Settings, which **Library tab** FamilyFlix opens on. Shipped (✅).
 
 Design log 50: step 33, initiative `subtitle-picker`. With two or more
 **Subtitles** the CC pill opens a menu to choose one, or _Off_; the choice
-carries across a sitting. Client only. Planned (🔜).
+carries across a sitting. Client only. Shipped (✅).
 
 | Term                      | Definition                                                                                                                                                                                                                                                      | Aliases to avoid                                     |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |

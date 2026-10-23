@@ -62,7 +62,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Manage library — every title, edit, clear, delete   | ✅ Done    |
 | Add a show folder — a show by its folder, numbered  | ✅ Done    |
 | Start on Series — open FamilyFlix on the Series tab | ✅ Done    |
-| Subtitle picker — choose a track in the player      | 🔜 Planned |
+| Subtitle picker — choose a track in the player      | ✅ Done    |
 | Loading states — spinners and an FF loading overlay | 🔜 Planned |
 | Scan new folders — and sync only what a run added   | 🔜 Planned |
 
@@ -240,3 +240,13 @@ is done (design log 49):
     is made, or if it can't be read, it opens on Movies as before. Every
     link and Back keeps its own destination: the logo and _Back to library_
     still mean Movies.
+
+Step 33 came out of films that carry two subtitle files, English and Spanish
+say, where the player only ever showed one. It is done (design log 50):
+
+33. ✅ **Subtitle picker**: with two or more subtitle files, the player's CC
+    button opens a menu: _Off_, then each file by its language, the one
+    showing marked. A film with one file keeps the plain on/off button, and
+    `C` still turns subtitles on and off. What you last chose carries to the
+    next episode for the evening; a film started afresh from the library
+    starts with subtitles off.
