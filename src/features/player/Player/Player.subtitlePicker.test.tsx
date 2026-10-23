@@ -19,7 +19,7 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
 import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
- * 50 — Subtitle picker, Phase 5: "the picker in the player" (issue #439).
+ * 50, Subtitle picker, Phase 5: "the picker in the player" (issue #439).
  *
  * A film with an English and a Spanish subtitle file: the CC pill is the
  * **Subtitle picker**, and a pick mid-film changes the lines on screen. An open
@@ -182,7 +182,7 @@ async function chooseSubtitle(label: string): Promise<void> {
   await settled();
 }
 
-describe('Player — picking a subtitle', () => {
+describe('Player: picking a subtitle', () => {
   stubMediaElement();
 
   it('draws the Spanish lines once Spanish is picked, and no box once Off is', async () => {
@@ -217,7 +217,7 @@ describe('Player — picking a subtitle', () => {
   });
 });
 
-describe('Player — keys inside the open Subtitle menu', () => {
+describe('Player: keys inside the open Subtitle menu', () => {
   stubMediaElement();
 
   it('neither seeks nor pauses the film', async () => {
@@ -236,7 +236,7 @@ describe('Player — keys inside the open Subtitle menu', () => {
   });
 });
 
-describe('Player — the chrome while a menu is open', () => {
+describe('Player: the chrome while a menu is open', () => {
   stubMediaElement();
 
   beforeEach(() => {

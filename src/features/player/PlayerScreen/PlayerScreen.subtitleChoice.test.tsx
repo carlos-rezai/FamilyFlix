@@ -30,7 +30,7 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
 import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 
 /**
- * 50 — Subtitle picker, Phase 7: "the sitting" (issue #441).
+ * 50, Subtitle picker, Phase 7: "the sitting" (issue #441).
  *
  * The **Subtitle choice** (the showing Subtitle's language after a hand pick,
  * the pill or `c`, or `null` for off) held by the **Fullscreen surface** and
@@ -371,7 +371,7 @@ function noLineOf(id: string): void {
   expect(screen.queryByText(new RegExp(`^${id} in `))).toBeNull();
 }
 
-describe('PlayerScreen — the Subtitle choice lasts the sitting', () => {
+describe('PlayerScreen: the Subtitle choice lasts the sitting', () => {
   stubMediaElement();
 
   it('opens the next episode on, in Spanish, after a Spanish pick, through Play now', async () => {

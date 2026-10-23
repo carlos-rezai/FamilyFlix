@@ -653,14 +653,14 @@ describe('PlayerControls — the Audio picker', () => {
 });
 
 /**
- * 50 — Subtitle picker, Phase 5: "the picker in the player" (issue #439).
+ * 50, Subtitle picker, Phase 5: "the picker in the player" (issue #439).
  *
  * Handed `hasSubtitlePicker` (two **Subtitles** or more), the chrome draws the
  * **Subtitle picker** in the CC pill's place, its slot after the Audio picker
  * in the right group: the pill as a menu button, never also a toggle. With one
  * file it is the toggle as before, with none there is no pill.
  */
-describe('PlayerControls — the Subtitle picker', () => {
+describe('PlayerControls: the Subtitle picker', () => {
   const ENGLISH: Subtitle = {
     id: 's-en',
     language: 'English',
