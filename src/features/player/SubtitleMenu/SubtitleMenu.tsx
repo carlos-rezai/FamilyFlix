@@ -10,9 +10,9 @@ export interface SubtitleMenuProps {
   /** The film's **Subtitles**, listed in track order. */
   subtitles: Subtitle[];
   /** The Subtitle showing now, or `null` while subtitles are off. */
-  track: Subtitle | null;
+  showing: Subtitle | null;
   /** A row pressed: the Subtitle, or `null` for _Off_. The menu has shut. */
-  onChoose: (choice: Subtitle | null) => void;
+  onChoose: (subtitle: Subtitle | null) => void;
   /**
    * Told whenever the menu opens or shuts: an open menu holds the **Chrome**
    * up, and the chrome is the screen's to hold, not this component's.
@@ -31,7 +31,7 @@ export interface SubtitleMenuProps {
  */
 export function SubtitleMenu({
   subtitles,
-  track,
+  showing,
   onChoose,
   onOpenChange,
 }: SubtitleMenuProps) {
@@ -45,20 +45,20 @@ export function SubtitleMenu({
           {...props}
           type="button"
           aria-label="Subtitles"
-          $on={track !== null}
+          $on={showing !== null}
         >
           <SubtitlesIcon size={22} />
           CC
         </SubtitleButton>
       )}
     >
-      <MenuItem selected={track === null} onSelect={() => onChoose(null)}>
+      <MenuItem selected={showing === null} onSelect={() => onChoose(null)}>
         Off
       </MenuItem>
       {ordered.map((subtitle) => (
         <MenuItem
           key={subtitle.id}
-          selected={track?.id === subtitle.id}
+          selected={showing?.id === subtitle.id}
           onSelect={() => onChoose(subtitle)}
         >
           {subtitleLabel(subtitle, subtitles)}

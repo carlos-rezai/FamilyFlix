@@ -33,14 +33,14 @@ const ROWS = [ENGLISH, SPANISH, ENGLISH_SDH];
 function renderMenu(
   overrides: Partial<Parameters<typeof SubtitleMenu>[0]> = {}
 ) {
-  const onChoose = vi.fn<(choice: Subtitle | null) => void>();
+  const onChoose = vi.fn<(subtitle: Subtitle | null) => void>();
   const onOpenChange = vi.fn<(open: boolean) => void>();
   const view = render(
     <ThemeProvider theme={theme}>
       <div>
         <SubtitleMenu
           subtitles={ROWS}
-          track={SPANISH}
+          showing={SPANISH}
           onChoose={onChoose}
           onOpenChange={onOpenChange}
           {...overrides}
@@ -92,13 +92,13 @@ describe('SubtitleMenu: the trigger', () => {
   });
 
   it('wears the lit face while subtitles show, and the dim one while off', () => {
-    const { unmount } = renderMenu({ track: SPANISH });
+    const { unmount } = renderMenu({ showing: SPANISH });
     const on = window.getComputedStyle(pill());
     expect(on.backgroundColor).toBe('rgba(255, 255, 255, 0.16)');
     expect(on.color).toBe('rgb(255, 255, 255)');
     unmount();
 
-    renderMenu({ track: null });
+    renderMenu({ showing: null });
     const off = window.getComputedStyle(pill());
     expect(off.backgroundColor).not.toBe('rgba(255, 255, 255, 0.16)');
     expect(off.color).not.toBe('rgb(255, 255, 255)');
@@ -121,13 +121,13 @@ describe('SubtitleMenu: the menu', () => {
   });
 
   it('marks the showing track, and only that one', () => {
-    renderMenu({ track: ENGLISH_SDH });
+    renderMenu({ showing: ENGLISH_SDH });
 
     expect(marked(open())).toEqual(['English · Track 3']);
   });
 
   it('marks Off while subtitles are off', () => {
-    renderMenu({ track: null });
+    renderMenu({ showing: null });
 
     expect(marked(open())).toEqual(['Off']);
   });

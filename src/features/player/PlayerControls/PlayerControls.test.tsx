@@ -766,7 +766,7 @@ describe('PlayerControls — the Subtitle picker', () => {
   });
 
   it('opens on Off then the files, the showing one marked, and hands back a choice', () => {
-    const onChooseSubtitle = vi.fn<(choice: Subtitle | null) => void>();
+    const onChooseSubtitle = vi.fn<(subtitle: Subtitle | null) => void>();
     renderPicker({
       subtitleTrack: SPANISH,
       subtitlesOn: true,
@@ -789,7 +789,7 @@ describe('PlayerControls — the Subtitle picker', () => {
   });
 
   it('marks Off while subtitles are off, and hands back null for it', () => {
-    const onChooseSubtitle = vi.fn<(choice: Subtitle | null) => void>();
+    const onChooseSubtitle = vi.fn<(subtitle: Subtitle | null) => void>();
     renderPicker({ subtitleTrack: null, onChooseSubtitle });
 
     fireEvent.click(pill());

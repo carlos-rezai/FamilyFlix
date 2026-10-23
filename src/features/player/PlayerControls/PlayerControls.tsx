@@ -100,7 +100,7 @@ export interface PlayerControlsProps {
   /** The **Subtitle track**, marked in the picker's menu while subtitles show. */
   subtitleTrack: Subtitle | null;
   /** A row chosen in the picker's menu: the Subtitle, or `null` for _Off_. */
-  onChooseSubtitle: (choice: Subtitle | null) => void;
+  onChooseSubtitle: (subtitle: Subtitle | null) => void;
   /** Told when the picker's menu opens or shuts, so the screen can hold the chrome up. */
   onSubtitleMenuChange: (open: boolean) => void;
 }
@@ -234,7 +234,7 @@ export function PlayerControls({
               {hasSubtitlePicker ? (
                 <SubtitleMenu
                   subtitles={subtitles}
-                  track={subtitlesOn ? subtitleTrack : null}
+                  showing={subtitlesOn ? subtitleTrack : null}
                   onChoose={onChooseSubtitle}
                   onOpenChange={onSubtitleMenuChange}
                 />
