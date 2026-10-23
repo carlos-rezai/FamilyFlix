@@ -11,6 +11,91 @@ Newest entry first.
 
 ---
 
+## 2026-10-23: Subtitle picker, the refactor (issue 442)
+
+Eleven commits against
+`docs/refactor-plans/50-subtitle-picker-refactor.md`, one per plan commit, the
+initiative's closing round. **10728 tests pass across 648 files**, against
+10723 across 647 at the end of the build (`03bfe99b`): one new suite
+(`inTrackOrder`, four cases) and one new case in `Player.subtitlePicker`.
+`tsc -b --force` is clean. `eslint src server electron` reports one error and
+148 warnings, against one and 149: the unused import this initiative left is
+gone.
+
+### What shipped
+
+Log 50's step 33: the prototype revision (435, 436), then RED and GREEN each,
+437 to 441. With two or more **Subtitles** the CC pill is the **Subtitle
+picker**, `SubtitleMenu`: _Off_, then each Subtitle by its **Subtitle label**,
+the showing one marked. With one it stays the toggle, and `c` stays a toggle.
+The **Subtitle choice** is held on the unkeyed `PlayerScreen` beside the
+**Audio choice** and read by `preferredSubtitle` ahead of the preference, so
+it carries to the next episode for the sitting. Client only: nothing on the
+server, the wire or Settings moved.
+
+### What each group changed
+
+- **Group 1, the picker's names** (`26c39b08`, `e5ed475a`). `SubtitleMenu`
+  takes `showing`, `AudioMenu`'s `playing` twin, and the hook's **Subtitle
+  track** keeps its word; every `Subtitle | null` parameter is a `subtitle`.
+  `useSubtitles` holds `handOn` with `setHandOn` and the pick as an id, as
+  `useAudioTracks` holds an index; its docblock is rewrapped and says "this
+  open".
+- **Group 2, track order once** (`933ab555`, `976a6bb2`, `bd951ca9`,
+  `08a8ca02`). `inTrackOrder` in `src/utils/` is the one spelling of
+  ascending `position`, read by `useSubtitles`, `preferredSubtitle`,
+  `subtitleLabel` and `formValues`' two sorts. `SubtitleMenu` lists what it
+  is handed, as `AudioMenu` does.
+- **Group 3, two menus, two flags** (`cf832439`). `Player` holds
+  `audioMenuOpen` and `subtitleMenuOpen` and derives `menuOpen` from both, so
+  the chrome stays up while either menu is open, whatever order the events
+  arrive in. The round's one behaviour change.
+- **Group 4, tests and prose** (`f2cf1b6d`, `49b0586c`). The audio suite's
+  unused `screen` import goes; the initiative's eight em dashes take the
+  previous round's comma and colon forms.
+- **Group 5, the docs** (`6aacbd01` and this commit). The checklist ticks
+  step 33; the README's tree and the glossary know it shipped.
+
+### Where this round left the plan
+
+- **No suite had to change for commits 1 to 6** but for commit 1's harness
+  following the prop rename, and both `PlayerControls.test.tsx` `vi.fn`
+  types, which named the same parameter `choice`. Commit 5 needed no
+  reordered fixtures: every suite already handed `SubtitleMenu` rows in
+  track order.
+- **The two-menus case was red for the reason the plan gives**: both menus
+  opened by their triggers alone, a pick in the Subtitle menu reported
+  `false`, and the chrome hid with the Audio menu still open inside it.
+- **The README's `player/` line names both pickers**, since it named
+  neither; the plan asked for the Subtitle picker beside the Audio one.
+- The full suite ran after every commit, green each time; `tsc -b --force`
+  and `eslint` at the end of each group.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the CC face spelled twice,
+`hasSubtitles` decided in `Player`, the `Subtitles` / `SubtitlesOptions`
+names beside the audio hook's, the per-suite player harnesses, em dashes
+older than this initiative, and everything log 50 put out of scope.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **A shared held-response and player-harness test helper** (`answerWith`,
+  `renderScreen`, `settled`, `emit`, `held()`).
+- **The repo-wide em dash pass**, including the older titles beside the ones
+  this round renamed.
+- **From earlier entries**: the sandbox teardown flake, and the lint error in
+  `EnrichmentReview.test.tsx`.
+
+### The initiative
+
+**Subtitle picker is done**: the prototype revision (435, 436), the five
+slices (437 to 441) and this round (442). Issue 434 is closed with it.
+
+---
+
 ## 2026-10-22: Start on Series, the refactor (issue 433)
 
 Sixteen commits against
