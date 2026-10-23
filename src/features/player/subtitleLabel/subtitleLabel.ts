@@ -1,4 +1,5 @@
 import type { Subtitle } from '@/types';
+import { inTrackOrder } from '@/utils';
 
 /**
  * The **Subtitle label**: the Subtitle's language, with ` · Track N` after it
@@ -17,8 +18,6 @@ export function subtitleLabel(
   if (!tied) return subtitle.language;
 
   const place =
-    [...subtitles]
-      .sort((a, b) => a.position - b.position)
-      .findIndex((other) => other.id === subtitle.id) + 1;
+    inTrackOrder(subtitles).findIndex((other) => other.id === subtitle.id) + 1;
   return `${subtitle.language} · Track ${place}`;
 }

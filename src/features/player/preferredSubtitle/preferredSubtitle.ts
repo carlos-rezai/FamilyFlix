@@ -1,4 +1,5 @@
 import type { Subtitle } from '@/types';
+import { inTrackOrder } from '@/utils';
 
 /**
  * The first row in track order spoken in `language`, compared without case:
@@ -40,9 +41,7 @@ export function preferredSubtitle(
   language?: string,
   choice?: string | null
 ): Subtitle | null {
-  // Track order, not arrival order: taking `subtitles[0]` would pass on a film
-  // whose rows came back sorted and fail on the next one.
-  const byPosition = [...subtitles].sort((a, b) => a.position - b.position);
+  const byPosition = inTrackOrder(subtitles);
 
   return (
     spokenIn(byPosition, choice) ??

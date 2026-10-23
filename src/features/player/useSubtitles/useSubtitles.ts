@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type { Cue, Playable, Subtitle } from '@/types';
+import { inTrackOrder } from '@/utils';
 
 import { fetchSubtitleCues } from '../api/api';
 import { cueAt } from '../cueAt/cueAt';
@@ -107,10 +108,7 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
   // never asked for twice.
   const asked = useRef(new Set<string>());
 
-  const subtitles = useMemo(
-    () => [...rows].sort((a, b) => a.position - b.position),
-    [rows]
-  );
+  const subtitles = useMemo(() => inTrackOrder(rows), [rows]);
 
   const fromPick =
     picked === null
