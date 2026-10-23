@@ -293,4 +293,28 @@ describe('Player — the chrome while a menu is open', () => {
     expect(within(menu).queryByRole('menuitem', { name: 'Off' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Back' })).toBeDefined();
   });
+
+  it('stays up while the Audio menu is open after a pick in the Subtitle menu', async () => {
+    await renderPlaying();
+
+    // The keyboard's path: no press outside shuts the first menu, so both
+    // are open at once.
+    fireEvent.click(screen.getByRole('button', { name: 'Audio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Subtitles' }));
+    const [audioMenu, subtitleMenu] = screen.getAllByRole('menu');
+    fireEvent.click(
+      within(subtitleMenu).getByRole('menuitem', { name: 'Spanish' })
+    );
+    await settled();
+    idleFor(10_000);
+
+    expect(screen.getByRole('menu')).toBe(audioMenu);
+    expect(screen.getByRole('button', { name: 'Back' })).toBeDefined();
+
+    fireEvent.keyDown(audioMenu, { key: 'Escape' });
+    await settled();
+    idleFor(3000);
+
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
+  });
 });

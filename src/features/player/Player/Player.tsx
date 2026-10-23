@@ -228,8 +228,11 @@ export function Player({
     onChoice: onAudioChoice,
   });
   // An open menu, the Audio picker's or the Subtitle picker's, holds the
-  // chrome up, as a paused film does.
-  const [menuOpen, setMenuOpen] = useState(false);
+  // chrome up, as a paused film does. One flag per menu: a menu shuts on
+  // Escape or a press outside, not when focus leaves it, so both can be open.
+  const [audioMenuOpen, setAudioMenuOpen] = useState(false);
+  const [subtitleMenuOpen, setSubtitleMenuOpen] = useState(false);
+  const menuOpen = audioMenuOpen || subtitleMenuOpen;
 
   const {
     src,
@@ -451,12 +454,12 @@ export function Player({
         audioTracks={audioTracks}
         audioTrack={audioTrack}
         onChooseAudio={chooseAudio}
-        onAudioMenuChange={setMenuOpen}
+        onAudioMenuChange={setAudioMenuOpen}
         hasSubtitlePicker={hasSubtitlePicker}
         subtitles={subtitles}
         subtitleTrack={track}
         onChooseSubtitle={chooseSubtitle}
-        onSubtitleMenuChange={setMenuOpen}
+        onSubtitleMenuChange={setSubtitleMenuOpen}
       />
     </Stage>
   );
