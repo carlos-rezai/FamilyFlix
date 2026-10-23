@@ -24,7 +24,7 @@ export interface Subtitles {
   /** Show the box, or stop showing it, over the current track. */
   toggleSubtitles: () => void;
   /** Show a row and turn subtitles on, or turn them off with `null`. */
-  choose: (row: Subtitle | null) => void;
+  choose: (subtitle: Subtitle | null) => void;
 }
 
 /** What the hook has to be told: which film, which rows, and where it is. */
@@ -59,9 +59,10 @@ export interface SubtitlesOptions {
  *
  * Until a row is picked by hand the track is the deterministic answer
  * `preferredSubtitle` gives from the sitting's **Subtitle choice**, the
- * household's **Preferred subtitle language**, then track order. `choose(row)` shows that row and turns
- * subtitles on; `choose(null)` turns them off. The last hand pick is the track
- * `toggleSubtitles` flips over from then on, for the rest of this open.
+ * household's **Preferred subtitle language**, then track order.
+ * `choose(subtitle)` shows that row and turns subtitles on; `choose(null)`
+ * turns them off. The last hand pick is the track `toggleSubtitles` flips over
+ * from then on, for the rest of this open.
  *
  * **The preference is handed in, never fetched here.** The player's opening
  * read is the one `GET /api/settings` an open makes; without a preference
@@ -74,7 +75,7 @@ export interface SubtitlesOptions {
  * implement it by accident. Every hand action (`choose`, the toggle) is
  * reported through `onChoice`; an open is not a hand action.
  *
- * **A Cue list is fetched once per track and held for the session**, keyed by
+ * **A Cue list is fetched once per track and held for this open**, keyed by
  * Subtitle id. Switching back to a track already read asks nothing, and
  * neither does a seek: cues are stamped in **Absolute position**. Lines are
  * fetched only while on, and only for the showing track. A list that lands for
@@ -97,9 +98,10 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
   } = options;
   // `null` until a hand action: until then the box opens as the sitting's
   // choice says, read once the rows have landed rather than at first render.
-  const [handOn, setSubtitlesOn] = useState<boolean | null>(null);
+  const [handOn, setHandOn] = useState<boolean | null>(null);
   const subtitlesOn = handOn ?? (typeof choice === 'string' && rows.length > 0);
-  const [picked, setPicked] = useState<Subtitle | null>(null);
+  // The id of the row last picked by hand, as `useAudioTracks` holds an index.
+  const [picked, setPicked] = useState<string | null>(null);
   const [cues, setCues] = useState<ReadonlyMap<string, Cue[]>>(new Map());
   // Every track asked for this open, landed or not, so a list in flight is
   // never asked for twice.
@@ -110,9 +112,11 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
     [rows]
   );
 
-  const track =
-    (picked && subtitles.find((row) => row.id === picked.id)) ??
-    preferredSubtitle(subtitles, language, choice);
+  const fromPick =
+    picked === null
+      ? undefined
+      : subtitles.find((subtitle) => subtitle.id === picked);
+  const track = fromPick ?? preferredSubtitle(subtitles, language, choice);
 
   // The callbacks stay stable while reading what is showing now.
   const latest = useRef({ track, subtitlesOn, onChoice });
@@ -120,19 +124,19 @@ export function useSubtitles(options: SubtitlesOptions): Subtitles {
 
   const toggleSubtitles = useCallback(() => {
     const { track: showing, subtitlesOn: on, onChoice: tell } = latest.current;
-    setSubtitlesOn(!on);
+    setHandOn(!on);
     tell?.(on ? null : (showing?.language ?? null));
   }, []);
 
-  const choose = useCallback((row: Subtitle | null) => {
-    if (row === null) {
-      setSubtitlesOn(false);
+  const choose = useCallback((subtitle: Subtitle | null) => {
+    if (subtitle === null) {
+      setHandOn(false);
       latest.current.onChoice?.(null);
       return;
     }
-    setPicked(row);
-    setSubtitlesOn(true);
-    latest.current.onChoice?.(row.language);
+    setPicked(subtitle.id);
+    setHandOn(true);
+    latest.current.onChoice?.(subtitle.language);
   }, []);
 
   const trackId = track?.id ?? null;
