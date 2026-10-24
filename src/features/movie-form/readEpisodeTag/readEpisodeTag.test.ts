@@ -171,3 +171,33 @@ describe('readEpisodeTag — the Episode word, where the season is not known', (
     }
   );
 });
+
+/**
+ * 51 — Library audit, Phase 5 (issue #448): the **Episode word**'s Dutch
+ * spellings, `Aflevering 12` and `Afl. 12`, in any case, mirrored from
+ * `episodeTag`'s new cases. Read only under the season the caller knows.
+ */
+describe('readEpisodeTag — the Dutch Episode word, where the season is known', () => {
+  it.each([
+    ['Aflevering 12.mkv'],
+    ['Afl. 12.mkv'],
+    ['aflevering 12.mkv'],
+    ['AFLEVERING 12.mkv'],
+    ['afl. 12.mkv'],
+    ['AFL. 12.mkv'],
+    ['Afl.12.mkv'],
+  ])('numbers %s as episode 12 under the season it is given', (filename) => {
+    expect(readEpisodeTag(filename, 2)).toMatchObject({
+      season: 2,
+      number: 12,
+    });
+  });
+
+  it('reads the title after the word', () => {
+    expect(readEpisodeTag('Aflevering 12 - De Storm.1080p.mkv', 1)).toEqual({
+      season: 1,
+      number: 12,
+      title: 'De Storm',
+    });
+  });
+});

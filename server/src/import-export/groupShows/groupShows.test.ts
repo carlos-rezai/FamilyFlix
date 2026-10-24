@@ -684,3 +684,39 @@ describe('groupShows — the wider Season folder rule', () => {
     expect(showFolderOf(episode.dir)).toBe(episode.dir);
   });
 });
+
+/**
+ * 51 — Library audit, Phase 5 (issue #448): the Dutch **Episode word**. A
+ * scanned `Seizoen 1/Aflevering 3.mp4` lands as S1 E3, not **Unplaced**.
+ */
+describe('groupShows — the Dutch Episode word', () => {
+  it('places a scanned Dutch season’s episodes by number', () => {
+    const season = scan(
+      ['De Vuurtorenwachters', 'Seizoen 1'],
+      ['Aflevering 1.mp4', 'Aflevering 2.mp4', 'Aflevering 3.mp4']
+    );
+
+    const { shows, films } = groupShows([season]);
+
+    expect(films).toEqual([]);
+    expect(shows).toHaveLength(1);
+    expect(shows[0].name).toBe('De Vuurtorenwachters');
+    expect(shows[0].episodes).toMatchObject([
+      { season: 1, episode: 1, video: season.videos[0] },
+      { season: 1, episode: 2, video: season.videos[1] },
+      { season: 1, episode: 3, video: season.videos[2] },
+    ]);
+    expect(shows[0].unplaced).toEqual([]);
+  });
+
+  it('numbers an Afl. video inside a Seizoen folder under its season', () => {
+    const season = scan(['De Vuurtorenwachters', 'Seizoen 2'], ['Afl. 12.mkv']);
+
+    const [show] = groupShows([season]).shows;
+
+    expect(show.episodes).toMatchObject([
+      { season: 2, episode: 12, video: season.videos[0] },
+    ]);
+    expect(show.unplaced).toEqual([]);
+  });
+});

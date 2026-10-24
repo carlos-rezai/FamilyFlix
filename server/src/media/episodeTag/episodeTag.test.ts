@@ -243,3 +243,41 @@ describe('episodeTag — a name that is not the Episode word', () => {
     expect(episodeTag(filename, 1)).toBeNull();
   });
 });
+
+// 51 — Library audit, Phase 5: "the Episode word reads Aflevering and Afl."
+// (issue #448).
+//
+// The **Episode word** gains its Dutch spellings, `Aflevering 12` and
+// `Afl. 12`, in any case. They are the word, not a new tag: read only under
+// a season the caller already knows, exactly as `Episode 12` is.
+
+describe('episodeTag — the Dutch Episode word, where the season is known', () => {
+  it.each([
+    ['Aflevering 12.mkv'],
+    ['Afl. 12.mkv'],
+    ['aflevering 12.mkv'],
+    ['AFLEVERING 12.mkv'],
+    ['afl. 12.mkv'],
+    ['AFL. 12.mkv'],
+    ['Afl.12.mkv'],
+    ['Harbor.and.Vine.Aflevering.12.mkv'],
+    ['Harbor and Vine - Afl. 12.mkv'],
+  ])('numbers %s as episode 12 under the season it is given', (filename) => {
+    expect(episodeTag(filename, 2)).toMatchObject({ season: 2, episode: 12 });
+  });
+
+  it('reads the title after the word, as after any tag', () => {
+    expect(episodeTag('Aflevering 12 - De Storm.1080p.mkv', 1)).toEqual({
+      season: 1,
+      episode: 12,
+      title: 'De Storm',
+    });
+  });
+
+  it('reads a padded number whole', () => {
+    expect(episodeTag('Afl. 003.mkv', 1)).toMatchObject({
+      season: 1,
+      episode: 3,
+    });
+  });
+});

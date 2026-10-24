@@ -70,6 +70,15 @@ const SHARED_EPISODE_WORDS: readonly (readonly [string, number | undefined])[] =
     ['Ep 12.mkv', undefined],
     ['Ep.12.mkv', undefined],
     ['E12.mkv', undefined],
+    // 51 — Library audit (issue #448): the Dutch spellings.
+    ['Aflevering 12.mkv', 1],
+    ['Afl. 12.mkv', 1],
+    ['aflevering 12.mkv', 2],
+    ['AFL. 12.mkv', 3],
+    ['Afl.12.mkv', 1],
+    ['Aflevering 12 - De Storm.1080p.mkv', 1],
+    ['Aflevering 12.mkv', undefined],
+    ['Afl. 12.mkv', undefined],
   ];
 
 /**
@@ -133,6 +142,21 @@ describe('the Episode tag — client and server agree', () => {
       number: 12,
     });
   });
+
+  /**
+   * 51 — Library audit (issue #448): the Dutch word's agreement is asserted
+   * on its own answer too, so two readers both missing it still fail.
+   */
+  it.each([['Aflevering 12.mkv'], ['Afl. 12.mkv']])(
+    'numbers %s as episode 12 on both sides',
+    (filename) => {
+      const server = episodeTag(filename, 1);
+      expect({
+        server: server === null ? null : server.episode,
+        client: readEpisodeTag(filename, 1)?.number ?? null,
+      }).toEqual({ server: 12, client: 12 });
+    }
+  );
 });
 
 describe('the Season folder — client and server agree', () => {
