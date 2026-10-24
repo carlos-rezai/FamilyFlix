@@ -214,6 +214,10 @@
           {id:18,title:'Nightjar',year:2019,genres:['Crime','Drama'],runtime:116,st:'unwatched',prog:0,g1:'#23211f',g2:'#544c3e',syn:'A night-shift cab driver becomes the unwilling witness to a city\u2019s small after-dark crimes.',added:15},
           {id:19,title:'The Cartographer',year:2021,genres:['Documentary'],runtime:88,st:'unwatched',prog:0,g1:'#2f2a20',g2:'#7a6a3a',syn:'A portrait of the last man hand-drawing maps of places that no longer match their own coastlines.',added:19},
           {id:20,title:'Saturday\u2019s Children',year:2017,genres:['Drama','Comedy'],runtime:99,st:'unwatched',prog:0,g1:'#332a2a',g2:'#7a5a4a',syn:'Five siblings reunite in their childhood home for one chaotic, tender weekend of unfinished arguments.',added:20},
+          // Three films with no genre, so the Other row shows on the home.
+          {id:21,title:'Summer at the Lake',year:2009,genres:[],runtime:47,st:'unwatched',prog:0,g1:'#24333a',g2:'#5a8090',syn:'The whole family, one rented cabin and a borrowed camcorder, over a long August week.',added:3},
+          {id:22,title:'The Lighthouse Tapes',year:2012,genres:[],runtime:84,st:'watched',prog:0,g1:'#2e2a22',g2:'#6e6248',syn:'An old ferry captain tells the stories of the coast to anyone who will sit still long enough.',added:6},
+          {id:23,title:'Wintergarden',year:2016,genres:[],runtime:102,st:'unwatched',prog:0,g1:'#22302a',g2:'#557a62',syn:'A greenhouse keeper and her neighbor nurse a city garden through the coldest winter in years.',added:16},
         ];
         // A season's own poster for the sample — the one Season card drawn with art
         // (Harbor & Vine, Season 1), beside its two gradient-only seasons. Inline, so
@@ -235,7 +239,7 @@
         genrePool = ['Action','Comedy','Drama','Horror','Thriller','Sci-Fi','Romance','Documentary','Animation','Family','Adventure','Crime'];
         langPool = ['English','Spanish','French','German','Portuguese','Italian','Dutch'];
         sortDefs = [['recent','Recently Added'],['az','Title (A\u2013Z)'],['year','Year'],['unwatched','Unwatched First'],['rating','Highest Rated']];
-        ratings = {1:90,2:80,3:70,4:60,5:80,6:90,7:50,8:70,9:60,10:80,11:70,12:90,13:50,14:40,15:80,16:70,17:60,18:50,19:70,20:60};
+        ratings = {1:90,2:80,3:70,4:60,5:80,6:90,7:50,8:70,9:60,10:80,11:70,12:90,13:50,14:40,15:80,16:70,17:60,18:50,19:70,20:60,21:60,22:70,23:50};
         ratingDefs = [['0','All ratings'],['80','4+ stars'],['60','3+ stars'],['40','2+ stars']];
         // Simulated playability, so all four Player notices are reachable by pressing Play.
         // Every other title buffers briefly and then plays.
@@ -291,7 +295,7 @@
           search:'', genre:'All Genres', sort:'recent', ratingFilter:'0',
           fRating:0, fRatingHover:null,
           openDrop:null, gearOpen:false, editMenuOpen:false, overrides:{}, favorites:[4,12,16],
-          genreView:null, genreSearch:'', detailReturn:'browse',
+          genreView:null, genreOther:false, genreSearch:'', detailReturn:'browse',
           playing:true, currentTime:0, subsOn:false, subTrack:0, subtitleMenuOpen:false, subtitleChoice:undefined, muted:false, volume:0.8, controlsVisible:true, playNotice:null, audioTrack:0, audioMenuOpen:false,
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, fStray:0, fMode:'link', fLinkOff:false, fVideoLinkOff:false, fVideoPicks:0, subLangOpen:null,
@@ -402,7 +406,7 @@
         }; }
         starText(pct){ return (Math.round(pct/20*2)/2).toFixed(1); }
         view(m){ const e=this.eff(m); return {
-          id:m.id,title:m.title,year:m.year,genres:m.genres,topTag:m.genres[0]+' · '+m.year,
+          id:m.id,title:m.title,year:m.year,genres:m.genres,topTag:(m.genres[0]?m.genres[0]+' · ':'')+m.year,
           posterStyle:this.posterStyleOf(m), barStyle:{height:'100%',width:m.prog+'%',background:'var(--color-accent)'},
           isWatched:e==='watched', isProgress:e==='progress',
           isFav:this.state.favorites.includes(m.id), notFav:!this.state.favorites.includes(m.id), toggleFav:(ev)=>{ if(ev&&ev.stopPropagation)ev.stopPropagation(); this.toggleFavById(m.id); },
@@ -479,7 +483,10 @@
         runReset(){ this.setState({resetting:true}); setTimeout(()=>{ this.setState({resetting:false,resetOpen:false}); this.goBrowse(); },900); }
         chooseCsv(){ this.setExportFormat('csv'); }
         chooseXlsx(){ this.setExportFormat('xlsx'); }
-        openGenre(name){ this.setState({screen:'genre',genreView:name,genreSearch:'',gearOpen:false,openDrop:null}); }
+        openGenre(name){ this.setState({screen:'genre',genreView:name,genreOther:false,genreSearch:'',gearOpen:false,openDrop:null}); }
+        // The Genre page's other mode (/genre-less in the app): headed "Other movies", every film with no genre.
+        openOther(){ this.setState({screen:'genre',genreView:'Other movies',genreOther:true,genreSearch:'',gearOpen:false,openDrop:null}); }
+        genrePageAll(){ const g=this.state.genreView; if(!g) return []; return this.rawMovies.filter(m=> this.state.genreOther ? m.genres.length===0 : m.genres.includes(g)); }
         onGenreSearch(e){ this.setState({genreSearch:e.target.value}); }
 
         // ---- browse ----
@@ -492,7 +499,7 @@
         sortList(list){ const rank=m=>{const e=this.eff(m);return e==='unwatched'?0:e==='progress'?1:2;}; const s=this.state.sort; return [...list].sort((a,b)=> s==='az'?a.title.localeCompare(b.title): s==='year'?b.year-a.year: s==='rating'?(this.ratingOf(b)-this.ratingOf(a)||b.added-a.added): s==='unwatched'?(rank(a)-rank(b)||b.added-a.added): b.added-a.added); }
         passRating(m){ return this.ratingOf(m) >= Number(this.state.ratingFilter||0); }
         filteredSorted(){ const q=this.state.search.trim().toLowerCase(); const list=this.rawMovies.filter(m=> this.passRating(m) && (!q || m.title.toLowerCase().includes(q) || m.syn.toLowerCase().includes(q) || m.genres.join(' ').toLowerCase().includes(q))); return this.sortList(list); }
-        genrePageMovies(){ const g=this.state.genreView; if(!g) return []; const q=this.state.genreSearch.trim().toLowerCase(); let list=this.rawMovies.filter(m=>m.genres.includes(g) && this.passRating(m)); if(q) list=list.filter(m=>m.title.toLowerCase().includes(q)||m.syn.toLowerCase().includes(q)); return this.sortList(list); }
+        genrePageMovies(){ const q=this.state.genreSearch.trim().toLowerCase(); let list=this.genrePageAll().filter(m=>this.passRating(m)); if(q) list=list.filter(m=>m.title.toLowerCase().includes(q)||m.syn.toLowerCase().includes(q)); return this.sortList(list); }
         buildRows(){
           const list=this.filteredSorted();
           const gf=this.state.genre;
@@ -502,6 +509,14 @@
           if(gf!=='All Genres') genres=genres.filter(g=>g===gf);
           genres.sort((a,b)=> counts[b]-counts[a] || a.localeCompare(b));
           return genres.map(g=>({name:g, count:this.rawMovies.filter(m=>m.genres.includes(g)).length, openAll:()=>this.openGenre(g), movies:list.filter(m=>m.genres.includes(g)).slice(0,15).map(m=>this.view(m))})).filter(r=>r.movies.length>0);
+        }
+        // The Other row: every film with no genre, capped at 15 like a genre row. Search, rating and sort
+        // narrow it; a genre filter leaves it out, and it is not drawn when empty (null, as the home read answers).
+        buildOtherRow(){
+          if(this.state.genre!=='All Genres') return null;
+          const movies=this.filteredSorted().filter(m=>m.genres.length===0);
+          if(movies.length===0) return null;
+          return {name:'Other movies', count:this.rawMovies.filter(m=>m.genres.length===0).length, openAll:()=>this.openOther(), movies:movies.slice(0,15).map(m=>this.view(m))};
         }
 
         // ---- detail ----
@@ -810,6 +825,7 @@
 
           // browse
           const rows=this.buildRows();
+          const otherRow=this.buildOtherRow();
           const continueList=this.filteredSorted().filter(m=>this.eff(m)==='progress').slice(0,15).map(m=>this.view(m));
           const favoritesList=this.filteredSorted().filter(m=>s.favorites.includes(m.id)).slice(0,15).map(m=>this.view(m));
           const counts={}; this.rawMovies.forEach(m=>m.genres.forEach(g=>counts[g]=(counts[g]||0)+1));
@@ -837,7 +853,7 @@
           const m=this.cur();
           let detail={posterStyle:{},genres:[]};
           if(m){ const e=this.eff(m); const isFav=s.favorites.includes(m.id); const cr=this.credits[m.id]||{dir:'\u2014',cast:[]}; detail={
-            title:m.title,year:m.year,genres:m.genres,synopsis:m.syn,topTag:m.genres[0]+' · '+m.year,
+            title:m.title,year:m.year,genres:m.genres,synopsis:m.syn,topTag:(m.genres[0]?m.genres[0]+' · ':'')+m.year,
             director:cr.dir, castText:cr.cast.join(', '),
             ratingPct:this.ratingOf(m), ratingText:this.starText(this.ratingOf(m)),
             starWrap:this.starParts(this.ratingOf(m),22).wrapStyle, starFill:this.starParts(this.ratingOf(m),22).fillStyle,
@@ -973,10 +989,10 @@
             goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
             genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
             genreSearch:s.genreSearch, onGenreSearch:(e)=>this.onGenreSearch(e),
-            genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
+            genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.genrePageAll().length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
             genreModel:{
               onBack:()=>this.goBrowse(), name:s.genreView,
-              countLabel:(function(self){ if(!s.genreView) return ''; const all=self.rawMovies.filter(m=>m.genres.includes(s.genreView)).length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
+              countLabel:(function(self){ if(!s.genreView) return ''; const all=self.genrePageAll().length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
               search:s.genreSearch, onSearch:(e)=>this.onGenreSearch(e), searchPlaceholder:'Search in '+(s.genreView||''),
               sortValue:sortLabel, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(), sortOptions,
               movies:this.genrePageMovies().map(m=>this.view(m)), noResults:this.genrePageMovies().length===0,
@@ -988,7 +1004,7 @@
             toggleGenre:()=>this.toggleGenre(), toggleSort:()=>this.toggleSort(), toggleGear:()=>this.toggleGear(),
             genreOptions, sortOptions, goAdd:()=>this.goAdd(), goImport:()=>this.goImport(), openExport:()=>this.openExport(),
             // body
-            showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:rows.length===0,
+            showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:rows.length===0 && !otherRow,
             libModel:{
               onLogo:()=>{ this.setState({tab:'movies'}); this.goBrowse(); }, search:s.search, onSearch:(e)=>this.onSearch(e),
               isMoviesTab:s.tab==='movies', isSeriesTab:s.tab==='series',
@@ -1003,7 +1019,7 @@
               sortLabel, sortOptions, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(),
               gearOpen:s.gearOpen, onToggleGear:()=>this.toggleGear(), onAdd:()=>this.goAdd(), onImport:()=>this.goImport(), onExport:()=>this.openExport(), onSettings:()=>this.goSettings(),
               showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList,
-              genreRows:rows, noResults:rows.length===0,
+              genreRows:rows, showOtherRow:!!otherRow, otherRow, noResults:rows.length===0 && !otherRow,
             },
             foldersModel:{
               onBack:()=>this.goSettings(),

@@ -369,6 +369,20 @@
               ></dc-import>
             </sc-for>
 
+            <!-- The Other row: last, "Other movies", every film with no genre
+                 (at most 15). Its View all opens the Genre page's other mode.
+                 Not drawn under a genre filter, nor when no film lacks a genre. -->
+            <sc-if
+              value="{{ lib.showOtherRow }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <dc-import
+                name="feat.GenreRow"
+                row="{{ lib.otherRow }}"
+                hint-size="100%,430px"
+              ></dc-import>
+            </sc-if>
+
             <sc-if
               value="{{ lib.noResults }}"
               hint-placeholder-val="{{ false }}"
