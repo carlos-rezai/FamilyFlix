@@ -268,17 +268,20 @@ export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
     })),
     still: null,
   }));
-  const unplaced = numberFoundRows(read.unplaced, read.path, read.episodes).map(
-    ({ path, season, number, title }, index) => ({
-      key: `${SHOW_FOLDER_KEY}unplaced-${index}`,
-      file: foundFile(path, read.unplacedRelative[index]),
-      season: String(season),
-      number: String(number),
-      title: title ?? '',
-      subtitles: [],
-      still: null,
-    })
-  );
+  const unplaced = numberFoundRows(
+    read.unplaced,
+    read.path,
+    read.episodes,
+    read.unplacedRelative
+  ).map(({ path, season, number, title }, index) => ({
+    key: `${SHOW_FOLDER_KEY}unplaced-${index}`,
+    file: foundFile(path, read.unplacedRelative[index]),
+    season: String(season),
+    number: String(number),
+    title: title ?? '',
+    subtitles: [],
+    still: null,
+  }));
   return [...numbered, ...unplaced];
 }
 
@@ -625,6 +628,18 @@ function folderSeason(video: string, showFolder: string | undefined): number {
   return season ?? 1;
 }
 
+/**
+ * The season a video's path inside the **Show folder** names: its nearest
+ * folder's, read by {@link readSeasonFolder}, else season 1 at the root.
+ */
+function relativeSeason(relative: string): number {
+  const folders = segmentsOf(relative).slice(0, -1);
+  if (folders.length === 0) {
+    return 1;
+  }
+  return readSeasonFolder(folders[folders.length - 1]) ?? 1;
+}
+
 /** One found video's **Numbering guess**: its season, number and title. */
 export interface FoundRowGuess {
   path: string;
@@ -637,18 +652,25 @@ export interface FoundRowGuess {
  * The **Numbering guess** for found videos in name order, under the folder
  * they were found in: the season from the folder, the episode from the
  * **Episode word**, else the next free number in that season. A pair in
- * `taken` — a held series's, or a numbered row's — is never guessed.
+ * `taken` — a held series's, or a numbered row's — is never guessed. Given
+ * each video's path inside the Show folder (`relative`), the season is read
+ * from that path instead.
  */
 export function numberFoundRows(
   videos: readonly string[],
   folder: string | undefined,
-  taken: readonly { season: number; number: number }[]
+  taken: readonly { season: number; number: number }[],
+  relative?: readonly string[]
 ): FoundRowGuess[] {
   const used = new Set(
     taken.map(({ season, number }) => `${season}x${number}`)
   );
-  const guesses = videos.map((path) => {
-    const season = folderSeason(path, folder);
+  const guesses = videos.map((path, index) => {
+    const inside = relative?.[index];
+    const season =
+      inside === undefined
+        ? folderSeason(path, folder)
+        : relativeSeason(inside);
     const tag = readEpisodeTag(foundFilenameOf(path), season);
     const claim =
       tag !== null && !used.has(`${tag.season}x${tag.number}`) ? tag : null;
