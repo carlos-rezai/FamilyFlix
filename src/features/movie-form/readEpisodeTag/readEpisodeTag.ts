@@ -22,12 +22,13 @@ export const TAG_SHAPES = [
 ];
 
 /**
- * The **Episode word** — `Episode 12`, `Ep 12`, `Ep.12`, `E12` — either case,
- * standing as a word of its own. It gives an episode number only, so it is
- * read only under a season the caller already knows.
+ * The **Episode word** (`Episode 12`, `Ep 12`, `Ep.12`, `E12`, and the Dutch
+ * `Aflevering 12`, `Afl. 12`, `Afl.12`) in any case, standing as a word of its
+ * own. It gives an episode number only, so it is read only under a season the
+ * caller already knows.
  */
 const EPISODE_WORD =
-  /(?:^|[\s._-])(?:episode|ep|e)[\s.]?(\d{1,4})(?=$|[\s._-])/i;
+  /(?:^|[\s._-])(?:aflevering|afl\.?|episode|ep|e)[\s.]?(\d{1,4})(?=$|[\s._-])/i;
 
 /** The words a release name carries that are not the episode's. */
 const QUALITY_TAG =
@@ -46,7 +47,9 @@ function withoutExtension(filename: string): string {
  * quality tags dropped.
  *
  * Given the `season` the caller already knows, the **Episode word** is read
- * too, under that season — the server's rule, held to it by the drift guard.
+ * too, under that season: `Episode 12`, `Ep 12`, `E12`, or the Dutch
+ * `Aflevering 12` and `Afl. 12`. The server's rule, held to it by the drift
+ * guard.
  */
 export function readEpisodeTag(
   filename: string,

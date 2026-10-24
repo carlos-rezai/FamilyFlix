@@ -20,12 +20,13 @@ const TAG_SHAPES = [
 ];
 
 /**
- * The **Episode word** — `Episode 12`, `Ep 12`, `Ep.12`, `E12` — either case,
- * standing as a word of its own. It gives an episode number only, so it is
- * read only under a season the caller already knows.
+ * The **Episode word** (`Episode 12`, `Ep 12`, `Ep.12`, `E12`, and the Dutch
+ * `Aflevering 12`, `Afl. 12`, `Afl.12`) in any case, standing as a word of its
+ * own. It gives an episode number only, so it is read only under a season the
+ * caller already knows.
  */
 const EPISODE_WORD =
-  /(?:^|[\s._-])(?:episode|ep|e)[\s.]?(\d{1,4})(?=$|[\s._-])/i;
+  /(?:^|[\s._-])(?:aflevering|afl\.?|episode|ep|e)[\s.]?(\d{1,4})(?=$|[\s._-])/i;
 
 /**
  * The words a release name carries that are not the episode's: resolutions,
@@ -41,7 +42,8 @@ const QUALITY_TAG =
  * left is a `null` title. The extension never reaches it.
  *
  * Given the `season` the caller already knows — a Season folder's, or 1 at a
- * Show folder's root — the **Episode word** is read too, under that season. A
+ * Show folder's root — the **Episode word** is read too, under that season:
+ * `Episode 12`, `Ep 12`, `E12`, or the Dutch `Aflevering 12` and `Afl. 12`. A
  * full tag still answers its own numbers.
  */
 export function episodeTag(
