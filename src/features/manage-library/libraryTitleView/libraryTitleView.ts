@@ -162,6 +162,7 @@ function filesGoing(title: LibraryTitle): string[] {
       return ['Its folder, to the Recycle Bin'];
     case 'videos':
       return ['Its video file(s), to the Recycle Bin'];
+    case 'shared':
     case 'unreachable':
       return [];
   }

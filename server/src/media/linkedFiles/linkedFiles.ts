@@ -28,11 +28,15 @@ function within(folder: string, path: string): boolean {
 }
 
 /**
- * Pure: a title's **Linked files**. `folder` when its Source folder holds
- * every one of its videos, no other held title's, and is not a Library folder
- * itself; `videos` when the folder is shared or the title is only partly
- * linked; `unreachable`, with no paths, while its Library folder can't be
- * read; `null` for a title with no linked video.
+ * Pure: a title's **Linked files**, what a `?files=trash` Delete would move to
+ * the Recycle Bin. A video another held title also links (an exact path match
+ * in `others`) is never among them. `unreachable`, with no paths, while its
+ * Library folder can't be read, shared videos or not; `shared`, with no paths,
+ * when every one of its videos is another title's too; `folder` when its
+ * Source folder holds every one of its videos, no other held title's, and is
+ * not a Library folder itself; else `videos`, its unshared videos alone, when
+ * the folder is shared or the title only partly linked; `null` for a title
+ * with no linked video.
  */
 export function linkedFiles({
   videos,
@@ -45,6 +49,11 @@ export function linkedFiles({
   if (libraryFolder === null || !libraryFolder.reachable) {
     return { kind: 'unreachable', paths: [] };
   }
+  const shared = new Set(others);
+  const unshared = videos.filter((video) => !shared.has(video));
+  if (unshared.length === 0) {
+    return { kind: 'shared', paths: [] };
+  }
   const wholeFolder =
     allLinked &&
     sourceFolder !== null &&
@@ -53,5 +62,5 @@ export function linkedFiles({
     !others.some((other) => within(sourceFolder, other));
   return wholeFolder && sourceFolder !== null
     ? { kind: 'folder', paths: [sourceFolder] }
-    : { kind: 'videos', paths: [...videos] };
+    : { kind: 'videos', paths: unshared };
 }

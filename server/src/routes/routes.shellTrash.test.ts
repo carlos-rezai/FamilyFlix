@@ -178,9 +178,12 @@ describe('a linked delete under the Shell trash', () => {
     const coco = (await titles(api)).movies.find((m) => m.title === 'Coco');
     expect(coco).toBeDefined();
 
-    const response = await fetch(`${api.baseUrl}/api/movies/${coco?.id}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      `${api.baseUrl}/api/movies/${coco?.id}?files=trash`,
+      {
+        method: 'DELETE',
+      }
+    );
 
     expect(response.status).toBe(204);
     expect(main.requests).toEqual([[join(api.library, 'Coco (2017)')]]);
@@ -204,9 +207,12 @@ describe('a linked delete under the Shell trash', () => {
     );
     expect(show).toBeDefined();
 
-    const response = await fetch(`${api.baseUrl}/api/series/${show?.id}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      `${api.baseUrl}/api/series/${show?.id}?files=trash`,
+      {
+        method: 'DELETE',
+      }
+    );
 
     expect(response.status).toBe(204);
     expect(main.requests).toEqual([[join(api.library, 'Harbor and Vine')]]);
@@ -225,9 +231,12 @@ describe('a linked delete on a standalone server', () => {
     const coco = (await titles(api)).movies.find((m) => m.title === 'Coco');
     expect(coco).toBeDefined();
 
-    const response = await fetch(`${api.baseUrl}/api/movies/${coco?.id}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      `${api.baseUrl}/api/movies/${coco?.id}?files=trash`,
+      {
+        method: 'DELETE',
+      }
+    );
 
     expect(response.status).toBe(409);
     expect(await response.json()).toEqual({ error: NO_SHELL });

@@ -73,7 +73,9 @@ async function readLibraryTitles(
   const linked = new Map<string, string[]>(
     [...movies, ...series].map((title) => [title.id, videosOf(title)])
   );
-  const allVideos = [...linked.values()].flat();
+  /** Every other held title's linked videos, a video it shares included. */
+  const othersOf = (id: string) =>
+    [...linked].flatMap(([other, videos]) => (other === id ? [] : videos));
 
   function placed(
     kind: 'movie' | 'series',
@@ -91,13 +93,12 @@ async function readLibraryTitles(
         ? null
         : join(libraryFolder.path, title.sourceFolder);
     const managed = resolve(mediaPath, title.mediaFolder ?? '');
-    const own = new Set(videos);
     const answer = linkedFiles({
       videos,
       allLinked,
       sourceFolder,
       libraryFolder,
-      others: allVideos.filter((video) => !own.has(video)),
+      others: othersOf(title.id),
     });
     answers.set(`${kind}:${title.id}`, answer);
     return {

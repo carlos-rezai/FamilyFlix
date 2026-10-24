@@ -336,9 +336,12 @@ describe('the app never removes a linked video', () => {
       (await streamed(`${baseUrl}/api/movies/${movie.id}/stream`)).status
     ).toBe(200);
 
-    const response = await fetch(`${baseUrl}/api/movies/${movie.id}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      `${baseUrl}/api/movies/${movie.id}?files=trash`,
+      {
+        method: 'DELETE',
+      }
+    );
 
     expect(response.status).toBe(204);
     expect(existsSync(join(media, 'heat-1995'))).toBe(false);
@@ -355,9 +358,12 @@ describe('the app never removes a linked video', () => {
       (await streamed(`${baseUrl}/api/episodes/${episode?.id}/stream`)).status
     ).toBe(200);
 
-    const response = await fetch(`${baseUrl}/api/series/${series.id}`, {
-      method: 'DELETE',
-    });
+    const response = await fetch(
+      `${baseUrl}/api/series/${series.id}?files=trash`,
+      {
+        method: 'DELETE',
+      }
+    );
 
     expect(response.status).toBe(204);
     expect(existsSync(file)).toBe(true);

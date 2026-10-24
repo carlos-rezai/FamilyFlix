@@ -743,10 +743,12 @@ export function createApiRouter(
   router.use(express.json());
 
   /**
-   * A delete's first step: the title's **Linked files** to the Recycle Bin
-   * through `media.trashLinked`, before any row goes. `true` to go on — a
-   * copied title, an `unreachable` one, or every file moved — else the `409`
-   * sentence is answered and every row kept.
+   * A `?files=trash` delete's first step: the title's **Linked files** to the
+   * Recycle Bin through `media.trashLinked`, before any row goes. A plain
+   * Delete never calls it, so it keeps the files and never asks the shell.
+   * `true` to go on: a copied title, an `unreachable` one, a `shared` one (no
+   * path of its own to trash), or every file moved. Else the `409` sentence is
+   * answered and every row kept.
    */
   async function trashedFirst(
     kind: 'movie' | 'series',
@@ -757,7 +759,11 @@ export function createApiRouter(
       kind,
       id
     );
-    if (linked === null || linked.kind === 'unreachable') {
+    if (
+      linked === null ||
+      linked.kind === 'unreachable' ||
+      linked.kind === 'shared'
+    ) {
       return true;
     }
     const outcome = await media.trashLinked(linked.paths);
@@ -901,7 +907,10 @@ export function createApiRouter(
       if (!series) {
         return;
       }
-      if (!(await trashedFirst('series', series.id, res))) {
+      if (
+        req.query.files === 'trash' &&
+        !(await trashedFirst('series', series.id, res))
+      ) {
         return;
       }
 
@@ -1865,7 +1874,10 @@ export function createApiRouter(
     if (!movie) {
       return;
     }
-    if (!(await trashedFirst('movie', movie.id, res))) {
+    if (
+      req.query.files === 'trash' &&
+      !(await trashedFirst('movie', movie.id, res))
+    ) {
       return;
     }
 
