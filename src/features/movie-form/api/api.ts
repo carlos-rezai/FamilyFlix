@@ -41,6 +41,18 @@ export class ProblemGoneError extends Error {
   }
 }
 
+/**
+ * A save the route refused in a sentence of its own, the `409` naming the
+ * title that already plays a picked video. The form draws the sentence and
+ * stays standing.
+ */
+export class SaveRefusedError extends Error {
+  constructor(readonly sentence: string) {
+    super(sentence);
+    this.name = 'SaveRefusedError';
+  }
+}
+
 /** The two verbs the form saves with, and the only two it ever will. */
 type SaveMethod = 'POST' | 'PATCH';
 
@@ -66,6 +78,12 @@ async function sendMovie(
     body: movieFormData(values, mode),
   });
 
+  if (response.status === 409) {
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      throw new SaveRefusedError(sentence);
+    }
+  }
   if (!response.ok) {
     throw new Error(`${method} ${endpoint} failed: ${response.status}`);
   }

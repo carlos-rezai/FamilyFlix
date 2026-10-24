@@ -1988,6 +1988,7 @@ export function createImporter({
             ? atFolder
             : null;
         },
+        titleHolding: storage.titleHolding,
       }),
 
     cancel: async () => {

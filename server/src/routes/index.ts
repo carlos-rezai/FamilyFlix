@@ -1499,6 +1499,23 @@ export function createApiRouter(
       return;
     }
     const [placed] = placing.placed;
+    // A linked video a held title already plays is refused by the **Held
+    // video** rule, naming the holder, the way a held Show folder is.
+    const held =
+      placed?.videoFolderId == null
+        ? null
+        : storage.titleHolding(placed.videoFolderId, placed.videoPath);
+    if (held !== null) {
+      const holder =
+        held.kind === 'movie'
+          ? storage.getMovie(held.id)
+          : storage.getSeries(held.id);
+      rollback();
+      res.status(409).json({
+        error: `${holder?.title ?? 'A title'} already plays this file.`,
+      });
+      return;
+    }
     // The **Source folder** is recorded in both modes for a found video under
     // a listed folder, so a later Folder scan reads the film as held.
     let source: FilmSource | null = null;

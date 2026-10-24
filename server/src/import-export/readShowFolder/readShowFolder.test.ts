@@ -36,7 +36,11 @@ function folderWith(root: string, path: string, files: string[]): string {
 }
 
 /** No folder listed and nothing held. */
-const noLibrary: ShowFolderContext = { folders: [], heldSeriesAt: () => null };
+const noLibrary: ShowFolderContext = {
+  folders: [],
+  heldSeriesAt: () => null,
+  titleHolding: () => null,
+};
 
 /** The read of `dir`, failing the test on a refusal. */
 async function readOf(dir: string, context: ShowFolderContext = noLibrary) {
@@ -306,6 +310,7 @@ describe('readShowFolder — a held Show folder', () => {
           (held) =>
             folderId === root.id && held.path === join(root.path, sourceFolder)
         )?.seriesId ?? null,
+      titleHolding: () => null,
     });
   }
 
@@ -359,6 +364,7 @@ describe('readShowFolder — its Library folder', () => {
   const listedAt = (path: string): ShowFolderContext => ({
     folders: [{ id: 'shows', path, titleCount: 0 }],
     heldSeriesAt: () => null,
+    titleHolding: () => null,
   });
 
   it('answers the id of the listed folder the show lies inside', async () => {

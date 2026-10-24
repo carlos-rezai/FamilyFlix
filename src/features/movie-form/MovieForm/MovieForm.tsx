@@ -184,6 +184,7 @@ export function MovieForm() {
     showFolder,
     removeShowFolder,
     showFolderRefusal,
+    saveRefusal,
     straySubtitles,
     setSeason,
     setNumber,
@@ -431,6 +432,8 @@ export function MovieForm() {
       {kind === 'series' && showFolderRefusal !== null && (
         <Refusal>{showFolderRefusal}</Refusal>
       )}
+      {/* A save the route refused by name: a held video's add. */}
+      {saveRefusal !== null && <Refusal>{saveRefusal}</Refusal>}
     </>
   );
 }

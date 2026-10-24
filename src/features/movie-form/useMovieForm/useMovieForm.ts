@@ -35,6 +35,7 @@ import {
   createSeries,
   ProblemGoneError,
   resolveProblem,
+  SaveRefusedError,
   resolveSeriesProblem,
   updateMovie,
   updateSeries,
@@ -182,6 +183,8 @@ export interface UseMovieFormResult {
   removeShowFolder: () => void;
   /** The sentence a refused Show folder read is drawn as, or `null`. */
   showFolderRefusal: string | null;
+  /** The sentence the route refused the last save with, or `null`. */
+  saveRefusal: string | null;
   /** How many subtitles the picked Show folder matched to no episode. */
   straySubtitles: number;
   /** The season of the row holding `key`, as typed. */
@@ -388,6 +391,7 @@ export function useMovieForm(): UseMovieFormResult {
   const [searchParams] = useSearchParams();
   const [values, setValues] = useState<MovieFormValues>(EMPTY);
   const [saving, setSaving] = useState(false);
+  const [saveRefusal, setSaveRefusal] = useState<string | null>(null);
   const episodeList = useEpisodeList();
   const { episodes, episodesComplete, holdEpisodes } = episodeList;
   const addFiles = episodeList.addEpisodeFiles;
@@ -681,6 +685,7 @@ export function useMovieForm(): UseMovieFormResult {
     }
 
     setSaving(true);
+    setSaveRefusal(null);
 
     // The job as its reads left it: a record that turned out to be gone — a
     // movie, a series or a problem — leaves the add standing, and the add is
@@ -767,13 +772,16 @@ export function useMovieForm(): UseMovieFormResult {
     };
 
     // The form is still on screen with everything typed still in it, and Save
-    // is offered again. Nothing else is said, because there is nothing yet to
-    // say it with. The one exception is a problem that is gone: there is
+    // is offered again. Nothing else is said, but for a save the route refused
+    // in a sentence of its own, which is drawn. The one exception is a problem that is gone: there is
     // nothing left to resolve, so the form falls back to the plain add — and
     // empty, because a found file is a path under the run's root, which the
     // plain add can never send.
     write().catch((error: unknown) => {
       setSaving(false);
+      if (error instanceof SaveRefusedError) {
+        setSaveRefusal(error.sentence);
+      }
       if (error instanceof ProblemGoneError) {
         setResolving(null);
         setValues(EMPTY);
@@ -848,6 +856,7 @@ export function useMovieForm(): UseMovieFormResult {
     showFolder: showFolderPick.showFolder,
     removeShowFolder: showFolderPick.removeShowFolder,
     showFolderRefusal: showFolderPick.refusal,
+    saveRefusal,
     straySubtitles: showFolderPick.straySubtitles,
     setSeason: episodeList.setSeason,
     setNumber: episodeList.setNumber,
