@@ -246,6 +246,8 @@ describe('deleteView — the confirm', () => {
  * The `callout`, for `folder` and `videos` only: _This is a linked title. Its
  * files go from your library folder to the Recycle Bin, not just out of
  * FamilyFlix._ — `null` for a copied or unreachable title.
+ *
+ * Since log 51 Q6 these are the **Recycle choice**'s second card, `'trash'`.
  */
 const SHARED_GOES = [
   'Its details, poster and artwork',
@@ -261,22 +263,25 @@ describe('deleteView — a linked folder', () => {
   });
 
   it('sends its folder to the Recycle Bin', () => {
-    expect(deleteView(COCO).goes).toEqual([
+    expect(deleteView(COCO, 'trash').goes).toEqual([
       ...SHARED_GOES,
       'Its folder, to the Recycle Bin',
     ]);
   });
 
   it('keeps Nothing', () => {
-    expect(deleteView(COCO).stays).toEqual(['Nothing']);
+    expect(deleteView(COCO, 'trash').stays).toEqual(['Nothing']);
   });
 
   it('draws the linked callout', () => {
-    expect(deleteView(COCO).callout).toBe(LINKED_CALLOUT);
+    expect(deleteView(COCO, 'trash').callout).toBe(LINKED_CALLOUT);
   });
 
   it('says the same for a linked show', () => {
-    const view = deleteView(makeLibrarySeries({ linkedFiles: 'folder' }));
+    const view = deleteView(
+      makeLibrarySeries({ linkedFiles: 'folder' }),
+      'trash'
+    );
     expect(view.goes).toEqual([
       ...SHARED_GOES,
       'Its folder, to the Recycle Bin',
@@ -293,18 +298,18 @@ describe('deleteView — linked videos in a shared folder', () => {
   });
 
   it('sends its video file(s) alone to the Recycle Bin', () => {
-    expect(deleteView(HEAT).goes).toEqual([
+    expect(deleteView(HEAT, 'trash').goes).toEqual([
       ...SHARED_GOES,
       'Its video file(s), to the Recycle Bin',
     ]);
   });
 
   it('keeps Nothing', () => {
-    expect(deleteView(HEAT).stays).toEqual(['Nothing']);
+    expect(deleteView(HEAT, 'trash').stays).toEqual(['Nothing']);
   });
 
   it('draws the linked callout', () => {
-    expect(deleteView(HEAT).callout).toBe(LINKED_CALLOUT);
+    expect(deleteView(HEAT, 'trash').callout).toBe(LINKED_CALLOUT);
   });
 });
 

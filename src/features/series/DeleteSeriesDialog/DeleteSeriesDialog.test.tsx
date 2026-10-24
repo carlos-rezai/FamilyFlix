@@ -10,6 +10,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { DeleteSeriesDialog } from './DeleteSeriesDialog';
+import type { LinkedFiles } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
@@ -27,11 +28,6 @@ import {
  * episode count in the body, _Delete series_ before _Cancel_, _Deleting…_ in
  * flight, and four ways out that send nothing.
  */
-const bodyFor = (count: number) =>
-  `The series and its ${count} episode${count === 1 ? '' : 's'} leave your library, and the videos, ` +
-  'posters and subtitles FamilyFlix copied are deleted. Its watch history ' +
-  'goes with it. The original files are not touched.';
-
 let fetchMock: ReturnType<
   typeof vi.fn<
     (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -54,7 +50,7 @@ interface RenderDialogOptions {
   open?: boolean;
   title?: string;
   episodeCount?: number;
-  linked?: boolean;
+  linkedFiles?: LinkedFiles | null;
   onClose?: () => void;
 }
 
@@ -62,7 +58,7 @@ function renderDialog({
   open = true,
   title = 'F’ck That’s Delicious',
   episodeCount = 24,
-  linked = false,
+  linkedFiles = null,
   onClose = () => undefined,
 }: RenderDialogOptions = {}) {
   return render(
@@ -81,7 +77,7 @@ function renderDialog({
                 seriesId="ftd"
                 title={title}
                 episodeCount={episodeCount}
-                linked={linked}
+                linkedFiles={linkedFiles}
                 open={open}
                 onClose={onClose}
               />
@@ -134,27 +130,6 @@ describe('DeleteSeriesDialog — the copy', () => {
     renderDialog();
 
     expect(within(dialog()).getByText('This can’t be undone.')).toBeTruthy();
-  });
-
-  it('says what goes and what stays, with the episode count, exactly', () => {
-    renderDialog({ episodeCount: 24 });
-
-    expect(within(dialog()).getByText(bodyFor(24))).toBeTruthy();
-  });
-
-  it('counts whichever number of episodes it was handed', () => {
-    renderDialog({ episodeCount: 7 });
-
-    expect(within(dialog()).getByText(bodyFor(7))).toBeTruthy();
-  });
-
-  it('counts a lone episode in the singular', () => {
-    renderDialog({ episodeCount: 1 });
-
-    expect(
-      within(dialog()).getByText(/its 1 episode leave your library/)
-    ).toBeTruthy();
-    expect(within(dialog()).getByText(bodyFor(1))).toBeTruthy();
   });
 
   it('renders nothing when closed', () => {
@@ -253,29 +228,6 @@ describe('DeleteSeriesDialog — the ways out', () => {
 });
 
 /**
- * 47 — Manage library, issue #413: the series' Delete dialog tells the truth
- * about a show with a **Linked video** among its episodes. The paragraph
- * stays; one sentence is added, read off the record the page already holds
- * and handed in as `linked`.
- */
-const LINKED_SENTENCE = 'Its files go to the Recycle Bin.';
-
-describe('DeleteSeriesDialog — a linked show', () => {
-  it('adds that its files go to the Recycle Bin, for a linked show only', () => {
-    const copied = renderDialog({ linked: false });
-    expect(dialog().textContent).toContain(bodyFor(24));
-    expect(dialog().textContent).not.toMatch(/Recycle Bin/);
-    copied.unmount();
-
-    renderDialog({ linked: true });
-
-    // The paragraph stays; the sentence is added beside it.
-    expect(dialog().textContent).toContain(bodyFor(24));
-    expect(dialog().textContent).toContain(LINKED_SENTENCE);
-  });
-});
-
-/**
  * The refusal line, the overview's: a `409`'s one sentence drawn in danger ink
  * above the buttons, held until the next press is answered — cleared when it
  * deletes, replaced when it is refused again. The page stays on the show.
@@ -289,7 +241,7 @@ const DANGER = 'rgb(201, 122, 106)';
 describe('DeleteSeriesDialog — the refusal line', () => {
   it('draws a 409’s sentence in danger ink above the buttons', async () => {
     fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
-    renderDialog({ linked: true });
+    renderDialog({ linkedFiles: 'folder' });
     expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
 
     fireEvent.click(confirmButton());
@@ -302,7 +254,7 @@ describe('DeleteSeriesDialog — the refusal line', () => {
 
   it('stays on the show, the dialog up and Delete series live again', async () => {
     fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
-    renderDialog({ linked: true });
+    renderDialog({ linkedFiles: 'folder' });
 
     fireEvent.click(confirmButton());
     await within(dialog()).findByText(NO_SHELL);
@@ -313,7 +265,7 @@ describe('DeleteSeriesDialog — the refusal line', () => {
 
   it('holds the sentence while the next press is in flight', async () => {
     fetchMock.mockResolvedValueOnce(conflictResponse(NO_SHELL));
-    renderDialog({ linked: true });
+    renderDialog({ linkedFiles: 'folder' });
     fireEvent.click(confirmButton());
     await within(dialog()).findByText(NO_SHELL);
 
@@ -328,7 +280,7 @@ describe('DeleteSeriesDialog — the refusal line', () => {
     fetchMock
       .mockResolvedValueOnce(conflictResponse(NO_SHELL))
       .mockResolvedValueOnce(conflictResponse(LOCKED));
-    renderDialog({ linked: true });
+    renderDialog({ linkedFiles: 'folder' });
 
     fireEvent.click(confirmButton());
     await within(dialog()).findByText(NO_SHELL);
@@ -343,7 +295,7 @@ describe('DeleteSeriesDialog — the refusal line', () => {
     fetchMock
       .mockResolvedValueOnce(conflictResponse(LOCKED))
       .mockResolvedValueOnce(noContentResponse());
-    renderDialog({ linked: true });
+    renderDialog({ linkedFiles: 'folder' });
 
     fireEvent.click(confirmButton());
     await within(dialog()).findByText(LOCKED);

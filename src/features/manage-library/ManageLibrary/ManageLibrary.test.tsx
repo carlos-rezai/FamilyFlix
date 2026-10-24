@@ -997,7 +997,7 @@ function serveLinked(answers: Response[]) {
 }
 
 describe('ManageLibrary — deleting a linked title', () => {
-  it('opens the linked Delete dialog, its callout in it', async () => {
+  it('opens the linked Delete dialog; a browser keeps the files, no callout', async () => {
     serveLinked([]);
     renderPage();
     await loaded();
@@ -1005,9 +1005,9 @@ describe('ManageLibrary — deleting a linked title', () => {
     openDeleteOn('Coco');
 
     const dialog = deleteDialog() as HTMLElement;
-    expect(within(dialog).getByText(CALLOUT)).toBeDefined();
+    expect(within(dialog).queryByText(CALLOUT)).toBeNull();
     expect(
-      within(dialog).getByText('Its folder, to the Recycle Bin')
+      within(dialog).getByText('Its folder, in your library folder')
     ).toBeDefined();
   });
 

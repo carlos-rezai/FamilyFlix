@@ -270,57 +270,15 @@ describe('DeleteTitleDialog — focus', () => {
  * can’t be reached right now_ and draws no callout. And the `refusal` prop —
  * the route's `409` sentence the organism holds — is drawn in danger ink
  * above the buttons, the **Reset dialog**'s line; nothing while `null`.
+ *
+ * Since log 51 Q6 a linked title's words follow the **Recycle choice**, in
+ * `DeleteTitleDialog.recycle.test.tsx`.
  */
 const CALLOUT =
   'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
 const SHARED_GOES = GOES.slice(0, 2);
 const NO_SHELL =
   'Only the desktop app can move a linked title’s files to the Recycle Bin.';
-
-describe('DeleteTitleDialog — a linked folder', () => {
-  const LINKED = makeLibraryMovie({
-    title: 'Coco',
-    linkedFiles: 'folder',
-    path: 'E:\\Movies\\Coco (2017)',
-  });
-
-  it('sends the folder to the Recycle Bin and keeps Nothing', () => {
-    renderDialog({ title: LINKED });
-
-    expect(itemsOf(listUnder('What goes'))).toEqual([
-      ...SHARED_GOES,
-      'Its folder, to the Recycle Bin',
-    ]);
-    expect(itemsOf(listUnder('What stays'))).toEqual(['Nothing']);
-  });
-
-  it('draws the linked callout', () => {
-    renderDialog({ title: LINKED });
-
-    expect(within(dialog()).getByText(CALLOUT)).toBeDefined();
-  });
-});
-
-describe('DeleteTitleDialog — linked videos', () => {
-  const HEAT = makeLibraryMovie({
-    title: 'Heat',
-    linkedFiles: 'videos',
-    path: 'E:\\Movies\\Collection\\Heat.mkv',
-  });
-
-  it('sends only its video file(s) to the Recycle Bin, with the callout', () => {
-    renderDialog({ title: HEAT });
-
-    expect(itemsOf(listUnder('What goes', 'Delete “Heat”?'))).toEqual([
-      ...SHARED_GOES,
-      'Its video file(s), to the Recycle Bin',
-    ]);
-    expect(itemsOf(listUnder('What stays', 'Delete “Heat”?'))).toEqual([
-      'Nothing',
-    ]);
-    expect(within(dialog('Delete “Heat”?')).getByText(CALLOUT)).toBeDefined();
-  });
-});
 
 describe('DeleteTitleDialog — an unreachable title', () => {
   const GONE = makeLibraryMovie({

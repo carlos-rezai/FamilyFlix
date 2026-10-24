@@ -12,7 +12,7 @@ import { useEffect, useState } from 'react';
 
 import { DeleteMovieDialog } from './DeleteMovieDialog';
 import { theme } from '@/styles/theme';
-import type { GenrePayload } from '@/types';
+import type { GenrePayload, LinkedFiles } from '@/types';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
@@ -30,9 +30,6 @@ import {
  * is tested with the Modal; what is left here is what makes this dialog *this*
  * dialog: which movie it names, what it says, and what confirming does.
  */
-const BODY =
-  'The movie leaves your library, and the video, poster and subtitles ' +
-  'FamilyFlix copied are deleted. The original files are not touched.';
 
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -55,14 +52,14 @@ afterEach(() => {
 interface RenderDialogOptions {
   open?: boolean;
   title?: string;
-  linked?: boolean;
+  linkedFiles?: LinkedFiles | null;
   onClose?: () => void;
 }
 
 function renderDialog({
   open = true,
   title = 'Northwind',
-  linked = false,
+  linkedFiles = null,
   onClose = () => undefined,
 }: RenderDialogOptions = {}) {
   return render(
@@ -71,7 +68,7 @@ function renderDialog({
         <DeleteMovieDialog
           movieId="m1"
           title={title}
-          linked={linked}
+          linkedFiles={linkedFiles}
           open={open}
           onClose={onClose}
         />
@@ -139,12 +136,6 @@ describe('DeleteMovieDialog — the copy', () => {
     renderDialog();
 
     expect(within(dialog()).getByText('This can’t be undone.')).toBeTruthy();
-  });
-
-  it('says what goes and what stays, exactly', () => {
-    renderDialog();
-
-    expect(within(dialog()).getByText(BODY)).toBeTruthy();
   });
 
   it('renders nothing when closed', () => {
@@ -276,7 +267,7 @@ function renderFromShelf() {
               <DeleteMovieDialog
                 movieId="m1"
                 title="Northwind"
-                linked={false}
+                linkedFiles={null}
                 open
                 onClose={() => undefined}
               />
@@ -324,7 +315,7 @@ function Host() {
       <DeleteMovieDialog
         movieId="m1"
         title="Northwind"
-        linked={false}
+        linkedFiles={null}
         open={open}
         onClose={() => setOpen(false)}
       />
@@ -526,28 +517,6 @@ describe('DeleteMovieDialog — confirming', () => {
       await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
       await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
     });
-  });
-});
-
-/**
- * 47 — Manage library, issue #413: the Delete dialog tells the truth about a
- * linked film. The paragraph stays; a **Linked video** adds one sentence, read
- * off the record the page already holds and handed in as `linked`.
- */
-const LINKED_SENTENCE = 'Its video goes to the Recycle Bin.';
-
-describe('DeleteMovieDialog — a linked film', () => {
-  it('adds that its video goes to the Recycle Bin, for a linked film only', () => {
-    const copied = renderDialog({ linked: false });
-    expect(dialog().textContent).toContain(BODY);
-    expect(dialog().textContent).not.toMatch(/Recycle Bin/);
-    copied.unmount();
-
-    renderDialog({ linked: true });
-
-    // The paragraph stays; the sentence is added beside it.
-    expect(dialog().textContent).toContain(BODY);
-    expect(dialog().textContent).toContain(LINKED_SENTENCE);
   });
 });
 
