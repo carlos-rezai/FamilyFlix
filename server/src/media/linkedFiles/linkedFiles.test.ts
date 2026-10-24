@@ -163,3 +163,70 @@ describe('linkedFiles — unreachable and copied', () => {
     ).toBeNull();
   });
 });
+
+// 51 — Library audit, slice 4 (issue #451): a Delete never trashes a video
+// another held title plays. `videos` drops every path another held title
+// links; when none is left the answer is `shared`, with no paths.
+describe('linkedFiles — shared videos', () => {
+  it('drops from videos an episode another held title links', () => {
+    expect(
+      linkedFiles({
+        videos: [at('Harbor.S01E01.mkv'), at('Harbor.S01E02.mkv')],
+        allLinked: true,
+        sourceFolder: LIBRARY,
+        libraryFolder: reachable,
+        others: [at('Harbor.S01E01.mkv')],
+      })
+    ).toEqual({ kind: 'videos', paths: [at('Harbor.S01E02.mkv')] });
+  });
+
+  it('answers shared, with no paths, for a Collection folder film whose video another title plays', () => {
+    expect(
+      linkedFiles({
+        videos: [at('Collection', 'Heat.mkv')],
+        allLinked: true,
+        sourceFolder: at('Collection'),
+        libraryFolder: reachable,
+        others: [at('Collection', 'Heat.mkv'), at('Collection', 'Coco.mkv')],
+      })
+    ).toEqual({ kind: 'shared', paths: [] });
+  });
+
+  it('answers shared, never folder, for a film alone in its folder whose video another title plays', () => {
+    expect(
+      linkedFiles({
+        videos: [at('Coco (2017)', 'Coco.mkv')],
+        allLinked: true,
+        sourceFolder: at('Coco (2017)'),
+        libraryFolder: reachable,
+        others: [at('Coco (2017)', 'Coco.mkv')],
+      })
+    ).toEqual({ kind: 'shared', paths: [] });
+  });
+
+  it('answers shared when every one of a show’s episodes is another title’s too', () => {
+    const episodes = [at('Harbor.S01E01.mkv'), at('Harbor.S01E02.mkv')];
+
+    expect(
+      linkedFiles({
+        videos: episodes,
+        allLinked: true,
+        sourceFolder: LIBRARY,
+        libraryFolder: reachable,
+        others: episodes,
+      })
+    ).toEqual({ kind: 'shared', paths: [] });
+  });
+
+  it('still answers unreachable while the Library folder can’t be read, shared or not', () => {
+    expect(
+      linkedFiles({
+        videos: [at('Collection', 'Heat.mkv')],
+        allLinked: true,
+        sourceFolder: at('Collection'),
+        libraryFolder: { path: LIBRARY, reachable: false },
+        others: [at('Collection', 'Heat.mkv')],
+      })
+    ).toEqual({ kind: 'unreachable', paths: [] });
+  });
+});

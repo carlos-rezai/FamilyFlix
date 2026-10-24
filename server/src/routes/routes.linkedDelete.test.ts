@@ -204,8 +204,11 @@ function linkedShow(
   return show;
 }
 
+/** A Delete that asks for the Recycle Bin: the trash path this suite covers. */
 function remove(api: Api, kind: 'movies' | 'series', id: string) {
-  return fetch(`${api.baseUrl}/api/${kind}/${id}`, { method: 'DELETE' });
+  return fetch(`${api.baseUrl}/api/${kind}/${id}?files=trash`, {
+    method: 'DELETE',
+  });
 }
 
 describe('DELETE a linked title — what the Trash is asked, before the rows', () => {
