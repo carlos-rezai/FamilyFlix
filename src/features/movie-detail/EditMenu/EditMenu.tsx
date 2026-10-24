@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { CornerMenu, MenuItem } from '@/components';
+import type { LinkedFiles } from '@/types';
 import { enrichPath, movieFormPath } from '@/utils';
 import { DeleteMovieDialog } from '../DeleteMovieDialog/DeleteMovieDialog';
 
@@ -10,8 +11,8 @@ export interface EditMenuProps {
   movieId: string;
   /** Its title — what the Delete dialog names. */
   title: string;
-  /** Whether its video is a **Linked video** — what the Delete dialog tells. */
-  linked: boolean;
+  /** Its **Linked files**, what the Delete dialog tells. */
+  linkedFiles: LinkedFiles | null;
 }
 
 /**
@@ -31,7 +32,7 @@ export interface EditMenuProps {
  * of what makes this menu *this* menu: three rows that know which movie they
  * are for.
  */
-export function EditMenu({ movieId, title, linked }: EditMenuProps) {
+export function EditMenu({ movieId, title, linkedFiles }: EditMenuProps) {
   const navigate = useNavigate();
   const [deleteOpen, setDeleteOpen] = useState(false);
 
@@ -57,7 +58,7 @@ export function EditMenu({ movieId, title, linked }: EditMenuProps) {
       <DeleteMovieDialog
         movieId={movieId}
         title={title}
-        linked={linked}
+        linkedFiles={linkedFiles}
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
       />

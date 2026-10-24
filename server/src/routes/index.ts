@@ -102,6 +102,7 @@ import {
   type LibraryFolder,
   type LibraryQuery,
   type LibraryTab,
+  type LinkedFiles,
   type Movie,
   type MovieSort,
   type NewEpisode,
@@ -750,6 +751,20 @@ export function createApiRouter(
    * path of its own to trash), or every file moved. Else the `409` sentence is
    * answered and every row kept.
    */
+  /**
+   * One title's **Linked files** kind, for its detail read's Delete dialog,
+   * as the Manage library list reads it now; `null` for a copied title.
+   */
+  async function linkedFilesOf(
+    kind: 'movie' | 'series',
+    id: string
+  ): Promise<LinkedFiles | null> {
+    return (
+      (await libraryTitleList(storage, mediaPath)).linkedFilesOf(kind, id)
+        ?.kind ?? null
+    );
+  }
+
   async function trashedFirst(
     kind: 'movie' | 'series',
     id: string,
@@ -884,14 +899,31 @@ export function createApiRouter(
   // The series page in one read: the series, its seasons with their episodes
   // and **Next episode**, and the series' own — derived on the server, so the
   // screen has no copy of `nextEpisodeOf`. A movie's id is not a series: 404.
-  router.get('/series/:id', (req: Request<{ id: string }>, res: Response) => {
-    const detail: SeriesDetail | null = storage.getSeriesDetail(req.params.id);
-    if (!detail) {
-      res.status(404).json({ error: `Unknown series: ${req.params.id}` });
-      return;
+  router.get(
+    '/series/:id',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const detail: SeriesDetail | null = storage.getSeriesDetail(
+        req.params.id
+      );
+      if (!detail) {
+        res.status(404).json({ error: `Unknown series: ${req.params.id}` });
+        return;
+      }
+      const linked = detail.seasons.some((season) =>
+        season.episodes.some((episode) => episode.videoFolderId !== null)
+      );
+      // A copied show reads as it is stored; `linkedFiles` absent is `null`.
+      if (!linked) {
+        res.json(detail);
+        return;
+      }
+      const answer: SeriesDetail = {
+        ...detail,
+        linkedFiles: await linkedFilesOf('series', detail.series.id),
+      };
+      res.json(answer);
     }
-    res.json(detail);
-  });
+  );
 
   // The series' **Delete dialog** confirm — the movie delete's shape. `204`
   // with nothing in it; the lookup and the JSON 404 are `seriesOr404`'s. The
@@ -1389,14 +1421,26 @@ export function createApiRouter(
   // serialization. A missing movie is a JSON 404, never Express's HTML page:
   // the client reads that body to tell "this movie is gone" from "the request
   // went wrong", which is what makes the page's `not-found` state reachable.
-  router.get('/movies/:id', (req: Request<{ id: string }>, res: Response) => {
-    const movie = movieOr404(storage, req.params.id, res);
-    if (!movie) {
-      return;
-    }
+  router.get(
+    '/movies/:id',
+    async (req: Request<{ id: string }>, res: Response) => {
+      const movie = movieOr404(storage, req.params.id, res);
+      if (!movie) {
+        return;
+      }
 
-    res.json(movie);
-  });
+      // A copied film reads as it is stored; `linkedFiles` absent is `null`.
+      if (movie.videoFolderId === null) {
+        res.json(movie);
+        return;
+      }
+      const answer: Movie = {
+        ...movie,
+        linkedFiles: await linkedFilesOf('movie', movie.id),
+      };
+      res.json(answer);
+    }
+  );
 
   // The **Movie form**'s save, and the first write of a whole record the API has:
   // every other write above is a single-signal `{ value }` POST against a movie

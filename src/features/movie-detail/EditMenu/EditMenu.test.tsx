@@ -28,7 +28,7 @@ function renderEditMenu(movieId = 'm1', title = 'Northwind') {
   return render(
     <ThemeProvider theme={theme}>
       <MemoryRouter initialEntries={['/movie/m1']}>
-        <EditMenu movieId={movieId} title={title} linked={false} />
+        <EditMenu movieId={movieId} title={title} linkedFiles={null} />
         <Probe />
       </MemoryRouter>
     </ThemeProvider>

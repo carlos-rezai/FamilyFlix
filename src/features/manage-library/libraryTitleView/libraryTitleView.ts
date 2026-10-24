@@ -1,4 +1,4 @@
-import type { DetailsState, LibraryTitle } from '@/types';
+import type { DeleteFiles, DetailsState, LibraryTitle } from '@/types';
 import {
   enrichPath,
   movieFormPath,
@@ -129,7 +129,7 @@ export function clearView(title: LibraryTitle): ClearView {
   };
 }
 
-/** The **Delete dialog**'s words (log 47 Q12). */
+/** The **Delete dialog**'s words (log 47 Q12, log 51 Q6). */
 export interface DeleteView {
   /** _Delete “Coco”?_ */
   heading: string;
@@ -137,13 +137,19 @@ export interface DeleteView {
   subtitle: string;
   /** **What goes**. */
   goes: string[];
-  /** **What stays**: the original in its Library folder, else _Nothing_. */
+  /** **What stays**: what the delete leaves on disk, else _Nothing_. */
   stays: string[];
-  /** _Delete movie_ / _Delete series_. */
+  /** _Delete movie_ / _Delete series_, on either card. */
   confirm: string;
-  /** The linked callout for `folder` and `videos`, else `null`. */
+  /** The linked callout, on the **Recycle choice**'s second card only. */
   callout: string | null;
 }
+
+/** What `deleteView` reads off a title: a **Library title**'s, or a page's. */
+export type DeleteSubject = Pick<
+  LibraryTitle,
+  'kind' | 'title' | 'path' | 'linkedFiles' | 'originalPath'
+>;
 
 const SHARED_GOES = [
   'Its details, poster and artwork',
@@ -153,43 +159,72 @@ const SHARED_GOES = [
 const LINKED_CALLOUT =
   'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
 
-/** What goes beyond the details and history, by the title's files. */
-function filesGoing(title: LibraryTitle): string[] {
+/** A linked title's own files, by its Linked files; `null` for the rest. */
+function ownFiles(title: DeleteSubject): string | null {
   switch (title.linkedFiles) {
-    case null:
-      return ['FamilyFlix’s copy of its video and subtitles'];
     case 'folder':
-      return ['Its folder, to the Recycle Bin'];
+      return 'Its folder';
     case 'videos':
-      return ['Its video file(s), to the Recycle Bin'];
-    case 'shared':
-    case 'unreachable':
-      return [];
+      return 'Its video file(s)';
+    default:
+      return null;
   }
 }
 
-/** What stays, by the title's files. */
-function filesStaying(title: LibraryTitle): string[] {
+/**
+ * Whether the **Recycle choice** is drawn for `title`: a linked title whose
+ * files can be moved, `folder` or `videos`. The shell is the caller's to add.
+ */
+export function offersRecycleChoice(title: DeleteSubject): boolean {
+  return ownFiles(title) !== null;
+}
+
+/** What goes beyond the details and history, by the title's files. */
+function filesGoing(title: DeleteSubject, own: string | null, trash: boolean) {
+  if (title.linkedFiles === null) {
+    return ['FamilyFlix’s copy of its video and subtitles'];
+  }
+  return own !== null && trash ? [`${own}, to the Recycle Bin`] : [];
+}
+
+/** What stays, by the title's files and the choice. */
+function filesStaying(
+  title: DeleteSubject,
+  own: string | null,
+  trash: boolean
+): string[] {
   if (title.linkedFiles === 'unreachable') {
     return [`Its files on ${title.path} — they can’t be reached right now`];
+  }
+  if (title.linkedFiles === 'shared') {
+    return ['Its video file(s), which another title plays'];
+  }
+  if (own !== null && !trash) {
+    return [`${own}, in your library folder`];
   }
   return title.linkedFiles === null && title.originalPath !== null
     ? ['Your original in its library folder — Scan folders would bring it back']
     : ['Nothing'];
 }
 
-/** Pure: a **Library title** → the **Delete dialog**'s words. */
-export function deleteView(title: LibraryTitle): DeleteView {
+/**
+ * Pure: a title and the **Recycle choice** → the **Delete dialog**'s words.
+ * `keep` lists a linked title's files under What stays; `trash` moves them to
+ * What goes, keeps _Nothing_ and draws the callout.
+ */
+export function deleteView(
+  title: DeleteSubject,
+  files: DeleteFiles = 'keep'
+): DeleteView {
   const noun = title.kind === 'movie' ? 'movie' : 'series';
+  const own = ownFiles(title);
+  const trash = own !== null && files === 'trash';
   return {
     heading: `Delete “${title.title}”?`,
     subtitle: `This takes the ${noun} out of FamilyFlix. It can’t be undone from here.`,
-    goes: [...SHARED_GOES, ...filesGoing(title)],
-    stays: filesStaying(title),
+    goes: [...SHARED_GOES, ...filesGoing(title, own, trash)],
+    stays: filesStaying(title, own, trash),
     confirm: `Delete ${noun}`,
-    callout:
-      title.linkedFiles === 'folder' || title.linkedFiles === 'videos'
-        ? LINKED_CALLOUT
-        : null,
+    callout: trash ? LINKED_CALLOUT : null,
   };
 }

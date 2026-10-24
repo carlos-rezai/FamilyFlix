@@ -112,7 +112,11 @@ export function MovieDetail() {
     <>
       <DetailBackdrop url={movie.backdropUrl} g1={movie.g1} g2={movie.g2} />
 
-      <EditMenu movieId={movie.id} title={movie.title} linked={movie.linked} />
+      <EditMenu
+        movieId={movie.id}
+        title={movie.title}
+        linkedFiles={movie.linkedFiles}
+      />
 
       <Content>
         <PosterColumn>

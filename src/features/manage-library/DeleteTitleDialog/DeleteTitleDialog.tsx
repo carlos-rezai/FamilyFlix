@@ -1,11 +1,10 @@
 import { Modal } from '@/components';
-import { BinIcon, Button } from '@/primitives';
-import type { LibraryTitle } from '@/types';
+import { BinIcon } from '@/primitives';
+import type { DeleteFiles, LibraryTitle } from '@/types';
 
 import { deleteView } from '../libraryTitleView/libraryTitleView';
-import { GoesAndStays } from '../GoesAndStays/GoesAndStays';
-import { Actions, PathWell } from '../titleDialog.styles';
-import { Callout, CalloutMark, Refusal } from './DeleteTitleDialog.styles';
+import { DeleteTitleBody } from '../DeleteTitleBody/DeleteTitleBody';
+import { PathWell } from '../titleDialog.styles';
 
 export interface DeleteTitleDialogProps {
   /** The title the delete is asked of. */
@@ -14,8 +13,8 @@ export interface DeleteTitleDialogProps {
   deleting: boolean;
   /** The route's `409` sentence, drawn above the buttons; `null` for none. */
   refusal: string | null;
-  /** _Delete movie_ / _Delete series_. */
-  onConfirm: () => void;
+  /** _Delete movie_ / _Delete series_, with the **Recycle choice**. */
+  onConfirm: (files: DeleteFiles) => void;
   /** What Cancel, the ✕, Escape and the scrim ask for. */
   onClose: () => void;
 }
@@ -23,11 +22,11 @@ export interface DeleteTitleDialogProps {
 /**
  * The **Delete dialog** (log 47 Q12), on `Modal` in the **Reset dialog**'s
  * shape: _Delete “Coco”?_ and its sentence, the title's path in the mono
- * well, **What goes** beside **What stays**, a linked title's callout, the
- * route's refusal in danger ink, then the confirm in `danger` before
- * _Cancel_. Focus lands on the card, the Modal's
- * own rule, so Enter alone deletes nothing. Its words are `deleteView`'s;
- * presentational, the organism owns the request.
+ * well, then `DeleteTitleBody`: **What goes** beside **What stays**, the
+ * **Recycle choice** and its callout, the route's refusal in danger ink, and
+ * the confirm in `danger` before _Cancel_. Focus lands on the card, the
+ * Modal's own rule, so Enter alone deletes nothing. Presentational, the
+ * organism owns the request.
  */
 export function DeleteTitleDialog({
   title,
@@ -47,23 +46,13 @@ export function DeleteTitleDialog({
       onClose={onClose}
     >
       <PathWell>{title.path}</PathWell>
-      <GoesAndStays goes={view.goes} stays={view.stays} />
-      {view.callout === null ? null : (
-        <Callout>
-          <CalloutMark>!</CalloutMark>
-          <span>{view.callout}</span>
-        </Callout>
-      )}
-      {refusal === null ? null : <Refusal>{refusal}</Refusal>}
-      <Actions>
-        <Button
-          label={deleting ? 'Deleting…' : view.confirm}
-          variant="danger"
-          disabled={deleting}
-          onClick={onConfirm}
-        />
-        <Button label="Cancel" variant="secondary" onClick={onClose} />
-      </Actions>
+      <DeleteTitleBody
+        title={title}
+        deleting={deleting}
+        refusal={refusal}
+        onConfirm={onConfirm}
+        onClose={onClose}
+      />
     </Modal>
   );
 }

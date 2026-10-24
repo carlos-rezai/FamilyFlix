@@ -3,6 +3,7 @@ import { useCallback, useState } from 'react';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { seriesTabPath } from '@/utils';
 import { deleteSeries as sendDelete } from '@/api/deleteSeries/deleteSeries';
+import type { DeleteFiles } from '@/types';
 
 /** Where a delete lands with nothing behind the page: the Series tab. */
 const LANDING = seriesTabPath();
@@ -20,7 +21,7 @@ export interface DeleteSeries {
    * Sends the delete and, once the series is gone, leaves its page. Rejects
    * with the request's own error when the server refused, nothing moved.
    */
-  deleteSeries: () => Promise<void>;
+  deleteSeries: (files?: DeleteFiles) => Promise<void>;
 }
 
 /**
@@ -33,21 +34,24 @@ export function useDeleteSeries(seriesId: string): DeleteSeries {
   const [deleting, setDeleting] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const deleteSeries = useCallback(async () => {
-    setDeleting(true);
-    let outcome;
-    try {
-      outcome = await sendDelete(seriesId);
-    } finally {
-      setDeleting(false);
-    }
-    if (outcome.kind === 'refused') {
-      setRefusal(outcome.sentence);
-      throw new Error(outcome.sentence);
-    }
-    setRefusal(null);
-    goBack();
-  }, [seriesId, goBack]);
+  const deleteSeries = useCallback(
+    async (files: DeleteFiles = 'keep') => {
+      setDeleting(true);
+      let outcome;
+      try {
+        outcome = await sendDelete(seriesId, files);
+      } finally {
+        setDeleting(false);
+      }
+      if (outcome.kind === 'refused') {
+        setRefusal(outcome.sentence);
+        throw new Error(outcome.sentence);
+      }
+      setRefusal(null);
+      goBack();
+    },
+    [seriesId, goBack]
+  );
 
   return { deleting, refusal, deleteSeries };
 }

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { deleteMovie } from '@/api/deleteMovie/deleteMovie';
 import { deleteSeries } from '@/api/deleteSeries/deleteSeries';
-import type { LibraryTitle, LibraryTitles } from '@/types';
+import type { DeleteFiles, LibraryTitle, LibraryTitles } from '@/types';
 import {
   clearMovieDetails,
   clearSeriesDetails,
@@ -22,11 +22,12 @@ export interface LibraryTitlesState {
   /** True for the life of a delete's request, false before and after. */
   deleting: boolean;
   /**
-   * Deletes a title over its unchanged route: `true` once its row is off its
-   * list, with no re-read; `false` for a refusal or any failure, the list as
-   * it was. Never rejects.
+   * Deletes a title over its unchanged route, `?files=trash` on the
+   * **Recycle choice**'s second card: `true` once its row is off its list,
+   * with no re-read; `false` for a refusal or any failure, the list as it
+   * was. Never rejects.
    */
-  deleteTitle: (title: LibraryTitle) => Promise<boolean>;
+  deleteTitle: (title: LibraryTitle, files?: DeleteFiles) => Promise<boolean>;
   /**
    * The route's `409` sentence for `title`, held against the title it
    * answered (`useSubtitles`' "held against the row it came from"): `null`
@@ -116,13 +117,16 @@ export function useLibraryTitles(): LibraryTitlesState {
   );
 
   const deleteTitle = useCallback(
-    async (title: LibraryTitle): Promise<boolean> => {
+    async (
+      title: LibraryTitle,
+      files: DeleteFiles = 'keep'
+    ): Promise<boolean> => {
       setDeleting(true);
       try {
         const outcome =
           title.kind === 'movie'
-            ? await deleteMovie(title.id)
-            : await deleteSeries(title.id);
+            ? await deleteMovie(title.id, files)
+            : await deleteSeries(title.id, files);
         if (outcome.kind === 'refused') {
           setRefusal({ title, sentence: outcome.sentence });
           return false;

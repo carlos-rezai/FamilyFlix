@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { CornerMenu, MenuItem } from '@/components';
+import type { LinkedFiles } from '@/types';
 import { enrichPath, movieFormPath } from '@/utils';
 import { DeleteSeriesDialog } from '../DeleteSeriesDialog/DeleteSeriesDialog';
 
@@ -12,8 +13,8 @@ export interface SeriesEditMenuProps {
   title: string;
   /** Every episode it holds — what the Delete dialog counts. */
   episodeCount: number;
-  /** Whether any episode is a **Linked video** — what the Delete dialog tells. */
-  linked: boolean;
+  /** The show’s **Linked files**, what the Delete dialog tells. */
+  linkedFiles: LinkedFiles | null;
 }
 
 /**
@@ -29,7 +30,7 @@ export function SeriesEditMenu({
   seriesId,
   title,
   episodeCount,
-  linked,
+  linkedFiles,
 }: SeriesEditMenuProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export function SeriesEditMenu({
         seriesId={seriesId}
         title={title}
         episodeCount={episodeCount}
-        linked={linked}
+        linkedFiles={linkedFiles}
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}
       />

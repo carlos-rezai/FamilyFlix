@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
 
 import { PageHeader, PillTabs } from '@/components';
-import type { LibraryTitle } from '@/types';
+import type { DeleteFiles, LibraryTitle } from '@/types';
 import { ClearDialog } from '../ClearDialog/ClearDialog';
 import { DeleteTitleDialog } from '../DeleteTitleDialog/DeleteTitleDialog';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
@@ -45,8 +45,8 @@ export function ManageLibrary() {
   }
   const [doomed, setDoomed] = useState<LibraryTitle | null>(null);
 
-  async function confirmDelete(title: LibraryTitle) {
-    const deleted = await deleteTitle(title);
+  async function confirmDelete(title: LibraryTitle, files: DeleteFiles) {
+    const deleted = await deleteTitle(title, files);
     if (deleted) {
       setDoomed(null);
       notify({ variant: 'success', message: `“${title.title}” was deleted.` });
@@ -120,7 +120,7 @@ export function ManageLibrary() {
           title={doomed}
           deleting={deleting}
           refusal={refusalFor(doomed)}
-          onConfirm={() => void confirmDelete(doomed)}
+          onConfirm={(files) => void confirmDelete(doomed, files)}
           onClose={() => setDoomed(null)}
         />
       )}

@@ -156,6 +156,7 @@ export type {
 export type { LibraryFolder } from './libraryFolders';
 export { DETAILS_STATES } from './libraryTitles';
 export type {
+  DeleteFiles,
   DetailsState,
   LinkedFiles,
   LibraryMovieTitle,

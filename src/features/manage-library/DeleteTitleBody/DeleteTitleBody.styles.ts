@@ -28,3 +28,9 @@ export const Refusal = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.danger};
 `;
+
+/** The **Recycle choice**'s two cards, the **Import mode**'s row. */
+export const Cards = styled.div`
+  display: flex;
+  gap: 10px;
+`;

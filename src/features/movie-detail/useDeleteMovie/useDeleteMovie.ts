@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { deleteMovie as sendDelete } from '@/api/deleteMovie/deleteMovie';
+import type { DeleteFiles } from '@/types';
 
 export interface DeleteMovie {
   /** True for the life of the request, false before and after. */
@@ -17,7 +18,7 @@ export interface DeleteMovie {
    * with the request's own error when the server refused, in which case
    * nothing moved.
    */
-  deleteMovie: () => Promise<void>;
+  deleteMovie: (files?: DeleteFiles) => Promise<void>;
 }
 
 /**
@@ -39,21 +40,24 @@ export function useDeleteMovie(movieId: string): DeleteMovie {
   const [deleting, setDeleting] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
 
-  const deleteMovie = useCallback(async () => {
-    setDeleting(true);
-    let outcome;
-    try {
-      outcome = await sendDelete(movieId);
-    } finally {
-      setDeleting(false);
-    }
-    if (outcome.kind === 'refused') {
-      setRefusal(outcome.sentence);
-      throw new Error(outcome.sentence);
-    }
-    setRefusal(null);
-    goBack();
-  }, [movieId, goBack]);
+  const deleteMovie = useCallback(
+    async (files: DeleteFiles = 'keep') => {
+      setDeleting(true);
+      let outcome;
+      try {
+        outcome = await sendDelete(movieId, files);
+      } finally {
+        setDeleting(false);
+      }
+      if (outcome.kind === 'refused') {
+        setRefusal(outcome.sentence);
+        throw new Error(outcome.sentence);
+      }
+      setRefusal(null);
+      goBack();
+    },
+    [movieId, goBack]
+  );
 
   return { deleting, refusal, deleteMovie };
 }

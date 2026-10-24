@@ -5,6 +5,8 @@
  * them (see `docs/handoff/COMPONENT-SPEC.md` §5).
  */
 
+import type { LinkedFiles } from './libraryTitles';
+
 /**
  * The view model a `PosterCard` renders from — a `Movie` flattened to exactly
  * what the tile shows, built by the `view()` mapper (`features/library/view.ts`).
@@ -111,8 +113,8 @@ export interface MovieDetailModel {
   g2: string;
   /** The uppercase caption over the gradient; `null` when there is a poster. */
   topTag: string | null;
-  /** Its video is a **Linked video** — what the Delete dialog tells. */
-  linked: boolean;
+  /** Its **Linked files**, `null` for a copied film: what the Delete dialog tells. */
+  linkedFiles: LinkedFiles | null;
 }
 
 /**
@@ -229,8 +231,8 @@ export interface SeriesPageModel {
   topTag: string | null;
   /** The series' heart. */
   isFavorite: boolean;
-  /** Any episode plays a **Linked video** — what the Delete dialog tells. */
-  linked: boolean;
+  /** Its **Linked files**, `null` for a copied show: what the Delete dialog tells. */
+  linkedFiles: LinkedFiles | null;
   /** The Seasons grid, one card per season in order. */
   seasons: SeasonCardSeason[];
 }

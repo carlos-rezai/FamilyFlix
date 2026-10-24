@@ -794,8 +794,8 @@ describe('SeriesDetail — the ⋯ menu', () => {
     expect(screen.queryByRole('button', { name: 'More options' })).toBeNull();
   });
 
-  it('opens the Delete dialog for this show, counting the episodes of every season', async () => {
-    // Seasons of 10 and 12: the dialog counts the show's 22.
+  it('opens the Delete dialog for this show, its What goes drawn', async () => {
+    // Log 51 Q6: the body is What goes / What stays, no episode count.
     serve(unstarted());
     renderDetail();
     await findTitle('Harbor & Vine');
@@ -806,7 +806,7 @@ describe('SeriesDetail — the ⋯ menu', () => {
     const open = screen.getByRole('dialog', {
       name: 'Delete “Harbor & Vine”?',
     });
-    expect(within(open).getByText(/its 22 episodes/)).toBeTruthy();
+    expect(within(open).getByText('What goes')).toBeTruthy();
     expect(writes()).toEqual([]);
   });
 });
@@ -889,12 +889,12 @@ describe('SeriesDetail — the Shown rating', () => {
 
 /**
  * 47 — Manage library, issue #413, on the page: the series' Delete dialog
- * reads whether the show is linked off the record the page already holds — a
- * show with any episode whose `videoFolderId` is set — and a `409` leaves the
- * page on the show with the route's sentence in the dialog.
+ * reads the show's **Linked files** off the record the page already holds
+ * (since log 51 Q6 answered by the detail read as `linkedFiles`), and a `409`
+ * leaves the page on the show with the route's sentence in the dialog.
  */
 describe('SeriesDetail — deleting a linked show', () => {
-  const LINKED_SENTENCE = 'Its files go to the Recycle Bin.';
+  const KEPT = 'Its folder, in your library folder';
   const NO_SHELL =
     'Only the desktop app can move a linked title’s files to the Recycle Bin.';
 
@@ -907,7 +907,7 @@ describe('SeriesDetail — deleting a linked show', () => {
       videoFolderId: 'lf1',
       videoPath: 'Harbor & Vine/S02E12.mkv',
     };
-    return detail;
+    return { ...detail, linkedFiles: 'folder' };
   }
 
   function openDeleteDialog() {
@@ -916,12 +916,12 @@ describe('SeriesDetail — deleting a linked show', () => {
     return screen.getByRole('dialog', { name: 'Delete “Harbor & Vine”?' });
   }
 
-  it('adds the Recycle Bin sentence for a show with a linked episode', async () => {
+  it('lists a linked show’s files from the read’s linkedFiles', async () => {
     serve(oneLinkedEpisode());
     renderDetail();
     await findTitle('Harbor & Vine');
 
-    expect(openDeleteDialog().textContent).toContain(LINKED_SENTENCE);
+    expect(within(openDeleteDialog()).getByText(KEPT)).toBeDefined();
   });
 
   it('stays on the show with the refusal in the dialog on a 409', async () => {

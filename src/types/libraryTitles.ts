@@ -14,6 +14,12 @@ export type DetailsState = (typeof DETAILS_STATES)[number];
  */
 export type LinkedFiles = 'folder' | 'videos' | 'shared' | 'unreachable';
 
+/**
+ * The **Recycle choice** a Delete is confirmed with: `keep` the title's
+ * Linked files where they lie, or `trash` them to the Recycle Bin.
+ */
+export type DeleteFiles = 'keep' | 'trash';
+
 /** What both kinds of **Library title** carry. */
 interface LibraryTitleBase {
   id: string;

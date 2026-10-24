@@ -1456,12 +1456,12 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
 
 /**
  * 47 — Manage library, issue #413, on the page: the Delete dialog reads
- * whether the film is linked off the record the page already holds — a
- * **Linked video** is one with a `videoFolderId` — and a `409` leaves the
- * page on the film with the route's sentence in the dialog.
+ * the film's **Linked files** off the record the page already holds (since
+ * log 51 Q6 answered by the detail read as `linkedFiles`), and a `409` leaves
+ * the page on the film with the route's sentence in the dialog.
  */
 describe('MovieDetail — deleting a linked film', () => {
-  const LINKED_SENTENCE = 'Its video goes to the Recycle Bin.';
+  const KEPT = 'Its video file(s), in your library folder';
   const NO_SHELL =
     'Only the desktop app can move a linked title’s files to the Recycle Bin.';
 
@@ -1472,13 +1472,17 @@ describe('MovieDetail — deleting a linked film', () => {
     return screen.getByRole('dialog');
   }
 
-  it('adds the Recycle Bin sentence for a linked film', async () => {
-    serveMovie({ videoFolderId: 'lf1', videoPath: 'Northwind/northwind.mkv' });
+  it('lists a linked film’s files from the read’s linkedFiles', async () => {
+    serveMovie({
+      videoFolderId: 'lf1',
+      videoPath: 'Northwind/northwind.mkv',
+      linkedFiles: 'videos',
+    });
     renderDetail();
 
     const dialog = await openDeleteDialog();
 
-    expect(dialog.textContent).toContain(LINKED_SENTENCE);
+    expect(within(dialog).getByText(KEPT)).toBeDefined();
   });
 
   it('stays on the film with the refusal in the dialog on a 409', async () => {

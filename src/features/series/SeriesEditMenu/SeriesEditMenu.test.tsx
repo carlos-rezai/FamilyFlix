@@ -47,7 +47,7 @@ function renderMenu(seriesId = 'harbor', title = 'Harbor & Vine', count = 22) {
           seriesId={seriesId}
           title={title}
           episodeCount={count}
-          linked={false}
+          linkedFiles={null}
         />
         <LocationProbe />
       </MemoryRouter>
@@ -115,7 +115,7 @@ describe('SeriesEditMenu — the Delete dialog', () => {
     expect(dialog()).toBeNull();
   });
 
-  it('closes the menu and opens the dialog, naming the show and its episodes', () => {
+  it('closes the menu and opens the dialog, naming the show', () => {
     renderMenu('harbor', 'Harbor & Vine', 22);
     openMenu();
 
@@ -127,7 +127,7 @@ describe('SeriesEditMenu — the Delete dialog', () => {
     const open = screen.getByRole('dialog', {
       name: 'Delete “Harbor & Vine”?',
     });
-    expect(within(open).getByText(/its 22 episodes/)).toBeTruthy();
+    expect(within(open).getByText('What goes')).toBeTruthy();
   });
 
   it('closes the dialog from Cancel, sends nothing, and leaves focus on ⋯', () => {
