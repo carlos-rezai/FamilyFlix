@@ -43,17 +43,31 @@ export interface GroupedScans {
   films: MovieFolderScan[];
 }
 
-/** `Season 01`, `Season 1`, `S01` — a Season folder's name, and its number. */
-const SEASON_FOLDER = /^(?:season\s*(\d{1,3})|s(\d{1,3}))$/i;
+/**
+ * A **Season folder**'s name, its number in the first group that matched:
+ * `Season N`, `Season 0N` or `Seizoen N`, or `SNN` anywhere in a release name,
+ * standing alone between separators (so never `S01E01`), or `Specials`.
+ */
+const SEASON_FOLDER =
+  /^(?:season|seizoen)\s*(\d{1,3})(?=$|[\s._\-[(])|(?:^|[\s._-])s(\d{1,3})(?=$|[\s._\-[(])|^(specials)$/i;
 
 /**
- * The season a folder's name says, or `null` for a name that is not one. The
- * client's `readSeasonFolder` mirrors it; the drift guard beside the client's
- * `readEpisodeTag` holds the two together.
+ * The season a folder's name says, or `null` for a name that is no **Season
+ * folder**. A name opening with `Season`, `Seizoen` or `S` and a number, in
+ * either case, says that number, whatever follows a separator after it, so the
+ * year in `Season 1 (2008)` is never read; a release name holding a standalone
+ * `SNN` not followed by `E` and a digit says `NN`, its parent then the **Show
+ * folder**; `Specials` and `Season 0` say season 0. An **Episode tag** such as
+ * `S01E01` is never a Season folder. The client's `readSeasonFolder` mirrors
+ * the rule; the drift guard beside its `readEpisodeTag` runs both over one
+ * table.
  */
 export const seasonOf = (name: string): number | null => {
   const found = SEASON_FOLDER.exec(name.trim());
-  return found === null ? null : Number(found[1] ?? found[2]);
+  if (found === null) {
+    return null;
+  }
+  return found[3] === undefined ? Number(found[1] ?? found[2]) : 0;
 };
 
 /**
