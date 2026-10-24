@@ -93,6 +93,9 @@ function fill(db: SqliteDatabase, n = 1): void {
     db.prepare(
       'INSERT INTO episode_subtitles (id, episode_id, path, language, position) VALUES (?, ?, ?, ?, 0)'
     ).run(`esub-${i}`, `episode-${i}`, `show-${i}/s01e01.en.srt`, 'en');
+    db.prepare(
+      'INSERT INTO left_out_videos (library_folder_id, video_path) VALUES (?, ?)'
+    ).run(folder, `film-${i}/film.mp4`);
     db.prepare('INSERT INTO settings (key, value) VALUES (?, ?)').run(
       `key-${i}`,
       'value'
@@ -121,6 +124,7 @@ describe('resetDatabase', () => {
       'episodes',
       'movies',
       'series',
+      'left_out_videos',
       'library_folders',
       'settings',
     ]);

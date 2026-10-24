@@ -59,10 +59,12 @@ import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 import { createTitles, type StoredLibraryTitles } from './titles/titles';
 import { createHolding, type HeldVideo } from './holding/holding';
+import { createLeftOut, type LeftOutVideo } from './leftOut/leftOut';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
 export type { HeldVideo } from './holding/holding';
+export type { LeftOutVideo } from './leftOut/leftOut';
 export type {
   LinkedVideo,
   StoredLibraryMovie,
@@ -359,6 +361,17 @@ export interface LibraryStorage {
    */
   titleHolding(folderId: string, videoPath: string): HeldVideo | null;
   /**
+   * Record **Left-out videos**, each a Library folder's id and a path spelled
+   * as a **Linked video**'s; one already recorded is kept once, not refused.
+   */
+  leaveOut(entries: readonly LeftOutVideo[]): void;
+  /** One Library folder's **Left-out videos**, and only that folder's. */
+  leftOut(folderId: string): ReadonlySet<string>;
+  /** Forget exactly these **Left-out videos**. */
+  clearLeftOut(entries: readonly LeftOutVideo[]): void;
+  /** Forget every **Left-out video** of one folder, answering how many went. */
+  bringBack(folderId: string): number;
+  /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its
    * episodes. Given episodes, they are written in the same transaction, so a
@@ -486,6 +499,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const seriesWatch = createSeriesWatch(db);
   const titles = createTitles(db);
   const holding = createHolding(db);
+  const leftOut = createLeftOut(db);
 
   return {
     addMovie: write.addMovie,
@@ -533,6 +547,10 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     sourcePath: enrich.sourcePath,
     titleAt: enrich.titleAt,
     titleHolding: holding.titleHolding,
+    leaveOut: leftOut.leaveOut,
+    leftOut: leftOut.leftOut,
+    clearLeftOut: leftOut.clearLeftOut,
+    bringBack: leftOut.bringBack,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     deleteSeries: seriesWrite.deleteSeries,

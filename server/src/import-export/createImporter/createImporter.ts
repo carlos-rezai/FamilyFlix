@@ -1483,6 +1483,7 @@ export function createImporter({
     const walked: WalkedFolder[] = [];
     let found = 0;
     let shelves = 0;
+    let leftOut = 0;
     for (const folder of folders) {
       if ((await readableFolder(folder.path)) !== 'readable') {
         log(current, `⚠ Can't reach ${folder.path}, skipped`, 'warning');
@@ -1507,6 +1508,9 @@ export function createImporter({
       if (signal.aborted) {
         return null;
       }
+      const kept = withoutLeftOut(folder, scans);
+      leftOut += kept.skipped;
+      scans = kept.scans;
       found += scans.length;
       shelves += foldersUnder(folder.path, scans);
       const grouped = groupShows(scans);
@@ -1525,7 +1529,43 @@ export function createImporter({
       `✓ Found ${count(found)} movies across ${count(shelves)} folders. Starting import…`,
       'success'
     );
+    if (leftOut > 0) {
+      log(
+        current,
+        `· Left out ${leftOut} ${leftOut === 1 ? 'video' : 'videos'} you deleted earlier`,
+        'info'
+      );
+    }
     return walked;
+  };
+
+  /**
+   * One walked folder's scans with every **Left-out video** taken out before
+   * any match or held check: a folder left with no video goes whole, so a
+   * Show folder all left out makes no series. Answers how many were skipped.
+   */
+  const withoutLeftOut = (
+    folder: StoredLibraryFolder,
+    scans: MovieFolderScan[]
+  ): { scans: MovieFolderScan[]; skipped: number } => {
+    const out = storage.leftOut(folder.id);
+    if (out.size === 0) {
+      return { scans, skipped: 0 };
+    }
+    let skipped = 0;
+    const kept: MovieFolderScan[] = [];
+    for (const scan of scans) {
+      const videos = scan.videos.filter(
+        (video) => !out.has(spellLinkedVideo(folder.path, video))
+      );
+      skipped += scan.videos.length - videos.length;
+      if (videos.length === scan.videos.length) {
+        kept.push(scan);
+      } else if (videos.length > 0) {
+        kept.push({ ...scan, videos });
+      }
+    }
+    return { scans: kept, skipped };
   };
 
   /**

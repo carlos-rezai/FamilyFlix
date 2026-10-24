@@ -46,7 +46,7 @@ const EXPECTED_GENRES = [
 // The version a fresh database migrates to — migration #14, an episode's
 // **Still source** (issue #382). Every "at the latest version" assertion reads
 // it, so the next migration moves one number rather than ten.
-const LATEST_VERSION = 14;
+const LATEST_VERSION = 15;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -273,12 +273,22 @@ function dropMigration12(db: TestDb): void {
  * exists, so every wind-back reads the same before #14 is written as after.
  */
 function dropMigration14(db: TestDb): void {
+  // Every wind-back to before #14 is also one to before #15.
+  dropMigration15(db);
   if (
     tableNames(db).includes('episodes') &&
     columnNames(db, 'episodes').includes('still_source')
   ) {
     db.prepare('ALTER TABLE episodes DROP COLUMN still_source').run();
   }
+}
+
+/**
+ * What migration #15 added, dropped: the `left_out_videos` table, only where
+ * it exists, so every wind-back reads the same before #15 is written as after.
+ */
+function dropMigration15(db: TestDb): void {
+  db.prepare('DROP TABLE IF EXISTS left_out_videos').run();
 }
 
 /**
@@ -1880,10 +1890,10 @@ describe('db: migration #13 — a score of 0 is no score', () => {
 // is backfilled by name: the series form's `-still.` is `'picked'`, any other
 // `'tmdb'`.
 describe('db: migration #14 — an episode’s Still source', () => {
-  it('lands a fresh database at version 14', () => {
+  it('lands a fresh database at version 14 or later', () => {
     const db = track(open(':memory:'));
 
-    expect(userVersion(db)).toBe(14);
+    expect(userVersion(db)).toBeGreaterThanOrEqual(14);
   });
 
   it('adds a nullable still_source TEXT column to episodes', () => {

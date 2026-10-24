@@ -15,6 +15,7 @@ export const ERASED_TABLES = [
   'episodes',
   'movies',
   'series',
+  'left_out_videos',
   'library_folders',
   'settings',
 ] as const;

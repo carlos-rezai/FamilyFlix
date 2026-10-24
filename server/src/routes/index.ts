@@ -13,6 +13,7 @@ import express, { type Request, type Response, type Router } from 'express';
 import type { LibraryStorage, SeriesUpdate } from '../library';
 import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
+import { titleVideos } from '../library/leftOut/titleVideos/titleVideos';
 import {
   admitFolder,
   type FolderRefusal,
@@ -939,11 +940,13 @@ export function createApiRouter(
       if (!series) {
         return;
       }
-      if (
-        req.query.files === 'trash' &&
-        !(await trashedFirst('series', series.id, res))
-      ) {
-        return;
+      if (req.query.files === 'trash') {
+        if (!(await trashedFirst('series', series.id, res))) {
+          return;
+        }
+      } else {
+        // A keep-files Delete: the videos stay on disk, so a scan skips them.
+        storage.leaveOut(titleVideos(storage, 'series', series.id));
       }
 
       const folder = storage.mediaFolderOf('series', series.id);
@@ -1918,11 +1921,13 @@ export function createApiRouter(
     if (!movie) {
       return;
     }
-    if (
-      req.query.files === 'trash' &&
-      !(await trashedFirst('movie', movie.id, res))
-    ) {
-      return;
+    if (req.query.files === 'trash') {
+      if (!(await trashedFirst('movie', movie.id, res))) {
+        return;
+      }
+    } else {
+      // A keep-files Delete: the video stays on disk, so a scan skips it.
+      storage.leaveOut(titleVideos(storage, 'movie', movie.id));
     }
 
     const folder = storage.mediaFolderOf('movie', movie.id);
