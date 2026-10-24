@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useLibraryFolders } from './useLibraryFolders';
-import type { LibraryFolder } from '@/types';
+import type { LibraryFolderView } from '@/types';
 import {
   createdResponse,
   noContentResponse,
@@ -39,18 +39,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const MOVIES: LibraryFolder = {
+const MOVIES: LibraryFolderView = {
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
   reachable: true,
+  leftOut: 0,
 };
 
-const KIDS: LibraryFolder = {
+const KIDS: LibraryFolderView = {
   id: 'f-kids',
   path: 'D:\\Kids',
   titleCount: 0,
   reachable: true,
+  leftOut: 0,
 };
 
 /** A refusal the route words: `{ error }` under its status. */
@@ -64,7 +66,7 @@ function refusedResponse(status: number, error: string): Response {
 
 /** `fetch` answering by method: the list on GET, the given answers after. */
 function routeFetch(
-  listed: LibraryFolder[],
+  listed: LibraryFolderView[],
   answers: { post?: Response; delete?: Response } = {}
 ) {
   fetchMock.mockImplementation((_input, init) => {

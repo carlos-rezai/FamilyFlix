@@ -111,7 +111,7 @@ import {
   type GenreListPayload,
   type GenrePoolPayload,
   type GenreQuery,
-  type LibraryFolder,
+  type LibraryFolderView,
   type LibraryQuery,
   type LibraryTab,
   type LinkedFiles,
@@ -2256,10 +2256,11 @@ export function createApiRouter(
   // add reads false on the next visit and true again once it is back.
   router.get('/library-folders', async (_req: Request, res: Response) => {
     const listed = storage.libraryFolders();
-    const folders: LibraryFolder[] = await Promise.all(
+    const folders: LibraryFolderView[] = await Promise.all(
       listed.map(async (folder) => ({
         ...folder,
         reachable: (await readableFolder(folder.path)) === 'readable',
+        leftOut: storage.leftOut(folder.id).size,
       }))
     );
     res.json(folders);
@@ -2340,6 +2341,16 @@ export function createApiRouter(
         res.status(409).json({ error: inUseSentence(removal.titles) });
     }
   });
+
+  // **Bring back**: forget the folder's **Left-out videos**, so the next
+  // Folder scan adds them again. `204` whether or not it held any.
+  router.delete(
+    '/library-folders/:id/left-out',
+    (req: Request, res: Response) => {
+      storage.bringBack(String(req.params.id));
+      res.status(204).end();
+    }
+  );
 
   // A **Folder scan** over every listed folder: `201` with the run's first
   // snapshot, `400` with none listed, `409` while a **Current run** is

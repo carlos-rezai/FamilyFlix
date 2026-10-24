@@ -9,6 +9,7 @@ import {
   type ImportProblem,
   type ImportRun,
   type LibraryFolder,
+  type LibraryFolderView,
   type SheetChoices,
   type StartExport,
 } from '@/types';
@@ -314,14 +315,14 @@ const FOLDERS_ENDPOINT = '/api/library-folders';
  * The **Library folders** in the order added, each with its title count and
  * whether the disk could reach it just now. Any status but a `200` rejects.
  */
-export async function fetchLibraryFolders(): Promise<LibraryFolder[]> {
+export async function fetchLibraryFolders(): Promise<LibraryFolderView[]> {
   const response = await fetch(FOLDERS_ENDPOINT);
 
   if (!response.ok) {
     throw new Error(`GET ${FOLDERS_ENDPOINT} failed: ${response.status}`);
   }
 
-  return (await response.json()) as LibraryFolder[];
+  return (await response.json()) as LibraryFolderView[];
 }
 
 /** What an add came to: the folder the route added, or its one sentence. */
@@ -382,6 +383,19 @@ export async function removeLibraryFolder(
   }
 
   return { kind: 'removed' };
+}
+
+/**
+ * **Bring back**: forget one folder's **Left-out videos**, so the next Folder
+ * scan adds them again. Any failure rejects.
+ */
+export async function bringBackLeftOut(id: string): Promise<void> {
+  const url = `${FOLDERS_ENDPOINT}/${encodeURIComponent(id)}/left-out`;
+  const response = await fetch(url, { method: 'DELETE' });
+
+  if (!response.ok) {
+    throw new Error(`DELETE ${url} failed: ${response.status}`);
+  }
 }
 
 const SCAN_ENDPOINT = '/api/library-folders/scan';

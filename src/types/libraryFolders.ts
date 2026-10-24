@@ -14,6 +14,12 @@ export interface LibraryFolder {
 }
 
 /**
+ * One **Library folder** as `GET /api/library-folders` answers it: the folder
+ * and how many **Left-out videos** it holds, the count **Bring back** forgets.
+ */
+export type LibraryFolderView = LibraryFolder & { leftOut: number };
+
+/**
  * The IPC channels between the preload and main for the native pickers and
  * Open folder.
  */

@@ -135,8 +135,20 @@ describe('GET /api/library-folders', () => {
     await add(api, { path: kids });
 
     expect(await list(api)).toEqual([
-      { id: expect.any(String), path: movies, titleCount: 0, reachable: true },
-      { id: expect.any(String), path: kids, titleCount: 0, reachable: true },
+      {
+        id: expect.any(String),
+        path: movies,
+        titleCount: 0,
+        reachable: true,
+        leftOut: 0,
+      },
+      {
+        id: expect.any(String),
+        path: kids,
+        titleCount: 0,
+        reachable: true,
+        leftOut: 0,
+      },
     ]);
   });
 

@@ -6,7 +6,7 @@ import {
   FolderListEditor,
   type FolderListEditorProps,
 } from './FolderListEditor';
-import type { LibraryFolder } from '@/types';
+import type { LibraryFolderView } from '@/types';
 import { theme } from '@/styles/theme';
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 
@@ -16,11 +16,12 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
  * is the surface and what each press asks for.
  */
 
-const MOVIES: LibraryFolder = {
+const MOVIES: LibraryFolderView = {
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
   reachable: true,
+  leftOut: 0,
 };
 
 function renderEditor(props: Partial<FolderListEditorProps> = {}) {
@@ -32,6 +33,7 @@ function renderEditor(props: Partial<FolderListEditorProps> = {}) {
         folders={[MOVIES]}
         add={add}
         remove={remove}
+        bringBack={vi.fn((_id: string) => Promise.resolve())}
         adding={false}
         refusal={null}
         removeRefusal={null}

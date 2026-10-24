@@ -47,3 +47,31 @@ export const Line = styled.div<{ $unreachable: boolean }>`
   color: ${({ $unreachable, theme }) =>
     $unreachable ? theme.colors.danger : theme.colors.textFaint};
 `;
+
+/** The second line, drawn only with **Left-out videos**: the count and _Bring back_. */
+export const LeftOutLine = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 2px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textFaint};
+`;
+
+/** _Bring back_: a bare 13px text button in dim ink, accent under hover. */
+export const BringBack = styled.button`
+  background: transparent;
+  border: none;
+  padding: 2px;
+  color: ${({ theme }) => theme.colors.textDim};
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+
+  &:hover {
+    color: ${({ theme }) => theme.colors.accent};
+  }
+`;

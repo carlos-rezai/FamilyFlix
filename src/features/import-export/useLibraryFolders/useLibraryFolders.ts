@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { LibraryFolder } from '@/types';
+import type { LibraryFolderView } from '@/types';
 import {
   addLibraryFolder,
+  bringBackLeftOut,
   fetchLibraryFolders,
   removeLibraryFolder,
 } from '../api/api';
@@ -12,7 +13,7 @@ export interface LibraryFoldersState {
    * The listed folders, `null` until the read lands and still if it never
    * does.
    */
-  folders: LibraryFolder[] | null;
+  folders: LibraryFolderView[] | null;
   /**
    * Post one path, resolving whether it was added; never rejects — a refusal
    * lands in `refusal`.
@@ -20,6 +21,11 @@ export interface LibraryFoldersState {
   add: (path: string) => Promise<boolean>;
   /** Delete one folder by id and drop its row; never rejects. */
   remove: (id: string) => Promise<void>;
+  /**
+   * **Bring back** one folder's **Left-out videos** and zero its count once the
+   * route agrees; never rejects.
+   */
+  bringBack: (id: string) => Promise<void>;
   /** Whether an add is out. */
   adding: boolean;
   /**
@@ -40,7 +46,7 @@ export interface LibraryFoldersState {
  * sentence and keeps the list. A remove drops the row once the route agrees.
  */
 export function useLibraryFolders(): LibraryFoldersState {
-  const [folders, setFolders] = useState<LibraryFolder[] | null>(null);
+  const [folders, setFolders] = useState<LibraryFolderView[] | null>(null);
   const [adding, setAdding] = useState(false);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [removeRefusal, setRemoveRefusal] = useState<{
@@ -71,7 +77,11 @@ export function useLibraryFolders(): LibraryFoldersState {
         return false;
       }
       setRefusal(null);
-      setFolders((listed) => [...(listed ?? []), outcome.folder]);
+      // A folder just listed has nothing left out yet.
+      setFolders((listed) => [
+        ...(listed ?? []),
+        { ...outcome.folder, leftOut: 0 },
+      ]);
       return true;
     } catch {
       // A failure the route did not word leaves the list as it was.
@@ -97,5 +107,27 @@ export function useLibraryFolders(): LibraryFoldersState {
     }
   }, []);
 
-  return { folders, add, remove, adding, refusal, removeRefusal };
+  const bringBack = useCallback(async (id: string) => {
+    try {
+      await bringBackLeftOut(id);
+      setFolders(
+        (listed) =>
+          listed?.map((folder) =>
+            folder.id === id ? { ...folder, leftOut: 0 } : folder
+          ) ?? null
+      );
+    } catch {
+      // The line stays: the route did not forget them.
+    }
+  }, []);
+
+  return {
+    folders,
+    add,
+    remove,
+    bringBack,
+    adding,
+    refusal,
+    removeRefusal,
+  };
 }

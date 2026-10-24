@@ -153,7 +153,7 @@ export type {
   GenreRowModel,
   FilterOption,
 } from './viewModels';
-export type { LibraryFolder } from './libraryFolders';
+export type { LibraryFolder, LibraryFolderView } from './libraryFolders';
 export { DETAILS_STATES } from './libraryTitles';
 export type {
   DeleteFiles,

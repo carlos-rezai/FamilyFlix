@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
 
 import { FolderRow } from './FolderRow';
-import type { LibraryFolder } from '@/types';
+import type { LibraryFolderView } from '@/types';
 import { theme } from '@/styles/theme';
 
 /**
@@ -20,18 +20,21 @@ import { theme } from '@/styles/theme';
 
 const DANGER = 'rgb(201, 122, 106)';
 
-const folder = (overrides: Partial<LibraryFolder> = {}): LibraryFolder => ({
+const folder = (
+  overrides: Partial<LibraryFolderView> = {}
+): LibraryFolderView => ({
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
   reachable: true,
+  leftOut: 0,
   ...overrides,
 });
 
-function renderRow(row: LibraryFolder = folder(), onRemove = vi.fn()) {
+function renderRow(row: LibraryFolderView = folder(), onRemove = vi.fn()) {
   render(
     <ThemeProvider theme={theme}>
-      <FolderRow folder={row} onRemove={onRemove} />
+      <FolderRow folder={row} onBringBack={vi.fn()} onRemove={onRemove} />
     </ThemeProvider>
   );
   return onRemove;
