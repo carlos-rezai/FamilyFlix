@@ -10,10 +10,18 @@ import type {
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
-import type { LibraryStorage, SeriesUpdate } from '../library';
+import type {
+  LeftOutVideo,
+  LibraryStorage,
+  SeriesUpdate,
+  StoredLibraryFolder,
+} from '../library';
 import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
-import { titleVideos } from '../library/leftOut/titleVideos/titleVideos';
+import {
+  episodeVideos,
+  titleVideos,
+} from '../library/leftOut/titleVideos/titleVideos';
 import {
   admitFolder,
   type FolderRefusal,
@@ -39,7 +47,10 @@ import {
   type FilmSource,
 } from '../import-export/placeFilmFolder/placeFilmFolder';
 import { listedFolderOf } from '../import-export/listedFolderOf/listedFolderOf';
-import { placeFoundVideos } from '../import-export/placeFoundVideo/placeFoundVideo';
+import {
+  placeFoundVideo,
+  placeFoundVideos,
+} from '../import-export/placeFoundVideo/placeFoundVideo';
 import { placeShowFolder } from '../import-export/placeShowFolder/placeShowFolder';
 import { foundPathRefusal } from './foundPathRefusal/foundPathRefusal';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
@@ -228,6 +239,24 @@ const REMOVE_REFUSALS: Record<
     error: 'The playback component could not be removed.',
   },
 };
+
+/**
+ * The **Left-out video** entries a hand add's found videos would have: each
+ * one under a listed Library folder, spelled as its Link placement. A picked
+ * row's bytes (`undefined`) and a path under no listed folder have none.
+ */
+function leftOutEntries(
+  folders: StoredLibraryFolder[],
+  paths: readonly (string | undefined)[]
+): LeftOutVideo[] {
+  return paths.flatMap((path) => {
+    const placed =
+      path === undefined ? null : placeFoundVideo(folders, path, 'link');
+    return placed === null || placed.videoFolderId === null
+      ? []
+      : [{ folderId: placed.videoFolderId, videoPath: placed.videoPath }];
+  });
+}
 
 function writeSignal<V>(
   storage: LibraryStorage,
@@ -1124,6 +1153,16 @@ export function createApiRouter(
           showFolder.sourceFolder
         );
       }
+      // A hand add brings its found videos back: each one's **Left-out
+      // video** entry, in either mode, goes.
+      storage.clearLeftOut(
+        leftOutEntries(
+          folders,
+          read.episodes.map((episode) =>
+            episode.video === undefined ? episode.videoPath : undefined
+          )
+        )
+      );
       res.status(201).json(series);
     } catch {
       rollback();
@@ -1243,6 +1282,13 @@ export function createApiRouter(
 
       const { title, year, endYear, creator, synopsis, rating, cast, genres } =
         read;
+      // Each removed episode's **Left-out video**, read before its row goes.
+      const keptIds = new Set(read.episodes.map((episode) => episode.id));
+      const removedVideos = episodeVideos(
+        storage,
+        existing.id,
+        held.filter((episode) => !keptIds.has(episode.id))
+      );
       let outcome: SeriesUpdate | null;
       try {
         outcome = storage.updateSeries(existing.id, {
@@ -1301,6 +1347,7 @@ export function createApiRouter(
         return;
       }
 
+      storage.leaveOut(removedVideos);
       res.json(outcome.series);
 
       // Only a commit authorises the unlink: what no row points at any more.
@@ -1678,6 +1725,8 @@ export function createApiRouter(
           source.sourceFile
         );
       }
+      // A hand add brings its found video back, in either mode.
+      storage.clearLeftOut(leftOutEntries(folders, [found]));
       res.status(201).json(movie);
     } catch {
       // `addMovie` is transactional, so a throw here has left no row — and the
