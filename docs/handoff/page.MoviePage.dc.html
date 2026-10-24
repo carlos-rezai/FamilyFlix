@@ -182,13 +182,10 @@
               >
                 🗑 Delete movie
               </div>
-              <!-- The Danger row opens the Delete dialog (log 12): Delete "<title>"? over
-                   This can't be undone., the body "The movie leaves your library, and the
-                   video, poster and subtitles FamilyFlix copied are deleted. The original
-                   files are not touched." — a linked film adds "Its video goes to the
-                   Recycle Bin." — then a route's 409 sentence, one 13px line in
-                   var(--color-danger) above the buttons until the next press is answered
-                   (log 47 Q16), then Delete movie (danger) before Cancel. -->
+              <!-- The Danger row opens the Delete dialog (log 12), drawn below as
+                   DeleteMovieDialog: What goes / What stays and, for a linked film in the
+                   shell, the Recycle choice (log 51 Q6), then Delete movie (danger) before
+                   Cancel. -->
             </div>
           </sc-if>
         </div>
@@ -546,6 +543,348 @@
           </div>
         </div>
       </div>
+
+      <!-- ========================= DELETE DIALOG (DeleteMovieDialog) =========================
+           On Modal: Delete "<title>"? over This can't be undone., then the Manage library Delete
+           dialog's What goes / What stays and, for a linked film in the shell, the Recycle choice
+           (log 51 Q6): Keep the files (chosen on every open) or Move them to the Recycle Bin.
+           What goes, What stays and the danger callout follow the choice; the callout shows only
+           on the second card, and Delete movie never changes. A copied film and a browser draw no
+           cards. A film whose videos are all another title's draws no cards, and What stays reads
+           "Its video file(s), which another title plays". A route's 409 sentence is one 13px line
+           in danger ink above the buttons until the next press is answered (log 47 Q16). Escape,
+           the scrim, the close button and Cancel each close it with nothing sent. -->
+      <sc-if value="{{ detail.del.open }}" hint-placeholder-val="{{ false }}">
+        <div
+          onClick="{{ detail.del.onClose }}"
+          style="
+            position: absolute;
+            inset: 0;
+            z-index: 90;
+            display: grid;
+            place-items: center;
+            background: var(--color-scrim);
+            backdrop-filter: blur(4px);
+            animation: ffFade 0.18s ease;
+            padding: 24px;
+          "
+        >
+          <div
+            onClick="{{ detail.del.stopProp }}"
+            data-screen-label="Delete movie"
+            style="
+              width: 520px;
+              max-width: 100%;
+              background: var(--color-surface-2);
+              border: 1px solid var(--color-border);
+              border-radius: var(--radius-lg);
+              box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+              overflow: hidden;
+              animation: ffPop 0.2s ease;
+            "
+          >
+            <div style="padding: 28px 28px 0">
+              <div style="display: flex; align-items: flex-start; gap: 14px">
+                <div
+                  style="
+                    flex: 0 0 auto;
+                    width: 44px;
+                    height: 44px;
+                    border-radius: 12px;
+                    background: var(--color-accent-soft);
+                    border: 1px solid var(--color-accent-line);
+                    display: grid;
+                    place-items: center;
+                    font-size: 20px;
+                  "
+                >
+                  🗑
+                </div>
+                <div style="flex: 1">
+                  <h2
+                    style="
+                      font-family: var(--font-serif);
+                      font-weight: 600;
+                      font-size: 24px;
+                      color: var(--color-text);
+                      margin: 0;
+                    "
+                  >
+                    {{ detail.del.heading }}
+                  </h2>
+                  <p
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 14px;
+                      color: var(--color-text-faint);
+                      margin: 4px 0 0;
+                    "
+                  >
+                    This can’t be undone.
+                  </p>
+                </div>
+                <button
+                  onClick="{{ detail.del.onClose }}"
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    width: 34px;
+                    height: 34px;
+                    background: transparent;
+                    border: none;
+                    border-radius: 8px;
+                    color: var(--color-text-faint);
+                    cursor: pointer;
+                    font-size: 16px;
+                  "
+                  style-hover="background:var(--color-surface-3);color:var(--color-text-dim)"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            <div
+              style="
+                padding: 22px 28px 28px;
+                display: flex;
+                flex-direction: column;
+                gap: 20px;
+              "
+            >
+              <div
+                style="
+                  display: grid;
+                  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                  gap: 12px;
+                "
+              >
+                <div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 12px;
+                      font-weight: 700;
+                      letter-spacing: 0.9px;
+                      text-transform: uppercase;
+                      color: var(--color-danger);
+                      margin-bottom: 8px;
+                    "
+                  >
+                    What goes
+                  </div>
+                  <sc-for
+                    list="{{ detail.del.removed }}"
+                    as="x"
+                    hint-placeholder-count="3"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        gap: 8px;
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        line-height: 1.45;
+                        color: var(--color-text);
+                        margin-bottom: 4px;
+                      "
+                    >
+                      <span style="color: var(--color-danger)">✕</span>{{ x }}
+                    </div>
+                  </sc-for>
+                </div>
+                <div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 12px;
+                      font-weight: 700;
+                      letter-spacing: 0.9px;
+                      text-transform: uppercase;
+                      color: var(--color-text-faint);
+                      margin-bottom: 8px;
+                    "
+                  >
+                    What stays
+                  </div>
+                  <sc-for
+                    list="{{ detail.del.kept }}"
+                    as="x"
+                    hint-placeholder-count="2"
+                  >
+                    <div
+                      style="
+                        display: flex;
+                        gap: 8px;
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        line-height: 1.45;
+                        color: var(--color-text-dim);
+                        margin-bottom: 4px;
+                      "
+                    >
+                      <span style="color: var(--color-success)">✓</span>{{ x }}
+                    </div>
+                  </sc-for>
+                  <sc-if
+                    value="{{ detail.del.keptNone }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        color: var(--color-text-faint);
+                      "
+                    >
+                      Nothing
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+
+              <!-- The Recycle choice (log 51 Q6): two ChoiceCards, the Import mode's pixels, drawn
+                   only for a linked title in the shell whose Linked files aren't shared (never a
+                   copied title, never a browser). Keep the files is chosen on every open, never
+                   remembered; What goes, What stays and the callout follow the choice, and the
+                   confirm's words never change. Only the second card sends files=trash. -->
+              <sc-if
+                value="{{ detail.del.showChoice }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div
+                  role="radiogroup"
+                  aria-label="Its files"
+                  style="display: flex; gap: 10px"
+                >
+                  <sc-for
+                    list="{{ detail.del.choices }}"
+                    as="c"
+                    hint-placeholder-count="2"
+                  >
+                    <button
+                      role="radio"
+                      aria-checked="{{ c.checked }}"
+                      onClick="{{ c.onSelect }}"
+                      style="{{ c.cardStyle }}"
+                    >
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          justify-content: space-between;
+                          gap: 10px;
+                        "
+                      >
+                        <span
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: var(--color-text);
+                            text-align: left;
+                          "
+                          >{{ c.label }}</span
+                        ><span style="{{ c.dotStyle }}"></span>
+                      </div>
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 12.5px;
+                          color: var(--color-text-faint);
+                          margin-top: 4px;
+                          text-align: left;
+                        "
+                      >
+                        {{ c.line }}
+                      </div>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+
+              <sc-if
+                value="{{ detail.del.warnLinked }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div
+                  style="
+                    display: flex;
+                    gap: 10px;
+                    padding: 12px 14px;
+                    background: rgba(201, 122, 106, 0.1);
+                    border: 1px solid rgba(201, 122, 106, 0.32);
+                    border-radius: 9px;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    line-height: 1.5;
+                    color: var(--color-text);
+                    text-wrap: pretty;
+                  "
+                >
+                  <span
+                    style="
+                      flex: 0 0 auto;
+                      color: var(--color-danger);
+                      font-weight: 700;
+                    "
+                    >!</span
+                  >
+                  <span
+                    >This is a linked title. Its files go from your library
+                    folder to the Recycle Bin, not just out of FamilyFlix.</span
+                  >
+                </div>
+              </sc-if>
+              <!-- Log 47 Q16: a route's 409 sentence, one 13px line in danger ink above the
+                   buttons, until the next press is answered. -->
+              <sc-if
+                value="{{ detail.del.hasRefusal }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-danger);
+                  "
+                >
+                  {{ detail.del.refusal }}
+                </div>
+              </sc-if>
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 12px;
+                  margin-top: 4px;
+                "
+              >
+                <dc-import
+                  name="prim.Button"
+                  label="{{ detail.del.deleteLabel }}"
+                  variant="danger"
+                  size="md"
+                  icon="none"
+                  disabled="{{ detail.del.deleting }}"
+                  on-click="{{ detail.del.onConfirm }}"
+                  hint-size="160px,50px"
+                ></dc-import>
+                <dc-import
+                  name="prim.Button"
+                  label="Cancel"
+                  variant="secondary"
+                  size="md"
+                  icon="none"
+                  on-click="{{ detail.del.onClose }}"
+                  hint-size="110px,50px"
+                ></dc-import>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
     </x-dc>
     <script
       type="text/x-dc"

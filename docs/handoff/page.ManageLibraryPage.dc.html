@@ -829,6 +829,66 @@
                   </div>
                 </div>
 
+                <!-- The Recycle choice (log 51 Q6): two ChoiceCards, the Import mode's pixels, drawn
+                     only for a linked title in the shell whose Linked files aren't shared (never a
+                     copied title, never a browser). Keep the files is chosen on every open, never
+                     remembered; What goes, What stays and the callout follow the choice, and the
+                     confirm's words never change. Only the second card sends files=trash. -->
+                <sc-if
+                  value="{{ modal.showChoice }}"
+                  hint-placeholder-val="{{ false }}"
+                >
+                  <div
+                    role="radiogroup"
+                    aria-label="Its files"
+                    style="display: flex; gap: 10px"
+                  >
+                    <sc-for
+                      list="{{ modal.choices }}"
+                      as="c"
+                      hint-placeholder-count="2"
+                    >
+                      <button
+                        role="radio"
+                        aria-checked="{{ c.checked }}"
+                        onClick="{{ c.onSelect }}"
+                        style="{{ c.cardStyle }}"
+                      >
+                        <div
+                          style="
+                            display: flex;
+                            align-items: center;
+                            justify-content: space-between;
+                            gap: 10px;
+                          "
+                        >
+                          <span
+                            style="
+                              font-family: var(--font-sans);
+                              font-size: 16px;
+                              font-weight: 600;
+                              color: var(--color-text);
+                              text-align: left;
+                            "
+                            >{{ c.label }}</span
+                          ><span style="{{ c.dotStyle }}"></span>
+                        </div>
+                        <div
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 12.5px;
+                            color: var(--color-text-faint);
+                            margin-top: 4px;
+                            text-align: left;
+                          "
+                        >
+                          {{ c.line }}
+                        </div>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
                 <sc-if
                   value="{{ modal.warnLinked }}"
                   hint-placeholder-val="{{ false }}"
@@ -951,7 +1011,7 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":900,"height":820},"onBack":{"editor":null,"tsType":"() =&gt; void"},"onEditManual":{"editor":null,"tsType":"(title: ManagedTitle) =&gt; void"}}'
+      data-props='{"$preview":{"width":900,"height":820},"onBack":{"editor":null,"tsType":"() =&gt; void"},"inBrowser":{"editor":"boolean","tsType":"boolean"},"onEditManual":{"editor":null,"tsType":"(title: ManagedTitle) =&gt; void"}}'
     >
       class Component extends DCLogic {
         state = {
@@ -963,6 +1023,8 @@
             { id:'m4', kind:'movies', title:'The Iron Giant', year:1999, path:'E:\\Movies\\The Iron Giant (1999)', source:'linked', linkedFiles:'videos', files:1, meta:'none' },
             { id:'m5', kind:'movies', title:'Inside Out', year:2015, path:'C:\\FamilyFlix\\Media\\Inside Out (2015)', source:'copied', files:2, meta:'synced' },
             { id:'m6', kind:'movies', title:'Spirited Away', year:2001, path:'F:\\Movies\\Spirited Away (2001)', source:'linked', linkedFiles:'unreachable', files:3, meta:'synced', unreachable:true },
+            // Log 51 Q8: a double of Coco, every video Coco's too, so its Linked files are shared.
+            { id:'m7', kind:'movies', title:'Coco (2)', year:null, path:'E:\\Movies\\Coco (2017)', source:'linked', linkedFiles:'shared', files:1, meta:'none' },
             { id:'s1', kind:'series', title:'Bluey', year:2018, path:'E:\\Series\\Bluey', source:'linked', linkedFiles:'folder', seasons:3, episodes:151, meta:'synced' },
             { id:'s2', kind:'series', title:'Avatar: The Last Airbender', year:2005, path:'C:\\FamilyFlix\\Media\\Avatar The Last Airbender', source:'copied', seasons:3, episodes:61, meta:'synced' },
             { id:'s3', kind:'series', title:'Planet Earth II', year:2016, path:'E:\\Series\\Planet Earth II', source:'linked', linkedFiles:'folder', seasons:1, episodes:6, meta:'own' },
@@ -997,7 +1059,8 @@
             // buttons, until the next press is answered.
             this.setState({ modal:{ ...m, busy:true } });
             setTimeout(()=>{
-              if (it.refuses && !m.refusal) {
+              // Log 51 Q7: only the Recycle Bin card asks the shell, so only it can be refused.
+              if (it.refuses && m.files==='trash' && !m.refusal) {
                 this.setState({ modal:{ ...m, busy:false, refusal:'Couldn’t move '+it.path+' to the Recycle Bin. Close anything playing it and try again.' } });
                 return;
               }
@@ -1050,7 +1113,8 @@
               onToggleMore:()=>this.setState(st=>({ openMenu: st.openMenu&&st.openMenu.id===it.id&&st.openMenu.kind==='more' ? null : { id:it.id, kind:'more' } })),
               onEditManual:()=>this.editManual(it), onSync:()=>this.sync(it),
               onAskClear:()=>this.setState({ openMenu:null, modal:{ id:it.id, kind:'clear' } }),
-              onAskDelete:()=>this.setState({ openMenu:null, modal:{ id:it.id, kind:'delete' } })
+              // Log 51 Q6: Keep the files on every open, never remembered.
+              onAskDelete:()=>this.setState({ openMenu:null, modal:{ id:it.id, kind:'delete', files:'keep' } })
             };
           });
 
@@ -1060,16 +1124,30 @@
             const isDelete = s.modal.kind==='delete';
             const copied = mi.source==='copied';
             const noun = mi.kind==='movies' ? 'movie' : 'series';
+            // Log 51 Q6: the Recycle choice, for a linked title in the shell whose files can be
+            // moved (folder or videos); never shared, unreachable, copied or a browser.
+            const showChoice = isDelete && !this.props.inBrowser && (mi.linkedFiles==='folder' || mi.linkedFiles==='videos');
+            const trash = showChoice && s.modal.files==='trash';
+            const ownFiles = ({ folder:'Its folder', videos:'Its video file(s)' })[mi.linkedFiles];
+            const card = sel=>({ flex:1, textAlign:'left', padding:'14px 16px', background:sel?'var(--color-accent-soft)':'var(--color-surface)', border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border)'), borderRadius:'12px', cursor:'pointer' });
+            const dot = sel=>({ display:'block', flex:'0 0 auto', width:'18px', height:'18px', borderRadius:'99px', border:'2px solid '+(sel?'var(--color-accent)':'var(--color-text-faint)'), background:sel?'var(--color-accent)':'transparent', boxShadow:sel?'inset 0 0 0 3px var(--color-surface-2)':'none' });
+            const choices = [
+              ['keep', 'Keep the files', 'They stay in your library folder. A scan won’t add it again.'],
+              ['trash', 'Move them to the Recycle Bin', 'From your library folder, so it can be restored from there.']
+            ].map(([v,label,line])=>{ const sel = (s.modal.files||'keep')===v; return { key:v, label, line, checked:sel, cardStyle:card(sel), dotStyle:dot(sel), onSelect:()=>this.setState(st=>({ modal:{ ...st.modal, files:v } })) }; });
             modal = {
-              isDelete, isClear:!isDelete, path:mi.path, warnLinked: isDelete && (mi.linkedFiles==='folder' || mi.linkedFiles==='videos'),
+              isDelete, isClear:!isDelete, path:mi.path, showChoice, choices,
+              // Log 51 Q6: the callout only on the Recycle Bin card.
+              warnLinked: trash,
               hasRefusal: isDelete && !!s.modal.refusal, refusal: s.modal.refusal || '',
               // Log 47 Q13: the Clear dialog's words and lists.
               title: isDelete ? 'Delete “'+mi.title+'”?' : 'Clear details?',
               // Log 47 Q12: every delete takes the title out of FamilyFlix; a linked one's files go to the Recycle Bin.
               subtitle: isDelete ? 'This takes the '+noun+' out of FamilyFlix. It can’t be undone from here.' : 'The '+noun+' stays in your library under its title, with no details, until you edit it or sync it with TMDB.',
-              removed: isDelete ? ['Its details, poster and artwork', 'Its watch history, rating and heart'].concat(({ folder:['Its folder, to the Recycle Bin'], videos:['Its video file(s), to the Recycle Bin'], unreachable:[] })[mi.linkedFiles] || ['FamilyFlix’s copy of its video and subtitles']) : ['Year, synopsis, credits and genres', 'Poster, backdrop and artwork', 'Its TMDB match and score'],
-              kept: isDelete ? (mi.linkedFiles==='unreachable' ? ['Its files on '+mi.path+' — they can’t be reached right now'] : copied && mi.original ? ['Your original in its library folder — Scan folders would bring it back'] : []) : ['Its title and files', 'Watch history, rating and heart'],
-              keptNone: isDelete && mi.linkedFiles!=='unreachable' && !(copied && mi.original),
+              // Log 51 Q6, Q8: kept files move to What stays; a shared title's videos are another title's.
+              removed: isDelete ? ['Its details, poster and artwork', 'Its watch history, rating and heart'].concat(copied ? ['FamilyFlix’s copy of its video and subtitles'] : trash ? [ownFiles+', to the Recycle Bin'] : []) : ['Year, synopsis, credits and genres', 'Poster, backdrop and artwork', 'Its TMDB match and score'],
+              kept: isDelete ? (mi.linkedFiles==='unreachable' ? ['Its files on '+mi.path+' \u2014 they can’t be reached right now'] : mi.linkedFiles==='shared' ? ['Its video file(s), which another title plays'] : ownFiles && !trash ? [ownFiles+', in your library folder'] : copied && mi.original ? ['Your original in its library folder \u2014 Scan folders would bring it back'] : []) : ['Its title and files', 'Watch history, rating and heart'],
+              keptNone: isDelete && !copied ? trash : isDelete && !mi.original,
               confirmLabel: isDelete ? (s.modal.busy ? 'Deleting…' : (mi.kind==='movies' ? 'Delete movie' : 'Delete series')) : (s.modal.busy ? 'Clearing…' : 'Clear details'),
               onConfirm:()=>this.confirm(),
               tileStyle:{ flex:'0 0 auto', width:'44px', height:'44px', borderRadius:'var(--radius-md)', display:'grid', placeItems:'center', background: isDelete?'rgba(201,122,106,.12)':'var(--color-accent-soft)', border:'1px solid '+(isDelete?'rgba(201,122,106,.32)':'var(--color-accent-line)'), color: isDelete?'var(--color-danger)':'var(--color-accent)' },
