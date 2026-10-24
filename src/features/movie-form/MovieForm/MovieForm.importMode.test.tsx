@@ -72,6 +72,7 @@ const readOf = (path: string, libraryFolderId: string | null) => ({
       season: 1,
       number: 1,
       title: 'Pilot',
+      relativePath: `Season 1/${PILOT}`,
       video: `${path}\\Season 1\\${PILOT}`,
       subtitles: [],
     },
@@ -79,11 +80,13 @@ const readOf = (path: string, libraryFolderId: string | null) => ({
       season: 1,
       number: 2,
       title: 'Low Tide',
+      relativePath: `Season 1/${LOW_TIDE}`,
       video: `${path}\\Season 1\\${LOW_TIDE}`,
       subtitles: [],
     },
   ],
   unplaced: [],
+  unplacedRelative: [],
   straySubtitles: 0,
 });
 

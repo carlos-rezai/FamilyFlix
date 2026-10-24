@@ -1,11 +1,22 @@
 import styled from 'styled-components';
 
+import { Filename } from '../fileRow.styles';
+
 /**
  * The filled state: the file that is in the slot, on the soft box the molecule
- * rung shares (`fileRow.styles.ts`) — nothing of its own to add, so the box,
- * its glyph and its filename are the furniture's under this slot's own name.
+ * rung shares (`fileRow.styles.ts`): the box, its glyph and its filename are
+ * the furniture's under this slot's own name.
  */
 export { Row as Filled, IconSlot, Filename } from '../fileRow.styles';
+
+/**
+ * The name ellipsised from its start (`truncateStart`): right to left, so the
+ * ellipsis lands before the name, its text left-aligned as the prototype has.
+ */
+export const StartTruncated = styled(Filename)`
+  direction: rtl;
+  text-align: left;
+`;
 
 /** The slot: its name on the left, its one control filling the rest. */
 export const Row = styled.div`

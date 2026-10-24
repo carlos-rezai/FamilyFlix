@@ -618,6 +618,7 @@ describe('movieAddValues', () => {
 
 describe('showFolderRows', () => {
   const SHOW = 'E:\\Shows\\Harbor and Vine';
+  const NATIVE = '\\';
   const PILOT = `${SHOW}\\Season 1\\Harbor.and.Vine.S01E01.Pilot.mkv`;
   const LOW_TIDE = `${SHOW}\\Season 1\\Harbor.and.Vine.S01E02.Low.Tide.mkv`;
   const SPRING = `${SHOW}\\Season 2\\Harbor.and.Vine.S02E01.Spring.mkv`;
@@ -635,6 +636,12 @@ describe('showFolderRows', () => {
     heldSeriesId: null,
     episodes,
     unplaced,
+    unplacedRelative: unplaced.map((video) =>
+      video
+        .slice(SHOW.length + 1)
+        .split(NATIVE)
+        .join('/')
+    ),
     straySubtitles: 0,
   });
 
@@ -644,10 +651,25 @@ describe('showFolderRows', () => {
       number: 1,
       title: 'Pilot',
       video: PILOT,
+      relativePath: 'Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
       subtitles: [{ path: PILOT_PT, language: 'Portuguese' }],
     },
-    { season: 1, number: 2, title: 'Low Tide', video: LOW_TIDE, subtitles: [] },
-    { season: 2, number: 1, title: null, video: SPRING, subtitles: [] },
+    {
+      season: 1,
+      number: 2,
+      title: 'Low Tide',
+      video: LOW_TIDE,
+      relativePath: 'Season 1/Harbor.and.Vine.S01E02.Low.Tide.mkv',
+      subtitles: [],
+    },
+    {
+      season: 2,
+      number: 1,
+      title: null,
+      video: SPRING,
+      relativePath: 'Season 2/Harbor.and.Vine.S02E01.Spring.mkv',
+      subtitles: [],
+    },
   ];
 
   it('keeps the read’s season-then-episode order, each a Found file', () => {
@@ -666,7 +688,7 @@ describe('showFolderRows', () => {
         {
           kind: 'found',
           path: PILOT,
-          filename: 'Harbor.and.Vine.S01E01.Pilot.mkv',
+          filename: 'Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
         },
       ],
       [
@@ -676,7 +698,7 @@ describe('showFolderRows', () => {
         {
           kind: 'found',
           path: LOW_TIDE,
-          filename: 'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+          filename: 'Season 1/Harbor.and.Vine.S01E02.Low.Tide.mkv',
         },
       ],
       [
@@ -686,7 +708,7 @@ describe('showFolderRows', () => {
         {
           kind: 'found',
           path: SPRING,
-          filename: 'Harbor.and.Vine.S02E01.Spring.mkv',
+          filename: 'Season 2/Harbor.and.Vine.S02E01.Spring.mkv',
         },
       ],
     ]);
@@ -733,7 +755,7 @@ describe('showFolderRows', () => {
       season: '1',
       number: '3',
       title: '',
-      file: { kind: 'found', path: BONUS, filename: 'bonus.mkv' },
+      file: { kind: 'found', path: BONUS, filename: 'Season 1/bonus.mkv' },
       subtitles: [],
     });
   });
@@ -761,6 +783,7 @@ describe('isShowFolderRow', () => {
       libraryFolderId: null,
       heldSeriesId: null,
       episodes: [],
+      unplacedRelative: ['bonus.mkv'],
       unplaced: ['E:\\Shows\\Harbor\\bonus.mkv'],
       straySubtitles: 0,
     });

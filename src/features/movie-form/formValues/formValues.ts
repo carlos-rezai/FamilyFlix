@@ -257,7 +257,7 @@ export const isShowFolderRow = (row: EpisodeFormRow): boolean =>
 export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
   const numbered = read.episodes.map((episode, index) => ({
     key: `${SHOW_FOLDER_KEY}episode-${index}`,
-    file: foundFile(episode.video),
+    file: foundFile(episode.video, episode.relativePath),
     season: String(episode.season),
     number: String(episode.number),
     title: episode.title ?? '',
@@ -271,7 +271,7 @@ export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
   const unplaced = numberFoundRows(read.unplaced, read.path, read.episodes).map(
     ({ path, season, number, title }, index) => ({
       key: `${SHOW_FOLDER_KEY}unplaced-${index}`,
-      file: foundFile(path),
+      file: foundFile(path, read.unplacedRelative[index]),
       season: String(season),
       number: String(number),
       title: title ?? '',
@@ -285,10 +285,14 @@ export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
 /**
  * The **File slot** a **Found file** fills: the absolute path the scan found
  * it at, and the name after its last separator — which is all the slot shows
- * of it, exactly as it shows a stored file.
+ * of it, exactly as it shows a stored file. A Show folder pick hands its
+ * path inside the show instead, so same-named episodes read apart.
  */
-export function foundFile(path: string): MovieFormFile {
-  return { kind: 'found', path, filename: foundFilenameOf(path) };
+export function foundFile(
+  path: string,
+  filename: string = foundFilenameOf(path)
+): MovieFormFile {
+  return { kind: 'found', path, filename };
 }
 
 /**

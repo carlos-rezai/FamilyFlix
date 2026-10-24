@@ -9,6 +9,7 @@ import {
   IconSlot,
   Label,
   Row,
+  StartTruncated,
 } from './FileField.styles';
 
 export interface FileFieldProps {
@@ -44,6 +45,11 @@ export interface FileFieldProps {
    * Defaults to the label.
    */
   removes?: string;
+  /**
+   * Ellipsise the name from its start, so its last segment always shows, and
+   * carry the whole name as its `title`: the Show folder row's path.
+   */
+  truncateStart?: boolean;
 }
 
 /**
@@ -76,6 +82,7 @@ export function FileField({
   onPick,
   onRemove,
   removes = label,
+  truncateStart = false,
 }: FileFieldProps) {
   return (
     <Row>
@@ -87,7 +94,13 @@ export function FileField({
                 tree unless it is given a title, so the row reads as its
                 filename. */}
             <IconSlot>{icon}</IconSlot>
-            <Filename>{filename}</Filename>
+            {truncateStart ? (
+              <StartTruncated title={filename}>
+                <bdi dir="ltr">{filename}</bdi>
+              </StartTruncated>
+            ) : (
+              <Filename>{filename}</Filename>
+            )}
             <RemoveButton removes={removes} onClick={onRemove} />
           </Filled>
         ) : (

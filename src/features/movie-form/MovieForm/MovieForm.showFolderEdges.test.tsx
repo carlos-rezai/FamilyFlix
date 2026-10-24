@@ -62,6 +62,11 @@ const LOW_TIDE = 'Harbor.and.Vine.S01E02.Low.Tide.mkv';
 const BONUS = 'bonus.mkv';
 const LOOSE = 'loose.mkv';
 
+/** What a row shows of each: its path inside the show. */
+const PILOT_ROW = `Season 1/${PILOT}`;
+const LOW_TIDE_ROW = `Season 1/${LOW_TIDE}`;
+const BONUS_ROW = `Season 1/${BONUS}`;
+
 /** A read of `SHOW`: two numbered episodes, two Unplaced videos. */
 const READ = {
   path: SHOW,
@@ -73,6 +78,7 @@ const READ = {
       season: 1,
       number: 1,
       title: 'Pilot',
+      relativePath: PILOT_ROW,
       video: `${SEASON_ONE}\\${PILOT}`,
       subtitles: [],
     },
@@ -80,11 +86,13 @@ const READ = {
       season: 1,
       number: 2,
       title: 'Low Tide',
+      relativePath: LOW_TIDE_ROW,
       video: `${SEASON_ONE}\\${LOW_TIDE}`,
       subtitles: [],
     },
   ],
   unplaced: [`${SEASON_ONE}\\${BONUS}`, `${SHOW}\\${LOOSE}`],
+  unplacedRelative: [BONUS_ROW, LOOSE],
   straySubtitles: 0,
 };
 
@@ -93,6 +101,7 @@ const FILM_SHAPED = {
   ...READ,
   episodes: [],
   unplaced: [`${SHOW}\\the harbor.mkv`, `${SHOW}\\the vine.mkv`],
+  unplacedRelative: ['the harbor.mkv', 'the vine.mkv'],
 };
 
 /** Another show, picked second. */
@@ -108,11 +117,13 @@ const OTHER_READ = {
       season: 1,
       number: 1,
       title: 'Arrival',
+      relativePath: ARRIVAL,
       video: `${OTHER_SHOW}\\${ARRIVAL}`,
       subtitles: [],
     },
   ],
   unplaced: [],
+  unplacedRelative: [],
   straySubtitles: 0,
 };
 
@@ -246,7 +257,7 @@ describe('MovieForm — the Show folder pick’s edges', () => {
           ['1', '4', ''],
         ])
       );
-      expect(screen.getByText(BONUS)).toBeDefined();
+      expect(screen.getByText(BONUS_ROW)).toBeDefined();
       expect(screen.getByText(LOOSE)).toBeDefined();
     });
 
@@ -355,7 +366,7 @@ describe('MovieForm — the Show folder pick’s edges', () => {
       await screen.findByText(HELD_REFUSAL);
       expect(drawnRows()).toEqual([]);
       expect(showFolderRemove()).toBeNull();
-      expect(screen.queryByText(PILOT)).toBeNull();
+      expect(screen.queryByText(PILOT_ROW)).toBeNull();
     });
   });
 
@@ -364,7 +375,9 @@ describe('MovieForm — the Show folder pick’s edges', () => {
       answerRead = (path) =>
         Promise.resolve(
           okResponse(
-            path === OTHER_SHOW ? OTHER_READ : { ...READ, unplaced: [] }
+            path === OTHER_SHOW
+              ? OTHER_READ
+              : { ...READ, unplaced: [], unplacedRelative: [] }
           )
         );
       await renderSeries();
@@ -383,8 +396,8 @@ describe('MovieForm — the Show folder pick’s edges', () => {
       );
       expect(screen.queryByText(SHOW)).toBeNull();
       expect(screen.getByText(OTHER_SHOW)).toBeDefined();
-      expect(screen.queryByText(PILOT)).toBeNull();
-      expect(screen.queryByText(BONUS)).toBeNull();
+      expect(screen.queryByText(PILOT_ROW)).toBeNull();
+      expect(screen.queryByText(BONUS_ROW)).toBeNull();
       expect(screen.getByText(ARRIVAL)).toBeDefined();
     });
   });

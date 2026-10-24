@@ -156,7 +156,7 @@ async function resolveRecord(
   return {
     ...NOTHING,
     values: problemFormValues(detail),
-    foundVideos: videos.length > 1 ? videos.map(foundFile) : [],
+    foundVideos: videos.length > 1 ? videos.map((path) => foundFile(path)) : [],
     resolving,
   };
 }

@@ -41,9 +41,11 @@ const readOf = (
     number: index + 1,
     title: null,
     video: `${path}\\${video}`,
+    relativePath: video,
     subtitles: [],
   })),
   unplaced: [],
+  unplacedRelative: [],
   straySubtitles: 0,
   ...extra,
 });

@@ -205,6 +205,7 @@ export function SeriesFormFiles({
           icon={<FileIcon size={16} />}
           onPick={() => undefined}
           onRemove={onRemoveShowFolder}
+          truncateStart
         />
       )}
       <Episodes>

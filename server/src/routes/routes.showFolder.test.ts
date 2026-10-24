@@ -131,6 +131,7 @@ describe('GET /api/show-folder', () => {
         number: 1,
         title: 'Pilot',
         video: join(seasonOne, 'Harbor.and.Vine.S01E01.Pilot.mkv'),
+        relativePath: 'Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
         subtitles: [
           {
             path: join(seasonOne, 'Harbor.and.Vine.S01E01.Pilot.pt.srt'),
@@ -143,6 +144,7 @@ describe('GET /api/show-folder', () => {
         number: 7,
         title: 'Spring Tide',
         video: join(seasonTwo, 'Harbor.and.Vine.S01E07.Spring.Tide.mkv'),
+        relativePath: 'Season 2/Harbor.and.Vine.S01E07.Spring.Tide.mkv',
         subtitles: [],
       },
     ]);

@@ -65,6 +65,11 @@ const PILOT_TRACK = 'Harbor.and.Vine.S01E01.Pilot.pt.srt';
 const LOW_TIDE = 'Harbor.and.Vine.S01E02.Low.Tide.mkv';
 const SPRING_TIDE = 'Harbor.and.Vine.S02E01.Spring.Tide.mkv';
 
+/** What a row shows of each: its path inside the show. */
+const PILOT_ROW = `Season 1/${PILOT}`;
+const LOW_TIDE_ROW = `Season 1/${LOW_TIDE}`;
+const SPRING_TIDE_ROW = `Season 2/${SPRING_TIDE}`;
+
 /** What `GET /api/show-folder` answers for the picked show. */
 const READ = {
   path: SHOW,
@@ -76,6 +81,7 @@ const READ = {
       season: 1,
       number: 1,
       title: 'Pilot',
+      relativePath: PILOT_ROW,
       video: `${SEASON_ONE}\\${PILOT}`,
       subtitles: [
         { path: `${SEASON_ONE}\\${PILOT_TRACK}`, language: 'Portuguese' },
@@ -85,6 +91,7 @@ const READ = {
       season: 1,
       number: 2,
       title: 'Low Tide',
+      relativePath: LOW_TIDE_ROW,
       video: `${SEASON_ONE}\\${LOW_TIDE}`,
       subtitles: [],
     },
@@ -92,11 +99,13 @@ const READ = {
       season: 2,
       number: 1,
       title: 'Spring Tide',
+      relativePath: SPRING_TIDE_ROW,
       video: `${SEASON_TWO}\\${SPRING_TIDE}`,
       subtitles: [],
     },
   ],
   unplaced: [],
+  unplacedRelative: [],
   straySubtitles: 0,
 };
 
@@ -289,11 +298,11 @@ describe('MovieForm — Add show folder in the shell', () => {
           ['2', '1', 'Spring Tide'],
         ])
       );
-      expect(screen.getByText(PILOT)).toBeDefined();
-      expect(screen.getByText(SPRING_TIDE)).toBeDefined();
-      expect(comesBefore(screen.getByText(SHOW), screen.getByText(PILOT))).toBe(
-        true
-      );
+      expect(screen.getByText(PILOT_ROW)).toBeDefined();
+      expect(screen.getByText(SPRING_TIDE_ROW)).toBeDefined();
+      expect(
+        comesBefore(screen.getByText(SHOW), screen.getByText(PILOT_ROW))
+      ).toBe(true);
     });
 
     it('draws each episode’s found subtitles under it, in their languages', async () => {
@@ -304,8 +313,8 @@ describe('MovieForm — Add show folder in the shell', () => {
       const language = await screen.findByRole('button', {
         name: `Language for ${PILOT_TRACK}: Portuguese`,
       });
-      expect(comesBefore(screen.getByText(PILOT), language)).toBe(true);
-      expect(comesBefore(language, screen.getByText(LOW_TIDE))).toBe(true);
+      expect(comesBefore(screen.getByText(PILOT_ROW), language)).toBe(true);
+      expect(comesBefore(language, screen.getByText(LOW_TIDE_ROW))).toBe(true);
       expect(
         screen.queryAllByRole('button', { name: /^language for /i })
       ).toHaveLength(1);
@@ -367,7 +376,7 @@ describe('MovieForm — Add show folder in the shell', () => {
 
       expect(drawnRows()).toEqual([['3', '1', 'Bonus']]);
       expect(screen.queryByText(SHOW)).toBeNull();
-      expect(screen.queryByText(PILOT)).toBeNull();
+      expect(screen.queryByText(PILOT_ROW)).toBeNull();
       expect(screen.queryByText(PILOT_TRACK)).toBeNull();
     });
 

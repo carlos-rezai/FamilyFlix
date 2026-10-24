@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { basename, relative } from 'node:path';
+import { basename, relative, sep } from 'node:path';
 
 import { isVideoFilename } from '../../media/fileKinds/fileKinds';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
@@ -56,6 +56,10 @@ function seriesHoldingAny(
   }
   return null;
 }
+
+/** A video's path inside the picked folder, spelled with forward slashes. */
+const insideShow = (dir: string, video: string): string =>
+  relative(dir, video).split(sep).join('/');
 
 /**
  * The **Source folders** under a picked folder: the folder itself when
@@ -114,6 +118,7 @@ export async function readShowFolder(
       number: episode.episode,
       title: episode.title,
       video: episode.video,
+      relativePath: insideShow(dir, episode.video),
       subtitles: episode.subtitles.map(({ path, language }) => ({
         path,
         language,
@@ -146,6 +151,7 @@ export async function readShowFolder(
             )),
       episodes,
       unplaced,
+      unplacedRelative: unplaced.map((video) => insideShow(dir, video)),
       straySubtitles: shows.reduce(
         (count, show) => count + show.straySubtitles.length,
         0

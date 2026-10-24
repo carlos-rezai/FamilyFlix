@@ -181,6 +181,8 @@ export interface ShowFolderRead {
   episodes: ShowFolderEpisode[];
   /** Videos no rule numbered, absolute, in scan order. */
   unplaced: string[];
+  /** Each of `unplaced`'s paths inside the Show folder, forward slashes. */
+  unplacedRelative: string[];
   /** Subtitles that matched no episode's stem. */
   straySubtitles: number;
 }
@@ -191,5 +193,7 @@ export interface ShowFolderEpisode {
   number: number;
   title: string | null;
   video: string;
+  /** The video's path inside the Show folder, forward slashes. */
+  relativePath: string;
   subtitles: { path: string; language: string }[];
 }
