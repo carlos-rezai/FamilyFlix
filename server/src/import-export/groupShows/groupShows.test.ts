@@ -18,7 +18,11 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { groupShows } from './groupShows';
+import { groupShows, seasonOf, showFolderOf } from './groupShows';
+import {
+  SEASON_FOLDER_CASES,
+  type SeasonFolderCase,
+} from '../../test-support/seasonFolderCases/seasonFolderCases';
 import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 
@@ -579,5 +583,104 @@ describe('groupShows — the Episode word', () => {
 
     expect(shows).toEqual([]);
     expect(films).toEqual([folder]);
+  });
+});
+
+/**
+ * 51 — Library audit (issue #447): the wider **Season folder** rule, over the
+ * one table the client's `readSeasonFolder` and the drift guard read. Each
+ * group is one rule, asserted whole.
+ */
+describe('seasonOf — the wider Season folder rule', () => {
+  const readAll = (cases: readonly SeasonFolderCase[]) =>
+    cases.map(([name]) => [name, seasonOf(name)]);
+  const expected = (cases: readonly SeasonFolderCase[]) =>
+    cases.map(([name, season]) => [name, season]);
+
+  it('reads every spelling, Season, Seizoen and S, in either case', () => {
+    const cases = SEASON_FOLDER_CASES.spellings;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+
+  it('reads a spelling with trailing text, never the year as the number', () => {
+    const cases = SEASON_FOLDER_CASES.trailing;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+
+  it('reads a release name holding a standalone S01', () => {
+    const cases = SEASON_FOLDER_CASES.release;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+
+  it('refuses an episode tag such as S01E01', () => {
+    const cases = SEASON_FOLDER_CASES.episodes;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+
+  it('reads Specials and Season 0 as season 0', () => {
+    const cases = SEASON_FOLDER_CASES.specials;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+
+  it('reads a film folder as no Season folder', () => {
+    const cases = SEASON_FOLDER_CASES.others;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+});
+
+describe('groupShows — the wider Season folder rule', () => {
+  it('puts a release-named Season folder under its parent, the Show folder', () => {
+    const release = scan(
+      ['Release Show', 'Release.Show.S01.1080p.WEB-DL'],
+      ['Release.Show.S01E01.1080p.WEB-DL.mkv']
+    );
+
+    expect(showFolderOf(release.dir)).toBe(join(ROOT, 'Release Show'));
+    const { shows, films } = groupShows([release]);
+    expect(films).toEqual([]);
+    expect(shows).toHaveLength(1);
+    expect(shows[0]).toMatchObject({
+      dir: join(ROOT, 'Release Show'),
+      name: 'Release Show',
+      episodes: [{ season: 1, episode: 1 }],
+    });
+  });
+
+  it('reads the season off the folder, not the year after it', () => {
+    const season = scan(['Year Show', 'Season 1 (2008)'], ['Episode 3.mkv']);
+
+    const { shows, films } = groupShows([season]);
+
+    expect(films).toEqual([]);
+    expect(shows).toHaveLength(1);
+    expect(shows[0]).toMatchObject({
+      name: 'Year Show',
+      episodes: [{ season: 1, episode: 3 }],
+    });
+  });
+
+  it('numbers a Specials folder’s episodes in season 0', () => {
+    const specials = scan(
+      ['Specials Show', 'Specials'],
+      ['Specials.Show.S00E01.Christmas.mkv']
+    );
+
+    const { shows, films } = groupShows([specials]);
+
+    expect(films).toEqual([]);
+    expect(shows).toHaveLength(1);
+    expect(shows[0]).toMatchObject({
+      name: 'Specials Show',
+      episodes: [{ season: 0, episode: 1 }],
+    });
+  });
+
+  it('never reads an S01E01 folder as a Season folder of its parent', () => {
+    const episode = scan(
+      ['Shows', 'Harbor.and.Vine.S01E01.1080p'],
+      ['Harbor.and.Vine.S01E01.1080p.mkv']
+    );
+
+    expect(showFolderOf(episode.dir)).toBe(episode.dir);
   });
 });

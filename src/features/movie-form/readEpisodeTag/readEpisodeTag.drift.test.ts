@@ -5,6 +5,7 @@ import { readEpisodeTag } from './readEpisodeTag';
 import { readSeasonFolder } from '../readSeasonFolder/readSeasonFolder';
 import { episodeTag } from '../../../../server/src/media/episodeTag/episodeTag';
 import { seasonOf } from '../../../../server/src/import-export/groupShows/groupShows';
+import { ALL_SEASON_FOLDER_CASES } from '../../../../server/src/test-support/seasonFolderCases/seasonFolderCases';
 
 /**
  * 29 — Add a series, Phase 3 (issue #263): the drift guard.
@@ -138,4 +139,19 @@ describe('the Season folder — client and server agree', () => {
   it.each(SHARED_SEASON_FOLDERS.map((name) => [name]))('%s', (name) => {
     expect(readSeasonFolder(name)).toBe(seasonOf(name));
   });
+
+  /**
+   * 51 — Library audit (issue #447): the wider rule's one table, the same
+   * the two units' table tests read. Agreement is asserted on the table's own
+   * answer too, so two readings both wrong the same way still fail.
+   */
+  it.each(ALL_SEASON_FOLDER_CASES.map(([name, season]) => [name, season]))(
+    '%s reads as season %s on both sides',
+    (name, season) => {
+      expect({
+        server: seasonOf(name),
+        client: readSeasonFolder(name),
+      }).toEqual({ server: season, client: season });
+    }
+  );
 });
