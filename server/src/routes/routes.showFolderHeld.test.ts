@@ -137,3 +137,33 @@ describe('GET /api/show-folder — a held Show folder', () => {
     expect(read.heldSeriesId).toBeNull();
   });
 });
+
+// 51 — Library audit, Phase 7 (issue #450): a Show folder is held as well
+// when any one of its videos is a held episode's, by the **Held video** rule,
+// whatever folder is on record: a renamed show's folder reads as its series.
+describe('GET /api/show-folder — a Show folder with a held episode', () => {
+  it('answers the series one of its videos plays for, with no folder on record', async () => {
+    const { baseUrl, shows, storage } = freshApi();
+    const show = join(shows, 'Harbour and Vine');
+    folderWith(show, 'Season 1', [
+      'Harbor.and.Vine.S01E01.Pilot.mkv',
+      'Harbor.and.Vine.S01E02.Low.Tide.mkv',
+    ]);
+    const listed = storage.addLibraryFolder(shows);
+    const series = storage.addSeries({ title: 'Harbor and Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'Harbour and Vine/Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
+        videoFolderId: listed.id,
+      },
+    ]);
+
+    const response = await readFolder(baseUrl, show);
+
+    expect(response.status).toBe(200);
+    const read = (await response.json()) as ReadBody;
+    expect(read.heldSeriesId).toBe(series.id);
+    expect(read.episodes).toHaveLength(2);
+  });
+});
