@@ -53,6 +53,41 @@
             {{ path }}
           </div>
           <div style="{{ lineStyle }}">{{ line }}</div>
+          <!-- The folder's Left-out videos, drawn only with a count above zero:
+               "3 videos left out" ("1 video" for one) and Bring back, which forgets
+               them (DELETE /api/library-folders/:id/left-out) so the next scan adds them. -->
+          <sc-if value="{{ hasLeftOut }}" hint-placeholder-val="{{ true }}">
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                gap: 10px;
+                margin-top: 2px;
+                font-family: var(--font-sans);
+                font-size: 13px;
+                color: var(--color-text-faint);
+              "
+            >
+              <span>{{ leftOutLine }}</span>
+              <button
+                onClick="{{ onBringBack }}"
+                style="
+                  background: transparent;
+                  border: none;
+                  color: var(--color-text-dim);
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  font-weight: 600;
+                  cursor: pointer;
+                  padding: 2px 2px;
+                  white-space: nowrap;
+                "
+                style-hover="color:var(--color-accent)"
+              >
+                Bring back
+              </button>
+            </div>
+          </sc-if>
         </div>
         <button
           onClick="{{ onRemove }}"
@@ -79,16 +114,20 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":640,"height":80},"path":{"editor":"text","default":"E:\\Movies","tsType":"string"},"titleCount":{"editor":"number","default":214,"tsType":"number"},"reachable":{"editor":"boolean","default":true,"tsType":"boolean"},"onRemove":{"editor":null,"tsType":"() =&gt; void"}}'
+      data-props='{"$preview":{"width":640,"height":100},"path":{"editor":"text","default":"E:\\Movies","tsType":"string"},"titleCount":{"editor":"number","default":214,"tsType":"number"},"reachable":{"editor":"boolean","default":true,"tsType":"boolean"},"leftOut":{"editor":"number","default":3,"tsType":"number"},"onBringBack":{"editor":null,"tsType":"() =&gt; void"},"onRemove":{"editor":null,"tsType":"() =&gt; void"}}'
     >
       class Component extends DCLogic {
         renderVals(){
           const reachable=this.props.reachable!==false;
+          const leftOut=this.props.leftOut||0;
           const path=this.props.path||'E:\\Movies';
           return {
             path,
             line: reachable ? (this.props.titleCount||0)+' titles' : 'Can’t be reached right now',
             lineStyle:{marginTop:'4px',fontFamily:'var(--font-sans)',fontSize:'13px',color:reachable?'var(--color-text-faint)':'var(--color-danger)'},
+            hasLeftOut:leftOut>0,
+            leftOutLine:leftOut+(leftOut===1?' video':' videos')+' left out',
+            onBringBack:this.props.onBringBack,
             removeLabel:'Remove '+path,
             onRemove:this.props.onRemove,
           };

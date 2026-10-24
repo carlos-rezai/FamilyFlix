@@ -15,7 +15,9 @@
         the empty card (No folders yet.), two folders with one unreachable, a
         refusal line under the field with the typed path kept, the add row
         with and without Browse… (drawn only when the shell's folder bridge exists),
-        a Folder row's removal refused under it (linked titles play from it), and
+        a Folder row's removal refused under it (linked titles play from it), a
+        Folder row with Left-out videos (3 videos left out, and Bring back, whose
+        press takes the line away; a folder with none draws no line), and
         the Scan group with Link chosen.
       -->
       <div
@@ -118,6 +120,8 @@
                       path="{{ f.path }}"
                       title-count="{{ f.titleCount }}"
                       reachable="{{ f.reachable }}"
+                      left-out="{{ f.leftOut }}"
+                      on-bring-back="{{ f.onBringBack }}"
                       on-remove="{{ f.onRemove }}"
                       hint-size="100%,68px"
                     ></dc-import>
@@ -320,7 +324,7 @@
               <!-- The Import mode, ImportModeChoice: the caption Files over two ChoiceCards in a
                    radiogroup — FormatCard's pixels, renamed for its second caller. Link chosen on
                    every visit, never remembered; posted as `mode` with Scan folders. The caption is
-                   the Group heading, Folders' and Scan's own: Files labels a section. -->
+                   the Group heading, Folders' and Scan's own: Link or copy labels a section. -->
               <div>
                 <span
                   id="lf-mode-caption"
@@ -334,7 +338,7 @@
                     color: var(--color-text-faint);
                     margin: 0 0 12px 2px;
                   "
-                  >Files</span
+                  >Link or copy</span
                 >
                 <div
                   role="radiogroup"

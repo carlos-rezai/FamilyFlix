@@ -300,7 +300,7 @@
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, fStray:0, fMode:'link', fLinkOff:false, fVideoLinkOff:false, fVideoPicks:0, subLangOpen:null,
           addContext:null, resolveId:null,
-          libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0}], folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
+          libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12,leftOut:3},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0}], folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
           impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[], impKind:'all', impOpen:{},
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
@@ -451,6 +451,7 @@
         browseFolders(){ this.addFolder('D:\\Films'); }
         // The route's 409: a folder linked videos play from is not removed, and the sentence is drawn
         // under its row. A folder whose titles were all copied goes as before, its titles kept.
+        bringBack(id){ this.setState(s=>({libraryFolders:s.libraryFolders.map(f=>f.id===id?{...f,leftOut:0}:f)})); }
         removeFolder(id){ const f=this.state.libraryFolders.find(x=>x.id===id); if(!f) return;
           if(f.linkedCount>0){ const n=f.linkedCount; this.setState({folderRemoveRefusal:{id,text:n===1?'1 title plays from this folder. Delete it before removing it.':n+' titles play from this folder. Delete them before removing it.'}}); return; }
           this.setState(s=>({libraryFolders:s.libraryFolders.filter(x=>x.id!==id),folderRemoveRefusal:null})); }
@@ -605,7 +606,8 @@
           if(turn===2) return {fShowFolderPicks:picks, fShowFolderRefusal:'There are no videos in that folder.'};
           if(turn===4) return {fShowFolderPicks:picks, fShowFolderRefusal:'Harbor Lights is already in your library.'};
           const dir=turn===3?'D:\\Downloads\\Harbor Lights':'E:\\Shows\\Harbor Lights';
-          const found=[[1,1,'Pilot'],[1,2,'Low Tide'],[2,1,'Spring Tide']].map(([se,n,t])=>({filename:'Harbor.Lights.S0'+se+'E0'+n+'.'+t.replace(/ /g,'.')+'.mkv',season:String(se),number:String(n),title:t,subs:se===1&&n===1?[{filename:'Harbor.Lights.S01E01.Pilot.pt.srt',lang:'Portuguese'}]:[],fromFolder:true}));
+          // A picked row's mono line is its path inside the show; a hand-picked file keeps its name.
+          const found=[[1,1,'Pilot'],[1,2,'Low Tide'],[2,1,'Spring Tide']].map(([se,n,t])=>({filename:se===2?'Seizoen 2/Aflevering '+n+'.mp4':'Season '+se+'/Harbor.Lights.S0'+se+'E0'+n+'.'+t.replace(/ /g,'.')+'.mkv',season:String(se),number:String(n),title:t,subs:se===1&&n===1?[{filename:'Harbor.Lights.S01E01.Pilot.pt.srt',lang:'Portuguese'}]:[],fromFolder:true}));
           if(turn===0) found.splice(2,0,{filename:'bonus.mkv',season:'1',number:'3',title:'',subs:[],fromFolder:true});
           return {fShowFolderPicks:picks, fShowFolderRefusal:'', fShowFolder:dir, fStray:turn===0?2:0, fLinkOff:turn===3, fEpisodes:[...s.fEpisodes.filter(e=>!e.fromFolder),...found], fTitle:s.fTitle||'Harbor Lights'}; }); }
         removeShowFolder(){ this.setState(s=>({fShowFolder:'', fStray:0, fLinkOff:false, fEpisodes:s.fEpisodes.filter(e=>!e.fromFolder)})); }
@@ -1025,7 +1027,7 @@
               onBack:()=>this.goSettings(),
               landed:true,
               empty:s.libraryFolders.length===0,
-              folders:s.libraryFolders.map(f=>{ const r=s.folderRemoveRefusal&&s.folderRemoveRefusal.id===f.id; return {key:f.id,path:f.path,titleCount:f.titleCount,reachable:f.reachable,onRemove:()=>this.removeFolder(f.id),removeRefused:!!r,removeRefusal:r?s.folderRemoveRefusal.text:''}; }),
+              folders:s.libraryFolders.map(f=>{ const r=s.folderRemoveRefusal&&s.folderRemoveRefusal.id===f.id; return {key:f.id,path:f.path,titleCount:f.titleCount,reachable:f.reachable,leftOut:f.leftOut||0,onBringBack:()=>this.bringBack(f.id),onRemove:()=>this.removeFolder(f.id),removeRefused:!!r,removeRefusal:r?s.folderRemoveRefusal.text:''}; }),
               typed:s.folderTyped, onTyped:(e)=>this.setState({folderTyped:e.target.value}),
               onAdd:()=>this.addFolder(s.folderTyped),
               browse:s.folderBridge, onBrowse:()=>this.browseFolders(),

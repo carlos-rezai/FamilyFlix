@@ -44,18 +44,10 @@
                 "
                 >{{ iconEl }}</span
               >
-              <span
-                style="
-                  flex: 1;
-                  font-family: var(--font-mono);
-                  font-size: 13px;
-                  color: var(--color-text-dim);
-                  overflow: hidden;
-                  text-overflow: ellipsis;
-                  white-space: nowrap;
-                  min-width: 0;
-                "
-                >{{ filename }}</span
+              <!-- truncateStart (the Show folder row): the name ellipsises from its start,
+                   so its own last segment always shows, and the whole name is its title. -->
+              <span style="{{ nameStyle }}" title="{{ nameTitle }}"
+                ><bdi dir="ltr">{{ filename }}</bdi></span
               >
               <button
                 onClick="{{ onRemove }}"
@@ -108,7 +100,7 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":440,"height":70},"label":{"editor":"text","default":"Video","tsType":"string"},"filename":{"editor":"text","default":"","tsType":"string"},"chooseLabel":{"editor":"text","default":"Choose video file","tsType":"string"},"icon":{"editor":"enum","default":"video","options":["video","poster","file"],"tsType":"&apos;video&apos;|&apos;poster&apos;|&apos;file&apos;"},"onPick":{"editor":null,"tsType":"() =&gt; void"},"onRemove":{"editor":null,"tsType":"() =&gt; void"}}'
+      data-props='{"$preview":{"width":440,"height":70},"label":{"editor":"text","default":"Video","tsType":"string"},"filename":{"editor":"text","default":"","tsType":"string"},"chooseLabel":{"editor":"text","default":"Choose video file","tsType":"string"},"icon":{"editor":"enum","default":"video","options":["video","poster","file"],"tsType":"&apos;video&apos;|&apos;poster&apos;|&apos;file&apos;"},"truncateStart":{"editor":"boolean","default":false,"tsType":"boolean"},"onPick":{"editor":null,"tsType":"() =&gt; void"},"onRemove":{"editor":null,"tsType":"() =&gt; void"}}'
     >
       class Component extends DCLogic {
         renderVals(){
@@ -122,6 +114,8 @@
           };
           return {
             label:this.props.label||'File', filename, hasFile:!!filename, noFile:!filename,
+            nameStyle:{flex:1,fontFamily:'var(--font-mono)',fontSize:'13px',color:'var(--color-text-dim)',overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',minWidth:0,direction:this.props.truncateStart?'rtl':'ltr',textAlign:'left'},
+            nameTitle:this.props.truncateStart?filename:undefined,
             chooseLabel:this.props.chooseLabel||'Choose file', iconEl:icons[icon]||icons.file,
             onPick:this.props.onPick, onRemove:this.props.onRemove,
           };

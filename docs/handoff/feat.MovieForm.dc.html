@@ -102,7 +102,7 @@
           >
             {{ form.lede }} To add many at once, use
             <span style="color: var(--color-text-dim); font-weight: 500"
-              >Import library</span
+              >Library folders</span
             >.
           </p>
 
@@ -496,8 +496,10 @@
 
                 <!-- The Show folder row (log 48): on the series add in the shell, once
                      ＋ Add show folder's pick has been read — mol.FileField's filled row,
-                     labelled Show folder, the picked folder's absolute path in mono. Its ✕
-                     takes off only the folder's rows; rows from ＋ Add episode files stay. -->
+                     labelled Show folder, the picked folder's absolute path in mono,
+                     ellipsised from its start (truncateStart) so the folder's own name always
+                     shows, the full path its title on hover. Its ✕ takes off only the
+                     folder's rows; rows from ＋ Add episode files stay. -->
                 <sc-if
                   value="{{ form.hasShowFolder }}"
                   hint-placeholder-val="{{ true }}"
@@ -506,6 +508,7 @@
                     name="mol.FileField"
                     label="Show folder"
                     filename="{{ form.showFolder }}"
+                    truncate-start="{{ true }}"
                     choose-label="Add show folder"
                     icon="file"
                     on-remove="{{ form.removeShowFolder }}"
@@ -688,7 +691,7 @@
           >
             <div style="margin-top: 24px">
               <span style="{{ form.groupHeadingStyle }}" id="form-mode-caption"
-                >Files</span
+                >Link or copy</span
               >
               <div
                 role="radiogroup"
