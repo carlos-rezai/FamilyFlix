@@ -63,6 +63,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Add a show folder — a show by its folder, numbered  | ✅ Done    |
 | Start on Series — open FamilyFlix on the Series tab | ✅ Done    |
 | Subtitle picker — choose a track in the player      | ✅ Done    |
+| Library audit: every Library flow, tested live      | 🔜 Planned |
 | Loading states — spinners and an FF loading overlay | 🔜 Planned |
 | Scan new folders — and sync only what a run added   | 🔜 Planned |
 
@@ -250,3 +251,35 @@ say, where the player only ever showed one. It is done (design log 50):
     `C` still turns subtitles on and off. What you last chose carries to the
     next episode for the evening; a film started afresh from the library
     starts with subtitles off.
+
+Step 34 comes before the loading states, out of using v0.10.0 for real: the
+Settings → Library flows were built one step at a time and never walked end
+to end. It is planned, and goes through grill-me first:
+
+34. 🔜 **Library audit**: every option and step under Settings → Library
+    (Library folders, Scan folders, Import from spreadsheet, Link or copy,
+    Manage library, Export, and the Add form's movie and series kinds) is
+    walked live in the desktop app, against a real show and film layout, and
+    whatever breaks is fixed. Known so far:
+    - **A rescan doubles series.** Adding one series scans every folder again
+      (Scan new folders isn't released yet), and some held series come back
+      as a second copy with no metadata. A scan knows a held show by the
+      folder on record or by its title and year; a series added before
+      folders were recorded, or one a Sync renamed, matches neither.
+    - **Deleting the double breaks the original.** Both copies point at the
+      same video files, so deleting the bare one sends those files to the
+      Recycle Bin, and the synced one is left with nothing to play and has
+      to be deleted by hand too.
+    - **A deleted title can't come back.** Deleting a linked movie or series,
+      from its own page or from Manage library, sends its video (or its whole
+      folder) to the Recycle Bin, so the next scan or add finds nothing to
+      link. Removing a title from FamilyFlix and throwing its files away
+      should be two separate choices.
+    - **A show folder's import is mislabelled.** _Add show folder_ reads the
+      folder, but the labels on what it is about to import are wrong.
+    - **A show folder holding season folders isn't read.** Only a folder that
+      holds the episodes themselves adds; a show folder with season folders
+      inside must add whole. Only `Season 1`, `Season 01` and `S01` are read
+      as season folders today, so a name like `Seizoen 1`, `Season 1 (2008)`
+      or `Show.S01.1080p` is the likely cause.
+    - More turn up in use; each is listed and confirmed in the grill-me.
