@@ -58,9 +58,11 @@ import {
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 import { createTitles, type StoredLibraryTitles } from './titles/titles';
+import { createHolding, type HeldVideo } from './holding/holding';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
+export type { HeldVideo } from './holding/holding';
 export type {
   LinkedVideo,
   StoredLibraryMovie,
@@ -349,6 +351,14 @@ export interface LibraryStorage {
     sourceFile?: string | null
   ): string | null;
   /**
+   * The **Held video** rule: the title whose video already lies at this path
+   * under this Library folder, relative to it with forward slashes, as a
+   * **Linked video** is spelled: a film's or an episode's Linked video, or
+   * an episode's **Source file** under its series' Source folder. `null`
+   * when none does; one of a double rather than a refusal.
+   */
+  titleHolding(folderId: string, videoPath: string): HeldVideo | null;
+  /**
    * Insert a **Series** and its genres (ordered) in one transaction, and
    * return the assembled model. It carries no watch state: that lives on its
    * episodes. Given episodes, they are written in the same transaction, so a
@@ -475,6 +485,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const seriesCuration = createSeriesCuration(db);
   const seriesWatch = createSeriesWatch(db);
   const titles = createTitles(db);
+  const holding = createHolding(db);
 
   return {
     addMovie: write.addMovie,
@@ -521,6 +532,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     mediaFolderOf: enrich.mediaFolderOf,
     sourcePath: enrich.sourcePath,
     titleAt: enrich.titleAt,
+    titleHolding: holding.titleHolding,
     addSeries: seriesWrite.addSeries,
     addEpisode: seriesWrite.addEpisode,
     deleteSeries: seriesWrite.deleteSeries,

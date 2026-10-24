@@ -11,6 +11,7 @@ import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFold
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
+import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import {
   groupShows,
   type ShowEpisode,
@@ -1528,10 +1529,32 @@ export function createImporter({
   };
 
   /**
-   * The film the library already holds for a **Source folder**, by the two
+   * The **Held video** rule: the first title of `kind` one of these found
+   * videos already belongs to, whatever it is called; `null` for none.
+   */
+  const holderOf = (
+    kind: HeldTitle['kind'],
+    folder: StoredLibraryFolder,
+    videos: readonly string[]
+  ): string | null => {
+    for (const video of videos) {
+      const held = storage.titleHolding(
+        folder.id,
+        spellLinkedVideo(folder.path, video)
+      );
+      if (held !== null && held.kind === kind) {
+        return held.id;
+      }
+    }
+    return null;
+  };
+
+  /**
+   * The film the library already holds for a **Source folder**, by the three
    * **Already in library** rules in order: the folder on record first,
    * whatever its title now says — a **Collection folder** film by its Source
-   * file — then the title key and year the row or the folder gives.
+   * file — then the **Held video** rule, then the title key and year the row
+   * or the folder gives.
    */
   const heldFilm = (
     filmsByKey: Map<string, string>,
@@ -1546,14 +1569,16 @@ export function createImporter({
         source.sourceFolder,
         source.sourceFile
       ) ??
+      holderOf('movie', folder, scan.videos) ??
       filmsByKey.get(filmKey(row.title, row.year)) ??
       null
     );
   };
 
   /**
-   * The same two rules for a **Show folder**, over the held series: the folder
-   * on record found in their list, the key and year in their map.
+   * The same three rules for a **Show folder**, over the held series: the
+   * folder on record, then the series any one episode video is held by,
+   * found in their list; the key and year in their map.
    */
   const heldShow = (
     held: HeldSeries[],
@@ -1566,8 +1591,14 @@ export function createImporter({
       folder.id,
       relative(folder.path, show.dir)
     );
+    const holder = holderOf(
+      'series',
+      folder,
+      show.episodes.map((episode) => episode.video)
+    );
     return (
       held.find((entry) => entry.series.id === atFolder) ??
+      held.find((entry) => entry.series.id === holder) ??
       seriesByKey.get(filmKey(row.title, row.year)) ??
       null
     );
