@@ -76,7 +76,7 @@ const refused = (error: string) =>
 
 /** The pick over a real episode list, with the title and Link it would set. */
 function renderPick() {
-  const prefillTitle = vi.fn<(guess: string) => void>();
+  const prefillTitle = vi.fn<(guess: string, picked: string | null) => void>();
   const setShowLink = vi.fn<(available: boolean) => void>();
   const rendered = renderHook(() => {
     const list = useEpisodeList();
@@ -124,7 +124,7 @@ describe('useShowFolderPick', () => {
     expect(filenames(result)).toEqual(['S01E01.mkv']);
     expect(result.current.pick.straySubtitles).toBe(2);
     expect(result.current.pick.refusal).toBeNull();
-    expect(prefillTitle).toHaveBeenCalledWith('Harbor and Vine');
+    expect(prefillTitle).toHaveBeenCalledWith('Harbor and Vine', null);
     expect(setShowLink).toHaveBeenCalledWith(true);
   });
 

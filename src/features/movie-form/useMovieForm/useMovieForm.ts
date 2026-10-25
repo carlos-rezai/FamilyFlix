@@ -35,8 +35,8 @@ import {
   createSeries,
   ProblemGoneError,
   resolveProblem,
-  SaveRefusedError,
   resolveSeriesProblem,
+  SaveRefusedError,
   updateMovie,
   updateSeries,
 } from '../api/api';
@@ -632,7 +632,7 @@ export function useMovieForm(): UseMovieFormResult {
   // The **Show folder pick**, `useShowFolderPick`'s: an empty title, or one
   // an earlier pick filled in, takes the read's **Title guess**, and its
   // Library folder says whether Link can be.
-  const prefillTitle = useCallback((guess: string, picked?: string) => {
+  const prefillTitle = useCallback((guess: string, picked: string | null) => {
     setValues((current) =>
       current.title.trim() === '' || current.title === picked
         ? { ...current, title: guess }
@@ -775,10 +775,10 @@ export function useMovieForm(): UseMovieFormResult {
 
     // The form is still on screen with everything typed still in it, and Save
     // is offered again. Nothing else is said, but for a save the route refused
-    // in a sentence of its own, which is drawn. The one exception is a problem that is gone: there is
-    // nothing left to resolve, so the form falls back to the plain add — and
-    // empty, because a found file is a path under the run's root, which the
-    // plain add can never send.
+    // in a sentence of its own, which is drawn. The one exception is a
+    // problem that is gone: there is nothing left to resolve, so the form
+    // falls back to the plain add — and empty, because a found file is a path
+    // under the run's root, which the plain add can never send.
     write().catch((error: unknown) => {
       setSaving(false);
       if (error instanceof SaveRefusedError) {

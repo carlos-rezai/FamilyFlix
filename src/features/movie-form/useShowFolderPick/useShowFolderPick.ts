@@ -19,9 +19,10 @@ export interface UseShowFolderPickInput {
   removeShowFolder: () => void;
   /**
    * Fill the title with the read's **Title guess** when it is empty, or still
-   * `picked`, the guess an earlier pick filled in; a typed one stays.
+   * `picked`, the guess an earlier pick filled in (`null` before any); a
+   * typed one stays.
    */
-  prefillTitle: (guess: string, picked?: string) => void;
+  prefillTitle: (guess: string, picked: string | null) => void;
   /** `useImportMode`'s: whether Link can be for the picked folder. */
   setShowLink: (available: boolean) => void;
 }
@@ -94,11 +95,7 @@ export function useShowFolderPick({
     setStraySubtitles(read.straySubtitles);
     setShowLink(read.libraryFolderId !== null);
     holdShowFolder(showFolderRows(read));
-    if (pickedTitle.current === null) {
-      prefillTitle(read.titleGuess);
-    } else {
-      prefillTitle(read.titleGuess, pickedTitle.current);
-    }
+    prefillTitle(read.titleGuess, pickedTitle.current);
     pickedTitle.current = read.titleGuess;
   }, [bridge, holdShowFolder, prefillTitle, setShowLink]);
 
