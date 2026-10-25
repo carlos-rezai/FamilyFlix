@@ -362,3 +362,54 @@ describe('EpisodeRow — hover, press and keyboard focus', () => {
     expect(focus['box-shadow']).toBe(normCss(`0 0 0 3px ${c.focusRing}`));
   });
 });
+
+/**
+ * Library audit (issue #464): a thumbnail whose `stillUrl` names a file that
+ * no longer exists used to draw a broken image. A still that fails to load now
+ * falls back to what a still-less row draws: the series' gradient alone, the
+ * resume bar still over it.
+ */
+describe('EpisodeRow — a still that fails to load', () => {
+  const MISSING_STILL =
+    '/api/images/the-hollow-coast-2018/season-02/S02E04.still.jpg';
+
+  /** Every background the thumbnail and its descendants paint. */
+  const paints = () =>
+    [thumbnail(), ...Array.from(thumbnail().querySelectorAll('*'))].map(
+      (element) => {
+        const computed = window.getComputedStyle(element);
+        return `${computed.backgroundImage} ${computed.background}`;
+      }
+    );
+
+  /** Fails the row's still the way the browser does when the file is gone. */
+  function failStill(container: HTMLElement) {
+    const img = container.querySelector(`img[src="${MISSING_STILL}"]`);
+    if (img === null) {
+      throw new Error('the thumbnail loads no <img> of its still to fail');
+    }
+    fireEvent.error(img);
+  }
+
+  it('draws the series’ gradient alone once its still fails', () => {
+    const { container } = renderRow({
+      episode: { stillUrl: MISSING_STILL } as Partial<Episode>,
+    });
+
+    failStill(container);
+
+    expect(container.querySelector(`img[src="${MISSING_STILL}"]`)).toBeNull();
+    expect(paints().some((bg) => bg.includes(MISSING_STILL))).toBe(false);
+    expect(paints().some((bg) => bg.includes('linear-gradient'))).toBe(true);
+  });
+
+  it('keeps the resume bar over the gradient once its still fails', () => {
+    const { container } = renderRow({
+      episode: { stillUrl: MISSING_STILL, progress: 40 } as Partial<Episode>,
+    });
+
+    failStill(container);
+
+    expect(within(thumbnail()).getByRole('progressbar')).toBeDefined();
+  });
+});

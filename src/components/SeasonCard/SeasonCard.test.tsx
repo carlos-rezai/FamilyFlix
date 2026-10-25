@@ -311,3 +311,31 @@ describe('SeasonCard — hover, press and keyboard focus', () => {
     expect(focus['border-radius']).toBe(theme.radius.md);
   });
 });
+
+/**
+ * Library audit (issue #464): a tile whose **Season poster** names a file that
+ * no longer exists used to draw nothing over the gradient but a broken layer.
+ * A poster that fails to load now falls back to what a poster-less tile draws:
+ * the gradient alone, the numeral still on it.
+ */
+describe('SeasonCard — a Season poster that fails to load', () => {
+  const MISSING_POSTER = '/api/images/harbor-vine-2019/S02-poster.jpg';
+
+  it('paints the gradient alone, numeral kept, once its poster fails', () => {
+    const { container } = renderCard({
+      season: { posterUrl: MISSING_POSTER },
+    });
+    const img = container.querySelector(`img[src="${MISSING_POSTER}"]`);
+    if (img === null) {
+      throw new Error('the tile loads no <img> of its poster to fail');
+    }
+
+    fireEvent.error(img);
+
+    expect(container.querySelector(`img[src="${MISSING_POSTER}"]`)).toBeNull();
+    const paints = backgroundsUnder(tile());
+    expect(paints.some((bg) => bg.includes('linear-gradient'))).toBe(true);
+    expect(paints.some((bg) => bg.includes(MISSING_POSTER))).toBe(false);
+    expect(within(tile() as HTMLElement).getByText('S02')).toBeDefined();
+  });
+});

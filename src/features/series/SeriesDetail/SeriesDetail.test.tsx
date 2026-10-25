@@ -950,3 +950,49 @@ describe('SeriesDetail — deleting a linked show', () => {
     ).toBeTruthy();
   });
 });
+
+/**
+ * Library audit (issue #464): a poster frame whose poster names a file that no
+ * longer exists used to draw a bare gradient. A poster that fails to load now
+ * falls back to the same captioned **Default poster** a poster-less show's
+ * frame draws: its tag, its title and the **Wordmark**.
+ */
+describe('SeriesDetail — a poster that fails to load', () => {
+  const MISSING_POSTER = '/api/images/harbor/poster.jpg';
+
+  /** Fails the frame's poster the way the browser does when the file is gone. */
+  function failPoster() {
+    const img = document.querySelector(`img[src="${MISSING_POSTER}"]`);
+    if (img === null) {
+      throw new Error('the poster frame loads no <img> of its poster to fail');
+    }
+    fireEvent.error(img);
+  }
+
+  it('captions the frame and draws the Wordmark once its poster fails', async () => {
+    serve(unstarted({ posterPath: 'harbor/poster.jpg', backdropPath: null }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+    failPoster();
+
+    expect(screen.getByText('Drama · 2019–2023')).toBeDefined();
+    // Once as the page heading, once as the poster's caption.
+    expect(screen.getAllByText('Harbor & Vine')).toHaveLength(2);
+    expect(screen.getAllByText('Flix')).toHaveLength(1);
+  });
+
+  it('paints the gradient, not the missing file, in the frame', async () => {
+    serve(unstarted({ posterPath: 'harbor/poster.jpg', backdropPath: null }));
+
+    renderDetail();
+    await findTitle('Harbor & Vine');
+    failPoster();
+
+    expect(document.querySelector(`img[src="${MISSING_POSTER}"]`)).toBeNull();
+    const backgrounds = Array.from(document.querySelectorAll('*')).map(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgrounds.some((bg) => bg.includes(MISSING_POSTER))).toBe(false);
+  });
+});

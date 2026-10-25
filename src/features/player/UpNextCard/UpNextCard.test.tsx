@@ -303,3 +303,33 @@ describe('UpNextCard — drawn as its prototype', () => {
     expect(hoverFill(cancel())).toBe(normCss('rgba(255,255,255,.1)'));
   });
 });
+
+/**
+ * Library audit (issue #464): an Up next card whose next episode's **Still**
+ * names a file that no longer exists used to draw a broken image. A still that
+ * fails to load now falls back to what a still-less card draws: the gradient
+ * alone.
+ */
+describe('UpNextCard — a still that fails to load', () => {
+  const MISSING_STILL = '/api/images/harbor-2019/season-03/S03E01-still.jpg';
+
+  it('draws the gradient alone once its still fails', () => {
+    renderCard({
+      next: { ...NEXT, stillPath: 'harbor-2019/season-03/S03E01-still.jpg' },
+    });
+    const img = thumbnail().querySelector(`img[src="${MISSING_STILL}"]`);
+    if (img === null) {
+      throw new Error('the thumbnail loads no <img> of its still to fail');
+    }
+
+    fireEvent.error(img);
+
+    expect(thumbnail().querySelector('img')).toBeNull();
+    const painted = [
+      thumbnail(),
+      ...Array.from(thumbnail().querySelectorAll('*')),
+    ].map((element) => window.getComputedStyle(element).backgroundImage);
+    expect(painted.some((bg) => bg.includes('linear-gradient'))).toBe(true);
+    expect(painted.some((bg) => bg.includes(MISSING_STILL))).toBe(false);
+  });
+});

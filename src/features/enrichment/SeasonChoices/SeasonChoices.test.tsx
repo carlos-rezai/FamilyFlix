@@ -232,3 +232,32 @@ describe('SeasonChoices — a press', () => {
     ).toEqual(['false', 'false']);
   });
 });
+
+/**
+ * Library audit (issue #464): a held tile whose Season poster names a file
+ * that no longer exists used to draw a broken layer over the gradient. A held
+ * poster that fails to load now falls back to what a poster-less tile draws:
+ * the gradient alone, captioned _No poster yet_.
+ */
+describe('SeasonChoices — a held poster that fails to load', () => {
+  const MISSING_POSTER = '/api/images/the-hollow-coast-2018/S01-poster.jpg';
+
+  it('paints the gradient alone, captioned No poster yet, once it fails', () => {
+    renderChoices();
+    const picker = pickerFor('S01');
+    const img = picker.querySelector(`img[src="${MISSING_POSTER}"]`);
+    if (img === null) {
+      throw new Error('the held tile loads no <img> of its poster to fail');
+    }
+
+    fireEvent.error(img);
+
+    const paints = heldPaints(picker);
+    expect(paints.some((paint) => paint.includes('linear-gradient'))).toBe(
+      true
+    );
+    expect(paints.some((paint) => paint.includes('/api/images/'))).toBe(false);
+    expect(within(picker).getByText('No poster yet')).toBeTruthy();
+    expect(within(picker).queryByText('Current poster')).toBeNull();
+  });
+});

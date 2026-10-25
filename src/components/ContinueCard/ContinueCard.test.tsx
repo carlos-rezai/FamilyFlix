@@ -244,3 +244,46 @@ describe('ContinueCard — the poster on the tile', () => {
     expect(screen.getByText('Resume · 1:13 of 1:55')).toBeTruthy();
   });
 });
+
+/**
+ * Library audit (issue #464): a tile whose `posterUrl` names a file that no
+ * longer exists used to draw an empty gradient. A poster that fails to load
+ * now falls back to the same **Default poster** a poster-less tile draws.
+ */
+describe('ContinueCard — a poster that fails to load', () => {
+  const MISSING_POSTER = '/api/images/solo/poster.jpg';
+  const missing: ContinueCardMovie = { ...movie, posterUrl: MISSING_POSTER };
+
+  /** Fails the tile's poster the way the browser does when the file is gone. */
+  function failPoster(container: HTMLElement) {
+    const img = container.querySelector(`img[src="${MISSING_POSTER}"]`);
+    if (img === null) {
+      throw new Error('the tile loads no <img> of its poster to fail');
+    }
+    fireEvent.error(img);
+  }
+
+  it('draws the Wordmark, hidden from the accessibility tree, once its poster fails', () => {
+    const { container } = renderCard({ movie: missing });
+
+    failPoster(container);
+
+    expect(screen.getByText('Flix').closest('[aria-hidden="true"]')).not.toBe(
+      null
+    );
+    expect(screen.getByRole('button', { name: 'Comet Season' })).toBeTruthy();
+  });
+
+  it('paints the gradient, not the missing file, behind the stand-in', () => {
+    const { container } = renderCard({ movie: missing });
+
+    failPoster(container);
+
+    const backgrounds = Array.from(container.querySelectorAll('*')).map(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgrounds.some((bg) => bg.includes('linear-gradient'))).toBe(true);
+    expect(backgrounds.some((bg) => bg.includes(MISSING_POSTER))).toBe(false);
+    expect(container.querySelector(`img[src="${MISSING_POSTER}"]`)).toBeNull();
+  });
+});
