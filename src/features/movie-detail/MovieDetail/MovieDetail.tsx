@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -15,6 +14,7 @@ import {
   HeartIcon,
   HeartOutlineIcon,
 } from '@/primitives';
+import { useImageFallback } from '@/hooks/useImageFallback/useImageFallback';
 import { moviePath } from '@/utils';
 import { EditMenu } from '../EditMenu/EditMenu';
 import { LoadingDetail } from '../LoadingDetail/LoadingDetail';
@@ -79,9 +79,9 @@ export function MovieDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const detail = useMovieDetail(id ?? '');
-  // The poster url that failed to load: while it is still the title's, the
-  // frame draws the captioned Default poster as if it had none.
-  const [failedPosterUrl, setFailedPosterUrl] = useState<string | null>(null);
+  const poster = useImageFallback(
+    detail.status === 'ready' ? detail.movie.posterUrl : null
+  );
 
   if (detail.status === 'loading') {
     return <LoadingDetail />;
@@ -111,8 +111,7 @@ export function MovieDetail() {
   }
 
   const { movie } = detail;
-  const posterUrl =
-    movie.posterUrl === failedPosterUrl ? null : movie.posterUrl;
+  const posterUrl = poster.url;
 
   return (
     <>
@@ -133,7 +132,7 @@ export function MovieDetail() {
               url={posterUrl}
               g1={movie.g1}
               g2={movie.g2}
-              onError={() => setFailedPosterUrl(movie.posterUrl)}
+              onError={poster.onError}
             />
             {/* Overlays caption the Default poster only — a real poster is
                 never covered by text that duplicates the heading beside it. */}

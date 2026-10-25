@@ -1,6 +1,5 @@
-import { useState } from 'react';
-
 import { Artwork } from '@/primitives';
+import { useImageFallback } from '@/hooks/useImageFallback/useImageFallback';
 import type { NextEpisodeRef } from '@/types';
 import { formatEpisodeTag, gradientFromId, imageUrl } from '@/utils';
 import {
@@ -41,22 +40,13 @@ export function UpNextCard({
 }: UpNextCardProps) {
   const { g1, g2 } = gradientFromId(next.id);
   const nextStillUrl = imageUrl(next.stillPath);
-  // The still url that failed to load: while it is still the next episode's,
-  // the thumbnail draws the gradient alone, as a still-less card does.
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const stillUrl = nextStillUrl === failedUrl ? null : nextStillUrl;
+  const { url: stillUrl, onError } = useImageFallback(nextStillUrl);
 
   return (
     <Card>
       <Thumb $g1={g1} $g2={g2} aria-hidden="true">
         {stillUrl ? (
-          <Artwork
-            image
-            url={stillUrl}
-            g1={g1}
-            g2={g2}
-            onError={() => setFailedUrl(stillUrl)}
-          />
+          <Artwork image url={stillUrl} g1={g1} g2={g2} onError={onError} />
         ) : null}
       </Thumb>
       <Body>

@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -16,6 +15,7 @@ import {
   HeartIcon,
   HeartOutlineIcon,
 } from '@/primitives';
+import { useImageFallback } from '@/hooks/useImageFallback/useImageFallback';
 import { episodePlayPath, seasonPath } from '@/utils';
 import { LoadingSeries } from '../LoadingSeries/LoadingSeries';
 import { SeriesEditMenu } from '../SeriesEditMenu/SeriesEditMenu';
@@ -77,9 +77,9 @@ export function SeriesDetail() {
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   const detail = useSeriesDetail(id ?? '');
-  // The poster url that failed to load: while it is still the title's, the
-  // frame draws the captioned Default poster as if it had none.
-  const [failedPosterUrl, setFailedPosterUrl] = useState<string | null>(null);
+  const poster = useImageFallback(
+    detail.status === 'ready' ? detail.series.posterUrl : null
+  );
 
   if (detail.status === 'loading') {
     return <LoadingSeries />;
@@ -107,8 +107,7 @@ export function SeriesDetail() {
   }
 
   const { series } = detail;
-  const posterUrl =
-    series.posterUrl === failedPosterUrl ? null : series.posterUrl;
+  const posterUrl = poster.url;
   const playId = series.playEpisodeId;
 
   return (
@@ -130,7 +129,7 @@ export function SeriesDetail() {
                 url={posterUrl}
                 g1={series.g1}
                 g2={series.g2}
-                onError={() => setFailedPosterUrl(series.posterUrl)}
+                onError={poster.onError}
               />
               {posterUrl ? null : (
                 <>

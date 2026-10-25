@@ -1,7 +1,6 @@
-import { useState } from 'react';
-
 import { Artwork, ProgressBar, StatusBadge } from '@/primitives';
 import type { SeasonCardSeason } from '@/types';
+import { useImageFallback } from '@/hooks/useImageFallback/useImageFallback';
 import { formatEpisodeTag } from '@/utils';
 import {
   Root,
@@ -35,10 +34,7 @@ export function SeasonCard({ season, onOpen }: SeasonCardProps) {
   const subLabel = inProgress
     ? `${watched} of ${total} watched`
     : `${total} episode${total === 1 ? '' : 's'}`;
-  // The poster url that failed to load: while it is still the season's, the
-  // tile draws the gradient alone, as a poster-less tile does.
-  const [failedUrl, setFailedUrl] = useState<string | null>(null);
-  const posterUrl = season.posterUrl === failedUrl ? null : season.posterUrl;
+  const { url: posterUrl, onError } = useImageFallback(season.posterUrl);
 
   return (
     <Root type="button" onClick={onOpen}>
@@ -48,7 +44,7 @@ export function SeasonCard({ season, onOpen }: SeasonCardProps) {
           image
           g1={season.g1}
           g2={season.g2}
-          onError={() => setFailedUrl(season.posterUrl ?? null)}
+          onError={onError}
         />
         <Numeral>{formatEpisodeTag({ season: number })}</Numeral>
         {complete ? (
