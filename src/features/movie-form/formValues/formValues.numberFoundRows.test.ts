@@ -7,9 +7,9 @@ import { numberFoundRows } from './formValues';
  * **Numbering guess** lifted out of `seriesResolveRows` so the **Series
  * Resolve** and the **Show folder pick** number found videos by one rule.
  *
- * Given found videos in name order, the folder they were found under and the
- * `(season, number)` pairs already taken, it answers each video's guess: the
- * season from the folder (a **Season folder**'s number, season 1 at the
+ * Given found videos in name order, each with its path inside the folder it
+ * was found under, and the `(season, number)` pairs already taken, it answers
+ * each video's guess: the season from that path (a **Season folder**'s number, season 1 at the
  * **Show folder**'s root or under any other folder), the episode from the
  * **Episode word**, else the next free number in that season. A pair taken
  * already — a held series's, or a numbered row's — is never guessed, so the
@@ -26,12 +26,16 @@ const FOG_HORN = `${SHOW}\\Season 2\\eps2.1_fog_horn.mov`;
 const PURSER = `${SHOW}\\Season 2\\the_purser Episode 2.mov`;
 const LANDFALL = `${SHOW}\\landfall.mov`;
 
+/** Each video with its path inside the Show folder. */
+const found = (videos: string[]) =>
+  videos.map((path) => ({ path, inside: path.slice(SHOW.length + 1) }));
+
 /** The guesses as `[path, season, number]`. */
 const numbered = (
   videos: string[],
   taken: { season: number; number: number }[] = []
 ) =>
-  numberFoundRows(videos, SHOW, taken).map((guess) => [
+  numberFoundRows(found(videos), taken).map((guess) => [
     guess.path,
     guess.season,
     guess.number,
@@ -116,7 +120,7 @@ describe('numberFoundRows — continuing after numbered rows', () => {
     const tagged = `${SHOW}\\Season 1\\The.Night.Ferry.S01E05.Fog.mkv`;
     const untagged = `${SHOW}\\Season 1\\bonus.mov`;
 
-    const [fog, bonus] = numberFoundRows([tagged, untagged], SHOW, []);
+    const [fog, bonus] = numberFoundRows(found([tagged, untagged]), []);
 
     expect(fog).toMatchObject({ season: 1, number: 5, title: 'Fog' });
     expect(bonus.title).toBeNull();
