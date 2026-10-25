@@ -365,7 +365,7 @@
                 const log=this.appendLog(s.impLog, {text:'Scanning   '+path, kind:'scan'});
                 if(found>=target){
                   this.setState({impFound:target, impTotal:target, impPhase:'import', impCurrent:'',
-                    impLog:this.appendLog(log, {text:'✓ Found '+target.toLocaleString()+' movies across '+s.impFound.toLocaleString()+' folders. Starting import…', kind:'success'})});
+                    impLog:this.appendLog(log, {text:'✓ Found '+target.toLocaleString()+' titles across '+s.impFound.toLocaleString()+' folders. Starting import…', kind:'success'})});
                 } else {
                   this.setState({impFound:found, impCurrent:path, impLog:log});
                 }
@@ -1193,7 +1193,7 @@
               heading: s.impSource==='folders' ? 'Scan library folders' : 'Import library',
               lede: s.impSource==='folders' ? 'Finding new movies and series in your library folders.' : 'Bulk-migrate your spreadsheet and movie folders in one pass.',
               headline: s.impPhase==='scan' ? 'Scanning your library…' : 'Importing movies…',
-              statLine: s.impPhase==='scan' ? ('Found '+s.impFound.toLocaleString()+' movies so far') : (s.impDone.toLocaleString()+' of '+s.impTotal.toLocaleString()+' imported'),
+              statLine: s.impPhase==='scan' ? ('Found '+s.impFound.toLocaleString()+' folders so far') : (s.impDone.toLocaleString()+' of '+s.impTotal.toLocaleString()+' imported'),
               currentItem:s.impCurrent, hasCurrent:!!s.impCurrent,
               elapsedLabel:'Elapsed '+fmt(elapsed), etaLabel: etaSec>0 ? ('About '+fmt(etaSec)+' left') : '', hasEta: etaSec>0,
               log:s.impLog,
