@@ -34,15 +34,15 @@ function renderChoice(
   );
 }
 
-const group = () => screen.getByRole('radiogroup', { name: 'Files' });
+const group = () => screen.getByRole('radiogroup', { name: 'Link or copy' });
 const radio = (name: 'Link' | 'Copy') =>
   within(group()).getByRole('radio', { name: new RegExp(`^${name}`) });
 
 describe('ImportModeChoice — radiogroup semantics', () => {
-  it('draws the caption Files and names the group by it', () => {
+  it('names the group by its caption', () => {
     renderChoice();
 
-    expect(screen.getByText('Files')).toBeDefined();
+    expect(screen.getByText('Link or copy')).toBeDefined();
     expect(group()).toBeDefined();
   });
 

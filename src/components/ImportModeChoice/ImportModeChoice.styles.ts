@@ -1,8 +1,8 @@
 import styled from 'styled-components';
 
 /**
- * The caption _Files_, drawn as the Settings **Group heading** is — small caps
- * in the faintest ink, nudged 2px in — since _Files_ labels a section, not one
+ * The caption _Link or copy_, drawn as the Settings **Group heading** is — small caps
+ * in the faintest ink, nudged 2px in — since _Link or copy_ labels a section, not one
  * input. Its own copy: a molecule draws no feature's furniture.
  */
 export const GroupHeading = styled.div`

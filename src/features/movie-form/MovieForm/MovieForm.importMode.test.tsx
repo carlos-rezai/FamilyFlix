@@ -163,7 +163,7 @@ async function renderAt(url = '/add?kind=series') {
   return view;
 }
 
-const choice = () => screen.queryByRole('radiogroup', { name: 'Files' });
+const choice = () => screen.queryByRole('radiogroup', { name: 'Link or copy' });
 
 const modeRadio = (name: 'Link' | 'Copy') =>
   within(choice() as HTMLElement).getByRole('radio', {

@@ -4194,12 +4194,12 @@ describe('MovieForm — the Kind tabs', () => {
       expect(heading('Add a movie')).toBeNull();
     });
 
-    it('carries the series lede, ending on Import library', async () => {
+    it('carries the series lede, ending on Library folders', async () => {
       await renderAt('/add?kind=series');
 
       expect(
         textMatching(
-          /^Pick the poster and every episode.s video and subtitles for this series\. To add many at once, use Import library\.$/
+          /^Pick the poster and every episode.s video and subtitles for this series\. To add many at once, use Library folders\.$/
         )
       ).toHaveLength(1);
       expect(

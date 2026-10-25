@@ -33,7 +33,7 @@ const LINK_DISABLED_LINE = 'Only for files inside one of your library folders.';
 /**
  * The **Import mode**, from `feat.ImportFlow.dc.html` and
  * `page.LibraryFoldersPage.dc.html`, `EnrichCheckCard`'s precedent: the
- * caption _Files_ — the **Group heading**, as _Folders_ and _Scan_ are drawn —
+ * caption _Link or copy_ — the **Group heading**, as _Folders_ and _Scan_ are drawn —
  * over two `ChoiceCard`s in a `radiogroup` labelled by it,
  * Link then Copy. Presentational: a press hands back the mode pressed, and
  * Link can be disabled with its line.
@@ -47,7 +47,7 @@ export function ImportModeChoice({
 
   return (
     <div>
-      <GroupHeading id={captionId}>Files</GroupHeading>
+      <GroupHeading id={captionId}>Link or copy</GroupHeading>
       <Cards role="radiogroup" aria-labelledby={captionId}>
         {IMPORT_MODES.map((key) => {
           const disabled = linkDisabled && key === 'link';

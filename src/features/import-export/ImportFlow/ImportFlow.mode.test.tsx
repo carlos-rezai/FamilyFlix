@@ -106,7 +106,8 @@ async function setupStep(): Promise<void> {
   await screen.findByText('Library folders');
 }
 
-const modeGroup = () => screen.findByRole('radiogroup', { name: 'Files' });
+const modeGroup = () =>
+  screen.findByRole('radiogroup', { name: 'Link or copy' });
 const modeRadio = (name: 'Link' | 'Copy') =>
   screen.findByRole('radio', { name: new RegExp(`^${name}`) });
 

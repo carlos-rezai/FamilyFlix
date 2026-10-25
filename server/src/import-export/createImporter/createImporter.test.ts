@@ -914,7 +914,7 @@ describe('createImporter — the Activity log', () => {
     expect(found).toHaveLength(1);
     expect(found[0]).toEqual({
       text: expect.stringMatching(
-        /^✓ Found 2 movies across \d+ folders\. Starting import…$/
+        /^✓ Found 2 titles across \d+ folders\. Starting import…$/
       ),
       kind: 'success',
     });

@@ -35,8 +35,8 @@ export const BannerTitle = styled.span`
 
 /**
  * The one phrase in that line that names another screen. Lifted out of the
- * faint text around it, and deliberately not a link: **Import library** does
- * not exist yet, and a link to nowhere is worse than a name.
+ * faint text around it, and deliberately not a link: **Library folders** is
+ * named, not linked, as the prototype draws it.
  */
 export const Emphasis = styled.span`
   color: ${({ theme }) => theme.colors.textDim};

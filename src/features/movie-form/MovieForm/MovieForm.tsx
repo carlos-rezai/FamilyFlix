@@ -67,7 +67,7 @@ const KIND_OPTIONS: readonly { value: FormKind; label: string }[] = [
  * What the form says that is the kind's own — the heading on an add, with or
  * without the import's head start, the lede's opening sentence, the
  * placeholders and the credit field. Everything else is one record both kinds
- * draw, and both ledes end on _Import library_.
+ * draw, and both ledes end on _Library folders_.
  */
 const WORDING = {
   movie: {
@@ -241,7 +241,7 @@ export function MovieForm() {
         lede={
           <>
             {wording.lede} To add many at once, use{' '}
-            <Emphasis>Import library</Emphasis>.
+            <Emphasis>Library folders</Emphasis>.
           </>
         }
       />

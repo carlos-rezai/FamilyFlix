@@ -250,7 +250,8 @@ describe('LibraryFolders — Also fetch from TMDB', () => {
  * every mount and never remembered, and the press posts the chosen `mode`
  * beside `enrich`.
  */
-const modeGroup = () => screen.findByRole('radiogroup', { name: 'Files' });
+const modeGroup = () =>
+  screen.findByRole('radiogroup', { name: 'Link or copy' });
 const modeRadio = (name: 'Link' | 'Copy') =>
   screen.findByRole('radio', { name: new RegExp(`^${name}`) });
 

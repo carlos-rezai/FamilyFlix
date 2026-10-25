@@ -1084,7 +1084,7 @@ export function createImporter({
     current: ImportRun,
     signal: AbortSignal,
     libraryFolder: StoredLibraryFolder
-  ): Promise<void> => {
+  ): Promise<boolean> => {
     const { row, show, held, episodes } = match;
     // Where the show came from, relative to its Library folder: on a held
     // series too, so a re-run backfills a library imported before it was
@@ -1104,7 +1104,7 @@ export function createImporter({
       if (held !== null && !match.updated) {
         logAlreadyHeld(current, row);
       }
-      return;
+      return false;
     }
     const folder = held?.folder ?? media.reserveFolder(row.title, row.year);
     let series: Series | null = held?.series ?? null;
@@ -1201,6 +1201,7 @@ export function createImporter({
     if (series === null) {
       media.removeFolder(folder);
     }
+    return held === null && series !== null;
   };
 
   /**
@@ -1447,9 +1448,19 @@ export function createImporter({
     }
 
     for (const { match, libraryFolder } of shows) {
-      await importShow(match, genres, current, signal, libraryFolder);
+      const added = await importShow(
+        match,
+        genres,
+        current,
+        signal,
+        libraryFolder
+      );
       if (signal.aborted) {
         return;
+      }
+      // A new series is one title imported; a held one gaining episodes none.
+      if (added) {
+        imported += 1;
       }
     }
 
@@ -1473,7 +1484,8 @@ export function createImporter({
   const walkListed = async (
     current: ImportRun,
     folders: StoredLibraryFolder[],
-    signal: AbortSignal
+    signal: AbortSignal,
+    isHeldShow: (folder: StoredLibraryFolder, show: ShowScan) => boolean
   ): Promise<WalkedFolder[] | null> => {
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
@@ -1511,22 +1523,23 @@ export function createImporter({
       const kept = withoutLeftOut(folder, scans);
       leftOut += kept.skipped;
       scans = kept.scans;
-      found += scans.length;
       shelves += foldersUnder(folder.path, scans);
       const grouped = groupShows(scans);
       for (const film of grouped.films) {
         wholeFolders.set(film.dir, film);
       }
-      walked.push({
-        folder,
-        films: splitCollections(grouped.films),
-        shows: grouped.shows,
-      });
+      const films = splitCollections(grouped.films);
+      // Titles, not folders: a new series is one, a held one gaining
+      // episodes none.
+      found +=
+        films.length +
+        grouped.shows.filter((show) => !isHeldShow(folder, show)).length;
+      walked.push({ folder, films, shows: grouped.shows });
     }
 
     log(
       current,
-      `✓ Found ${count(found)} movies across ${count(shelves)} folders. Starting import…`,
+      `✓ Found ${count(found)} titles across ${count(shelves)} folders. Starting import…`,
       'success'
     );
     if (leftOut > 0) {
@@ -1701,7 +1714,14 @@ export function createImporter({
     const seriesByKey = heldSeriesByKey(held);
     const genres = genreReader();
 
-    const walked = await walkListed(current, folders, signal);
+    const walked = await walkListed(
+      current,
+      folders,
+      signal,
+      (folder, show) =>
+        heldShow(held, seriesByKey, folder, show, guessedRow(show.name)) !==
+        null
+    );
     if (walked === null) {
       return;
     }
@@ -1870,7 +1890,14 @@ export function createImporter({
     const held = heldSeriesList();
     const seriesByKey = heldSeriesByKey(held);
 
-    const walked = await walkListed(current, folders, signal);
+    const walked = await walkListed(
+      current,
+      folders,
+      signal,
+      (folder, show) =>
+        heldShow(held, seriesByKey, folder, show, guessedRow(show.name)) !==
+        null
+    );
     if (walked === null) {
       return;
     }
