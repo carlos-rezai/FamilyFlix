@@ -10,7 +10,7 @@ import {
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import type { StoredLibraryFolder } from '../../library';
-import type { HeldVideo } from '../../library/holding/holding';
+import type { HeldTitle } from '../../library/holding/holding';
 import { groupShows, showFolderOf } from '../groupShows/groupShows';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { titleGuess } from '../titleKey/titleKey';
@@ -33,7 +33,7 @@ export interface ShowFolderContext {
   /** The held series whose **Source folder** this is, `null` for none. */
   heldSeriesAt(folderId: string, sourceFolder: string): string | null;
   /** The **Held video** rule: the title playing a video, `null` for none. */
-  titleHolding(folderId: string, videoPath: string): HeldVideo | null;
+  titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
 
 /**

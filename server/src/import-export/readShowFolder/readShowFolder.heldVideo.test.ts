@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 
 import { readShowFolder, type ShowFolderContext } from './readShowFolder';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
-import type { HeldVideo } from '../../library/holding/holding';
+import type { HeldTitle } from '../../library/holding/holding';
 
 /** A folder under `root`, holding the files named. */
 function folderWith(root: string, path: string, files: string[]): string {
@@ -35,7 +35,7 @@ function folderWith(root: string, path: string, files: string[]): string {
  */
 function heldBy(
   path: string,
-  held: Record<string, HeldVideo>,
+  held: Record<string, HeldTitle>,
   asked: string[] = []
 ): ShowFolderContext {
   return {

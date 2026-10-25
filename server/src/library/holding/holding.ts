@@ -1,14 +1,14 @@
 import type { SqliteDatabase } from '../../db';
 
 /** The title a **Held video** belongs to. */
-export interface HeldVideo {
+export interface HeldTitle {
   kind: 'movie' | 'series';
   id: string;
 }
 
 /** The holding slice: the **Held video** rule's read. */
 export interface HoldingRepository {
-  titleHolding(folderId: string, videoPath: string): HeldVideo | null;
+  titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
 
 export function createHolding(db: SqliteDatabase): HoldingRepository {
@@ -35,7 +35,7 @@ export function createHolding(db: SqliteDatabase): HoldingRepository {
   return {
     titleHolding(folderId, videoPath) {
       const row = selectHolding.get({ folderId, videoPath }) as
-        | HeldVideo
+        | HeldTitle
         | undefined;
       return row === undefined ? null : { kind: row.kind, id: row.id };
     },

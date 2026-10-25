@@ -58,12 +58,12 @@ import {
 import { createSeriesCuration } from './series/curation/curation';
 import { createSeriesWatch } from './series/watch/watch';
 import { createTitles, type StoredLibraryTitles } from './titles/titles';
-import { createHolding, type HeldVideo } from './holding/holding';
+import { createHolding, type HeldTitle } from './holding/holding';
 import { createLeftOut, type LeftOutVideo } from './leftOut/leftOut';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
-export type { HeldVideo } from './holding/holding';
+export type { HeldTitle } from './holding/holding';
 export type { LeftOutVideo } from './leftOut/leftOut';
 export type {
   LinkedVideo,
@@ -364,7 +364,7 @@ export interface LibraryStorage {
    * an episode's **Source file** under its series' Source folder. `null`
    * when none does; one of a double rather than a refusal.
    */
-  titleHolding(folderId: string, videoPath: string): HeldVideo | null;
+  titleHolding(folderId: string, videoPath: string): HeldTitle | null;
   /**
    * Record **Left-out videos**, each a Library folder's id and a path spelled
    * as a **Linked video**'s; one already recorded is kept once, not refused.

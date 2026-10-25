@@ -3,7 +3,11 @@ import { readFile } from 'node:fs/promises';
 import { setImmediate as nextTurn } from 'node:timers/promises';
 import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
-import type { LibraryStorage, StoredLibraryFolder } from '../../library';
+import type {
+  HeldTitle,
+  LibraryStorage,
+  StoredLibraryFolder,
+} from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
@@ -548,12 +552,6 @@ interface ShowMatch {
 interface GenreReader {
   pool: Map<string, string>;
   warned: Set<string>;
-}
-
-/** A title the library already holds: a film or a series, by id. */
-interface HeldTitle {
-  kind: 'movie' | 'series';
-  id: string;
 }
 
 /**
