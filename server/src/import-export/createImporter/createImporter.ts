@@ -580,6 +580,15 @@ interface Placed<M> {
   libraryFolder: StoredLibraryFolder;
 }
 
+/**
+ * A held film with a **Missing video** that evidence found: the film and the
+ * found video it takes, placed in the **Import phase** as a match is.
+ */
+interface FoundAgain {
+  movie: Movie;
+  video: string;
+}
+
 /** One listed **Library folder** as the walk found it: its films and its shows. */
 interface WalkedFolder {
   folder: StoredLibraryFolder;
@@ -1330,6 +1339,65 @@ export function createImporter({
     );
 
   /**
+   * Every held film whose video is a **Missing video**, by id — read once per
+   * run, as `heldFilmsByKey` is. A film **Found again** comes off, so it is
+   * found again at most once per run.
+   */
+  const missingFilms = (filmsByKey: Map<string, Movie>): Map<string, Movie> =>
+    new Map(
+      [...filmsByKey.values()]
+        .filter((movie) => playback.videoFile(movie).kind === 'missing')
+        .map((movie) => [movie.id, movie])
+    );
+
+  /**
+   * The **Missing video** rule: the held film whose Missing video has the file
+   * name of one of these found videos, when exactly one missing film has it;
+   * `null` for none, and for two or more.
+   */
+  const missingHolderOf = (
+    missing: Map<string, Movie>,
+    videos: readonly string[]
+  ): string | null => {
+    for (const video of videos) {
+      const name = basename(video);
+      const named = [...missing.values()].filter(
+        (movie) => basename(movie.videoPath) === name
+      );
+      if (named.length === 1) {
+        return named[0].id;
+      }
+    }
+    return null;
+  };
+
+  /**
+   * A held film's **Found again** check: when its video is a **Missing
+   * video**, the found video it takes — the one with its file's name, else the
+   * folder's only one — and the film comes off `missing`. `null` for a film
+   * whose video is there, or a folder that gives no one video.
+   */
+  const foundAgainOf = (
+    missing: Map<string, Movie>,
+    heldId: string,
+    scan: MovieFolderScan
+  ): FoundAgain | null => {
+    const movie = missing.get(heldId);
+    if (movie === undefined) {
+      return null;
+    }
+    const video =
+      scan.videos.find(
+        (found) => basename(found) === basename(movie.videoPath)
+      ) ?? (scan.videos.length === 1 ? scan.videos[0] : undefined);
+    if (video === undefined) {
+      return null;
+    }
+    missing.delete(heldId);
+    return { movie, video };
+  };
+
+  /**
    * The film the **Title key** holds where a found video is at stake: one
    * whose video is a **Missing video** is passed over, so the found video is
    * imported; an `unreachable` one still holds.
@@ -1422,18 +1490,31 @@ export function createImporter({
     current: ImportRun,
     films: Placed<Match>[],
     shows: Placed<ShowMatch>[],
+    foundAgain: Placed<FoundAgain>[],
     verb: 'Import' | 'Scan',
     signal: AbortSignal,
     genres: GenreReader = genreReader()
   ): Promise<void> => {
-    // Only new imports count: a held show taking episodes is not one.
+    // Only new imports count: a held show taking episodes is not one, nor a
+    // film found again.
     current.matched =
       films.length + shows.filter(({ match }) => match.held === null).length;
     // Each episode is one item on the bar, as each film is.
     current.total =
       films.length +
+      foundAgain.length +
       shows.reduce((sum, { match }) => sum + match.episodes.length, 0);
     current.phase = 'importing';
+
+    for (const { match, libraryFolder } of foundAgain) {
+      await nextTurn();
+      current.currentItem = match.movie.title;
+      await placeFoundAgain(current, match, libraryFolder, signal);
+      if (signal.aborted) {
+        return;
+      }
+      current.done += 1;
+    }
 
     let imported = 0;
     for (const { match, libraryFolder } of films) {
@@ -1623,11 +1704,13 @@ export function createImporter({
    * The film the library already holds for a **Source folder**, by the three
    * **Already in library** rules in order: the folder on record first,
    * whatever its title now says — a **Collection folder** film by its Source
-   * file — then the **Held video** rule, then the title key and year the row
-   * or the folder gives, passing over a **Missing video**.
+   * file — then the **Held video** rule, then the **Missing video** rule,
+   * then the title key and year the row or the folder gives, passing over a
+   * **Missing video**.
    */
   const heldFilm = (
     filmsByKey: Map<string, Movie>,
+    missing: Map<string, Movie>,
     folder: StoredLibraryFolder,
     scan: MovieFolderScan,
     row: SheetRow
@@ -1640,8 +1723,62 @@ export function createImporter({
         source.sourceFile
       ) ??
       holderOf('movie', folder, scan.videos) ??
+      missingHolderOf(missing, scan.videos) ??
       heldByKey(filmsByKey, row)
     );
+  };
+
+  /**
+   * Place one film **Found again** by the run's **Import mode** — in Copy,
+   * into its **Media folder**, one reserved and recorded when that is gone —
+   * derive its runtime again, and write only its video columns, then the
+   * `✓ Updated` line naming `video`. A copy that throws leaves no reserved
+   * folder behind and is a **Warning line**; a cancel, nothing.
+   */
+  const placeFoundAgain = async (
+    current: ImportRun,
+    { movie, video: found }: FoundAgain,
+    libraryFolder: StoredLibraryFolder,
+    signal: AbortSignal
+  ): Promise<void> => {
+    let reserved: string | null = null;
+    try {
+      let video = placeFoundVideo([libraryFolder], found, current.mode);
+      if (video === null) {
+        const recorded = storage.mediaFolderOf('movie', movie.id);
+        const opened = recorded === null ? null : media.openFolder(recorded);
+        const into =
+          opened ?? (reserved = media.reserveFolder(movie.title, movie.year));
+        video = {
+          videoPath: await media.copyIn(into, found, signal),
+          videoFolderId: null,
+        };
+      }
+      signal.throwIfAborted();
+      const runtime = derivedRuntime(playback, video);
+      storage.updateMovie(movie.id, {
+        ...video,
+        ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+        ...(reserved === null ? {} : { mediaFolder: basename(reserved) }),
+      });
+      log(
+        current,
+        `✓ Updated    ${titleWithYear(movie.title, movie.year)} — video`,
+        'success'
+      );
+    } catch (error) {
+      if (reserved !== null) {
+        media.removeFolder(reserved);
+      }
+      if (!signal.aborted) {
+        const reason = error instanceof Error ? error.message : String(error);
+        log(
+          current,
+          `⚠ ${titleWithYear(movie.title, movie.year)}: couldn't copy the video file: ${reason}`,
+          'warning'
+        );
+      }
+    }
   };
 
   /**
@@ -1726,6 +1863,7 @@ export function createImporter({
     signal: AbortSignal
   ): Promise<void> => {
     const filmsByKey = heldFilmsByKey();
+    const missing = missingFilms(filmsByKey);
     const held = heldSeriesList();
     const seriesByKey = heldSeriesByKey(held);
     const genres = genreReader();
@@ -1758,6 +1896,7 @@ export function createImporter({
     const verdicts = matchRows(rows, [...films, ...showOf.keys()]);
     const matched: Placed<Match>[] = [];
     const matchedShows: Placed<ShowMatch>[] = [];
+    const foundAgain: Placed<FoundAgain>[] = [];
     for (const match of verdicts.matched) {
       const libraryFolder = folderOf.get(match.folder);
       if (libraryFolder === undefined) {
@@ -1783,6 +1922,7 @@ export function createImporter({
       }
       const heldId = heldFilm(
         filmsByKey,
+        missing,
         libraryFolder,
         match.folder,
         match.row
@@ -1790,10 +1930,21 @@ export function createImporter({
       if (heldId !== null) {
         // Already in library: nothing is added, but where it came from is
         // remembered — the backfill for a library imported before this was —
-        // and its empty fields take the row's **Sheet fills**.
+        // and its empty fields take the row's **Sheet fills**. A film whose
+        // video is missing is **Found again**, in the Import phase.
         linkHeld(heldId, libraryFolder, match.folder);
+        const again = foundAgainOf(missing, heldId, match.folder);
+        if (again !== null) {
+          foundAgain.push({ match: again, libraryFolder });
+        }
         if (
-          !fillHeld(current, { kind: 'movie', id: heldId }, match.row, genres)
+          !fillHeld(
+            current,
+            { kind: 'movie', id: heldId },
+            match.row,
+            genres
+          ) &&
+          again === null
         ) {
           logAlreadyHeld(current, match.row);
         }
@@ -1878,6 +2029,7 @@ export function createImporter({
       current,
       matched,
       matchedShows,
+      foundAgain,
       'Import',
       signal,
       genres
@@ -1896,6 +2048,7 @@ export function createImporter({
     signal: AbortSignal
   ): Promise<void> => {
     const filmsByKey = heldFilmsByKey();
+    const missing = missingFilms(filmsByKey);
     const held = heldSeriesList();
     const seriesByKey = heldSeriesByKey(held);
 
@@ -1906,13 +2059,21 @@ export function createImporter({
 
     const films: Placed<Match>[] = [];
     const shows: Placed<ShowMatch>[] = [];
+    const foundAgain: Placed<FoundAgain>[] = [];
     for (const { folder, films: found, shows: grouped } of walked) {
       for (const scan of found) {
         const row = guessedRow(scan.name);
-        const heldId = heldFilm(filmsByKey, folder, scan, row);
+        const heldId = heldFilm(filmsByKey, missing, folder, scan, row);
         if (heldId !== null) {
-          // Held: linked to where it was found, and nothing is added.
-          skipHeld(current, heldId, folder, scan, row);
+          // Held: linked to where it was found, and nothing is added; a film
+          // whose video is missing is **Found again**, in the Import phase.
+          const again = foundAgainOf(missing, heldId, scan);
+          if (again === null) {
+            skipHeld(current, heldId, folder, scan, row);
+          } else {
+            linkHeld(heldId, folder, scan);
+            foundAgain.push({ match: again, libraryFolder: folder });
+          }
           continue;
         }
         if (scan.videos.length > 1) {
@@ -1939,7 +2100,7 @@ export function createImporter({
       }
     }
 
-    await importPlaced(current, films, shows, 'Scan', signal);
+    await importPlaced(current, films, shows, foundAgain, 'Scan', signal);
   };
 
   /** A run's first state, from its source and the flag it carries. */
