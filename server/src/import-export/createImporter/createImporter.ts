@@ -1257,11 +1257,12 @@ export function createImporter({
   };
 
   /**
-   * The **Series folder** a held series' files live in — its recorded **Media
-   * folder**, opened — or `null` when none is recorded or it is not there.
+   * The folder a held title's files live in (its recorded **Media folder**,
+   * opened; a series' **Series folder**), or `null` when none is recorded or
+   * it is not there.
    */
-  const heldFolder = (seriesId: string): string | null => {
-    const recorded = storage.mediaFolderOf('series', seriesId);
+  const heldFolder = (kind: HeldTitle['kind'], id: string): string | null => {
+    const recorded = storage.mediaFolderOf(kind, id);
     return recorded === null ? null : media.openFolder(recorded);
   };
 
@@ -1314,7 +1315,7 @@ export function createImporter({
             episode.sourceFile === null ? [] : [episode.sourceFile]
           )
         ),
-        folder: heldFolder(series.id),
+        folder: heldFolder('series', series.id),
       };
     });
 
@@ -1725,10 +1726,9 @@ export function createImporter({
     try {
       let video = placeFoundVideo([libraryFolder], found, current.mode);
       if (video === null) {
-        const recorded = storage.mediaFolderOf('movie', movie.id);
-        const opened = recorded === null ? null : media.openFolder(recorded);
         const into =
-          opened ?? (reserved = media.reserveFolder(movie.title, movie.year));
+          heldFolder('movie', movie.id) ??
+          (reserved = media.reserveFolder(movie.title, movie.year));
         video = {
           videoPath: await media.copyIn(into, found, signal),
           videoFolderId: null,
@@ -2444,7 +2444,8 @@ export function createImporter({
       const stored = slots.find(
         (slot): slot is { stored: string } => 'stored' in slot
       );
-      const ownFolder = heldSeries === null ? null : heldFolder(heldSeries.id);
+      const ownFolder =
+        heldSeries === null ? null : heldFolder('series', heldSeries.id);
       const folder =
         ownFolder ??
         (stored === undefined ? null : media.storedFolder(stored.stored)) ??
