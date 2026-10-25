@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { moviePath, range, toGenreQueryParams } from '@/utils';
+import { OTHER_MOVIES_TITLE } from '../../genre/GenreMovies/GenreMovies';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { GenreRow } from '../GenreRow/GenreRow';
@@ -40,9 +41,6 @@ function LoadingRows() {
     </div>
   );
 }
-
-/** The title the screen draws over the **Other row**; the payload names none. */
-const OTHER_ROW_TITLE = 'Other movies';
 
 /** Where the Other row's _View all_ goes: its own route, never `/genre/Other`. */
 const GENRE_LESS_PATH = '/genre-less';
@@ -179,9 +177,10 @@ export function HomeRows() {
           onToggleFavorite={toggleFavorite}
         />
       ))}
+      {/* The payload names no genre for the Other row: the title is ours. */}
       {other !== null && (
         <GenreRow
-          row={{ ...other, genre: OTHER_ROW_TITLE }}
+          row={{ ...other, genre: OTHER_MOVIES_TITLE }}
           onOpenAll={() => navigate(GENRE_LESS_PATH)}
           onOpenMovie={openMovie}
           onToggleFavorite={toggleFavorite}

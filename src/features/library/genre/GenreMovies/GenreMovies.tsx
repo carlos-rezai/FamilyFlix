@@ -67,8 +67,11 @@ const GenreMoviesContext = createContext<GenreMoviesValue | null>(null);
  */
 export type GenrePageMode = 'genre' | 'other';
 
-/** What the `other` mode is headed by: no genre's name, the screen's own. */
-const OTHER_TITLE = 'Other movies';
+/**
+ * What the `other` mode is headed by: no genre's name, the screen's own. The
+ * home's **Other row** is titled by it too.
+ */
+export const OTHER_MOVIES_TITLE = 'Other movies';
 
 export interface GenreMoviesProviderProps {
   children: ReactNode;
@@ -108,7 +111,7 @@ export function GenreMoviesProvider({
   // The name arrives decoded from the router, which is what lets a genre with a
   // space in it ("Science Fiction") survive the round-trip through the URL.
   // The `other` mode names no genre, so the heading is its own title.
-  const genre = mode === 'other' ? OTHER_TITLE : (name ?? '');
+  const genre = mode === 'other' ? OTHER_MOVIES_TITLE : (name ?? '');
 
   // The settled query written back out the way the URL spells it — the shared
   // parser's answer, so a stale, hand-edited or hostile URL is made safe here by
