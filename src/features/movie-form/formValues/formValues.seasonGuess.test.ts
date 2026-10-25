@@ -7,7 +7,7 @@ import { showFolderRows } from './formValues';
  * 51 — Library audit, Phase 14 (issue #457): episodes numbered by their
  * season. A picked video in a **Season folder** is numbered from that
  * folder's season, read by the wider `readSeasonFolder` over its path inside
- * the **Show folder** (`unplacedRelative`), so a season-2 video never lands
+ * the **Show folder** (its `relativePath`), so a season-2 video never lands
  * as S1 E3. The **Numbering guess** starts each season's free numbers from
  * that season, and a video with an **Episode tag** keeps its tagged number.
  *
@@ -29,8 +29,10 @@ const seasonTwoRead = (
   libraryFolderId: 'shows',
   heldSeriesId: null,
   episodes,
-  unplaced: unplaced.map((name) => `${PICKED}\\${name}`),
-  unplacedRelative: unplaced.map((name) => `Seizoen 2/${name}`),
+  unplaced: unplaced.map((name) => ({
+    video: `${PICKED}\\${name}`,
+    relativePath: `Seizoen 2/${name}`,
+  })),
   straySubtitles: 0,
 });
 

@@ -45,7 +45,6 @@ const readOf = (
     subtitles: [],
   })),
   unplaced: [],
-  unplacedRelative: [],
   straySubtitles: 0,
   ...extra,
 });

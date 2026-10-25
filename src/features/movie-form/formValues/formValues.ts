@@ -268,17 +268,19 @@ export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
     })),
     still: null,
   }));
-  const unplaced = numberFoundRows(
-    read.unplaced,
+  // The guesses answer in the order they are asked, one per video.
+  const guesses = numberFoundRows(
+    read.unplaced.map(({ video }) => video),
     read.path,
     read.episodes,
-    read.unplacedRelative
-  ).map(({ path, season, number, title }, index) => ({
+    read.unplaced.map(({ relativePath }) => relativePath)
+  );
+  const unplaced = read.unplaced.map(({ video, relativePath }, index) => ({
     key: `${SHOW_FOLDER_KEY}unplaced-${index}`,
-    file: foundFile(path, read.unplacedRelative[index]),
-    season: String(season),
-    number: String(number),
-    title: title ?? '',
+    file: foundFile(video, relativePath),
+    season: String(guesses[index].season),
+    number: String(guesses[index].number),
+    title: guesses[index].title ?? '',
     subtitles: [],
     still: null,
   }));

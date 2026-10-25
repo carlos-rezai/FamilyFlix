@@ -105,7 +105,6 @@ const READ = {
     },
   ],
   unplaced: [],
-  unplacedRelative: [],
   straySubtitles: 0,
 };
 

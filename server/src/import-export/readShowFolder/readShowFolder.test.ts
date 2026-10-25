@@ -257,7 +257,7 @@ describe('readShowFolder — a folder read as a film', () => {
     const read = await readOf(show);
 
     expect(read.episodes).toEqual([]);
-    expect([...read.unplaced].sort()).toEqual([
+    expect(read.unplaced.map(({ video }) => video).sort()).toEqual([
       join(show, 'the harbor.mkv'),
       join(show, 'the vine.mkv'),
     ]);

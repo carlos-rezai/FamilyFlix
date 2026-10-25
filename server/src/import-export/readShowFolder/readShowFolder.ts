@@ -137,10 +137,10 @@ export async function readShowFolder(
               'series'
             )),
       episodes,
-      unplaced,
-      unplacedRelative: unplaced.map((video) =>
-        sourceFileOf(showFolder, video)
-      ),
+      unplaced: unplaced.map((video) => ({
+        video,
+        relativePath: sourceFileOf(showFolder, video),
+      })),
       straySubtitles: shows.reduce(
         (count, show) => count + show.straySubtitles.length,
         0

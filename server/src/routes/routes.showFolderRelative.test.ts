@@ -102,12 +102,12 @@ describe('GET /api/show-folder — paths inside the show', () => {
     expect(response.status).toBe(200);
     const read = (await response.json()) as {
       episodes: { relativePath: string }[];
-      unplacedRelative: string[];
+      unplaced: { relativePath: string }[];
     };
     expect(read.episodes.map((episode) => episode.relativePath)).toEqual([
       'Seizoen 1/Aflevering 1.mp4',
       'Seizoen 2/Aflevering 1.mp4',
     ]);
-    expect(read.unplacedRelative).toEqual([]);
+    expect(read.unplaced).toEqual([]);
   });
 });

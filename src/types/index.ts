@@ -94,6 +94,7 @@ export type {
   SeasonPosterSlot,
   ShowFolderEpisode,
   ShowFolderRead,
+  ShowFolderVideo,
 } from './form';
 export type {
   ImportField,

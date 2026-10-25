@@ -1240,7 +1240,6 @@ describe('readShowFolder', () => {
     heldSeriesId: null,
     episodes: [],
     unplaced: [],
-    unplacedRelative: [],
     straySubtitles: 0,
   };
 

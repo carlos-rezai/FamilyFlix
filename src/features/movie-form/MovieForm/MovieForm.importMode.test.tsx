@@ -86,7 +86,6 @@ const readOf = (path: string, libraryFolderId: string | null) => ({
     },
   ],
   unplaced: [],
-  unplacedRelative: [],
   straySubtitles: 0,
 });
 

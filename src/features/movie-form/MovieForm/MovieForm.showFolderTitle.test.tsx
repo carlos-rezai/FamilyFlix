@@ -55,7 +55,6 @@ const readOf = (path: string): ShowFolderRead => ({
     },
   ],
   unplaced: [],
-  unplacedRelative: [],
   straySubtitles: 0,
 });
 

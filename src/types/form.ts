@@ -179,12 +179,18 @@ export interface ShowFolderRead {
   /** The held series whose Show folder this is, or `null`. */
   heldSeriesId: string | null;
   episodes: ShowFolderEpisode[];
-  /** Videos no rule numbered, absolute, in scan order. */
-  unplaced: string[];
-  /** Each of `unplaced`'s paths inside the Show folder, forward slashes. */
-  unplacedRelative: string[];
+  /** Videos no rule numbered, in scan order. */
+  unplaced: ShowFolderVideo[];
   /** Subtitles that matched no episode's stem. */
   straySubtitles: number;
+}
+
+/** One video of a {@link ShowFolderRead}, by the two paths it is read by. */
+export interface ShowFolderVideo {
+  /** Absolute. */
+  video: string;
+  /** The video's path inside the Show folder, forward slashes. */
+  relativePath: string;
 }
 
 /** One numbered episode of a {@link ShowFolderRead}, its paths absolute. */

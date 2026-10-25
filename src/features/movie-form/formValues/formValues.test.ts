@@ -635,13 +635,13 @@ describe('showFolderRows', () => {
     libraryFolderId: 'shows',
     heldSeriesId: null,
     episodes,
-    unplaced,
-    unplacedRelative: unplaced.map((video) =>
-      video
+    unplaced: unplaced.map((video) => ({
+      video,
+      relativePath: video
         .slice(SHOW.length + 1)
         .split(NATIVE)
-        .join('/')
-    ),
+        .join('/'),
+    })),
     straySubtitles: 0,
   });
 
@@ -783,8 +783,9 @@ describe('isShowFolderRow', () => {
       libraryFolderId: null,
       heldSeriesId: null,
       episodes: [],
-      unplacedRelative: ['bonus.mkv'],
-      unplaced: ['E:\\Shows\\Harbor\\bonus.mkv'],
+      unplaced: [
+        { video: 'E:\\Shows\\Harbor\\bonus.mkv', relativePath: 'bonus.mkv' },
+      ],
       straySubtitles: 0,
     });
 

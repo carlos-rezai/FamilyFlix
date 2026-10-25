@@ -5,7 +5,7 @@
 // `readShowFolder` answers each found video with its path relative to the
 // picked **Show folder**, spelled with forward slashes whatever the machine's
 // own separator is: a numbered episode as its `relativePath`, an **Unplaced**
-// video in `unplacedRelative`, in the same order as `unplaced`. Two seasons'
+// video as its entry's `relativePath` in `unplaced`. Two seasons'
 // `Aflevering 1.mp4` then read `Seizoen 1/Aflevering 1.mp4` and
 // `Seizoen 2/Aflevering 1.mp4`, where their names alone read alike.
 //
@@ -93,8 +93,8 @@ describe('readShowFolder — each video’s path inside the show', () => {
     const read = await readOf(show);
 
     expect(read.unplaced).toHaveLength(2);
-    expect(read.unplacedRelative).toEqual(
-      read.unplaced.map((video) =>
+    expect(read.unplaced.map(({ relativePath }) => relativePath)).toEqual(
+      read.unplaced.map(({ video }) =>
         video.endsWith('the harbor.mkv')
           ? 'Extras/the harbor.mkv'
           : 'Extras/the vine.mkv'

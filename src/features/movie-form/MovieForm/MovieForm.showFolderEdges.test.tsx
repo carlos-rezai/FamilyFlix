@@ -91,8 +91,10 @@ const READ = {
       subtitles: [],
     },
   ],
-  unplaced: [`${SEASON_ONE}\\${BONUS}`, `${SHOW}\\${LOOSE}`],
-  unplacedRelative: [BONUS_ROW, LOOSE],
+  unplaced: [
+    { video: `${SEASON_ONE}\\${BONUS}`, relativePath: BONUS_ROW },
+    { video: `${SHOW}\\${LOOSE}`, relativePath: LOOSE },
+  ],
   straySubtitles: 0,
 };
 
@@ -100,8 +102,10 @@ const READ = {
 const FILM_SHAPED = {
   ...READ,
   episodes: [],
-  unplaced: [`${SHOW}\\the harbor.mkv`, `${SHOW}\\the vine.mkv`],
-  unplacedRelative: ['the harbor.mkv', 'the vine.mkv'],
+  unplaced: [
+    { video: `${SHOW}\\the harbor.mkv`, relativePath: 'the harbor.mkv' },
+    { video: `${SHOW}\\the vine.mkv`, relativePath: 'the vine.mkv' },
+  ],
 };
 
 /** Another show, picked second. */
@@ -123,7 +127,6 @@ const OTHER_READ = {
     },
   ],
   unplaced: [],
-  unplacedRelative: [],
   straySubtitles: 0,
 };
 
@@ -375,9 +378,7 @@ describe('MovieForm — the Show folder pick’s edges', () => {
       answerRead = (path) =>
         Promise.resolve(
           okResponse(
-            path === OTHER_SHOW
-              ? OTHER_READ
-              : { ...READ, unplaced: [], unplacedRelative: [] }
+            path === OTHER_SHOW ? OTHER_READ : { ...READ, unplaced: [] }
           )
         );
       await renderSeries();

@@ -96,7 +96,9 @@ describe('readShowFolder — a picked Season folder', () => {
 
     const read = await readOf(season, onRecord(shows));
 
-    expect(read.unplacedRelative).toEqual(['Seizoen 2/Kerstspecial.mp4']);
+    expect(read.unplaced.map(({ relativePath }) => relativePath)).toEqual([
+      'Seizoen 2/Kerstspecial.mp4',
+    ]);
   });
 
   it('is held while its show is a held series’s Show folder', async () => {

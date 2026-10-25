@@ -20,8 +20,8 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
  * 51 — Library audit, Phase 13 (issue #456): picked episodes read apart.
  *
  * The **Show folder read** answers each found video with its path inside the
- * show: an episode's `relativePath`, an **Unplaced** video's entry in
- * `unplacedRelative`. Each **Episode file row** a pick lands shows that path
+ * show: an episode's `relativePath`, and an **Unplaced** video's in its
+ * `unplaced` entry. Each **Episode file row** a pick lands shows that path
  * as its mono line, so two seasons' `Aflevering 1.mp4` read
  * `Seizoen 1/Aflevering 1.mp4` and `Seizoen 2/Aflevering 1.mp4`; a file
  * picked by hand with _＋ Add episode files_ keeps its own name. The **Show
@@ -65,8 +65,12 @@ const READ = {
       subtitles: [],
     },
   ],
-  unplaced: [`${SHOW}\\Extras\\Kerstspecial.mp4`],
-  unplacedRelative: ['Extras/Kerstspecial.mp4'],
+  unplaced: [
+    {
+      video: `${SHOW}\\Extras\\Kerstspecial.mp4`,
+      relativePath: 'Extras/Kerstspecial.mp4',
+    },
+  ],
   straySubtitles: 0,
 };
 
