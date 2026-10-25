@@ -887,21 +887,21 @@ export function createImporter({
   };
 
   /**
-   * A held title's `✓ Updated` line, naming what it took — nothing written
+   * A held title's `✓ Updated` line, naming what a write took (its **Sheet
+   * fills**, or the `video` a **Found again** film took); nothing written
    * when it took nothing. Answers whether it took any.
    */
   const logUpdated = (
     current: ImportRun,
-    row: SheetRow,
-    fill: SheetFill
+    { title, year }: Pick<SheetRow, 'title' | 'year'>,
+    names: readonly string[]
   ): boolean => {
-    const names = filledNames(fill);
     if (names.length === 0) {
       return false;
     }
     log(
       current,
-      `✓ Updated    ${titleWithYear(row.title, row.year)} — ${names.join(', ')}`,
+      `✓ Updated    ${titleWithYear(title, year)} — ${names.join(', ')}`,
       'success'
     );
     return true;
@@ -939,7 +939,7 @@ export function createImporter({
     );
     fileDiffers(current, pooled, { ...held, proposed }, differences);
     writeSheetFill(held, fill);
-    return logUpdated(current, row, fill);
+    return logUpdated(current, row, filledNames(fill));
   };
 
   /**
@@ -1741,11 +1741,7 @@ export function createImporter({
         ...(runtime === null ? {} : { runtimeMinutes: runtime }),
         ...(reserved === null ? {} : { mediaFolder: basename(reserved) }),
       });
-      log(
-        current,
-        `✓ Updated    ${titleWithYear(movie.title, movie.year)} — video`,
-        'success'
-      );
+      logUpdated(current, movie, ['video']);
     } catch (error) {
       if (reserved !== null) {
         media.removeFolder(reserved);
