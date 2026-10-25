@@ -2,6 +2,7 @@
 > **Design log:** `docs/design-logs/51-library-audit.md`
 > **Issue:** #443 (the PRD, step 34)
 > **Build order:** step 34, **Library audit**. It ships as thin slices (log 51, _Implementation Plan_), the prototype revision first. One migration (15: `left_out_videos`), two new routes, a changed delete contract.
+> **Follow-up:** log 51, _Follow-up: issues 463, 465 and 466_ (Q18 to Q27), found walking #462. Its slices 10 to 13 are the plan's phases 20 to 23, walked live in phase 24; slice 14 (the docs, then the refactor) stays outside the phases, as the docs always were. No migration, no new route.
 
 ## Problem Statement
 
@@ -16,6 +17,12 @@ Testing 0.10.0 live turned up a run of problems in the Library flows. Each step 
 - **Films with no genre disappear** (F6). The Movies home is built from genre rows. Every scanned film has no genre until a Sync, so the home says _Your library is empty_ with 11 films held, and search can't find them either.
 - **The copy miscounts and misnames** (F9, F10). _Found 15 movies_ counts shows as movies. _Scan complete: 10 imported_ leaves out five new series. The form has two cards headed _FILES_, and its subtitle points to an _Import library_ screen that doesn't exist.
 
+Walking the build against the household's real `D:\Movies` (#462) turned up three more:
+
+- **A title whose video is gone keeps a real one out** (#463). The older _Guardians of the Galaxy_ record points at a folder that no longer exists, yet a scan matches it by title and never links the real `Guardians of the Galaxy.mp4`. The dead _Star Wars_ record, copied long ago from `Star Wars/The Last Jedi (2017).mp4`, sits beside a newly linked _The Last Jedi_: the film is held twice.
+- **The Found line still miscounts** (#465). It counts held films but not held shows, so a rescan of everything held reads _Found 6 titles_ above eleven _Already in library_ lines. The live stat says _Found N movies so far_ while counting folders.
+- **Empty folders are left in managed storage** (#466). `media/the-last-jedi-2017/` and `media/guardians-of-the-galaxy-vol-2/` hold nothing and no title names them, so the next _The Last Jedi_ lands in `the-last-jedi-2017-2/`.
+
 ## Solution
 
 One predictable way to add, edit, take out and bring back a film, a series or an episode, its files or its details.
@@ -28,6 +35,9 @@ One predictable way to add, edit, take out and bring back a film, a series or an
 - **The Show folder pick reads right.** Each picked episode shows its path inside the show (`Seizoen 2/Aflevering 1.mp4`). The folder row truncates from the start so its own name always shows. The title follows each new pick until the maintainer types one. A picked Season folder is titled and held-checked by its show.
 - **Every film is on the home.** An **Other row**, _Other movies_, sits last on the Movies home and holds every film with no genre. Its _View all_ opens `/genre-less`.
 - **The copy is right.** Scans count titles: _Found 15 titles across 22 folders_; _Scan complete: 15 imported_. The Import mode card is headed _Link or copy_. The form's subtitle points to _Library folders_.
+- **The Found line counts what was found** (follow-up). Every title found, held or new, films and shows alike; _Scan complete_ still counts only the new. The live stat reads _Found N folders so far_ and ends at the found line's folder count.
+- **A title whose video is gone holds only on evidence** (follow-up). A film whose video is a **Missing video** never holds a found video by its title, so the real film is imported and plays. When its folder on record, or the **Missing video** rule (the found file has the name of exactly one missing film's video), points at it, the film is **Found again**: it takes the found video, its details and watch history kept.
+- **An edit owns the folder it makes** (follow-up). An edit that needs a new Media folder records it when it saves, and a refused edit removes it, so nothing in `media/` is left unnamed.
 
 ## User Stories
 
@@ -126,6 +136,28 @@ One predictable way to add, edit, take out and bring back a film, a series or an
 73. As the maintainer, I want the Import mode card headed _Link or copy_ wherever it's drawn (the form, Library folders, Import setup), so that it never repeats the Files card's _FILES_.
 74. As the maintainer, I want the form's subtitle to point to _Library folders_, so that it names a page that exists.
 
+### The follow-up: tallies
+
+75. As the maintainer, I want _Found N titles_ to count every title the scan found, held or new, films and shows alike, so that a rescan's found line matches the titles it lists.
+76. As the maintainer, I want the live stat to read _Found N folders so far_ and end at the found line's folder count, so that the progress counts what it says it counts.
+
+### The follow-up: a title whose video is gone
+
+77. As the maintainer, I want a film whose video is gone never to keep a found video out by its title alone, so that the real film is imported and plays.
+78. As the maintainer, I want a film whose drive is only unplugged still to count as held, so that an offline drive never makes a double.
+79. As the maintainer, I want a dead copy found again when a scan finds a video with its file's name, so that an older library's mistitled copy gets its film back without a double.
+80. As the maintainer, I want a film whose folder is on record but whose video is gone to take the video the scan finds in that folder, so that a file renamed on disk is not lost.
+81. As the maintainer, I want a film found again to take its video the run's way, linked in Link and copied in Copy, so that it follows the Import mode I chose.
+82. As a parent, I want a film found again to keep its title, details, rating and watch history, so that mending its file changes nothing else.
+83. As the maintainer, I want the log to say the film was updated, naming its video, so that I can see what the scan mended.
+84. As the maintainer, I want two missing films with the same file name both left alone, so that the scan never guesses between them.
+
+### The follow-up: folders nothing names
+
+85. As the maintainer, I want an edit that needed a new Media folder to record it as the title's, so that a later edit and a Delete use the folder its files are in.
+86. As the maintainer, I want a refused or failed edit to leave no new folder in `media/`, so that folder names stay free for the next import.
+87. As the maintainer, I want a series edit whose recorded folder is gone to record the one it made, so that series and films follow one rule.
+
 ## Implementation Decisions
 
 - **One initiative** (log 51 Q1): `library-audit`, step 34, findings F1 to F11. Not built here: Loading states, Scan new folders, cleaning up doubles an older library already holds, the Details state reading a parsed year as _Your own details_.
@@ -169,7 +201,7 @@ One predictable way to add, edit, take out and bring back a film, a series or an
   - **Client.** `HomeRows` draws it last, titled _Other movies_. Its _View all_ goes to `/genre-less`.
   - **The page.** A new `GET /api/genre-less` answers every film with no genre, uncapped. The **Genre page** gains an `other` mode on its own route, headed _Other movies_.
   - **Rejected.** A fake _Other_ genre; `/genre/other`; a plain grid of every film.
-- **Tallies** (Q15): the importer's found-count and imported-count count titles, with a new series counted as one. A held series that only gained episodes isn't counted. The log lines read _Found N titles across M folders_ and _Scan complete: N imported_.
+- **Tallies** (Q15): the importer's found-count and imported-count count titles, with a new series counted as one. A held series that only gained episodes isn't counted. The log lines read _Found N titles across M folders_ and _Scan complete: N imported_. Revised for the found-count by the follow-up (Q19): it counts every title found, held or new.
 - **Copy** (Q16): `ImportModeChoice`'s heading becomes _Link or copy_ wherever it's drawn. The Movie form's lede names _Library folders_.
 - **Slices** (log 51, _Implementation Plan_):
   1. the prototype;
@@ -181,6 +213,19 @@ One predictable way to add, edit, take out and bring back a film, a series or an
   7. the Other row;
   8. copy and tallies;
   9. walk it again (the sandbox shapes and the real layout, live in the shell) and the docs.
+
+### The follow-up (log 51 Q18 to Q27)
+
+- **Scope** (Q18): one follow-up, same initiative and PRD; #463, #465 and #466 are closed by the log. The prototype's two scan lines are already amended (_titles across_, _folders so far_); nothing new is drawn.
+- **The found-count** (Q19): `walkListed` counts every film and every show it grouped and loses its `isHeldShow` parameter. _Scan complete_ is unchanged. Rejected: counting new titles only.
+- **`ImportRun.found`** (Q20): the folders the walk has gone through so far, by `foldersUnder`'s rule (every Source folder and every shelf above it, the Library folder not), kept as the walk goes, so its last value is the found line's M. M is counted before left-out videos come off. `importView` reads _Found N folders so far_.
+- **Missing video** (Q21): a held film whose `playback.videoFile` answers `missing`. `unreachable` is not missing and still holds.
+- **The Title key rule** (Q22) passes over a film with a Missing video wherever a found video is at stake. A Sheet row with no folder found still reaches it by key, for Sheet fills only. Rejected: giving the key-matched film the found video (the household's dead _Guardians_ is _Vol. 2_).
+- **The Missing video rule** (Q23), third in `heldFilm`, after the folder on record and the Held video rule: a found video whose file name is the file name of exactly one held film's Missing video, linked or copied. Two such films answer neither. Read once per run, as `heldFilmsByKey` is. Films only; rejected for episodes.
+- **Found again** (Q24): when the folder on record or the Missing video rule finds a film whose video is missing, the importer places the found video by the run's Import mode (in Copy, into the film's Media folder, reserved and recorded when it is gone), derives its runtime again, records its folder with `setSourceFolder`, and updates only `videoPath`, `videoFolderId`, `runtimeMinutes` and, when reserved, `mediaFolder`. It logs the Sheet fills' `✓ Updated` line naming `video`. Rejected: a new Problem kind.
+- **The edits' folder** (Q25, Q26): `PATCH /api/movies/:id` and `PATCH /api/series/:id` record a folder they reserve as the title's **Media folder** on commit (`MoviePatch.mediaFolder` in `src/types/write.ts`, `SeriesEdit.mediaFolder` in the series write), replacing a recorded folder that is gone. The movie edit's rollback removes a folder it reserved, as the series edit's already does. Rejected: removing a folder when its last file goes.
+- **The household's two empty folders** (Q27) are removed by hand. Rejected: a sweep.
+- **Slices** (the follow-up's 10 to 13): every title found; an edit owns its folder; a missing film holds by evidence; Found again. Then the docs and the initiative's refactor (slice 14).
 
 ## Testing Decisions
 
@@ -233,6 +278,18 @@ One predictable way to add, edit, take out and bring back a film, a series or an
 - **`useShowFolderPick` / the form**: a second pick replaces a picked title and leaves a typed one; relative paths on picked rows; the start-truncated Show folder row with its `title`; per-season Numbering guess. Prior art: `useShowFolderPick.test.ts`, the MovieForm show-folder tests.
 - **`HomeRows` and the Genre page**: the Other row drawn last as _Other movies_ with _View all_ to `/genre-less`; the `other` mode's heading and grid. Prior art: their existing tests.
 - **`ImportModeChoice`**: heading _Link or copy_. Prior art: its existing test.
+- **The follow-up's tallies** (`createImporter`, real runs over a built tree): a rescan with a held film and a held show counts both in _Found N titles_; _Scan complete_ still leaves them out; `run.found` ends at the found line's M, shelves included. `importView` reads _Found N folders so far_. Prior art: `createImporter.tallies.test.ts` (its _is not counted among the titles found_ case flips) and the `importView` tests.
+- **The follow-up's missing films** (`createImporter`, real storage, media and playback over a sandbox, the dead file removed on disk):
+  - a key match whose video is missing is passed over and the found video imported;
+  - an unreachable film still holds;
+  - a dead copy with the found file's name is found again, in Link and in Copy, its title, rating and watch history unchanged, one `✓ Updated` line naming `video`;
+  - a film whose folder is on record and whose video is gone takes the found video;
+  - two missing films of one name are both left alone;
+  - a Sheet row with no folder found still fills a missing film by key.
+
+  Prior art: `createImporter.heldVideo.test.ts`, `createImporter.sourceFolders.test.ts`.
+
+- **The follow-up's edit folders** (supertest over the router, a real `Media` over a sandbox): a movie edit whose recorded folder is gone records the folder it reserved and a later Delete removes it; a refused movie edit leaves no new folder; the series edit records a reserved folder over a dead one. Prior art: the existing movie and series PATCH route tests and `routes.linkedDelete.test.ts`.
 
 ## Out of Scope
 
@@ -243,6 +300,7 @@ One predictable way to add, edit, take out and bring back a film, a series or an
 - A browser of left-out files.
 - A unique index on `video_path`.
 - Matching held titles by TMDB or original title.
+- **The follow-up:** a missing episode; a sweep of folders no title names; a missing film no evidence reaches (no folder on record, its file renamed), which stays the maintainer's to delete.
 
 ## Further Notes
 
@@ -255,3 +313,5 @@ One predictable way to add, edit, take out and bring back a film, a series or an
   - CLAUDE.md _Product Rules_;
   - the glossary;
   - the docblocks of `linkedFiles`, `trashedFirst`, `seasonOf`, `readSeasonFolder`, `episodeTag`, `walkLibraryFolder`'s callers and `HomeRows`.
+- **The follow-up's glossary** is already written: **Missing video** and **Found again** are new; **Already in library**, **Media folder** and **Stranded folder** are updated. Its docblocks: `heldFilm`, `walkListed`, `ImportRun.found`, `importView`, the movie and series PATCH routes.
+- **The key rule now reads the disk.** A scan checks the held films' videos once per run to know which are missing. A missing film whose file had a generic name (`movie.mp4`) can be given the wrong file by the Missing video rule; the log names it, and the Movie form edit picks the right one.
