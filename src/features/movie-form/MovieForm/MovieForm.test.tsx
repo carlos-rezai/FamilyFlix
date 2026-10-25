@@ -4160,6 +4160,32 @@ describe('MovieForm — the Kind tabs', () => {
     });
   });
 
+  // 51 — Library audit, Phase 18 (issue #461): the lede sends a bulk add to
+  // _Library folders_, as `feat.MovieForm.dc.html` draws it.
+  describe('the lede names Library folders', () => {
+    it('ends the movie lede on Library folders', async () => {
+      await renderAt('/add');
+
+      expect(
+        textMatching(
+          /^Pick the video, poster, and any subtitle files for this movie\. To add many at once, use Library folders\.$/
+        )
+      ).toHaveLength(1);
+      expect(textMatching(/use Import library\.$/)).toHaveLength(0);
+    });
+
+    it('ends the series lede on Library folders', async () => {
+      await renderAt('/add?kind=series');
+
+      expect(
+        textMatching(
+          /^Pick the poster and every episode.s video and subtitles for this series\. To add many at once, use Library folders\.$/
+        )
+      ).toHaveLength(1);
+      expect(textMatching(/use Import library\.$/)).toHaveLength(0);
+    });
+  });
+
   describe('the series wording', () => {
     it('heads the form Add a series', async () => {
       await renderAt('/add?kind=series');
