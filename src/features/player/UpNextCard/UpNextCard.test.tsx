@@ -310,7 +310,7 @@ describe('UpNextCard — drawn as its prototype', () => {
  * fails to load now falls back to what a still-less card draws: the gradient
  * alone.
  */
-describe('UpNextCard — a still that fails to load', () => {
+describe('UpNextCard: a still that fails to load', () => {
   const MISSING_STILL = '/api/images/harbor-2019/season-03/S03E01-still.jpg';
 
   it('draws the gradient alone once its still fails', () => {

@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 18: "copy and tallies" (issue #461).
+// 51, Library audit, Phase 18: "copy and tallies" (issue #461).
 //
 // A **Folder scan**'s found-count and imported-count count titles, not
 // folders and not films alone:
@@ -180,7 +180,7 @@ function theLine(run: ImportRun, pattern: RegExp): string {
 const FOUND = /Found /;
 const COMPLETE = /Scan complete/;
 
-describe('createImporter.scan — the tallies count titles', () => {
+describe('createImporter.scan: the tallies count titles', () => {
   it('logs Found 15 titles for 10 films and 5 new series', async () => {
     const box = sandbox();
     FILMS.forEach((film) => addFilm(box.root, film));
@@ -204,7 +204,7 @@ describe('createImporter.scan — the tallies count titles', () => {
   });
 });
 
-describe('createImporter.scan — a rescan counts every title found', () => {
+describe('createImporter.scan: a rescan counts every title found', () => {
   /**
    * A first scan holds one film and one show; then the show gains an
    * episode, and two new films and a new show land beside them, and the
@@ -245,7 +245,7 @@ describe('createImporter.scan — a rescan counts every title found', () => {
   });
 });
 
-describe('createImporter.scan — run.found counts the folders walked', () => {
+describe('createImporter.scan: run.found counts the folders walked', () => {
   /** The M in the found line: how many folders it says it went through. */
   function foldersInFoundLine(run: ImportRun): number {
     const match = /across ([\d,]+) folders/.exec(theLine(run, FOUND));

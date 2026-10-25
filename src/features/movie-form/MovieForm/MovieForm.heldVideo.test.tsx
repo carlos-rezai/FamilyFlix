@@ -26,7 +26,7 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 51 — Library audit, Phase 7 (issue #450): the movie add refuses a held
+ * 51, Library audit, Phase 7 (issue #450): the movie add refuses a held
  * video.
  *
  * A shell movie add whose linked video a held title already plays is refused
@@ -119,7 +119,7 @@ async function addCoco() {
   fireEvent.click(save());
 }
 
-describe('MovieForm — a shell add of a held video', () => {
+describe('MovieForm: a shell add of a held video', () => {
   const bridge = fakeFolderBridge();
 
   beforeEach(() => {

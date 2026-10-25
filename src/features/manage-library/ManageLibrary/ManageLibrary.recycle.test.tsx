@@ -24,7 +24,7 @@ import {
 } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
 
 /**
- * 51 — Library audit, Phase 9: "the Recycle choice in the Delete dialog"
+ * 51, Library audit, Phase 9: "the Recycle choice in the Delete dialog"
  * (issue #452, log 51 Q6), on Manage library.
  *
  * The delete a linked title's dialog sends carries `?files=trash` only when
@@ -128,7 +128,7 @@ function confirmDelete(title: string) {
   );
 }
 
-describe('ManageLibrary — the Recycle choice, in the shell', () => {
+describe('ManageLibrary: the Recycle choice, in the shell', () => {
   fakeFolderBridge();
 
   it('sends the plain delete on Keep the files', async () => {
@@ -191,7 +191,7 @@ describe('ManageLibrary — the Recycle choice, in the shell', () => {
   });
 });
 
-describe('ManageLibrary — the Recycle choice, in a browser', () => {
+describe('ManageLibrary: the Recycle choice, in a browser', () => {
   it('draws no cards, keeps the files and sends the plain delete for a linked title', async () => {
     serve();
     renderPage();

@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 13 (issue #456): picked episodes read apart.
+// 51, Library audit, Phase 13 (issue #456): picked episodes read apart.
 //
 // `readShowFolder` answers each found video with its path relative to the
 // picked **Show folder**, spelled with forward slashes whatever the machine's
@@ -44,7 +44,7 @@ async function readOf(dir: string) {
   return answer.read;
 }
 
-describe('readShowFolder — each video’s path inside the show', () => {
+describe('readShowFolder: each video’s path inside the show', () => {
   it('answers two seasons’ same-named episodes by their Season folders', async () => {
     const show = join(
       sandboxRoot('familyflix-show-relative-'),

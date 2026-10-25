@@ -250,7 +250,7 @@ describe('ContinueCard — the poster on the tile', () => {
  * longer exists used to draw an empty gradient. A poster that fails to load
  * now falls back to the same **Default poster** a poster-less tile draws.
  */
-describe('ContinueCard — a poster that fails to load', () => {
+describe('ContinueCard: a poster that fails to load', () => {
   const MISSING_POSTER = '/api/images/solo/poster.jpg';
   const missing: ContinueCardMovie = { ...movie, posterUrl: MISSING_POSTER };
 

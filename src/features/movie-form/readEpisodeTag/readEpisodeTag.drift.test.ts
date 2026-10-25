@@ -70,7 +70,7 @@ const SHARED_EPISODE_WORDS: readonly (readonly [string, number | undefined])[] =
     ['Ep 12.mkv', undefined],
     ['Ep.12.mkv', undefined],
     ['E12.mkv', undefined],
-    // 51 — Library audit (issue #448): the Dutch spellings.
+    // 51, Library audit (issue #448): the Dutch spellings.
     ['Aflevering 12.mkv', 1],
     ['Afl. 12.mkv', 1],
     ['aflevering 12.mkv', 2],
@@ -144,7 +144,7 @@ describe('the Episode tag — client and server agree', () => {
   });
 
   /**
-   * 51 — Library audit (issue #448): the Dutch word's agreement is asserted
+   * 51, Library audit (issue #448): the Dutch word's agreement is asserted
    * on its own answer too, so two readers both missing it still fail.
    */
   it.each([['Aflevering 12.mkv'], ['Afl. 12.mkv']])(
@@ -165,7 +165,7 @@ describe('the Season folder — client and server agree', () => {
   });
 
   /**
-   * 51 — Library audit (issue #447): the wider rule's one table, the same
+   * 51, Library audit (issue #447): the wider rule's one table, the same
    * the two units' table tests read. Agreement is asserted on the table's own
    * answer too, so two readings both wrong the same way still fail.
    */

@@ -138,10 +138,10 @@ describe('GET /api/show-folder — a held Show folder', () => {
   });
 });
 
-// 51 — Library audit, Phase 7 (issue #450): a Show folder is held as well
+// 51, Library audit, Phase 7 (issue #450): a Show folder is held as well
 // when any one of its videos is a held episode's, by the **Held video** rule,
 // whatever folder is on record: a renamed show's folder reads as its series.
-describe('GET /api/show-folder — a Show folder with a held episode', () => {
+describe('GET /api/show-folder: a Show folder with a held episode', () => {
   it('answers the series one of its videos plays for, with no folder on record', async () => {
     const { baseUrl, shows, storage } = freshApi();
     const show = join(shows, 'Harbour and Vine');

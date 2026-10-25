@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, the follow-up: "an edit owns its folder" (issue #468).
+// 51, Library audit, the follow-up: "an edit owns its folder" (issue #468).
 //
 // `PATCH /api/movies/:id` and `PATCH /api/series/:id` reserve a folder when
 // the title's recorded **Media folder** is gone, and record it as the title's

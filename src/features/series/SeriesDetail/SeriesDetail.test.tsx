@@ -964,7 +964,7 @@ describe('SeriesDetail — deleting a linked show', () => {
  * falls back to the same captioned **Default poster** a poster-less show's
  * frame draws: its tag, its title and the **Wordmark**.
  */
-describe('SeriesDetail — a poster that fails to load', () => {
+describe('SeriesDetail: a poster that fails to load', () => {
   const MISSING_POSTER = '/api/images/harbor/poster.jpg';
 
   /** Fails the frame's poster the way the browser does when the file is gone. */

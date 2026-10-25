@@ -13,7 +13,7 @@ import {
 } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
 
 /**
- * 51 — Library audit, Phase 9: "the Recycle choice in the Delete dialog"
+ * 51, Library audit, Phase 9: "the Recycle choice in the Delete dialog"
  * (issue #452, log 51 Q6).
  *
  * For a linked title in the shell whose **Linked files** aren't `shared`, the
@@ -109,7 +109,7 @@ const itemsOf = (heading: string) =>
     .getAllByRole('listitem')
     .map((item) => item.textContent);
 
-describe('DeleteTitleDialog — the Recycle choice, in the shell', () => {
+describe('DeleteTitleDialog: the Recycle choice, in the shell', () => {
   fakeFolderBridge();
 
   it.each([
@@ -278,7 +278,7 @@ describe('DeleteTitleDialog — the Recycle choice, in the shell', () => {
   });
 });
 
-describe('DeleteTitleDialog — a shared title, in the shell', () => {
+describe('DeleteTitleDialog: a shared title, in the shell', () => {
   fakeFolderBridge();
 
   it('draws no cards, and reads that another title plays its video file(s)', () => {
@@ -307,7 +307,7 @@ describe('DeleteTitleDialog — a shared title, in the shell', () => {
   });
 });
 
-describe('DeleteTitleDialog — no Recycle choice for a copied or unreachable title', () => {
+describe('DeleteTitleDialog: no Recycle choice for a copied or unreachable title', () => {
   fakeFolderBridge();
 
   it.each([
@@ -329,7 +329,7 @@ describe('DeleteTitleDialog — no Recycle choice for a copied or unreachable ti
   );
 });
 
-describe('DeleteTitleDialog — the Recycle choice, in a browser', () => {
+describe('DeleteTitleDialog: the Recycle choice, in a browser', () => {
   it('draws no cards for a linked title, and keeps its files', () => {
     renderDialog();
 

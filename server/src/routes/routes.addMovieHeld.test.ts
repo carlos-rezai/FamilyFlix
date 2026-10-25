@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 7 (issue #450): the movie add refuses a held
+// 51, Library audit, Phase 7 (issue #450): the movie add refuses a held
 // video.
 //
 // `POST /api/movies` in **Link** asks the **Held video** rule
@@ -159,7 +159,7 @@ const titles = (storage: LibraryStorage): string[] =>
     .map((movie) => movie.title)
     .sort();
 
-describe('POST /api/movies — a video a held film already plays', () => {
+describe('POST /api/movies: a video a held film already plays', () => {
   it('answers 409 naming the film that plays it', async () => {
     const { baseUrl, files } = freshApi();
     expect((await linkAdd(baseUrl, 'Heat', files.heat)).status).toBe(201);
@@ -184,7 +184,7 @@ describe('POST /api/movies — a video a held film already plays', () => {
   });
 });
 
-describe('POST /api/movies — a video a held episode already plays', () => {
+describe('POST /api/movies: a video a held episode already plays', () => {
   it('answers 409 naming the series, and adds nothing', async () => {
     const { storage, baseUrl, folderId, files } = freshApi();
     storage.addSeries({ title: 'Harbor and Vine', mediaFolder: 'harbor' }, [
@@ -206,7 +206,7 @@ describe('POST /api/movies — a video a held episode already plays', () => {
   });
 });
 
-describe('POST /api/movies — a video no title holds', () => {
+describe('POST /api/movies: a video no title holds', () => {
   it('adds a held film’s Collection folder sibling as before', async () => {
     const { storage, baseUrl, folderId, files } = freshApi();
     expect((await linkAdd(baseUrl, 'A New Hope', files.hope)).status).toBe(201);

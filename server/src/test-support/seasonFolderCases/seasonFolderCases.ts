@@ -1,5 +1,5 @@
 /**
- * 51 — Library audit (issue #447): the **Season folder**'s one table.
+ * 51, Library audit (issue #447): the **Season folder**'s one table.
  *
  * The server's `seasonOf` groups a scan into shows; the client's
  * `readSeasonFolder` seeds the **Numbering guess** off the same folder name.

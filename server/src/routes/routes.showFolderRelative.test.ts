@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 13 (issue #456): `GET /api/show-folder` answers
+// 51, Library audit, Phase 13 (issue #456): `GET /api/show-folder` answers
 // each found video with its path inside the picked **Show folder**, forward
 // slashes, so the form can draw two seasons' same-named files apart.
 //
@@ -90,7 +90,7 @@ function folderWith(root: string, path: string, files: string[]): string {
 const readFolder = (baseUrl: string, path: string): Promise<Response> =>
   fetch(`${baseUrl}/api/show-folder?path=${encodeURIComponent(path)}`);
 
-describe('GET /api/show-folder — paths inside the show', () => {
+describe('GET /api/show-folder: paths inside the show', () => {
   it('answers each episode with its path relative to the Show folder', async () => {
     const { baseUrl, shows } = freshApi();
     const show = join(shows, 'De Luizenmoeder');

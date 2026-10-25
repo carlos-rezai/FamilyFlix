@@ -17,7 +17,7 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 51 — Library audit, Phase 13 (issue #456): picked episodes read apart.
+ * 51, Library audit, Phase 13 (issue #456): picked episodes read apart.
  *
  * The **Show folder read** answers each found video with its path inside the
  * show: an episode's `relativePath`, and an **Unplaced** video's in its
@@ -127,7 +127,7 @@ const showFolderName = () => {
   return text.tagName === 'BDI' ? (text.parentElement as HTMLElement) : text;
 };
 
-describe('MovieForm — picked episodes read apart', () => {
+describe('MovieForm: picked episodes read apart', () => {
   const bridge = fakeFolderBridge();
 
   beforeEach(() => {

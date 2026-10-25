@@ -319,7 +319,7 @@ describe('SeasonCard — hover, press and keyboard focus', () => {
  * A poster that fails to load now falls back to what a poster-less tile draws:
  * the gradient alone, the numeral still on it.
  */
-describe('SeasonCard — a Season poster that fails to load', () => {
+describe('SeasonCard: a Season poster that fails to load', () => {
   const MISSING_POSTER = '/api/images/harbor-vine-2019/S02-poster.jpg';
 
   it('paints the gradient alone, numeral kept, once its poster fails', () => {

@@ -370,7 +370,7 @@ describe('EpisodeRow — hover, press and keyboard focus', () => {
  * falls back to what a still-less row draws: the series' gradient alone, the
  * resume bar still over it.
  */
-describe('EpisodeRow — a still that fails to load', () => {
+describe('EpisodeRow: a still that fails to load', () => {
   const MISSING_STILL =
     '/api/images/the-hollow-coast-2018/season-02/S02E04.still.jpg';
 

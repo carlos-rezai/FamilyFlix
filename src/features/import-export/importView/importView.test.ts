@@ -20,7 +20,7 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
  * left" only while importing and only once more than 20 are done — a
  * twelve-terabyte copy gets a forecast, a small one is not lied to.
  *
- * 51 — Library audit, Phase 20 (issue #467): `found` counts the folders the
+ * 51, Library audit, Phase 20 (issue #467): `found` counts the folders the
  * walk has gone through, so the scanning line reads "Found N folders so far".
  */
 

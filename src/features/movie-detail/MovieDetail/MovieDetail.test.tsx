@@ -1522,7 +1522,7 @@ describe('MovieDetail — deleting a linked film', () => {
  * falls back to the same captioned **Default poster** a poster-less film's
  * frame draws: its tag, its title and the **Wordmark**.
  */
-describe('MovieDetail — a poster that fails to load', () => {
+describe('MovieDetail: a poster that fails to load', () => {
   const MISSING_POSTER = '/api/images/northwind/poster.jpg';
 
   /** Fails the frame's poster the way the browser does when the file is gone. */

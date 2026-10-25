@@ -173,11 +173,11 @@ describe('readEpisodeTag — the Episode word, where the season is not known', (
 });
 
 /**
- * 51 — Library audit, Phase 5 (issue #448): the **Episode word**'s Dutch
+ * 51, Library audit, Phase 5 (issue #448): the **Episode word**'s Dutch
  * spellings, `Aflevering 12` and `Afl. 12`, in any case, mirrored from
  * `episodeTag`'s new cases. Read only under the season the caller knows.
  */
-describe('readEpisodeTag — the Dutch Episode word, where the season is known', () => {
+describe('readEpisodeTag: the Dutch Episode word, where the season is known', () => {
   it.each([
     ['Aflevering 12.mkv'],
     ['Afl. 12.mkv'],

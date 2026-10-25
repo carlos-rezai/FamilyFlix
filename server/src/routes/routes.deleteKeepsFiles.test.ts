@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, slice 4: "a plain Delete keeps the files" (issue #451).
+// 51, Library audit, slice 4: "a plain Delete keeps the files" (issue #451).
 //
 // The delete contract: `DELETE /api/movies/:id` and `DELETE /api/series/:id`
 // keep a linked title's files by default and never ask the shell, so a

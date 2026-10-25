@@ -8,7 +8,7 @@ import type { LibraryFolderView } from '@/types';
 import { theme } from '@/styles/theme';
 
 /**
- * 51 — Library audit, Phase 12: "Bring back on Library folders" (issue #455).
+ * 51, Library audit, Phase 12: "Bring back on Library folders" (issue #455).
  *
  * A **Folder row** with **Left-out videos** draws a second line,
  * `mol.FolderRow.dc.html`: _3 videos left out_ (_1 video_ for one) and
@@ -35,7 +35,7 @@ function renderRow(row: LibraryFolderView, onBringBack = vi.fn()) {
 
 const bringBack = () => screen.queryByRole('button', { name: 'Bring back' });
 
-describe('FolderRow — the left-out line', () => {
+describe('FolderRow: the left-out line', () => {
   it('reads 3 videos left out, with Bring back, for a count of 3', () => {
     renderRow(folder(3));
 

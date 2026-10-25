@@ -171,11 +171,11 @@ describe('ImportModeChoice — Link disabled', () => {
 });
 
 /**
- * 51 — Library audit, Phase 18: "copy and tallies" (issue #461). The caption
+ * 51, Library audit, Phase 18: "copy and tallies" (issue #461). The caption
  * becomes _Link or copy_, wherever the choice is drawn: the Movie form,
  * Library folders and Import setup all draw this one.
  */
-describe('ImportModeChoice — the Link or copy heading', () => {
+describe('ImportModeChoice: the Link or copy heading', () => {
   it('draws the caption Link or copy and names the group by it', () => {
     renderChoice();
 

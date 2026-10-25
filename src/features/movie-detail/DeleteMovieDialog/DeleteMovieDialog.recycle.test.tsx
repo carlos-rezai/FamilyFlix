@@ -17,7 +17,7 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
 import { noContentResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 51 — Library audit, Phase 9: "the Recycle choice in the Delete dialog"
+ * 51, Library audit, Phase 9: "the Recycle choice in the Delete dialog"
  * (issue #452, log 51 Q6), on the movie page.
  *
  * The movie page's Delete dialog draws `DeleteTitleDialog`'s body
@@ -103,7 +103,7 @@ function itemsOf(heading: string): (string | null)[] {
     .map((item) => item.textContent);
 }
 
-describe('DeleteMovieDialog — the Recycle choice, in the shell', () => {
+describe('DeleteMovieDialog: the Recycle choice, in the shell', () => {
   fakeFolderBridge();
 
   it('draws the two cards for a linked film, Keep the files chosen', () => {
@@ -217,7 +217,7 @@ describe('DeleteMovieDialog: the Delete facts, as Manage library reads them', ()
   });
 });
 
-describe('DeleteMovieDialog — the Recycle choice, in a browser', () => {
+describe('DeleteMovieDialog: the Recycle choice, in a browser', () => {
   it('draws no cards for a linked film, and keeps its files', async () => {
     render(ui());
 

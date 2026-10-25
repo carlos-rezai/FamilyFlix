@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 6: "a scan knows a file it already plays"
+// 51, Library audit, Phase 6: "a scan knows a file it already plays"
 // (issue #449).
 //
 // `titleHolding(folderId, videoPath)`, the **Held video** rule's read: the
@@ -18,7 +18,7 @@ import { describe, expect, it } from 'vitest';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
 
-describe('library: titleHolding — the Held video rule', () => {
+describe('library: titleHolding: the Held video rule', () => {
   it('answers the film whose Linked video lies at the path', () => {
     const storage = freshStorage();
     const folder = storage.addLibraryFolder('E:\\Movies');

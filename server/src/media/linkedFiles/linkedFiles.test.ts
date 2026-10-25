@@ -164,10 +164,10 @@ describe('linkedFiles — unreachable and copied', () => {
   });
 });
 
-// 51 — Library audit, slice 4 (issue #451): a Delete never trashes a video
+// 51, Library audit, slice 4 (issue #451): a Delete never trashes a video
 // another held title plays. `videos` drops every path another held title
 // links; when none is left the answer is `shared`, with no paths.
-describe('linkedFiles — shared videos', () => {
+describe('linkedFiles: shared videos', () => {
   it('drops from videos an episode another held title links', () => {
     expect(
       linkedFiles({

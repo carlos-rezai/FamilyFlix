@@ -13,7 +13,7 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 51 — Library audit, Phase 12: "Bring back on Library folders" (issue #455).
+ * 51, Library audit, Phase 12: "Bring back on Library folders" (issue #455).
  *
  * On the **Library folders page**, a folder with **Left-out videos** reads
  * _N videos left out_ with _Bring back_. A press is **Bring back**:
@@ -87,7 +87,7 @@ function renderPage() {
 const loaded = () =>
   waitFor(() => expect(screen.queryByText('E:\\Movies')).not.toBeNull());
 
-describe('LibraryFolders — Bring back', () => {
+describe('LibraryFolders: Bring back', () => {
   it('draws each folder’s left-out line from the list', async () => {
     libraryWire([MOVIES, KIDS]);
     renderPage();

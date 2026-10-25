@@ -6,7 +6,7 @@ import { FileField } from '@/components';
 import { theme } from '@/styles/theme';
 
 /**
- * 51 — Library audit, Phase 13 (issue #456): `truncateStart`.
+ * 51, Library audit, Phase 13 (issue #456): `truncateStart`.
  *
  * The Movie form's Show folder row ellipsises its name from the start, so the
  * folder's own last segment always shows, and carries the whole name as its
@@ -39,7 +39,7 @@ const nameBox = () => {
   return text.tagName === 'BDI' ? (text.parentElement as HTMLElement) : text;
 };
 
-describe('FileField — truncateStart', () => {
+describe('FileField: truncateStart', () => {
   it('ellipsises the name from its start', () => {
     renderField(true);
 

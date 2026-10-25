@@ -239,7 +239,7 @@ describe('SeasonChoices — a press', () => {
  * poster that fails to load now falls back to what a poster-less tile draws:
  * the gradient alone, captioned _No poster yet_.
  */
-describe('SeasonChoices — a held poster that fails to load', () => {
+describe('SeasonChoices: a held poster that fails to load', () => {
   const MISSING_POSTER = '/api/images/the-hollow-coast-2018/S01-poster.jpg';
 
   it('paints the gradient alone, captioned No poster yet, once it fails', () => {

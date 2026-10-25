@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 10: "a title taken out stays out" (issue #453).
+// 51, Library audit, Phase 10: "a title taken out stays out" (issue #453).
 //
 // Migration 15 adds `left_out_videos (library_folder_id, video_path)`: a
 // **Left-out video** per row, its path relative to the Library folder with

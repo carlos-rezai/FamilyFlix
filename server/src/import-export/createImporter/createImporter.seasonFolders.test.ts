@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 4: "season folders read as real shows name them"
+// 51, Library audit, Phase 4: "season folders read as real shows name them"
 // (issue #447).
 //
 // The importer's **Folder scan** over the four **Season folder** shapes the
@@ -97,7 +97,7 @@ async function untilReview(importer: Importer): Promise<ImportRun> {
   }
 }
 
-describe('createImporter.scan — the four Season folder shapes', () => {
+describe('createImporter.scan: the four Season folder shapes', () => {
   it('makes four series, no films', async () => {
     const { storage, importer, folder } = sandbox();
 

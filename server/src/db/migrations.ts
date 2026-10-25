@@ -394,7 +394,8 @@ export const migrations: readonly Migration[] = [
   },
   {
     // The Left-out video: a video a keep-files Delete took out of the
-    // library, which a Folder scan and a sheet run then skip. Its path is
+    // library, or an episode removed in the Series edit job, which a Folder
+    // scan and a sheet run then skip. Its path is
     // relative to its Library folder with forward slashes, spelled as a
     // Linked video's `video_path`; listing the folder again starts afresh.
     version: 15,

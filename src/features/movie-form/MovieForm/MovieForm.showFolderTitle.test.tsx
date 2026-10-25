@@ -16,7 +16,7 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 51 — Library audit, Phase 15 (issue #458): the title follows the pick.
+ * 51, Library audit, Phase 15 (issue #458): the title follows the pick.
  *
  * `useShowFolderPick` remembers whether the title came from a pick (log 29
  * Q19): a second **Show folder pick** replaces a picked title with its own
@@ -93,7 +93,7 @@ async function renderSeries() {
 const seriesTitle = () =>
   screen.getByRole('textbox', { name: 'Title' }) as HTMLInputElement;
 
-describe('MovieForm — the title follows the pick', () => {
+describe('MovieForm: the title follows the pick', () => {
   const bridge = fakeFolderBridge();
 
   /** Pick `path` with the Show folder pick and wait for its row. */

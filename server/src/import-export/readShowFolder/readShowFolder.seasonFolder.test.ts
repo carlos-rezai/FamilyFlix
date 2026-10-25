@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 15 (issue #458): a picked Season folder climbs.
+// 51, Library audit, Phase 15 (issue #458): a picked Season folder climbs.
 //
 // A **Season folder** picked as the Show folder (`Tacoma FD/Season 1`) is
 // read for its own episodes only, but titled and held-checked by its Show
@@ -64,7 +64,7 @@ function tacomaFd(): { shows: string; show: string } {
   return { shows, show };
 }
 
-describe('readShowFolder — a picked Season folder', () => {
+describe('readShowFolder: a picked Season folder', () => {
   it('is titled by its show', async () => {
     const { shows, show } = tacomaFd();
 

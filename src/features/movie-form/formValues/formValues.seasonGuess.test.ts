@@ -4,7 +4,7 @@ import type { ShowFolderRead } from '@/types';
 import { showFolderRows } from './formValues';
 
 /**
- * 51 — Library audit, Phase 14 (issue #457): episodes numbered by their
+ * 51, Library audit, Phase 14 (issue #457): episodes numbered by their
  * season. A picked video in a **Season folder** is numbered from that
  * folder's season, read by the wider `readSeasonFolder` over its path inside
  * the **Show folder** (its `relativePath`), so a season-2 video never lands
@@ -44,7 +44,7 @@ const numbered = (read: ShowFolderRead) =>
     row.number,
   ]);
 
-describe('showFolderRows — episodes numbered by their season', () => {
+describe('showFolderRows: episodes numbered by their season', () => {
   it('lands a video under Seizoen 2 in season 2', () => {
     expect(numbered(seasonTwoRead(['de_overtocht.mkv']))).toEqual([
       ['Seizoen 2/de_overtocht.mkv', '2', '1'],

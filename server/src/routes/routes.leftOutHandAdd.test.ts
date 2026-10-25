@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 11: "removed episodes stay out, a hand add brings
+// 51, Library audit, Phase 11: "removed episodes stay out, a hand add brings
 // back" (issue #454).
 //
 // The last writer of the **Left-out videos**, and their clearing:

@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 10: "a title taken out stays out" (issue #453).
+// 51, Library audit, Phase 10: "a title taken out stays out" (issue #453).
 //
 // The Delete routes write the **Left-out videos**, so a later **Folder scan**
 // does not bring a deleted title back:

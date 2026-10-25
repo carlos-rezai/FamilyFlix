@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, follow-up Phase 23: "found again" (issue #470).
+// 51, Library audit, follow-up Phase 23: "found again" (issue #470).
 //
 // The **Missing video** rule sits third in `heldFilm`: a found video no
 // earlier rule placed, whose file name is the file name of exactly one held
@@ -177,7 +177,7 @@ function deadCopy(box: Sandbox): string {
   return dead.id;
 }
 
-describe("createImporter.scan — a dead copy with the found file's name", () => {
+describe("createImporter.scan: a dead copy with the found file's name", () => {
   it('is found again in Link: it links the found video, and no second film is added', async () => {
     const box = sandbox();
     const id = deadCopy(box);
@@ -266,7 +266,7 @@ describe("createImporter.scan — a dead copy with the found file's name", () =>
   });
 });
 
-describe('createImporter.scan — a film whose folder is on record and whose video is gone', () => {
+describe('createImporter.scan: a film whose folder is on record and whose video is gone', () => {
   it('takes the video found in that folder', async () => {
     const box = sandbox();
     const gone = `${STAR_WARS}/Star Wars (1977).mp4`;
@@ -294,7 +294,7 @@ describe('createImporter.scan — a film whose folder is on record and whose vid
   });
 });
 
-describe('createImporter.scan — two missing films of one file name', () => {
+describe('createImporter.scan: two missing films of one file name', () => {
   it('leaves both alone, while a film whose file name is its own is found again', async () => {
     const box = sandbox();
     // A second found video, whose name only one missing film's file carries.

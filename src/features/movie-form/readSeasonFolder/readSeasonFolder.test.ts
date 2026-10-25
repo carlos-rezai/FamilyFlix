@@ -32,11 +32,11 @@ describe('readSeasonFolder', () => {
 });
 
 /**
- * 51 — Library audit (issue #447): the wider rule, one table shared with the
+ * 51, Library audit (issue #447): the wider rule, one table shared with the
  * server's `seasonOf` and the drift guard. Each group is one rule, asserted
  * whole, so a group fails until every name in it reads right.
  */
-describe('readSeasonFolder — the wider Season folder rule', () => {
+describe('readSeasonFolder: the wider Season folder rule', () => {
   const readAll = (cases: readonly SeasonFolderCase[]) =>
     cases.map(([name]) => [name, readSeasonFolder(name)]);
   const expected = (cases: readonly SeasonFolderCase[]) =>

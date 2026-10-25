@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 6: "a scan knows a file it already plays"
+// 51, Library audit, Phase 6: "a scan knows a file it already plays"
 // (issue #449).
 //
 // The importer's **Already in library** runs three rules in order: the
@@ -184,7 +184,7 @@ const alreadyHeldLines = (run: ImportRun): string[] =>
     .map((line) => line.text)
     .filter((text) => text.startsWith('· Already in library'));
 
-describe('createImporter.scan — a renamed title with no folder on record', () => {
+describe('createImporter.scan: a renamed title with no folder on record', () => {
   it('finds a renamed film Already in library by its Linked video', async () => {
     const box = sandbox();
     await scanOnce(box);
@@ -240,7 +240,7 @@ describe('createImporter.scan — a renamed title with no folder on record', () 
   });
 });
 
-describe('createImporter.scan — a held series found by one episode', () => {
+describe('createImporter.scan: a held series found by one episode', () => {
   it('is the held series, and gains the Show folder’s new episodes', async () => {
     const box = sandbox();
     const held = box.storage.addSeries(
@@ -268,7 +268,7 @@ describe('createImporter.scan — a held series found by one episode', () => {
   });
 });
 
-describe('createImporter.scan — a double an older library holds', () => {
+describe('createImporter.scan: a double an older library holds', () => {
   it('still migrates, and the scan adds no third title over the shared video', async () => {
     const box = sandbox();
     const first = box.storage.addMovie(

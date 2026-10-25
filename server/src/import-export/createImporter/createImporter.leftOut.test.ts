@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 10: "a title taken out stays out" (issue #453).
+// 51, Library audit, Phase 10: "a title taken out stays out" (issue #453).
 //
 // A **Folder scan** and a sheet import skip every **Left-out video** before
 // any match, so a title deleted with its files kept does not come back:
@@ -153,7 +153,7 @@ const episodeVideos = (storage: LibraryStorage, title: string): string[] => {
 const leftOutLines = (run: ImportRun) =>
   run.log.filter((line) => line.text.startsWith('· Left out'));
 
-describe('createImporter.scan — left-out videos', () => {
+describe('createImporter.scan: left-out videos', () => {
   it('skips a left-out film: not imported and not a Problem', async () => {
     const box = sandbox();
     box.storage.leaveOut([{ folderId: box.films.id, videoPath: DIE_HARD }]);
@@ -229,7 +229,7 @@ describe('createImporter.scan — left-out videos', () => {
   });
 });
 
-describe('createImporter.start — a sheet run skips left-out videos', () => {
+describe('createImporter.start: a sheet run skips left-out videos', () => {
   it('imports neither left-out film, and logs one line for the run', async () => {
     const box = sandbox();
     box.storage.leaveOut([

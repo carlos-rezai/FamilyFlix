@@ -17,7 +17,7 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
 import { noContentResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 51 — Library audit, Phase 9: "the Recycle choice in the Delete dialog"
+ * 51, Library audit, Phase 9: "the Recycle choice in the Delete dialog"
  * (issue #452, log 51 Q6), on the series page.
  *
  * The series page's Delete dialog draws `DeleteTitleDialog`'s body
@@ -98,7 +98,7 @@ function itemsOf(heading: string): (string | null)[] {
     .map((item) => item.textContent);
 }
 
-describe('DeleteSeriesDialog — the Recycle choice, in the shell', () => {
+describe('DeleteSeriesDialog: the Recycle choice, in the shell', () => {
   fakeFolderBridge();
 
   it('draws the two cards for a linked show, Keep the files chosen', () => {
@@ -199,7 +199,7 @@ describe('DeleteSeriesDialog: the Delete facts, as Manage library reads them', (
   });
 });
 
-describe('DeleteSeriesDialog — the Recycle choice, in a browser', () => {
+describe('DeleteSeriesDialog: the Recycle choice, in a browser', () => {
   it('draws no cards for a linked show, and keeps its files', async () => {
     render(ui());
 

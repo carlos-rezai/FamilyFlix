@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 7 (issue #450): a Show folder held by its videos.
+// 51, Library audit, Phase 7 (issue #450): a Show folder held by its videos.
 //
 // Besides the folder on record (`heldSeriesAt`), `readShowFolder` asks the
 // **Held video** rule (`titleHolding`) of every video it found, by its
@@ -57,7 +57,7 @@ async function readOf(dir: string, context: ShowFolderContext) {
   return answer.read;
 }
 
-describe('readShowFolder — a held episode video', () => {
+describe('readShowFolder: a held episode video', () => {
   it('answers the series one episode video plays for, with no folder on record', async () => {
     const shows = join(sandboxRoot('familyflix-show-held-video-'), 'Shows');
     const show = join(shows, 'Harbour and Vine');

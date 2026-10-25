@@ -1329,7 +1329,7 @@ export function createImporter({
     );
 
   /**
-   * Every film the library holds, by key and year — read once per run.
+   * Every film the library holds, by key and year, read once per run.
    */
   const heldFilmsByKey = (): Map<string, Movie> =>
     new Map(
@@ -1339,8 +1339,8 @@ export function createImporter({
     );
 
   /**
-   * Every held film whose video is a **Missing video**, by id — read once per
-   * run, as `heldFilmsByKey` is. A film **Found again** comes off, so it is
+   * Every held film whose video is a **Missing video**, by id, read once per
+   * run as `heldFilmsByKey` is. A film **Found again** comes off, so it is
    * found again at most once per run.
    */
   const missingFilms = (filmsByKey: Map<string, Movie>): Map<string, Movie> =>
@@ -1373,8 +1373,8 @@ export function createImporter({
 
   /**
    * A held film's **Found again** check: when its video is a **Missing
-   * video**, the found video it takes — the one with its file's name, else the
-   * folder's only one — and the film comes off `missing`. `null` for a film
+   * video**, the found video it takes (the one with its file's name, else the
+   * folder's only one), and the film comes off `missing`. `null` for a film
    * whose video is there, or a folder that gives no one video.
    */
   const foundAgainOf = (
@@ -1710,8 +1710,8 @@ export function createImporter({
   };
 
   /**
-   * Place one film **Found again** by the run's **Import mode** — in Copy,
-   * into its **Media folder**, one reserved and recorded when that is gone —
+   * Place one film **Found again** by the run's **Import mode** (in Copy,
+   * into its **Media folder**, one reserved and recorded when that is gone),
    * derive its runtime again, and write only its video columns, then the
    * `✓ Updated` line naming `video`. A copy that throws leaves no reserved
    * folder behind and is a **Warning line**; a cancel, nothing.

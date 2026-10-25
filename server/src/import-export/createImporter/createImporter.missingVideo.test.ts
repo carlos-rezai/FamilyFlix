@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, follow-up Phase 22: "a missing film holds by evidence"
+// 51, Library audit, follow-up Phase 22: "a missing film holds by evidence"
 // (issue #469).
 //
 // The **Title key** rule in **Already in library** passes over a held film
@@ -151,7 +151,7 @@ const filmsTitled = (db: SqliteDatabase, title: string): VideoRow[] =>
     )
     .all(title) as VideoRow[];
 
-describe('createImporter.scan — a held film whose video is missing', () => {
+describe('createImporter.scan: a held film whose video is missing', () => {
   it('imports the found Guardians of the Galaxy.mp4 beside it as a new film', async () => {
     const box = sandbox();
     const dead = box.storage.addMovie(
@@ -193,7 +193,7 @@ describe('createImporter.scan — a held film whose video is missing', () => {
   });
 });
 
-describe('createImporter.scan — a held film on an unreadable Library folder', () => {
+describe('createImporter.scan: a held film on an unreadable Library folder', () => {
   it('still holds by key, so no second film is made', async () => {
     const box = sandbox();
     const unplugged = join(box.dir, 'unplugged');
@@ -223,7 +223,7 @@ describe('createImporter.scan — a held film on an unreadable Library folder', 
   });
 });
 
-describe('createImporter.start — a sheet row with no folder found', () => {
+describe('createImporter.start: a sheet row with no folder found', () => {
   it('still fills a held film whose video is missing', async () => {
     const box = sandbox();
     // The fixture's Die Hard folder is gone, so its row finds no folder.

@@ -587,11 +587,11 @@ describe('groupShows — the Episode word', () => {
 });
 
 /**
- * 51 — Library audit (issue #447): the wider **Season folder** rule, over the
+ * 51, Library audit (issue #447): the wider **Season folder** rule, over the
  * one table the client's `readSeasonFolder` and the drift guard read. Each
  * group is one rule, asserted whole.
  */
-describe('seasonOf — the wider Season folder rule', () => {
+describe('seasonOf: the wider Season folder rule', () => {
   const readAll = (cases: readonly SeasonFolderCase[]) =>
     cases.map(([name]) => [name, seasonOf(name)]);
   const expected = (cases: readonly SeasonFolderCase[]) =>
@@ -628,7 +628,7 @@ describe('seasonOf — the wider Season folder rule', () => {
   });
 });
 
-describe('groupShows — the wider Season folder rule', () => {
+describe('groupShows: the wider Season folder rule', () => {
   it('puts a release-named Season folder under its parent, the Show folder', () => {
     const release = scan(
       ['Release Show', 'Release.Show.S01.1080p.WEB-DL'],
@@ -686,10 +686,10 @@ describe('groupShows — the wider Season folder rule', () => {
 });
 
 /**
- * 51 — Library audit, Phase 5 (issue #448): the Dutch **Episode word**. A
+ * 51, Library audit, Phase 5 (issue #448): the Dutch **Episode word**. A
  * scanned `Seizoen 1/Aflevering 3.mp4` lands as S1 E3, not **Unplaced**.
  */
-describe('groupShows — the Dutch Episode word', () => {
+describe('groupShows: the Dutch Episode word', () => {
   it('places a scanned Dutch season’s episodes by number', () => {
     const season = scan(
       ['De Vuurtorenwachters', 'Seizoen 1'],

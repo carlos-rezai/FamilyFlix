@@ -318,7 +318,7 @@ describe('PosterCard — the Default poster', () => {
  * poster** a poster-less card draws: the **Gradient fallback**, the Wordmark
  * and the title.
  */
-describe('PosterCard — a poster that fails to load', () => {
+describe('PosterCard: a poster that fails to load', () => {
   const MISSING_POSTER = '/api/images/star-wars/poster.jpg';
   const missing: PosterCardMovie = { ...movie, posterUrl: MISSING_POSTER };
 

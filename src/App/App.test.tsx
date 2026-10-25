@@ -2217,10 +2217,10 @@ describe('App: the launch on the Start tab', () => {
 });
 
 /**
- * 51 — Library audit, phase 17: "the Other movies page" (issue #460). The
+ * 51, Library audit, phase 17: "the Other movies page" (issue #460). The
  * Other row's View all lands on the Genre page in its `other` mode.
  */
-describe('App — the Other movies page at /genre-less', () => {
+describe('App: the Other movies page at /genre-less', () => {
   it('draws Other movies over the grid of every genre-less film', async () => {
     renderApp('/genre-less');
 

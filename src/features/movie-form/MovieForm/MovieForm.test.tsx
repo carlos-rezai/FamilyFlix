@@ -4160,7 +4160,7 @@ describe('MovieForm — the Kind tabs', () => {
     });
   });
 
-  // 51 — Library audit, Phase 18 (issue #461): the lede sends a bulk add to
+  // 51, Library audit, Phase 18 (issue #461): the lede sends a bulk add to
   // _Library folders_, as `feat.MovieForm.dc.html` draws it.
   describe('the lede names Library folders', () => {
     it('ends the movie lede on Library folders', async () => {

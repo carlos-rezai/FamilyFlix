@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 51 — Library audit, Phase 12: "Bring back on Library folders" (issue #455).
+// 51, Library audit, Phase 12: "Bring back on Library folders" (issue #455).
 //
 // The Library folders routes and a folder's **Left-out videos**:
 //
