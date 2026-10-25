@@ -39,14 +39,13 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderMenu(seriesId = 'harbor', title = 'Harbor & Vine', count = 22) {
+function renderMenu(seriesId = 'harbor', title = 'Harbor & Vine') {
   return render(
     <ThemeProvider theme={theme}>
       <MemoryRouter initialEntries={['/series/harbor']}>
         <SeriesEditMenu
           seriesId={seriesId}
           title={title}
-          episodeCount={count}
           deleteFacts={{ path: '', linkedFiles: null, originalPath: null }}
         />
         <LocationProbe />
@@ -116,7 +115,7 @@ describe('SeriesEditMenu — the Delete dialog', () => {
   });
 
   it('closes the menu and opens the dialog, naming the show', () => {
-    renderMenu('harbor', 'Harbor & Vine', 22);
+    renderMenu('harbor', 'Harbor & Vine');
     openMenu();
 
     selectDelete();

@@ -11,8 +11,6 @@ export interface SeriesEditMenuProps {
   seriesId: string;
   /** Its title — what the Delete dialog names. */
   title: string;
-  /** Every episode it holds — what the Delete dialog counts. */
-  episodeCount: number;
   /** The show’s **Delete facts**, what the Delete dialog tells. */
   deleteFacts: DeleteFacts;
 }
@@ -29,7 +27,6 @@ export interface SeriesEditMenuProps {
 export function SeriesEditMenu({
   seriesId,
   title,
-  episodeCount,
   deleteFacts,
 }: SeriesEditMenuProps) {
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -57,7 +54,6 @@ export function SeriesEditMenu({
       <DeleteSeriesDialog
         seriesId={seriesId}
         title={title}
-        episodeCount={episodeCount}
         deleteFacts={deleteFacts}
         open={deleteOpen}
         onClose={() => setDeleteOpen(false)}

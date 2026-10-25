@@ -83,7 +83,6 @@ export function seriesView(
       episodes.length,
       'episode'
     )}`,
-    episodeCount: episodes.length,
     ratingPercent: toRatingPercent(shown?.units ?? null),
     ratingSource: shown?.source ?? null,
     genres: series.genres.map((genre) => genre.name),

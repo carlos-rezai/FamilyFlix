@@ -69,7 +69,6 @@ function ui({
         <DeleteSeriesDialog
           seriesId="s1"
           title="Bluey"
-          episodeCount={24}
           deleteFacts={{ path: BLUEY_PATH, linkedFiles, originalPath: null }}
           open={open}
           onClose={() => undefined}

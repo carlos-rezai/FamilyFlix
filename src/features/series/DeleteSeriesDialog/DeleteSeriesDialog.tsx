@@ -8,8 +8,6 @@ export interface DeleteSeriesDialogProps {
   seriesId: string;
   /** Its title, for the heading. */
   title: string;
-  /** Every episode it holds; the body's lists don't count them (log 51 Q6). */
-  episodeCount: number;
   /** The show's **Delete facts**, as Manage library reads them. */
   deleteFacts: DeleteFacts;
   /** Whether the dialog is on screen. Closed, it renders nothing at all. */

@@ -49,7 +49,6 @@ afterEach(() => {
 interface RenderDialogOptions {
   open?: boolean;
   title?: string;
-  episodeCount?: number;
   linkedFiles?: LinkedFiles | null;
   onClose?: () => void;
 }
@@ -57,7 +56,6 @@ interface RenderDialogOptions {
 function renderDialog({
   open = true,
   title = 'F’ck That’s Delicious',
-  episodeCount = 24,
   linkedFiles = null,
   onClose = () => undefined,
 }: RenderDialogOptions = {}) {
@@ -76,7 +74,6 @@ function renderDialog({
               <DeleteSeriesDialog
                 seriesId="ftd"
                 title={title}
-                episodeCount={episodeCount}
                 deleteFacts={{ path: '', linkedFiles, originalPath: null }}
                 open={open}
                 onClose={onClose}

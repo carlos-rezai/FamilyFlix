@@ -195,8 +195,6 @@ export interface SeriesPageModel {
   yearLabel: string | null;
   /** `2 seasons · 22 episodes`. */
   countLabel: string;
-  /** Every episode the series holds — the count the line spells, as a number. */
-  episodeCount: number;
   /** 0–100 percent the read-only stars fill against; `null` when unrated. */
   ratingPercent: number | null;
   /** Whose rating the stars draw — `null` when unrated. */

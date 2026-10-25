@@ -117,7 +117,6 @@ export function SeriesDetail() {
       <SeriesEditMenu
         seriesId={series.id}
         title={series.title}
-        episodeCount={series.episodeCount}
         deleteFacts={series.deleteFacts}
       />
 
