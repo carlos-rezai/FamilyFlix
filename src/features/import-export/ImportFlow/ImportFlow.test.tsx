@@ -361,7 +361,7 @@ describe('ImportFlow — a run already in progress', () => {
     renderFlow();
 
     expect(await runningStep('Scanning your library…')).toBeDefined();
-    expect(screen.getByText('Found 7 movies so far')).toBeDefined();
+    expect(screen.getByText('Found 7 folders so far')).toBeDefined();
   });
 
   it('shows a run already in review as the review step', async () => {

@@ -6,9 +6,18 @@
 // folders and not films alone:
 //
 // - a new series is one title, whatever its Season folders and episodes;
-// - a held series that only gained episodes is no title at all;
+// - a held series that only gained episodes is no title imported;
 // - the log reads _Found N titles across M folders_ and _Scan complete: N
 //   imported_.
+//
+// Phase 20, "every title found" (issue #467, log 51 Q19 and Q20):
+//
+// - the found line counts every title the walk grouped, held or new: a rescan
+//   with one held film, one held show that gained an episode and three new
+//   titles logs _Found 5 titles_ and _Scan complete: 3 imported_;
+// - `run.found` counts folders by the found line's rule (every Source folder
+//   and every shelf above it, the Library folder not, before left-out videos
+//   come off), so at the end of the walk it equals the found line's M.
 //
 // The runs are real: a Library folder built here (ten film folders beside five
 // Show folders of two Season folders each), an on-disk library, a real `Media`
@@ -195,34 +204,35 @@ describe('createImporter.scan — the tallies count titles', () => {
   });
 });
 
-describe('createImporter.scan — a held series that gained episodes', () => {
+describe('createImporter.scan — a rescan counts every title found', () => {
   /**
-   * A first scan holds one show; then it gains an episode, and two new films
-   * and a new show land beside it, and the folder is scanned again: three
-   * titles, the held show not among them.
+   * A first scan holds one film and one show; then the show gains an
+   * episode, and two new films and a new show land beside them, and the
+   * folder is scanned again: five titles found, three of them imported.
    */
   async function rescanned(): Promise<{ box: Sandbox; run: ImportRun }> {
     const box = sandbox();
+    addFilm(box.root, FILMS[0]);
     addShow(box.root, SHOWS[0]);
     await scanOnce(box.importer, [box.folder]);
     addEpisode(box.root, SHOWS[0], 2, 3);
-    addFilm(box.root, FILMS[0]);
     addFilm(box.root, FILMS[1]);
+    addFilm(box.root, FILMS[2]);
     addShow(box.root, SHOWS[1]);
 
     const run = await scanOnce(box.importer, [box.folder]);
     return { box, run };
   }
 
-  it('is not counted among the titles found', async () => {
+  it('logs Found 5 titles, the held film and the held show among them', async () => {
     const { run } = await rescanned();
 
     expect(theLine(run, FOUND)).toMatch(
-      /^✓ Found 3 titles across \d+ folders\. Starting import…$/
+      /^✓ Found 5 titles across \d+ folders\. Starting import…$/
     );
   });
 
-  it('is not counted among the titles imported', async () => {
+  it('logs Scan complete: 3 imported, the held titles not among them', async () => {
     const { box, run } = await rescanned();
 
     expect(theLine(run, COMPLETE)).toMatch(/^✓ Scan complete: 3 imported\b/);
@@ -232,5 +242,54 @@ describe('createImporter.scan — a held series that gained episodes', () => {
       .series.find((series) => series.title === 'Salt Road');
     expect(show).toBeDefined();
     expect(box.storage.listEpisodes(show?.id ?? '')).toHaveLength(5);
+  });
+});
+
+describe('createImporter.scan — run.found counts the folders walked', () => {
+  /** The M in the found line: how many folders it says it went through. */
+  function foldersInFoundLine(run: ImportRun): number {
+    const match = /across ([\d,]+) folders/.exec(theLine(run, FOUND));
+    if (match === null) {
+      throw new Error('the found line names no folder count');
+    }
+    return Number(match[1].replace(/,/g, ''));
+  }
+
+  /**
+   * A film at the root, a film on a `Drama/` shelf, a show of two Season
+   * folders and a film whose one video was deleted earlier and left out:
+   * seven folders by the found line's rule (the film folders, the shelf, the
+   * Show folder and its Season folders), the left-out film's among them.
+   */
+  function shelvedLibrary(): Sandbox {
+    const box = sandbox();
+    addFilm(box.root, FILMS[0]);
+    addFilm(join(box.root, 'Drama'), FILMS[1]);
+    addShow(box.root, SHOWS[0]);
+    addFilm(box.root, FILMS[2]);
+    box.storage.leaveOut([
+      {
+        folderId: box.folder.id,
+        videoPath: `${FILMS[2]}/${FILMS[2]}.1080p.mp4`,
+      },
+    ]);
+    return box;
+  }
+
+  it("ends the walk equal to the found line's M", async () => {
+    const box = shelvedLibrary();
+
+    const run = await scanOnce(box.importer, [box.folder]);
+
+    expect(run.found).toBe(foldersInFoundLine(run));
+  });
+
+  it('counts every shelf and Source folder, left-out videos still in', async () => {
+    const box = shelvedLibrary();
+
+    const run = await scanOnce(box.importer, [box.folder]);
+
+    expect(foldersInFoundLine(run)).toBe(7);
+    expect(run.found).toBe(7);
   });
 });

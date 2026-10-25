@@ -15,7 +15,7 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
  * item, elapsed, the ETA and the **Activity log** are the console slice's.
  *
  * Copy is the prototype's, verbatim — "Scanning your library…" / "Importing
- * movies…", "Found N movies so far" / "N of M imported" — with the thousands
+ * movies…", "Found N folders so far" / "N of M imported" — with the thousands
  * separators the container's `toLocaleString()` puts in, because the real
  * library is a thousand rows and "1200 of 1200" is a number nobody reads.
  *
@@ -55,7 +55,7 @@ describe('ImportProgress — while scanning', () => {
   it('counts what the walk has found so far', () => {
     renderProgress({ run: makeImportRun({ phase: 'scanning', found: 12 }) });
 
-    expect(screen.getByText('Found 12 movies so far')).toBeDefined();
+    expect(screen.getByText('Found 12 folders so far')).toBeDefined();
   });
 
   it('counts with thousands separators', () => {
@@ -63,7 +63,7 @@ describe('ImportProgress — while scanning', () => {
       run: makeImportRun({ phase: 'scanning', found: 1234 }),
     });
 
-    expect(screen.getByText('Found 1,234 movies so far')).toBeDefined();
+    expect(screen.getByText('Found 1,234 folders so far')).toBeDefined();
   });
 
   it('draws the bar indeterminate — the scan has no known total', () => {

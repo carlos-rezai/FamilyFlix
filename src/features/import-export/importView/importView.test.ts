@@ -15,10 +15,13 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
  * prototype's container works them out (`FamilyFlix.dc.html`, `importModel`).
  *
  * Copy is the prototype's verbatim: "Scanning your library…" / "Importing
- * movies…"; "Found N movies so far" / "N of M imported", with the thousands
+ * movies…"; "Found N folders so far" / "N of M imported", with the thousands
  * separators its `toLocaleString()` puts in; "Elapsed m:ss"; and "About m:ss
  * left" only while importing and only once more than 20 are done — a
  * twelve-terabyte copy gets a forecast, a small one is not lied to.
+ *
+ * 51 — Library audit, Phase 20 (issue #467): `found` counts the folders the
+ * walk has gone through, so the scanning line reads "Found N folders so far".
  */
 
 const STARTED = '2026-09-13T10:00:00.000Z';
@@ -38,7 +41,7 @@ describe('importView — the headline and the stat line per phase', () => {
     const view = importView(scanning(12), secondsIn(1));
 
     expect(view.headline).toBe('Scanning your library…');
-    expect(view.statLine).toBe('Found 12 movies so far');
+    expect(view.statLine).toBe('Found 12 folders so far');
   });
 
   it('says it is importing, and how many of how many', () => {
@@ -50,7 +53,7 @@ describe('importView — the headline and the stat line per phase', () => {
 
   it('counts with thousands separators', () => {
     expect(importView(scanning(1234), secondsIn(1)).statLine).toBe(
-      'Found 1,234 movies so far'
+      'Found 1,234 folders so far'
     );
     expect(importView(importing(1000, 1200), secondsIn(1)).statLine).toBe(
       '1,000 of 1,200 imported'
