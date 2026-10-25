@@ -159,6 +159,13 @@ function genreResponse(url: string): Response {
   return okResponse(payload);
 }
 
+/** The films with no genre, as `GET /api/genre-less` answers them. */
+const GENRE_LESS: Movie[] = [
+  makeMovie({ id: 'o1', title: 'Untagged One', genres: [] }),
+  makeMovie({ id: 'o2', title: 'Untagged Two', genres: [] }),
+  makeMovie({ id: 'o3', title: 'Untagged Three', genres: [] }),
+];
+
 /** Every movie the fixture rows hold, as the detail route serves them by id. */
 const MOVIES = [...ACTION_SHIPPED, ...SCI_FI_SHIPPED];
 
@@ -197,6 +204,11 @@ beforeEach(() => {
     }
     if (url.includes('/api/genre/')) {
       return Promise.resolve(genreResponse(url));
+    }
+    if (url.includes('/api/genre-less')) {
+      return Promise.resolve(
+        okResponse({ total: GENRE_LESS.length, movies: GENRE_LESS })
+      );
     }
     if (url.includes('/favorite')) {
       return Promise.resolve(okResponse({ value: true }));
@@ -2201,5 +2213,30 @@ describe('App: the launch on the Start tab', () => {
     ).toBeDefined();
     expect(pathname()).toBe('/');
     expect(search()).toBe('?tab=series');
+  });
+});
+
+/**
+ * 51 — Library audit, phase 17: "the Other movies page" (issue #460). The
+ * Other row's View all lands on the Genre page in its `other` mode.
+ */
+describe('App — the Other movies page at /genre-less', () => {
+  it('draws Other movies over the grid of every genre-less film', async () => {
+    renderApp('/genre-less');
+
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Other movies' })
+    ).toBeDefined();
+    await screen.findByText('3 titles');
+    expect(screen.getByRole('button', { name: 'Untagged One' })).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Untagged Two' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Untagged Three' })
+    ).toBeDefined();
+    expect(
+      fetchMock.mock.calls.some(([input]) =>
+        String(input).includes('/api/genre-less')
+      )
+    ).toBe(true);
   });
 });

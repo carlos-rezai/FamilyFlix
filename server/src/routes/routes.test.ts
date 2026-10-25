@@ -33,6 +33,8 @@
 // line count.
 
 import express from 'express';
+import Database from 'better-sqlite3';
+import { randomUUID } from 'node:crypto';
 import type { AddressInfo } from 'node:net';
 import type { Server } from 'node:http';
 import {
@@ -120,14 +122,14 @@ afterEach(async () => {
  */
 function freshApi(
   component: PlaybackComponent | null = null,
-  seam: (mediaPath: string) => Media = createMedia
+  seam: (mediaPath: string) => Media = createMedia,
+  storage: LibraryStorage = createSqliteStorage(':memory:')
 ): {
   storage: LibraryStorage;
   baseUrl: string;
   media: string;
   outside: string;
 } {
-  const storage = createSqliteStorage(':memory:');
   storages.push(storage);
 
   const root = sandboxRoot('familyflix-api-');
@@ -1771,6 +1773,86 @@ function postRating(baseUrl: string, id: string, body: unknown) {
     body: JSON.stringify(body),
   });
 }
+
+// --- 51 — Library audit, phase 17: "the Other movies page" (issue #460) -------
+
+/** `GET /api/genre-less`, checked for a 200 and parsed. */
+async function getGenreLessPayload(
+  baseUrl: string
+): Promise<{ total: number; movies: Movie[] }> {
+  const response = await fetch(`${baseUrl}/api/genre-less`);
+  expect(response.status).toBe(200);
+  return (await response.json()) as { total: number; movies: Movie[] };
+}
+
+/**
+ * A library whose genre table holds one named _Other_, which the seeded pool
+ * does not: written straight into the file between two opens, the way a
+ * genre the pool never had would arrive.
+ */
+function storageWithAnOtherGenre(): LibraryStorage {
+  const path = join(sandboxRoot('familyflix-other-'), 'library.db');
+  createSqliteStorage(path).close();
+  const db = new Database(path);
+  db.prepare('INSERT INTO genres (id, name) VALUES (?, ?)').run(
+    randomUUID(),
+    'Other'
+  );
+  db.close();
+  return createSqliteStorage(path);
+}
+
+describe('GET /api/genre-less', () => {
+  it('answers every film with no genre, uncapped', async () => {
+    const { storage, baseUrl } = freshApi();
+    for (let n = 1; n <= 20; n += 1) {
+      storage.addMovie({
+        title: `Loose ${String(n).padStart(2, '0')}`,
+        videoPath: `Loose ${n}/loose-${n}.mkv`,
+      });
+    }
+    storage.addMovie({
+      title: 'Weepie',
+      videoPath: 'Weepie (2020)/weepie.mkv',
+      genres: ['Drama'],
+    });
+
+    const payload = await getGenreLessPayload(baseUrl);
+
+    // The Other row caps at fifteen; this is its View all, so the other five
+    // are reachable here or nowhere.
+    expect(payload.movies).toHaveLength(20);
+    expect(payload.total).toBe(20);
+    expect(payload.movies.map((m) => m.title)).not.toContain('Weepie');
+    expect(payload.movies.every((m) => m.genres.length === 0)).toBe(true);
+  });
+
+  it('leaves a genre named Other on its own /genre/:name page', async () => {
+    const { storage, baseUrl } = freshApi(
+      null,
+      createMedia,
+      storageWithAnOtherGenre()
+    );
+    storage.addMovie({
+      title: 'Filed Under Other',
+      videoPath: 'Filed (2020)/filed.mkv',
+      genres: ['Other'],
+    });
+    storage.addMovie({
+      title: 'Untagged',
+      videoPath: 'Untagged (2021)/untagged.mkv',
+    });
+
+    const genre = await getGenrePayload(baseUrl, 'Other');
+    const genreLess = await getGenreLessPayload(baseUrl);
+
+    // A genre that happens to be spelled "Other" is a genre like any other,
+    // not the genre-less films.
+    expect(genre.genre).toBe('Other');
+    expect(genre.movies.map((m) => m.title)).toEqual(['Filed Under Other']);
+    expect(genreLess.movies.map((m) => m.title)).toEqual(['Untagged']);
+  });
+});
 
 /**
  * The titles the library holds, in the order `sort` gives them — read at the
