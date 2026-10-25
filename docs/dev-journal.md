@@ -11,6 +11,137 @@ Newest entry first.
 
 ---
 
+## 2026-10-25: Library audit, the refactor (issue 472)
+
+Twenty-six commits against
+`docs/refactor-plans/51-library-audit-refactor.md`, one per plan commit, the
+initiative's closing round. **11048 tests pass across 681 files**, against
+11033 across 678 at the end of the build (`f9a0adf0`): three new suites
+(`heldByVideo`, `leftOutEntries`, `useImageFallback`, four cases each), seven
+new cases (one in the importer's `foundAgain`, two in `browse`, one in
+`routes.test`, three in the page dialogs' `recycle` suites), and four cases
+gone that asserted only `episodeCount` or `hasPoster`. `tsc -b --force` is
+clean. `eslint src server electron` reports one error and 148 warnings,
+against one and 162: the 14 this initiative added are gone.
+
+### What shipped
+
+Log 51's step 34 and its follow-up: the prototype revisions (444 to 446), the
+build slices 447 to 461, the follow-up 467 to 470, and 464, found on the
+walk. A rescan never doubles a title: the **Held video** rule second in
+**Already in library**, the **Missing video** rule third, the **Title key**
+passing over a missing film. A plain Delete keeps the files and records
+**Left-out videos**; the **Recycle choice** sends `?files=trash`, and a
+shared video is never trashed; _Bring back_ forgets a folder's entries. The
+wider **Season folder** rule and the Dutch **Episode word**, both sides of
+the drift guard. The **Other row** and `/genre-less`. A film whose file has
+gone is **Found again**. A poster or still that fails to load falls back.
+
+### What each group changed
+
+- **Group 1, one name per rule** (`fbd6e1a8`, `67ba6eca`, `148b09bf`,
+  `0fcdb615`, `d27800e9`). `HeldTitle` is the one holder type, exported by
+  `library/holding`; `heldByVideo` in `import-export/` is the one Held video
+  rule over a list, and `heldFilm` reads `heldByVideo`, `heldByMissingVideo`,
+  `heldByKey`. An episode's path inside its show is `sourceFileOf`;
+  `titleVideos` spells a Source file once, by `sourceVideo`, cross-referenced
+  with `holding`'s SQL.
+- **Group 2, the importer reads once** (`ba03bf77`, `316780dd`,
+  `db739211`). `heldByKey` reads the run's `missing` map, so a second folder
+  keying to a film found again earlier in the run is Already in library, not
+  a second copy: the round's first behaviour change. `heldFolder(kind, id)`
+  opens Found again's folder; `logUpdated` writes both `✓ Updated` lines.
+- **Group 3, routes that route** (`17b99e73`, `1cad4c12`, `719b0226`).
+  `trashedFirst` has its docblock back; `recycleChoiceFirst` decides the
+  Recycle choice for both Deletes, `files` read through `queryString`;
+  `leftOutEntries` is a unit of `import-export/` with its own suite.
+- **Group 4, the Other row once** (`30e9f4fc`, `9c1e6b32`).
+  `countGenreLess` is one SQL count on the browse slice, the clause shared
+  with `listMovies` as `GENRE_LESS`; _Other movies_ is `GenreMovies`'
+  `OTHER_MOVIES_TITLE`.
+- **Group 5, the page Delete dialogs** (`40a874da`, `17742748`, `7362e3de`,
+  `8db1fc9e`). The detail reads answer the title's **Delete facts**, off the
+  Manage library list, for every title: an unreachable film's page names its
+  path, and a copied film's names its original. The round's second behaviour
+  change. `DeleteSubject` and `DeleteFacts` live in `src/types/`. The dead
+  `episodeCount` and `hasPoster` go; the three hooks require the choice.
+- **Group 6, one image fallback** (`cd4b978b`). `useImageFallback` in
+  `src/hooks/`, the first hook a molecule calls; seven call sites.
+- **Group 7, the form** (`b2f0875f`, `b2c9f2ea`, `30271dd4`, `1400191a`).
+  `ShowFolderRead.unplaced` is `ShowFolderVideo[]`; `numberFoundRows` takes
+  `{ path, inside }` and answers `inside` back, so one `folderSeason` reads
+  both the pick and the Resolve; the Resolve builds by `foundFile`; one
+  `prefillTitle` call.
+- **Group 8, tests, prose and docs** (`b307bc72`, `725ae658`, `1ba0f863` and
+  this commit). The recycle suites lint clean; the initiative's suite
+  headers, `describe` titles and importer docblocks lose their em dashes;
+  migration 15's comment names the Series edit job; the checklist ticks
+  step 34, the README gains _Looking after the library_, the glossary gains
+  **Delete facts**, and CLAUDE.md's **Media** rule says a Delete keeps the
+  files unless asked.
+
+### Where this round left the plan
+
+- **Suites that changed beyond a rename**, each with its reason in the
+  commit: commit 14's two route round-trips now allow the read's added
+  `deleteFacts`; commit 22's pick suite expects the one call's `null`;
+  commit 19 and 20's `numberFoundRows` suite helper follows the signature.
+  Commit 1's `readShowFolder.heldVideo` suite imported the old type name.
+- **`countGenreLess` is on `LibraryStorage` too**: the browse suite reads
+  through storage, as `countMovies`' cases do.
+- **`useImageFallback` takes `string | null | undefined`**: `EpisodeRow` and
+  `SeasonCard` hand an optional url.
+- **A detail read's facts, when absent, read as a copied title with no
+  original**: the views' fallback for a record that did not come off the
+  detail read, as `linkedFiles ?? null` did.
+- **The Resolve's path below its folder** is `formValues`' `insideOf`, the
+  segments after the Problem's folder, so the season rule is one function
+  whichever way a video is found.
+- **Commit 23 dropped the `!`s** rather than guarding: the project does not
+  set `noUncheckedIndexedAccess`, and the suites' older neighbours read
+  `mock.calls[0]` bare.
+- **Commit 24 kept the dashes the initiative only rewrapped** (in
+  `ImportModeChoice`, `episodeTag`, `ImportProgress.test` and an importer
+  docblock): they predate it.
+- **The README had no Library paragraph**, so the shipped story is a new
+  _Looking after the library_ section under How It Works.
+- **One flake**: at commit 23, `routes.enrichment`'s "answers 409 to a second
+  start while one runs" failed once under the full suite; it passed alone
+  three times and in the next full run. The file is untouched by this round.
+- The full suite ran after every commit, green each time; `tsc -b --force`
+  and `eslint` at the end of each group.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the two edits' reserve-or-reuse
+closures, `useDeleteMovie` and `useDeleteSeries` as twins, `reasonOf`
+spelled four times, pluralising by hand, `SeasonChoices`' set of failed
+urls, the _Bring back_ text button's styles, `holding`'s SQL spelling of a
+Source file beside `sourceVideo`, em dashes older than this initiative and
+the household's copy, and everything log 51 put out of scope.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **The routes file's two reserve-or-reuse closures**, in `PATCH
+/movies/:id` and `PATCH /series/:id`.
+- **A shared error-reason helper and a plural helper**, server and client.
+- **A text-button primitive**.
+- **The `routes.enrichment` 409 case under load**, beside the sandbox
+  teardown flake.
+- **From earlier entries**: a shared held-response and player-harness test
+  helper, the repo-wide em dash pass, and the lint error in
+  `EnrichmentReview.test.tsx`.
+
+### The initiative
+
+**Library audit is done**: the prototype revisions (444 to 446), the slices
+(447 to 461, 467 to 470 and 464) and this round (472). Issue 443 is closed
+with it.
+
+---
+
 ## 2026-10-23: Subtitle picker, the refactor (issue 442)
 
 Eleven commits against
