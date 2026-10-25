@@ -76,7 +76,8 @@ when a second feature needs it; no feature imports another's wire.
 
 - **Media:** an import links a video where it lies by default (the **Import
   mode**) or copies it; art and subtitles are always copied. A linked video is
-  played read-only and removed only by a Delete, only to the Recycle Bin.
+  played read-only and kept by a Delete unless the household asks, then
+  only to the Recycle Bin.
 - **Movie form** (`/add`): file fields are manual pickers. In the shell an
   add links by default (a picked video's path read through the **Path
   bridge**, a show taken whole by the **Show folder pick**) and copies a file

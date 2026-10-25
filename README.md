@@ -47,7 +47,11 @@ Movies open in a built-in player with subtitle support. Watched, in-progress, an
 
 ### Browsing
 
-The main screen is genre rows, like a streaming app, with search and filtering on top to find something quickly without scrolling.
+The main screen is genre rows, like a streaming app, with search and filtering on top to find something quickly without scrolling. A film with no genre yet sits in its own _Other movies_ row, so every film is on the home.
+
+### Looking after the library
+
+A rescan never adds a title twice: a video FamilyFlix already plays is known wherever it lies and whatever its folder is now called, and a film whose file has gone missing is found again when a scan meets its file. Season folders are read the way real shows name them (`Season 1`, `Seizoen 1`, `Season 1 (2008)`, a release's `S01` folder, `Specials`), and a show folder pick names each episode by its path inside the show. Deleting a title takes it out of FamilyFlix and leaves its files where they lie, unless you ask for the Recycle Bin, and a file another title plays is never thrown away. A title taken out stays out of every scan until _Bring back_ on its Library folder, or until you add it again by hand. A poster that won't load draws the stand-in.
 
 ---
 
@@ -158,6 +162,8 @@ familyflix/
 │       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key and stamp beside them
 │       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
 │       │   ├── folders/           # the Library folders: the list, its title counts, the remove that keeps the titles, and folderOverlap
+│       │   ├── holding/           # the Held video rule's read: the title a video already belongs to
+│       │   ├── leftOut/           # the Left-out videos a scan skips, and titleVideos, the ones a keep-files Delete records
 │       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf, and yearSpan, the one reading of a Year range
 │       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, into a title's Media folder or a season under it; readStored), subtitle detection, removing a title's Media folder after a delete, space used
 │       │   ├── readableFolder/        # whether a path is a folder the app can read, never throwing
@@ -168,7 +174,7 @@ familyflix/
 │       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   ├── writableFolder/        # whether a folder can be written into, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, heldValues, readShowFolder, listedFolderOf, placeFoundVideo, placeShowFolder, placeFilmFolder, copyFoundEpisodes, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
+│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, heldValues, readShowFolder, listedFolderOf, heldByVideo, placeFoundVideo, leftOutEntries, placeShowFolder, placeFilmFolder, copyFoundEpisodes, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
 │       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
 │       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them; 8 and 9: the Source file an episode and a film remember across scans; 10: season posters); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
@@ -210,7 +216,7 @@ familyflix/
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
 │   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage, CodecsPage and LibraryFoldersPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
-│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, useEnrichmentSummary, and useLibraryTab, the Library tab the URL names)
+│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, useEnrichmentSummary, useLibraryTab, the Library tab the URL names, and useImageFallback, the one failed-url rule for a poster or a still)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks, accentScale, isLibraryTab, libraryTabOptions and inTrackOrder among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
