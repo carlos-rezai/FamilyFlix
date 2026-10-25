@@ -28,7 +28,7 @@ import { noContentResponse } from '@/test-support/fakeResponse/fakeResponse';
  * lists and the callout follow the choice; _Delete movie_ never changes. A
  * `shared` film draws no cards and keeps _Its video file(s), which another
  * title plays_; a copied film and a browser draw no cards. The film's Linked
- * files are handed in as `linkedFiles`, `null` for a copied film.
+ * files are handed in as `deleteFacts`, the detail read's **Delete facts**.
  */
 
 const SHARED_GOES = [
@@ -56,17 +56,25 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Where the film lies, as the detail read's `deleteFacts.path` spells it. */
+const NORTHWIND_PATH = 'D:/Films/Northwind (2004)';
+
 function ui({
   open = true,
   linkedFiles = 'videos',
-}: { open?: boolean; linkedFiles?: LinkedFiles | null } = {}) {
+  originalPath = null,
+}: {
+  open?: boolean;
+  linkedFiles?: LinkedFiles | null;
+  originalPath?: string | null;
+} = {}) {
   return (
     <ThemeProvider theme={theme}>
       <MemoryRouter initialEntries={['/', '/movie/m1']} initialIndex={1}>
         <DeleteMovieDialog
           movieId="m1"
           title="Northwind"
-          linkedFiles={linkedFiles}
+          deleteFacts={{ path: NORTHWIND_PATH, linkedFiles, originalPath }}
           open={open}
           onClose={() => undefined}
         />
@@ -185,6 +193,26 @@ describe('DeleteMovieDialog — the Recycle choice, in the shell', () => {
     expect(itemsOf('What goes')).toEqual([
       ...SHARED_GOES,
       'FamilyFlix’s copy of its video and subtitles',
+    ]);
+  });
+});
+
+describe('DeleteMovieDialog: the Delete facts, as Manage library reads them', () => {
+  it('names an unreachable linked film’s path under What stays', () => {
+    render(ui({ linkedFiles: 'unreachable' }));
+
+    expect(itemsOf('What stays')).toEqual([
+      `Its files on ${NORTHWIND_PATH} — they can’t be reached right now`,
+    ]);
+  });
+
+  it('keeps a copied film’s original under What stays', () => {
+    render(
+      ui({ linkedFiles: null, originalPath: 'D:/Films/Northwind (2004)' })
+    );
+
+    expect(itemsOf('What stays')).toEqual([
+      'Your original in its library folder — Scan folders would bring it back',
     ]);
   });
 });

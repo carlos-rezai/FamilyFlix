@@ -68,7 +68,7 @@ function renderDialog({
         <DeleteMovieDialog
           movieId="m1"
           title={title}
-          linkedFiles={linkedFiles}
+          deleteFacts={{ path: '', linkedFiles, originalPath: null }}
           open={open}
           onClose={onClose}
         />
@@ -267,7 +267,11 @@ function renderFromShelf() {
               <DeleteMovieDialog
                 movieId="m1"
                 title="Northwind"
-                linkedFiles={null}
+                deleteFacts={{
+                  path: '',
+                  linkedFiles: null,
+                  originalPath: null,
+                }}
                 open
                 onClose={() => undefined}
               />
@@ -315,7 +319,7 @@ function Host() {
       <DeleteMovieDialog
         movieId="m1"
         title="Northwind"
-        linkedFiles={null}
+        deleteFacts={{ path: '', linkedFiles: null, originalPath: null }}
         open={open}
         onClose={() => setOpen(false)}
       />

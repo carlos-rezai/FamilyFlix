@@ -77,7 +77,7 @@ function renderDialog({
                 seriesId="ftd"
                 title={title}
                 episodeCount={episodeCount}
-                linkedFiles={linkedFiles}
+                deleteFacts={{ path: '', linkedFiles, originalPath: null }}
                 open={open}
                 onClose={onClose}
               />

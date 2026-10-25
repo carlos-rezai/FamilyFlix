@@ -5,7 +5,7 @@
  * them (see `docs/handoff/COMPONENT-SPEC.md` §5).
  */
 
-import type { LinkedFiles } from './libraryTitles';
+import type { DeleteFacts } from './libraryTitles';
 
 /**
  * The view model a `PosterCard` renders from — a `Movie` flattened to exactly
@@ -116,8 +116,8 @@ export interface MovieDetailModel {
    * draws no poster; `null` when there is neither a genre nor a year.
    */
   topTag: string | null;
-  /** Its **Linked files**, `null` for a copied film: what the Delete dialog tells. */
-  linkedFiles: LinkedFiles | null;
+  /** Its **Delete facts**: what the Delete dialog tells. */
+  deleteFacts: DeleteFacts;
 }
 
 /**
@@ -237,8 +237,8 @@ export interface SeriesPageModel {
   topTag: string | null;
   /** The series' heart. */
   isFavorite: boolean;
-  /** Its **Linked files**, `null` for a copied show: what the Delete dialog tells. */
-  linkedFiles: LinkedFiles | null;
+  /** Its **Delete facts**: what the Delete dialog tells. */
+  deleteFacts: DeleteFacts;
   /** The Seasons grid, one card per season in order. */
   seasons: SeasonCardSeason[];
 }

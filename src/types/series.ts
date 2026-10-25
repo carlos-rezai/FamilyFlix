@@ -6,7 +6,7 @@
  * `season` number on its episodes.
  */
 import type { Genre, Subtitle, WatchStatus } from './movie';
-import type { LinkedFiles } from './libraryTitles';
+import type { DeleteFacts } from './libraryTitles';
 import type { NewSubtitle } from './write';
 
 /** The fully-assembled series model returned by repository reads. */
@@ -100,10 +100,10 @@ export interface SeriesDetail {
   /** The series' **Next episode** across every season; `null` for none. */
   next: Episode | null;
   /**
-   * Its **Linked files**, `null` for a copied show: answered by the route,
-   * `GET /api/series/:id`, for its Delete dialog; absent on the storage read.
+   * Its **Delete facts**: answered by the route, `GET /api/series/:id`, for
+   * its Delete dialog; absent on the storage read.
    */
-  linkedFiles?: LinkedFiles | null;
+  deleteFacts?: DeleteFacts;
 }
 
 /** A series as the library is given it; everything but the title optional. */

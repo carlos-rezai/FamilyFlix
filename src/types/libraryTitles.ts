@@ -50,6 +50,18 @@ export type LibraryTitle =
       episodes: number;
     });
 
+/**
+ * A title's **Delete facts**: what its **Delete dialog** reads to say what
+ * goes and what stays, the Manage library list's and a detail read's alike.
+ */
+export type DeleteFacts = Pick<
+  LibraryTitle,
+  'path' | 'linkedFiles' | 'originalPath'
+>;
+
+/** What `deleteView` reads off a title: a **Library title**'s, or a page's. */
+export type DeleteSubject = Pick<LibraryTitle, 'kind' | 'title'> & DeleteFacts;
+
 /** A film **Library title**, the Movies tab's row. */
 export type LibraryMovieTitle = Extract<LibraryTitle, { kind: 'movie' }>;
 

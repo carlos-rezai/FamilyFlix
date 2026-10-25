@@ -98,6 +98,7 @@ import {
   DEFAULT_MOVIE_SORT,
   LIBRARY_TABS,
   MOVIE_SORTS,
+  type DeleteFacts,
   type EpisodeRead,
   type ExportField,
   type ExportResult,
@@ -107,7 +108,6 @@ import {
   type LibraryFolderView,
   type LibraryQuery,
   type LibraryTab,
-  type LinkedFiles,
   type Movie,
   type MovieSort,
   type NewEpisode,
@@ -774,17 +774,25 @@ export function createApiRouter(
   router.use(express.json());
 
   /**
-   * One title's **Linked files** kind, for its detail read's Delete dialog,
-   * as the Manage library list reads it now; `null` for a copied title.
+   * One title's **Delete facts**, for its detail read's Delete dialog, off
+   * the Manage library list as it reads them now, copied titles too; absent
+   * for an id the list does not hold.
    */
-  async function linkedFilesOf(
+  async function deleteFactsOf(
     kind: 'movie' | 'series',
     id: string
-  ): Promise<LinkedFiles | null> {
-    return (
-      (await libraryTitleList(storage, mediaPath)).linkedFilesOf(kind, id)
-        ?.kind ?? null
+  ): Promise<DeleteFacts | undefined> {
+    const { titles } = await libraryTitleList(storage, mediaPath);
+    const title = (kind === 'movie' ? titles.movies : titles.series).find(
+      (entry) => entry.id === id
     );
+    return title === undefined
+      ? undefined
+      : {
+          path: title.path,
+          linkedFiles: title.linkedFiles,
+          originalPath: title.originalPath,
+        };
   }
 
   /**
@@ -958,17 +966,9 @@ export function createApiRouter(
         res.status(404).json({ error: `Unknown series: ${req.params.id}` });
         return;
       }
-      const linked = detail.seasons.some((season) =>
-        season.episodes.some((episode) => episode.videoFolderId !== null)
-      );
-      // A copied show reads as it is stored; `linkedFiles` absent is `null`.
-      if (!linked) {
-        res.json(detail);
-        return;
-      }
       const answer: SeriesDetail = {
         ...detail,
-        linkedFiles: await linkedFilesOf('series', detail.series.id),
+        deleteFacts: await deleteFactsOf('series', detail.series.id),
       };
       res.json(answer);
     }
@@ -1492,15 +1492,9 @@ export function createApiRouter(
       if (!movie) {
         return;
       }
-
-      // A copied film reads as it is stored; `linkedFiles` absent is `null`.
-      if (movie.videoFolderId === null) {
-        res.json(movie);
-        return;
-      }
       const answer: Movie = {
         ...movie,
-        linkedFiles: await linkedFilesOf('movie', movie.id),
+        deleteFacts: await deleteFactsOf('movie', movie.id),
       };
       res.json(answer);
     }

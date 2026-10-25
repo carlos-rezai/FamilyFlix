@@ -474,6 +474,25 @@ describe('GET /api/movies/:id', () => {
     expect(movie.status).toBe('in-progress');
   });
 
+  // 51, Library audit, refactor (issue #472): the page's Delete dialog reads
+  // the Delete facts Manage library reads, for a copied film too.
+  it('answers a copied film’s Delete facts, its original in a Library folder', async () => {
+    const { storage, baseUrl, media, outside } = freshApi();
+    const stored = addFullMovie(storage);
+    const folder = storage.addLibraryFolder(outside);
+    storage.setSourceFolder(stored.id, folder.id, 'The Quiet Harbor (2016)');
+
+    const response = await fetch(`${baseUrl}/api/movies/${stored.id}`);
+
+    expect(response.status).toBe(200);
+    const movie = (await response.json()) as Movie;
+    expect(movie.deleteFacts).toEqual({
+      path: join(media, 'The Quiet Harbor (2016)'),
+      linkedFiles: null,
+      originalPath: join(outside, 'The Quiet Harbor (2016)'),
+    });
+  });
+
   it('answers 404 with an error body for an unknown id', async () => {
     const { baseUrl } = freshApi();
 
@@ -3758,7 +3777,11 @@ describe('POST /api/movies', () => {
 
     const response = await fetch(`${baseUrl}/api/movies/${created.id}`);
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual(created);
+    // The detail read adds the Delete dialog's facts to the stored movie.
+    expect(await response.json()).toEqual({
+      ...created,
+      deleteFacts: expect.any(Object),
+    });
   });
 
   it('accepts a title with no year at all', async () => {
@@ -5617,7 +5640,11 @@ describe('PATCH /api/movies/:id — a body with no video', () => {
     expect(refused.status).toBe(400);
 
     const read = await fetch(`${baseUrl}/api/movies/${movie.id}`);
-    expect(await read.json()).toEqual(movie);
+    // The detail read adds the Delete dialog's facts to the stored movie.
+    expect(await read.json()).toEqual({
+      ...movie,
+      deleteFacts: expect.any(Object),
+    });
     expect(folderContents(media, KEEPER_FOLDER)).toEqual(before);
     expect(folders(media)).toEqual([KEEPER_FOLDER]);
   });

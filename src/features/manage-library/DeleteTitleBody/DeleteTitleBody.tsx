@@ -3,12 +3,11 @@ import { useState } from 'react';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { ChoiceCard } from '@/components';
 import { Button } from '@/primitives';
-import type { DeleteFiles } from '@/types';
+import type { DeleteFiles, DeleteSubject } from '@/types';
 
 import {
   deleteView,
   offersRecycleChoice,
-  type DeleteSubject,
 } from '../libraryTitleView/libraryTitleView';
 import { GoesAndStays } from '../GoesAndStays/GoesAndStays';
 import { Actions } from '../titleDialog.styles';

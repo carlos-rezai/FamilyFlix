@@ -28,7 +28,7 @@ import { noContentResponse } from '@/test-support/fakeResponse/fakeResponse';
  * the callout), the only card that sends `?files=trash`. _Delete series_
  * never changes. A `shared` show draws no cards and keeps _Its video
  * file(s), which another title plays_; a copied show and a browser draw no
- * cards. The show's Linked files are handed in as `linkedFiles`.
+ * cards. The show's **Delete facts** are handed in as `deleteFacts`.
  */
 
 const SHARED_GOES = [
@@ -56,6 +56,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Where the show lies, as the detail read's `deleteFacts.path` spells it. */
+const BLUEY_PATH = 'D:/Shows/Bluey';
+
 function ui({
   open = true,
   linkedFiles = 'folder',
@@ -67,7 +70,7 @@ function ui({
           seriesId="s1"
           title="Bluey"
           episodeCount={24}
-          linkedFiles={linkedFiles}
+          deleteFacts={{ path: BLUEY_PATH, linkedFiles, originalPath: null }}
           open={open}
           onClose={() => undefined}
         />
@@ -184,6 +187,16 @@ describe('DeleteSeriesDialog — the Recycle choice, in the shell', () => {
 
     expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
     expect(itemsOf('What goes')).toEqual(expect.arrayContaining(SHARED_GOES));
+  });
+});
+
+describe('DeleteSeriesDialog: the Delete facts, as Manage library reads them', () => {
+  it('names an unreachable linked show’s path under What stays', () => {
+    render(ui({ linkedFiles: 'unreachable' }));
+
+    expect(itemsOf('What stays')).toEqual([
+      `Its files on ${BLUEY_PATH} — they can’t be reached right now`,
+    ]);
   });
 });
 

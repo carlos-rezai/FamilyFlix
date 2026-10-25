@@ -121,7 +121,7 @@ export function MovieDetail() {
       <EditMenu
         movieId={movie.id}
         title={movie.title}
-        linkedFiles={movie.linkedFiles}
+        deleteFacts={movie.deleteFacts}
       />
 
       <Content>

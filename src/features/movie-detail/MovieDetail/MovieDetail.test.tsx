@@ -1457,7 +1457,7 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
 /**
  * 47 — Manage library, issue #413, on the page: the Delete dialog reads
  * the film's **Linked files** off the record the page already holds (since
- * log 51 Q6 answered by the detail read as `linkedFiles`), and a `409` leaves
+ * log 51 Q6 answered by the detail read, now as `deleteFacts`), and a `409` leaves
  * the page on the film with the route's sentence in the dialog.
  */
 describe('MovieDetail — deleting a linked film', () => {
@@ -1472,11 +1472,15 @@ describe('MovieDetail — deleting a linked film', () => {
     return screen.getByRole('dialog');
   }
 
-  it('lists a linked film’s files from the read’s linkedFiles', async () => {
+  it('lists a linked film’s files from the read’s deleteFacts', async () => {
     serveMovie({
       videoFolderId: 'lf1',
       videoPath: 'Northwind/northwind.mkv',
-      linkedFiles: 'videos',
+      deleteFacts: {
+        path: 'D:/Films/Northwind',
+        linkedFiles: 'videos',
+        originalPath: null,
+      },
     });
     renderDetail();
 

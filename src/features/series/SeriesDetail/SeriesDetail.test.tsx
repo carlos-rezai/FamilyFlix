@@ -890,7 +890,7 @@ describe('SeriesDetail — the Shown rating', () => {
 /**
  * 47 — Manage library, issue #413, on the page: the series' Delete dialog
  * reads the show's **Linked files** off the record the page already holds
- * (since log 51 Q6 answered by the detail read as `linkedFiles`), and a `409`
+ * (since log 51 Q6 answered by the detail read, now as `deleteFacts`), and a `409`
  * leaves the page on the show with the route's sentence in the dialog.
  */
 describe('SeriesDetail — deleting a linked show', () => {
@@ -907,7 +907,14 @@ describe('SeriesDetail — deleting a linked show', () => {
       videoFolderId: 'lf1',
       videoPath: 'Harbor & Vine/S02E12.mkv',
     };
-    return { ...detail, linkedFiles: 'folder' };
+    return {
+      ...detail,
+      deleteFacts: {
+        path: 'D:/Shows/Harbor & Vine',
+        linkedFiles: 'folder',
+        originalPath: null,
+      },
+    };
   }
 
   function openDeleteDialog() {
@@ -916,7 +923,7 @@ describe('SeriesDetail — deleting a linked show', () => {
     return screen.getByRole('dialog', { name: 'Delete “Harbor & Vine”?' });
   }
 
-  it('lists a linked show’s files from the read’s linkedFiles', async () => {
+  it('lists a linked show’s files from the read’s deleteFacts', async () => {
     serve(oneLinkedEpisode());
     renderDetail();
     await findTitle('Harbor & Vine');

@@ -38,7 +38,7 @@ function aMovie(over: Partial<MovieDetailModel> = {}): MovieDetailModel {
     g1: '#000',
     g2: '#111',
     topTag: null,
-    linkedFiles: null,
+    deleteFacts: { path: '', linkedFiles: null, originalPath: null },
     ...over,
   };
 }

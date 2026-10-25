@@ -156,7 +156,9 @@ export type {
 export type { LibraryFolder, LibraryFolderView } from './libraryFolders';
 export { DETAILS_STATES } from './libraryTitles';
 export type {
+  DeleteFacts,
   DeleteFiles,
+  DeleteSubject,
   DetailsState,
   LinkedFiles,
   LibraryMovieTitle,

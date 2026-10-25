@@ -131,6 +131,11 @@ export function detailView(
     g1,
     g2,
     topTag: toTopTag(movie),
-    linkedFiles: movie.linkedFiles ?? null,
+    // Absent off the detail read: told as a copied film with no original.
+    deleteFacts: movie.deleteFacts ?? {
+      path: '',
+      linkedFiles: null,
+      originalPath: null,
+    },
   };
 }

@@ -1,4 +1,9 @@
-import type { DeleteFiles, DetailsState, LibraryTitle } from '@/types';
+import type {
+  DeleteFiles,
+  DeleteSubject,
+  DetailsState,
+  LibraryTitle,
+} from '@/types';
 import {
   enrichPath,
   movieFormPath,
@@ -144,12 +149,6 @@ export interface DeleteView {
   /** The linked callout, on the **Recycle choice**'s second card only. */
   callout: string | null;
 }
-
-/** What `deleteView` reads off a title: a **Library title**'s, or a page's. */
-export type DeleteSubject = Pick<
-  LibraryTitle,
-  'kind' | 'title' | 'path' | 'linkedFiles' | 'originalPath'
->;
 
 const SHARED_GOES = [
   'Its details, poster and artwork',

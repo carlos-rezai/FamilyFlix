@@ -5,7 +5,7 @@
  * it is narrowed for display.
  */
 
-import type { LinkedFiles } from './libraryTitles';
+import type { DeleteFacts } from './libraryTitles';
 import type { StoredVideo } from './series';
 
 /** Three-way watch state, derived from `watched` + `resumePositionSeconds`. */
@@ -56,8 +56,8 @@ export interface Movie extends StoredVideo {
   /** TMDB's score to one decimal — beside the household's rating, never over it. */
   tmdbScore: number | null;
   /**
-   * Its **Linked files**, `null` for a copied film: answered by the detail
-   * read, `GET /api/movies/:id`, for its Delete dialog; absent elsewhere.
+   * Its **Delete facts**: answered by the detail read, `GET /api/movies/:id`,
+   * for its Delete dialog; absent elsewhere.
    */
-  linkedFiles?: LinkedFiles | null;
+  deleteFacts?: DeleteFacts;
 }

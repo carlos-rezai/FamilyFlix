@@ -1,6 +1,6 @@
 import { Modal } from '@/components';
 import { DeleteTitleBody } from '@/features/manage-library/DeleteTitleBody/DeleteTitleBody';
-import type { LinkedFiles } from '@/types';
+import type { DeleteFacts } from '@/types';
 import { useDeleteSeries } from '../useDeleteSeries/useDeleteSeries';
 
 export interface DeleteSeriesDialogProps {
@@ -10,8 +10,8 @@ export interface DeleteSeriesDialogProps {
   title: string;
   /** Every episode it holds; the body's lists don't count them (log 51 Q6). */
   episodeCount: number;
-  /** The show's **Linked files**, `null` for a copied show. */
-  linkedFiles: LinkedFiles | null;
+  /** The show's **Delete facts**, as Manage library reads them. */
+  deleteFacts: DeleteFacts;
   /** Whether the dialog is on screen. Closed, it renders nothing at all. */
   open: boolean;
   /** What Cancel, the ✕, Escape and the scrim ask for. */
@@ -29,7 +29,7 @@ export interface DeleteSeriesDialogProps {
 export function DeleteSeriesDialog({
   seriesId,
   title,
-  linkedFiles,
+  deleteFacts,
   open,
   onClose,
 }: DeleteSeriesDialogProps) {
@@ -44,13 +44,7 @@ export function DeleteSeriesDialog({
       onClose={onClose}
     >
       <DeleteTitleBody
-        title={{
-          kind: 'series',
-          title,
-          path: '',
-          linkedFiles,
-          originalPath: null,
-        }}
+        title={{ kind: 'series', title, ...deleteFacts }}
         deleting={deleting}
         refusal={refusal}
         onConfirm={(files) => {

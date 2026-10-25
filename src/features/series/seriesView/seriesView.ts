@@ -102,7 +102,12 @@ export function seriesView(
     g2,
     topTag: toTopTag(detail, yearLabel),
     isFavorite: series.isFavorite,
-    linkedFiles: detail.linkedFiles ?? null,
+    // Absent off the detail read: told as a copied show with no original.
+    deleteFacts: detail.deleteFacts ?? {
+      path: '',
+      linkedFiles: null,
+      originalPath: null,
+    },
     seasons: seasons.map((season) => ({
       number: season.number,
       episodeCount: season.episodes.length,
