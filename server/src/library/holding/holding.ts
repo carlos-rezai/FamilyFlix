@@ -14,8 +14,9 @@ export interface HoldingRepository {
 export function createHolding(db: SqliteDatabase): HoldingRepository {
   // A film's or an episode's Linked video, then an episode's Source file
   // under its series' Source folder; both spelled with forward slashes, as a
-  // Linked video is. `char(92)` is a backslash. No unique index: a double an
-  // older library holds answers one of its titles.
+  // Linked video is. `char(92)` is a backslash. `titleVideos`' `sourceVideo`
+  // spells the same Source file for the entry it writes. No unique index: a
+  // double an older library holds answers one of its titles.
   const selectHolding = db.prepare(`
     SELECT 'movie' AS kind, id FROM movies
       WHERE video_folder_id = @folderId AND video_path = @videoPath

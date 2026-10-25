@@ -1,12 +1,26 @@
 import { posix } from 'node:path';
 
-import type { LibraryStorage } from '../..';
+import type { LibraryStorage, TitleSource } from '../..';
 import type { LeftOutVideo } from '../leftOut';
 import type { Episode } from '@/types';
 
 type Reads = Pick<LibraryStorage, 'getMovie' | 'listEpisodes' | 'titleSource'>;
 
 const forward = (path: string): string => path.replace(/\\/g, '/');
+
+/**
+ * A **Source folder**'s **Source file** as the **Left-out video** it records:
+ * under the folder's Library folder, joined with forward slashes as a
+ * **Linked video** is spelled. `holding`'s SQL spells the same rule for its
+ * lookup.
+ */
+const sourceVideo = (
+  { folderId, sourceFolder }: TitleSource,
+  file: string
+): LeftOutVideo => ({
+  folderId,
+  videoPath: posix.join(forward(sourceFolder), forward(file)),
+});
 
 /**
  * The **Left-out videos** a keep-files Delete of one title records, read
@@ -21,12 +35,7 @@ export function titleVideos(
 ): LeftOutVideo[] {
   const source = storage.titleSource(id);
   const fromSource = (file: string): LeftOutVideo | null =>
-    source === null
-      ? null
-      : {
-          folderId: source.folderId,
-          videoPath: posix.join(forward(source.sourceFolder), forward(file)),
-        };
+    source === null ? null : sourceVideo(source, file);
 
   if (kind === 'movie') {
     const movie = storage.getMovie(id);
@@ -65,14 +74,6 @@ export function episodeVideos(
     }
     return source === null || episode.sourceFile === null
       ? []
-      : [
-          {
-            folderId: source.folderId,
-            videoPath: posix.join(
-              forward(source.sourceFolder),
-              forward(episode.sourceFile)
-            ),
-          },
-        ];
+      : [sourceVideo(source, episode.sourceFile)];
   });
 }
