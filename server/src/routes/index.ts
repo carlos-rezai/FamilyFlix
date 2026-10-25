@@ -414,6 +414,31 @@ function videoFileOrRefusal(
 }
 
 /**
+ * The **genre query** a genre screen's request carries, `?q=` and `?sort=`:
+ * `q` translated to the domain's `search`, an empty one no filter at all. A sort
+ * this API does not know answers the 400 here and yields `null`.
+ */
+function genreQueryOr400(
+  params: Request['query'],
+  res: Response
+): GenreQuery | null {
+  const sortParam = queryString(params.sort);
+  const sort = parseSort(sortParam);
+  if (sort === null) {
+    res.status(400).json({ error: `Unknown sort: ${sortParam}` });
+    return null;
+  }
+
+  const query: GenreQuery = { sort };
+
+  const search = parseSearch(queryString(params.q));
+  if (search !== undefined) {
+    query.search = search;
+  }
+  return query;
+}
+
+/**
  * The first value of a query parameter, or `undefined` when it is absent.
  * Express parses `?genre=a&genre=b` into an array and nested keys into objects;
  * this route layer only ever means the simple scalar case.
@@ -1447,23 +1472,22 @@ export function createApiRouter(
   router.get(
     '/genre/:name',
     (req: Request<{ name: string }>, res: Response) => {
-      const sortParam = queryString(req.query.sort);
-      const sort = parseSort(sortParam);
-      if (sort === null) {
-        res.status(400).json({ error: `Unknown sort: ${sortParam}` });
-        return;
+      const query = genreQueryOr400(req.query, res);
+      if (query) {
+        res.json(storage.getGenre(req.params.name, query));
       }
-
-      const query: GenreQuery = { sort };
-
-      const search = parseSearch(queryString(req.query.q));
-      if (search !== undefined) {
-        query.search = search;
-      }
-
-      res.json(storage.getGenre(req.params.name, query));
     }
   );
+
+  // The Genre page's `other` mode: every film with no genre, uncapped, since it
+  // is the Other row's _View all_. Its own path, never `/genre/Other`, so a
+  // genre the family names _Other_ keeps its page; the same `?q=` and `?sort=`.
+  router.get('/genre-less', (req: Request, res: Response) => {
+    const query = genreQueryOr400(req.query, res);
+    if (query) {
+      res.json(storage.getGenreLess(query));
+    }
+  });
 
   // One movie by id, for the detail page's URL. The repository already
   // assembles every field that screen renders — synopsis, director, cast,

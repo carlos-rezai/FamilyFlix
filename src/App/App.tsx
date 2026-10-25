@@ -69,6 +69,7 @@ export default function App() {
               <Route path="/series/:id/season/:n" element={<SeasonPage />} />
               <Route path="/add" element={<AddMoviePage />} />
               <Route path="/genre/:name" element={<GenrePage />} />
+              <Route path="/genre-less" element={<GenrePage mode="other" />} />
               <Route path="/settings" element={<SettingsPage />} />
               <Route path="/settings/codecs" element={<CodecsPage />} />
               <Route

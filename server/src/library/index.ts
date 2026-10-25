@@ -219,6 +219,11 @@ export interface LibraryStorage {
    */
   getGenre(name: string, query?: Partial<GenreQuery>): GenrePayload;
   /**
+   * Every film with no genre in full, the Genre page's `other` mode: `getGenre`'s
+   * shape with a blank `genre`, uncapped, `total` the unfiltered count.
+   */
+  getGenreLess(query?: Partial<GenreQuery>): GenrePayload;
+  /**
    * Persist the resume position (seconds into the file), and stamp
    * `last_watched_at` with the current ISO time — this is the call that means
    * "we are watching this", and that stamp is what orders the Continue Watching
@@ -522,6 +527,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     countMovies: browse.countMovies,
     getHome: home.getHome,
     getGenre: genre.getGenre,
+    getGenreLess: genre.getGenreLess,
     setResumePosition: watch.setResumePosition,
     markWatched: watch.markWatched,
     markUnwatched: watch.markUnwatched,

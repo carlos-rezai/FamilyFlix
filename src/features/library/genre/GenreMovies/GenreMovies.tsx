@@ -10,7 +10,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import type { GenrePayload, GenreQuery, PosterCardMovie } from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
-import { fetchGenrePayload } from '../../api/api';
+import { fetchGenreLessPayload, fetchGenrePayload } from '../../api/api';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
@@ -61,8 +61,19 @@ export interface GenreMoviesValue {
 
 const GenreMoviesContext = createContext<GenreMoviesValue | null>(null);
 
+/**
+ * Which screen the Genre page is: one genre named by the path, or the `other`
+ * mode at `/genre-less`, every film with no genre.
+ */
+export type GenrePageMode = 'genre' | 'other';
+
+/** What the `other` mode is headed by: no genre's name, the screen's own. */
+const OTHER_TITLE = 'Other movies';
+
 export interface GenreMoviesProviderProps {
   children: ReactNode;
+  /** `genre` when omitted. */
+  mode?: GenrePageMode;
 }
 
 /**
@@ -87,13 +98,17 @@ export interface GenreMoviesProviderProps {
  * not a contract: `useGenreMovies()` is what consumers read, and nothing about
  * them would change if the value arrived another way.
  */
-export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
+export function GenreMoviesProvider({
+  children,
+  mode = 'genre',
+}: GenreMoviesProviderProps) {
   const { name } = useParams<{ name: string }>();
   const [searchParams] = useSearchParams();
 
   // The name arrives decoded from the router, which is what lets a genre with a
   // space in it ("Science Fiction") survive the round-trip through the URL.
-  const genre = name ?? '';
+  // The `other` mode names no genre, so the heading is its own title.
+  const genre = mode === 'other' ? OTHER_TITLE : (name ?? '');
 
   // The settled query written back out the way the URL spells it — the shared
   // parser's answer, so a stale, hand-edited or hostile URL is made safe here by
@@ -116,10 +131,13 @@ export function GenreMoviesProvider({ children }: GenreMoviesProviderProps) {
   // Which load this is: the genre and the settled query together, since either
   // one changing is a different screen. The name is encoded so that a genre
   // holding a `?` cannot spell the same key as some other genre and query.
-  const key = `${encodeURIComponent(genre)}?${settled}`;
+  const key = `${mode}:${encodeURIComponent(genre)}?${settled}`;
 
   const { status, data, setData, retry } = useBrowseLoad(
-    () => fetchGenrePayload(genre, query),
+    () =>
+      mode === 'other'
+        ? fetchGenreLessPayload(query)
+        : fetchGenrePayload(genre, query),
     key
   );
 

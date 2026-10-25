@@ -8,6 +8,7 @@ import type { Browse } from '../browse/browse';
 /** The genre-page aggregate: one genre in full, in one call. */
 export interface GenreAggregate {
   getGenre(name: string, query?: Partial<GenreQuery>): GenrePayload;
+  getGenreLess(query?: Partial<GenreQuery>): GenrePayload;
 }
 
 /**
@@ -58,5 +59,26 @@ export function createGenre(browse: Browse): GenreAggregate {
     };
   }
 
-  return { getGenre };
+  /**
+   * The Genre page's `other` mode: every film with no genre, uncapped, since it
+   * is the Other row's _View all_. It is asked by flag, never by a name, so a
+   * genre the family spells _Other_ stays its own page. `genre` is blank, the
+   * title being the screen's to draw, and `total` is the unfiltered count.
+   */
+  function getGenreLess(query: Partial<GenreQuery> = {}): GenrePayload {
+    return {
+      genre: '',
+      total: browse.listMovies({
+        sort: DEFAULT_MOVIE_SORT,
+        genreLessOnly: true,
+      }).length,
+      movies: browse.listMovies({
+        ...query,
+        sort: query.sort ?? DEFAULT_MOVIE_SORT,
+        genreLessOnly: true,
+      }),
+    };
+  }
+
+  return { getGenre, getGenreLess };
 }

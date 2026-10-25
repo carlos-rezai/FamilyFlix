@@ -1,4 +1,7 @@
-import { GenreMoviesProvider } from '@/features/library/genre/GenreMovies/GenreMovies';
+import {
+  GenreMoviesProvider,
+  type GenrePageMode,
+} from '@/features/library/genre/GenreMovies/GenreMovies';
 import { GenreHeading } from '@/features/library/genre/GenreHeading/GenreHeading';
 import { GenreGrid } from '@/features/library/genre/GenreGrid/GenreGrid';
 import { GenreControls } from '@/features/search/GenreControls/GenreControls';
@@ -20,9 +23,14 @@ import { GenreLayout } from '@/layouts/GenreLayout/GenreLayout';
  * a search settling or an order being chosen refetches the genre once, and the
  * count line the header prints comes from the same answer the grid did.
  */
-export default function GenrePage() {
+export interface GenrePageProps {
+  /** `other` at `/genre-less`: every film with no genre, under _Other movies_. */
+  mode?: GenrePageMode;
+}
+
+export default function GenrePage({ mode = 'genre' }: GenrePageProps) {
   return (
-    <GenreMoviesProvider>
+    <GenreMoviesProvider mode={mode}>
       <GenreLayout heading={<GenreHeading />} headerEnd={<GenreControls />}>
         <GenreGrid />
       </GenreLayout>

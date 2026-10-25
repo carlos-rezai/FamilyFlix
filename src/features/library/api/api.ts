@@ -81,6 +81,27 @@ export async function fetchGenrePayload(
   return (await response.json()) as GenrePayload;
 }
 
+/** Where the Genre page's `other` mode loads from: never `/api/genre/Other`. */
+const GENRE_LESS_ENDPOINT = '/api/genre-less';
+
+/**
+ * Loads every film with no genre in full, the Genre page's `other` mode:
+ * `fetchGenrePayload`'s shape and parameters with no name in the path. Rejects
+ * if the route answers with anything but a 2xx.
+ */
+export async function fetchGenreLessPayload(
+  query: GenreQuery
+): Promise<GenrePayload> {
+  const search = toGenreQueryParams(query).toString();
+  const url =
+    search === '' ? GENRE_LESS_ENDPOINT : `${GENRE_LESS_ENDPOINT}?${search}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`GET ${GENRE_LESS_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as GenrePayload;
+}
+
 /** The Series tab in one payload: every series, and the episode total. */
 const SERIES_ENDPOINT = '/api/series';
 
