@@ -1267,3 +1267,134 @@ describe('library: getHome pins the continue section’s order', () => {
     );
   });
 });
+
+// --- the Other row -------------------------------------------------------------
+//
+// library-audit, issue #459: every film with no Genre earns the Other row, so a
+// folder scanned with no Sync still shows on the home.
+
+describe('library: getHome Other row', () => {
+  /** `count` genre-less movies, oldest first, titled `Loose 01`…`Loose NN`. */
+  function seedGenreLess(
+    storage: ReturnType<typeof createSqliteStorage>,
+    count: number
+  ): void {
+    seedByAge(storage, count, (label) => ({ title: `Loose ${label}` }));
+  }
+
+  it('holds only the films with no genre', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Tagged', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Untagged' }));
+
+    const { other } = storage.getHome();
+
+    expect(other?.movies.map((m) => m.title)).toEqual(['Untagged']);
+  });
+
+  it('caps at 15 films, newest first', () => {
+    const storage = freshStorage();
+    seedGenreLess(storage, 20);
+
+    const { other } = storage.getHome();
+
+    expect(other?.movies).toHaveLength(15);
+    expect(other?.movies[0].title).toBe('Loose 20');
+    expect(other?.movies[14].title).toBe('Loose 06');
+  });
+
+  it('is narrowed by the search term', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Comic Caper' }));
+    storage.addMovie(newMovie({ title: 'Weepie' }));
+
+    const { other } = storage.getHome({
+      sort: 'recently-added',
+      search: 'comic',
+    });
+
+    expect(other?.movies.map((m) => m.title)).toEqual(['Comic Caper']);
+  });
+
+  it('is narrowed by the rating minimum', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Adored', rating: 9 }));
+    storage.addMovie(newMovie({ title: 'Liked', rating: 4 }));
+    storage.addMovie(newMovie({ title: 'Unrated' }));
+
+    const { other } = storage.getHome({
+      sort: 'recently-added',
+      minRating: 8,
+    });
+
+    expect(other?.movies.map((m) => m.title)).toEqual(['Adored']);
+  });
+
+  it('comes back in the sort the query asked for', () => {
+    const storage = freshStorage();
+    seedGenreLess(storage, 3);
+
+    const { other } = storage.getHome({ sort: 'a-z' });
+
+    expect(other?.movies.map((m) => m.title)).toEqual([
+      'Loose 01',
+      'Loose 02',
+      'Loose 03',
+    ]);
+  });
+
+  it('is null under a genre filter, while that genre’s row is built', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Tagged', genres: ['Drama'] }));
+    storage.addMovie(newMovie({ title: 'Untagged' }));
+
+    const home = storage.getHome({ sort: 'recently-added', genre: 'Drama' });
+
+    expect(home.other).toBeNull();
+    expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
+  });
+
+  it('is null when every film has a genre', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Tagged', genres: ['Drama'] }));
+
+    expect(storage.getHome().other).toBeNull();
+  });
+
+  it('is null when the search leaves no genre-less film', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Weepie' }));
+
+    const { other } = storage.getHome({
+      sort: 'recently-added',
+      search: 'comic',
+    });
+
+    expect(other).toBeNull();
+  });
+
+  it('is null for an empty library, after the rows', () => {
+    const storage = freshStorage();
+
+    const home = storage.getHome();
+
+    expect(home.other).toBeNull();
+    expect(Object.keys(home)).toEqual([
+      'continueWatching',
+      'favorites',
+      'rows',
+      'other',
+    ]);
+  });
+
+  it('writes no genre to the films it holds', () => {
+    const storage = freshStorage();
+    const loose = storage.addMovie(newMovie({ title: 'Untagged' }));
+
+    const { other } = storage.getHome();
+
+    expect(other?.movies.map((m) => m.id)).toEqual([loose.id]);
+    expect(storage.getMovie(loose.id)?.genres).toEqual([]);
+    expect(storage.listGenres()).toEqual([]);
+  });
+});

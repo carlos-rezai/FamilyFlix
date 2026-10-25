@@ -1444,3 +1444,104 @@ describe('HomeRows — TMDB ratings on the cards', () => {
     expect(within(continuing).queryByText('★★★★★')).toBeNull();
   });
 });
+
+describe('HomeRows: the Other row', () => {
+  /**
+   * The genre-less films the home read answers in `other`. Its `genre` is
+   * deliberately blank: the title is this screen's to draw, not the payload's.
+   */
+  const OTHER: HomeRow = {
+    genre: '',
+    count: 2,
+    movies: [
+      makeMovie({ id: 'o1', title: 'Loose Reel', genres: [] }),
+      makeMovie({ id: 'o2', title: 'Attic Tape', genres: [] }),
+    ],
+  };
+
+  /** Serve the home with `rows` and `other`, durably, for this whole test. */
+  function serveWithOther(rows: HomeRow[], other: HomeRow | null) {
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url.includes('/api/home')) {
+        return Promise.resolve(
+          okResponse({ continueWatching: [], favorites: [], rows, other })
+        );
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  }
+
+  it('draws it last, titled Other movies, after every genre row', async () => {
+    serveWithOther(LIBRARY, OTHER);
+
+    renderRows();
+
+    await findGenreHeading('Other movies');
+    const headings = screen
+      .getAllByRole('heading', { level: 2 })
+      .map((heading) => heading.textContent);
+
+    expect(headings).toEqual(['Action', 'Comedy', 'Drama', 'Other movies']);
+  });
+
+  it('holds the genre-less films as cards', async () => {
+    serveWithOther(LIBRARY, OTHER);
+
+    renderRows();
+
+    await findGenreHeading('Other movies');
+    const other = within(screen.getByRole('region', { name: 'Other movies' }));
+    expect(other.getAllByText('Loose Reel').length).toBeGreaterThan(0);
+    expect(other.getAllByText('Attic Tape').length).toBeGreaterThan(0);
+  });
+
+  it('opens /genre-less from its View all', async () => {
+    serveWithOther(LIBRARY, OTHER);
+
+    renderRows();
+
+    await findGenreHeading('Other movies');
+    fireEvent.click(
+      within(screen.getByRole('region', { name: 'Other movies' })).getByRole(
+        'button',
+        { name: /view all/i }
+      )
+    );
+    await act(async () => undefined);
+
+    expect(pathname()).toBe('/genre-less');
+  });
+
+  it('shows a library of only genre-less films instead of calling it empty', async () => {
+    serveWithOther([], OTHER);
+
+    renderRows();
+
+    expect(await findGenreHeading('Other movies')).toBeDefined();
+    expect(screen.queryByText(/your library is empty/i)).toBeNull();
+  });
+
+  it('shows the row, not the miss, when a search matched only genre-less films', async () => {
+    serveWithOther([], OTHER);
+
+    renderRows('/?q=loose');
+
+    expect(await findGenreHeading('Other movies')).toBeDefined();
+    expect(screen.queryByText(/nothing here/i)).toBeNull();
+  });
+
+  it('draws the row for a payload holding one, and nothing for null', async () => {
+    serveWithOther(LIBRARY, OTHER);
+    const first = renderRows();
+    expect(await findGenreHeading('Other movies')).toBeDefined();
+    first.unmount();
+
+    serveWithOther(LIBRARY, null);
+    renderRows();
+
+    await findGenreHeading('Action');
+    expect(screen.queryByRole('heading', { name: 'Other movies' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Other movies' })).toBeNull();
+  });
+});
