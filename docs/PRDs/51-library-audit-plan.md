@@ -15,7 +15,10 @@ folder** and **Episode word** readings, a Show folder pick that reads right, the
 ## Running the phases
 
 **Phases 1 to 18 are AFK and run under `issue-loop`, in order. Phase 19 is
-HITL.**
+HITL.** The follow-up (log 51, _Follow-up: issues 463, 465 and 466_) adds
+phases 20 to 23, AFK and in order, and phase 24, HITL. Its slices 10 to 13
+are phases 20 to 23; phase 24 walks them on the real library, as phase 19
+did; its slice 14 (the docs, then the refactor) is not a phase.
 
 - The prototype already lives in `docs/handoff/`, so amending it needs no
   Claude Design round. Its revision is phases 1 to 3, and lands before any
@@ -75,7 +78,15 @@ ReadonlySet<string>`, `clearLeftOut(entries)`, `bringBack(folderId):
 number`; entries are `{ folderId, videoPath }`.
   - **Already in library** runs in order: folder on record, the **Held
     video** rule, the title key. A match by held video records the folder with
-    `setSourceFolder`.
+    `setSourceFolder`. The follow-up puts the **Missing video** rule third,
+    before the title key, and the title key passes over a film whose video
+    is a **Missing video** (`playback.videoFile` answers `missing`) wherever
+    a found video is at stake. A missing film the folder on record or the
+    Missing video rule finds is **Found again**.
+  - `MoviePatch.mediaFolder?: string` (`src/types/write.ts`) and
+    `SeriesEdit.mediaFolder?: string` (the series write): an edit records a
+    folder it reserved. `ImportRun.found` is the folders the walk has gone
+    through so far, ending at the found line's M.
   - `LinkedFiles` in `src/types` is `'folder' | 'videos' | 'shared' |
 'unreachable'`. `videos` never holds a path another held title links.
   - `LibraryFolderView.leftOut: number`; `HomePayload.other: HomeRow | null`.
@@ -93,7 +104,9 @@ number`; entries are `{ folderId, videoPath }`.
   line is _· Left out N videos you deleted earlier_; the Folder row reads
   _N videos left out_ with _Bring back_; the row title is _Other movies_; the
   tallies are _Found N titles across M folders_ and _Scan complete: N
-  imported_; the Import mode heading is _Link or copy_.
+  imported_; the Import mode heading is _Link or copy_. The follow-up's live
+  stat is _Found N folders so far_, and a film found again logs the Sheet
+  fills' `✓ Updated` line naming `video`.
 - **Unchanged throughout**: the whole-folder refusal for a Source folder
   another title lies in; a copied title's Delete; season `>= 0` on the form
   and the wire; Enrichment as the only network client.
@@ -598,3 +611,117 @@ phase needs a person at the shell.
 - [ ] The four sandbox shapes and the real layout read as their shows.
 - [ ] Every held film is on the Movies home.
 - [ ] Findings, if any, are filed by number.
+
+---
+
+## Phase 20: Every title found
+
+**User stories**: 75, 76
+
+### What to build
+
+`walkListed` counts every film and every show it grouped in _Found N titles
+across M folders_, held or new, and loses its `isHeldShow` parameter. _Scan
+complete: N imported_ is unchanged. `run.found` counts folders by
+`foldersUnder`'s rule as the walk goes (every Source folder and every shelf
+above it, before left-out videos come off), so its last value is M.
+`importView` reads _Found N folders so far_. The prototype already reads so.
+
+### Acceptance criteria
+
+- [ ] A rescan with one held film, one held show that gained an episode and
+      three new titles logs _Found 5 titles_ and _Scan complete: 3 imported_.
+- [ ] `run.found` at the end of the walk equals the found line's M.
+- [ ] The running step reads _Found N folders so far_.
+
+---
+
+## Phase 21: An edit owns its folder
+
+**User stories**: 85 to 87
+
+### What to build
+
+`PATCH /api/movies/:id` and `PATCH /api/series/:id` record a folder they
+reserved as the title's **Media folder** when the edit commits:
+`MoviePatch.mediaFolder` and `SeriesEdit.mediaFolder`, written over a recorded
+folder that is gone. The movie edit's rollback removes a folder it reserved,
+as the series edit's already does, and still removes only its own files from
+a folder it reused.
+
+### Acceptance criteria
+
+- [ ] A movie edit whose recorded folder is gone, with a new poster, records
+      the reserved folder; a Delete afterwards leaves nothing in `media/`.
+- [ ] A refused movie edit that had reserved a folder leaves no new folder.
+- [ ] A series edit whose recorded folder is gone records the one it reserved.
+- [ ] An edit that reuses its recorded folder is unchanged.
+
+---
+
+## Phase 22: A missing film holds by evidence
+
+**User stories**: 77, 78
+
+### What to build
+
+The title key in `heldFilm` passes over a held film whose
+`playback.videoFile` answers `missing`, so the found video is imported. A
+film whose video answers `unreachable` still holds. The folder on record and
+the **Held video** rule are unchanged. A Sheet row with no folder found still
+reaches a missing film by key, for Sheet fills.
+
+### Acceptance criteria
+
+- [ ] A scan beside a held _Guardians of the Galaxy_ whose copied video is
+      gone imports the found `Guardians of the Galaxy.mp4` as a new film.
+- [ ] A held film on an unreadable Library folder still holds by key.
+- [ ] A sheet row with no folder found still fills a missing film.
+
+---
+
+## Phase 23: Found again
+
+**User stories**: 79 to 84
+
+### What to build
+
+The **Missing video** rule sits third in `heldFilm`: a found video no earlier
+rule placed, whose file name is the file name of exactly one held film's
+Missing video (read once per run). When it, or the folder on record, finds a
+film whose video is missing, the film is **Found again**: the found video is
+placed by the run's Import mode (in Copy, into its Media folder, reserved and
+recorded when that is gone, as phase 21 records one), its runtime is derived
+again, its folder is recorded, and only `videoPath`, `videoFolderId`,
+`runtimeMinutes` and, when reserved, `mediaFolder` change. The run logs the
+Sheet fills' `✓ Updated` line naming `video`; nothing is filed in review.
+
+### Acceptance criteria
+
+- [ ] A dead copy `star-wars/The Last Jedi (2017).mp4` is found again by a
+      scan of `Star Wars/The Last Jedi (2017).mp4`, in Link and in Copy; no
+      second film is added.
+- [ ] Its title, rating and watch history are unchanged, and the log holds
+      one `✓ Updated` line naming `video`.
+- [ ] A film whose folder is on record and whose video is gone takes the
+      video found there.
+- [ ] Two missing films of one file name are both left alone.
+
+---
+
+## Phase 24: Walk the follow-up (HITL)
+
+**User stories**: 75 to 87, as a walk
+
+### What to build
+
+Remove the two empty folders in `media/` by hand, then scan `D:\Movies` in
+the shell and edit a title whose folder is gone. Anything that still
+misbehaves is filed as a new issue, not fixed here.
+
+### Acceptance criteria
+
+- [ ] The real _Guardians of the Galaxy_ is imported and plays.
+- [ ] _Star Wars_ plays _The Last Jedi_; no second one is held.
+- [ ] A rescan's _Found N titles_ matches the titles it lists.
+- [ ] No folder in `media/` is left that no title names.
