@@ -103,11 +103,6 @@ export interface MovieDetailModel {
   /** Ready image-route URLs, or `null` → the gradient fallback. */
   posterUrl: string | null;
   backdropUrl: string | null;
-  /**
-   * True when a poster is set; the poster frame's caption is drawn only
-   * without one.
-   */
-  hasPoster: boolean;
   /** The placeholder gradient stops — the same ones the movie's card draws. */
   g1: string;
   g2: string;
@@ -220,11 +215,6 @@ export interface SeriesPageModel {
   /** Ready image-route URLs, or `null` → the gradient fallback. */
   posterUrl: string | null;
   backdropUrl: string | null;
-  /**
-   * True when a poster is set; the poster frame's caption is drawn only
-   * without one.
-   */
-  hasPoster: boolean;
   /** The placeholder gradient stops — the same ones the series' card draws. */
   g1: string;
   g2: string;

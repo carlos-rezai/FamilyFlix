@@ -34,7 +34,6 @@ function aMovie(over: Partial<MovieDetailModel> = {}): MovieDetailModel {
     castText: '—',
     posterUrl: null,
     backdropUrl: null,
-    hasPoster: false,
     g1: '#000',
     g2: '#111',
     topTag: null,

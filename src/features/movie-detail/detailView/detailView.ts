@@ -106,7 +106,6 @@ export function detailView(
   tmdbRatings: boolean
 ): MovieDetailModel {
   const { g1, g2 } = gradientFromId(movie.id);
-  const hasPoster = movie.posterPath !== null;
   const hasDirector = movie.director !== null;
   const hasCast = movie.cast.length > 0;
 
@@ -127,7 +126,6 @@ export function detailView(
     castText: hasCast ? movie.cast.join(', ') : MISSING_CREDIT,
     posterUrl: imageUrl(movie.posterPath),
     backdropUrl: imageUrl(movie.backdropPath),
-    hasPoster,
     g1,
     g2,
     topTag: toTopTag(movie),

@@ -71,7 +71,6 @@ export function seriesView(
   const watched = episodes.filter((episode) => episode.watched).length;
   const hasCreator = series.creator !== null;
   const hasCast = series.cast.length > 0;
-  const hasPoster = series.posterPath !== null;
   const yearLabel = spellYearSpan(series.year, series.endYear);
   const shown = shownRating(series.rating, series.tmdbScore, tmdbRatings);
 
@@ -96,7 +95,6 @@ export function seriesView(
     castText: hasCast ? series.cast.join(', ') : MISSING_CREDIT,
     posterUrl: imageUrl(series.posterPath),
     backdropUrl: imageUrl(series.backdropPath),
-    hasPoster,
     g1,
     g2,
     topTag: toTopTag(detail, yearLabel),

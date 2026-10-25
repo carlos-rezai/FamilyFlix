@@ -335,10 +335,6 @@ describe('detailView — artwork and the gradient fallback', () => {
     expect(vm.g1).toBe(gradientFromId('m1').g1);
     expect(vm.g2).toBe(gradientFromId('m1').g2);
     expect(vm.posterUrl).toContain('/api/images/abc/poster.jpg');
-
-    // And it has a poster: the caption belongs to a film with no poster, not
-    // to one that simply has no backdrop.
-    expect(vm.hasPoster).toBe(true);
   });
 
   it('always carries the deterministic gradient stops its id hashes to — the same ones its card draws', () => {
@@ -419,22 +415,12 @@ describe('detailView — the poster overlay tag', () => {
 });
 
 /**
- * 28 — Default poster, Phase 2 (issue #255): the poster frame's caption
- * follows whether there is a **poster**, not whether there is any art. A film
- * with a backdrop and no poster draws a captioned Default poster in front of
- * the backdrop; real poster art is never captioned.
+ * 28 — Default poster, Phase 2 (issue #255): the top tag is composed whatever
+ * art the film has. Whether the poster frame draws it is the page's to decide,
+ * by the poster url still loadable (issue #464).
  */
-describe('detailView — hasPoster', () => {
-  it('is true when a poster is set', () => {
-    const vm = detailView(
-      makeMovie({ posterPath: 'abc/poster.jpg', backdropPath: null }),
-      false
-    );
-
-    expect(vm.hasPoster).toBe(true);
-  });
-
-  it('is true when both a poster and a backdrop are set, the tag still composed', () => {
+describe('detailView — the top tag, whatever the art', () => {
+  it('is composed when both a poster and a backdrop are set', () => {
     const vm = detailView(
       makeMovie({
         posterPath: 'abc/poster.jpg',
@@ -445,11 +431,10 @@ describe('detailView — hasPoster', () => {
       false
     );
 
-    expect(vm.hasPoster).toBe(true);
     expect(vm.topTag).toBe('Drama · 1994');
   });
 
-  it('is false for a backdrop alone, and the top tag is filled', () => {
+  it('is composed for a backdrop alone', () => {
     const vm = detailView(
       makeMovie({
         posterPath: null,
@@ -460,16 +445,6 @@ describe('detailView — hasPoster', () => {
       false
     );
 
-    expect(vm.hasPoster).toBe(false);
     expect(vm.topTag).toBe('Drama · 1994');
-  });
-
-  it('is false when the record carries neither path', () => {
-    const vm = detailView(
-      makeMovie({ posterPath: null, backdropPath: null }),
-      false
-    );
-
-    expect(vm.hasPoster).toBe(false);
   });
 });
