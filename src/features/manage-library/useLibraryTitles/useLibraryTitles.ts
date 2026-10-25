@@ -27,7 +27,7 @@ export interface LibraryTitlesState {
    * with no re-read; `false` for a refusal or any failure, the list as it
    * was. Never rejects.
    */
-  deleteTitle: (title: LibraryTitle, files?: DeleteFiles) => Promise<boolean>;
+  deleteTitle: (title: LibraryTitle, files: DeleteFiles) => Promise<boolean>;
   /**
    * The route's `409` sentence for `title`, held against the title it
    * answered (`useSubtitles`' "held against the row it came from"): `null`
@@ -117,10 +117,7 @@ export function useLibraryTitles(): LibraryTitlesState {
   );
 
   const deleteTitle = useCallback(
-    async (
-      title: LibraryTitle,
-      files: DeleteFiles = 'keep'
-    ): Promise<boolean> => {
+    async (title: LibraryTitle, files: DeleteFiles): Promise<boolean> => {
       setDeleting(true);
       try {
         const outcome =

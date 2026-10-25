@@ -21,7 +21,7 @@ export interface DeleteSeries {
    * Sends the delete and, once the series is gone, leaves its page. Rejects
    * with the request's own error when the server refused, nothing moved.
    */
-  deleteSeries: (files?: DeleteFiles) => Promise<void>;
+  deleteSeries: (files: DeleteFiles) => Promise<void>;
 }
 
 /**
@@ -35,7 +35,7 @@ export function useDeleteSeries(seriesId: string): DeleteSeries {
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const deleteSeries = useCallback(
-    async (files: DeleteFiles = 'keep') => {
+    async (files: DeleteFiles) => {
       setDeleting(true);
       let outcome;
       try {

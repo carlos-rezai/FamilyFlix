@@ -255,7 +255,7 @@ describe('useLibraryTitles — clearDetails', () => {
 /**
  * 47 — Manage library, Phase 4: "delete a copied title" (issue #410).
  *
- * `deleteTitle(title)` sends the title's delete over the unchanged route —
+ * `deleteTitle(title, 'keep')` sends the title's delete over the unchanged route —
  * `DELETE /api/movies/:id` or `/api/series/:id`, through the shared
  * `deleteMovie` / `deleteSeries` — and on `deleted` takes that row off its
  * list with no re-read, so the tab's count and the summary follow at once.
@@ -273,7 +273,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
 
     expect(writesOf()).toHaveLength(1);
     const [input, init] = writesOf()[0]!;
@@ -287,7 +287,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.series[0]!));
+    await act(() => result.current.deleteTitle(LISTED.series[0]!, 'keep'));
 
     expect(String(writesOf()[0]?.[0])).toBe('/api/series/s1');
   });
@@ -297,7 +297,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
 
     expect(result.current.titles?.movies).toEqual([
       LISTED.movies[0],
@@ -311,7 +311,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.series[0]!));
+    await act(() => result.current.deleteTitle(LISTED.series[0]!, 'keep'));
 
     expect(result.current.titles?.series).toEqual([]);
     expect(result.current.titles?.movies).toEqual(LISTED.movies);
@@ -322,7 +322,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
 
     expect(
       fetchMock.mock.calls.filter(
@@ -340,7 +340,7 @@ describe('useLibraryTitles — deleteTitle', () => {
 
     let pending: Promise<boolean> | undefined;
     act(() => {
-      pending = result.current.deleteTitle(LISTED.movies[1]!);
+      pending = result.current.deleteTitle(LISTED.movies[1]!, 'keep');
     });
     expect(result.current.deleting).toBe(true);
 
@@ -358,7 +358,7 @@ describe('useLibraryTitles — deleteTitle', () => {
 
     let deleted: boolean | undefined;
     await act(async () => {
-      deleted = await result.current.deleteTitle(LISTED.movies[1]!);
+      deleted = await result.current.deleteTitle(LISTED.movies[1]!, 'keep');
     });
 
     expect(deleted).toBe(true);
@@ -374,7 +374,7 @@ describe('useLibraryTitles — deleteTitle', () => {
 
       let deleted: boolean | undefined;
       await act(async () => {
-        deleted = await result.current.deleteTitle(LISTED.movies[1]!);
+        deleted = await result.current.deleteTitle(LISTED.movies[1]!, 'keep');
       });
 
       expect(deleted).toBe(false);
@@ -414,7 +414,7 @@ describe('useLibraryTitles — refusalFor', () => {
 
     let deleted: boolean | undefined;
     await act(async () => {
-      deleted = await result.current.deleteTitle(LISTED.movies[1]!);
+      deleted = await result.current.deleteTitle(LISTED.movies[1]!, 'keep');
     });
 
     expect(deleted).toBe(false);
@@ -428,10 +428,10 @@ describe('useLibraryTitles — refusalFor', () => {
       Promise.resolve(answers.shift() ?? noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
     expect(result.current.refusalFor(LISTED.movies[1]!)).toBe(LOCKED);
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
 
     expect(result.current.refusalFor(LISTED.movies[1]!)).toBeNull();
     expect(result.current.titles?.movies.map((row) => row.id)).toEqual([
@@ -446,8 +446,8 @@ describe('useLibraryTitles — refusalFor', () => {
       Promise.resolve(answers.shift() ?? noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
 
     expect(result.current.refusalFor(LISTED.movies[1]!)).toBe(LOCKED);
   });
@@ -457,7 +457,7 @@ describe('useLibraryTitles — refusalFor', () => {
       Promise.resolve(conflictResponse(NO_SHELL))
     );
 
-    await act(() => result.current.deleteTitle(LISTED.series[0]!));
+    await act(() => result.current.deleteTitle(LISTED.series[0]!, 'keep'));
 
     expect(result.current.refusalFor(LISTED.series[0]!)).toBe(NO_SHELL);
     expect(result.current.titles?.series).toEqual(LISTED.series);
@@ -468,7 +468,7 @@ describe('useLibraryTitles — refusalFor', () => {
       Promise.resolve(conflictResponse(NO_SHELL))
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
 
     expect(result.current.refusalFor(LISTED.movies[0]!)).toBeNull();
     expect(result.current.refusalFor(LISTED.series[0]!)).toBeNull();

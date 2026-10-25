@@ -57,7 +57,7 @@ function Screen() {
         // Whether the hook swallows a refusal or rethrows it is the dialog's
         // concern, not this file's; the location is what is asserted here.
         onClick={() => {
-          void Promise.resolve(deleteMovie()).catch(() => undefined);
+          void Promise.resolve(deleteMovie('keep')).catch(() => undefined);
         }}
       >
         Delete movie

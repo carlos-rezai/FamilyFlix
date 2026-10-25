@@ -53,7 +53,7 @@ function Screen() {
       <button
         type="button"
         onClick={() => {
-          void Promise.resolve(deleteSeries()).catch(() => undefined);
+          void Promise.resolve(deleteSeries('keep')).catch(() => undefined);
         }}
       >
         Delete series

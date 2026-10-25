@@ -18,7 +18,7 @@ export interface DeleteMovie {
    * with the request's own error when the server refused, in which case
    * nothing moved.
    */
-  deleteMovie: (files?: DeleteFiles) => Promise<void>;
+  deleteMovie: (files: DeleteFiles) => Promise<void>;
 }
 
 /**
@@ -41,7 +41,7 @@ export function useDeleteMovie(movieId: string): DeleteMovie {
   const [refusal, setRefusal] = useState<string | null>(null);
 
   const deleteMovie = useCallback(
-    async (files: DeleteFiles = 'keep') => {
+    async (files: DeleteFiles) => {
       setDeleting(true);
       let outcome;
       try {
