@@ -1,5 +1,5 @@
 import { readdir } from 'node:fs/promises';
-import { basename, relative, sep } from 'node:path';
+import { basename, relative } from 'node:path';
 
 import { isVideoFilename } from '../../media/fileKinds/fileKinds';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
@@ -13,6 +13,7 @@ import type { HeldTitle } from '../../library/holding/holding';
 import { groupShows, showFolderOf } from '../groupShows/groupShows';
 import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
+import { sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
 import { titleGuess } from '../titleKey/titleKey';
 import type { ShowFolderEpisode, ShowFolderRead } from '@/types';
 
@@ -35,10 +36,6 @@ export interface ShowFolderContext {
   /** The **Held video** rule: the title playing a video, `null` for none. */
   titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
-
-/** A video's path inside the Show folder, spelled with forward slashes. */
-const insideShow = (dir: string, video: string): string =>
-  relative(dir, video).split(sep).join('/');
 
 /**
  * The **Source folders** under a picked folder: the folder itself when
@@ -93,6 +90,8 @@ export async function readShowFolder(
 
   // A picked **Season folder** is read for its own videos, but titled,
   // held-checked and spelled by its Show folder.
+  // The Show folder is each episode's Source folder, so a video's path
+  // inside it is its **Source file**.
   const showFolder = showFolderOf(dir);
   const { shows, films } = groupShows(scans);
   const episodes: ShowFolderEpisode[] = shows
@@ -102,7 +101,7 @@ export async function readShowFolder(
       number: episode.episode,
       title: episode.title,
       video: episode.video,
-      relativePath: insideShow(showFolder, episode.video),
+      relativePath: sourceFileOf(showFolder, episode.video),
       subtitles: episode.subtitles.map(({ path, language }) => ({
         path,
         language,
@@ -139,7 +138,9 @@ export async function readShowFolder(
             )),
       episodes,
       unplaced,
-      unplacedRelative: unplaced.map((video) => insideShow(showFolder, video)),
+      unplacedRelative: unplaced.map((video) =>
+        sourceFileOf(showFolder, video)
+      ),
       straySubtitles: shows.reduce(
         (count, show) => count + show.straySubtitles.length,
         0
