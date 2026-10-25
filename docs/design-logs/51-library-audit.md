@@ -366,3 +366,227 @@ flowchart TD
 - **Out of scope:** Loading states, Scan new folders, cleaning up doubles an
   older library already holds, every language's season word, the Details
   state's reading of a parsed year.
+
+## Follow-up: issues 463, 465 and 466
+
+> **Initiative:** `library-audit` (unchanged)
+> **Parent PRD:** #443 · **Issues:** #463, #465, #466 (closed by this entry)
+
+A second `grill-me` for step 34, held on 2026-10-25 against `154914b`, after
+the build slices and the walk of #462. It is appended, not merged: the
+sections above stay the snapshot they were. The session ran alone, the
+maintainer approving every recommendation in advance and asking, again, that
+the codebase stay consistent with its naming, conventions, patterns and
+architecture. Their brief: _for 463, 465 and 466. these are part of our
+library-audit. after writing a design-log, close these issues. goal is to add
+this as a follow-up to our library-audit feature and do the missing
+request-a-refactor-plan and refactor steps to fully close the feature/epic._
+
+### Background
+
+Walking #462 against the household's real `D:\Movies` turned up three faults
+the build slices left:
+
+- **#463.** Two older records, _Star Wars_ (copied from
+  `Star Wars/The Last Jedi (2017).mp4`) and _Guardians of the Galaxy_ (whose
+  stored video is `Guardians of the Galaxy Vol. 2.mp4`), point at
+  `media/star-wars/` and `media/guardians-of-the-galaxy/`, and neither folder
+  exists. A scan matches the dead _Guardians_ by **Title key**, logs it
+  **Already in library** and never links the real
+  `Guardians of the Galaxy/Guardians of the Galaxy.mp4`; it links _The Last
+  Jedi_ beside the dead _Star Wars_, so that film is held twice.
+- **#465.** `walkListed` adds every film to `found` but only the shows
+  `isHeldShow` calls new, so a rescan of everything held reads _Found 6
+  titles_ beside eleven _Already in library_ lines.
+- **#466.** `media/the-last-jedi-2017/` and
+  `media/guardians-of-the-galaxy-vol-2/` are empty and no title names them;
+  the next _The Last Jedi_ import lands in `the-last-jedi-2017-2/`.
+
+### Problem
+
+A title whose video is gone still counts as held by a guess, so it keeps a
+real video out and leaves a double; a tally counts held films and not held
+shows; and an edit can leave a folder in managed storage that nothing names.
+
+### Questions and Answers
+
+18. **One follow-up or three?** ✅ **One**, appended here, same initiative,
+    three thin slices (_Implementation Plan_ below), then the initiative's
+    `request-refactor-plan` and `refactor`, which close step 34. No new PRD:
+    the slices are filed from this entry under #443. #463, #465 and #466 are
+    closed by it.
+
+#### The tallies (#465)
+
+19. **What does _Found N titles_ count?** ✅ **Every title the walk found,
+    held or new, films and shows alike.** The prototype's Found is the run's
+    whole total, its _Already in library_ lines among them; _Scan complete:
+    N imported_ stays the count of new titles (Q15, unchanged). `walkListed`
+    loses its `isHeldShow` parameter. ❌ Both counting new titles only: the
+    found line is written before any match, and a film's held check would
+    move into the walk. The prototype's line said _movies_; amended here to
+    _titles_ (`FamilyFlix.dc.html`), which Q15 decided and never reached.
+
+20. **And the live stat, _Found N movies so far_?** ✅ **It counts folders
+    and says so: _Found N folders so far_.** `run.found` counts each Source
+    folder as the walk reaches it, so a show of two Season folders read as
+    two _movies_. It becomes the same count as the found line's _across M
+    folders_ (`foldersUnder`'s rule: every Source folder and every shelf
+    above it, the Library folder not), kept as the walk goes, so its last
+    value is M. M is counted before **Left-out videos** come off, since the
+    walk did go through those folders. The prototype already used one
+    number for both and labelled the first _movies_; amended to _folders_.
+
+#### A title whose video is gone (#463)
+
+21. **What is a title whose video is gone?** ✅ A **Missing video**: a held
+    film whose `playback.videoFile` answers `missing`. One that answers
+    `unreachable` (its Library folder offline) is not missing and still
+    holds, as an **Unreachable** folder is skipped, never forgotten.
+
+22. **Does a film with a Missing video keep a found video out?** ✅ **Not by
+    guess.** The **Title key** rule passes over a held film whose video is
+    missing wherever a found video is at stake, so that video is imported
+    and plays (_Guardians of the Galaxy_). The folder on record and the
+    **Held video** rule are evidence and still hold. A **Sheet row** with no
+    folder found still reaches a missing film by key: nothing is placed
+    there, only **Sheet fills**. ❌ Giving the found video to the film the
+    key matched: the household's dead _Guardians of the Galaxy_ is _Vol. 2_,
+    so a guess would give a record the wrong film.
+
+23. **What finds a missing film on evidence?** ✅ **The Missing video
+    rule**, third, before the Title key: a found video no earlier rule
+    placed, whose file name is the file name of exactly one held film's
+    Missing video. A copy keeps its source's name (`copyIn`), so the dead
+    _Star Wars_ (`star-wars/The Last Jedi (2017).mp4`) is the found
+    `Star Wars/The Last Jedi (2017).mp4`, and no double is made. Linked and
+    copied films alike: a moved Linked video keeps its name too. Two
+    missing films of one name answer neither. Read once per run, as
+    `heldFilmsByKey` is. ❌ Episodes: a held episode's number already holds
+    its place, the **Series edit job** picks its file back, and no
+    household show has one.
+
+24. **What does a scan do with a missing film it found?** ✅ **Found
+    again**: when the folder on record or the Missing video rule finds a
+    film whose video is missing, the film takes the found video, placed by
+    the run's **Import mode** (a **Linked video** in Link; in Copy, copied
+    into its **Media folder**, reserved and recorded when that is gone, as
+    Q26 does), its runtime derived again and its folder recorded. Its
+    title, details, rating and watch history are untouched. Logged as the
+    Sheet fills' `✓ Updated` line naming `video`, so the review shows
+    nothing new. ❌ A new Problem kind for missing films: a review row for
+    a repair the scan can make on evidence, and none in the prototype.
+
+#### Folders nothing names (#466)
+
+25. **Which flows leave one?** ✅ **The two edits**, read in the code. The
+    movie edit (`PATCH /api/movies/:id`) and the series edit
+    (`PATCH /api/series/:id`) reserve a folder when the recorded **Media
+    folder** is gone or none is recorded, write into it, and never record
+    it (`updateMovie` takes no folder; the series write fills one only
+    where none is recorded). The movie edit's rollback removes its files
+    and leaves the folder: a refused edit of the dead _Star Wars_ retitled
+    _The Last Jedi_ (2017) is exactly `the-last-jedi-2017/`, and of
+    _Guardians of the Galaxy_ retitled _Vol. 2_,
+    `guardians-of-the-galaxy-vol-2/`. Every add, import and Resolve already
+    removes the folder it reserved (`removeFolder`).
+
+26. **The fix?** ✅ **An edit owns the folder it reserves**: recorded as the
+    title's Media folder on commit (`MoviePatch.mediaFolder`,
+    `SeriesEdit.mediaFolder`), removed by a refused or failed edit (the
+    movie edit's rollback gains the series edit's `reserved` branch). A
+    Delete then removes the folder the files are really in. ❌ Removing a
+    folder when its last file goes: no flow empties a recorded folder but a
+    Delete, which removes it.
+
+27. **The household's two empty folders?** ✅ **Removed by hand** (Settings
+    → Open media folder, log 35). ❌ A sweep of folders no title names, at
+    start or in the **Storage report**: a broad delete in managed storage
+    for two folders, and Q1 already left an older library's tidying to the
+    maintainer.
+
+### Design
+
+- ✅ _Found N titles_ counts every title found; ❌ new titles only.
+- ✅ The live stat counts folders, ending at the found line's M.
+- ✅ A **Missing video** holds by evidence, never by Title key.
+- ✅ The **Missing video** rule, third; **Found again** on evidence;
+  ❌ key-matched repair; ❌ a Problem kind; ❌ episodes.
+- ✅ An edit records and rolls back the folder it reserves; ❌ a sweep.
+
+A found film's video against the **Already in library** rules, in order:
+
+```mermaid
+flowchart TD
+  V[found film video] --> F{folder on record?}
+  F -- yes --> M{its video missing?}
+  M -- no --> A[Already in library]
+  M -- yes --> R[Found again: placed by Import mode, logged Updated video]
+  F -- no --> H{Held video?}
+  H -- yes --> A
+  H -- no --> N{one missing film of this file name?}
+  N -- yes --> R
+  N -- no --> K{Title key and year, video not missing?}
+  K -- yes --> A
+  K -- no --> I[imported]
+```
+
+```ts
+// src/types/write.ts
+export interface MoviePatch {
+  /* … */ mediaFolder?: string;
+}
+// server/src/library/series/write/write.ts
+export interface SeriesEdit {
+  /* … */ mediaFolder?: string;
+}
+// src/types/import.ts
+export interface ImportRun {
+  /* … */
+  /** Folders the walk has gone through so far: the found line's M. */
+  found: number;
+}
+```
+
+| Unit                     | Where                                   | What                                                                     |
+| ------------------------ | --------------------------------------- | ------------------------------------------------------------------------ |
+| `walkListed` (ch.)       | `import-export/createImporter/`         | every title in _Found_; `found` kept by `foldersUnder`'s rule as it goes |
+| `heldFilm` (ch.)         | `import-export/createImporter/`         | the Missing video rule third; the key passes over a missing film         |
+| `importMatch` area (ch.) | `import-export/createImporter/`         | **Found again**: place, derive, record, log `✓ Updated` naming `video`   |
+| `importView` (ch.)       | `features/import-export/importView/`    | _Found N folders so far_                                                 |
+| movie edit (ch.)         | `routes/index.ts`, `library/write/`     | `mediaFolder` recorded on commit; a reserved folder rolled back          |
+| series edit (ch.)        | `routes/index.ts`, `library/series/...` | `mediaFolder` recorded on commit, replacing a dead one                   |
+
+### Implementation Plan
+
+Numbered on from the slices above.
+
+10. **Every title found.** Held shows count in _Found N titles_; the live
+    stat reads _Found N folders so far_ and ends at M: a rescan of
+    everything held reads as many titles as it lists.
+11. **An edit owns its folder.** The movie edit's rollback removes a folder
+    it reserved; both edits record one on commit: a refused edit of a title
+    whose folder is gone leaves nothing in `media/`.
+12. **A missing film holds by evidence.** The Title key passes over a
+    Missing video: a scan beside the dead _Guardians_ imports the real one.
+13. **Found again.** The Missing video rule and the folder on record give a
+    missing film the found video in either Import mode: a scan beside the
+    dead _Star Wars_ makes no double.
+14. **Close step 34.** The documents of Q17 for this entry (the glossary is
+    written with it), then `request-refactor-plan` and `refactor` for
+    `library-audit`; only then is step 34 ticked.
+
+### Trade-offs
+
+- **Easier:** the found line and the live stat say what they count; a dead
+  record never keeps a real film out and is mended where the evidence is;
+  nothing an edit writes into `media/` is left unnamed.
+- **Harder:** a scan reads the held films' videos once per run to know
+  which are missing, so the key rule now depends on the disk as well as
+  the rows; a missing film whose file had a generic name (`movie.mp4`) can
+  be given the wrong file by the Missing video rule (logged, and the
+  **Movie form** edit picks the right one).
+- **Out of scope:** a missing episode; a sweep of folders nothing names; a
+  missing film no evidence reaches (no folder on record, its file renamed),
+  which stays the maintainer's to delete, as Q1 left an older library's
+  doubles.
