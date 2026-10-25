@@ -36,6 +36,7 @@ const PATCH_SCALARS: ReadonlyArray<{
   { key: 'videoFolderId', column: 'video_folder_id' },
   { key: 'posterPath', column: 'poster_path' },
   { key: 'backdropPath', column: 'backdrop_path' },
+  { key: 'mediaFolder', column: 'media_folder' },
 ];
 
 /** The movie-lifecycle slice: the transactional insert, the all-or-nothing

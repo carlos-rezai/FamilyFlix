@@ -94,6 +94,9 @@ export interface SeriesEdit {
   episodes: EpisodeEdit[];
   /** The seasons whose poster changes; a season left out keeps its own. */
   seasonPosters?: SeasonPosterEdit[];
+  /** A folder the edit reserved over a recorded one that is gone, recorded
+   *  as the series' **Media folder**; omitted, the recorded one stays. */
+  mediaFolder?: string;
 }
 
 /** What a series edit answers: the series now, and the files to clean up. */
@@ -286,6 +289,9 @@ export function createSeriesWrite(
   const clearSeriesMatch = db.prepare(
     'UPDATE series SET tmdb_id = NULL WHERE id = ?'
   );
+  const recordSeriesFolder = db.prepare(
+    'UPDATE series SET media_folder = ? WHERE id = ?'
+  );
   const deleteSeriesGenres = db.prepare(
     'DELETE FROM series_genres WHERE series_id = ?'
   );
@@ -377,6 +383,9 @@ export function createSeriesWrite(
       });
       if (edit.tmdbId === null) {
         clearSeriesMatch.run(id);
+      }
+      if (edit.mediaFolder !== undefined) {
+        recordSeriesFolder.run(edit.mediaFolder, id);
       }
       deleteSeriesGenres.run(id);
       edit.genres.forEach((name, position) => {

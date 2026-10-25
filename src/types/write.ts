@@ -80,4 +80,7 @@ export interface MoviePatch {
   backdropPath?: string | null;
   genres?: string[];
   subtitles?: NewSubtitle[];
+  /** Its **Media folder**: a folder an edit reserved over a recorded one that
+   *  is gone. Server side only, never on the wire. */
+  mediaFolder?: string;
 }

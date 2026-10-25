@@ -1355,6 +1355,7 @@ export function createApiRouter(
                   : {}),
             };
           }),
+          ...(reserved === null ? {} : { mediaFolder: basename(reserved) }),
           // The series' folder is never renamed: a Stored path is as landed.
           seasonPosters: seasonPosterEdits(
             seasonPosters.changes,
@@ -1811,25 +1812,35 @@ export function createApiRouter(
       // the movie's recorded **Media folder**, so renaming a film moves
       // nothing — and only a row with no folder behind it has none to reuse
       // and gets one reserved, exactly as the POST would.
+      // A folder reserved over a recorded one that is gone is recorded as the
+      // movie's when the edit commits, so a later Delete finds it.
+      let reserved: string | null = null;
       const recorded = storage.mediaFolderOf('movie', existing.id);
-      const { onFile, uploads } = collectUploads(
-        media,
-        (before) =>
-          (recorded === null ? null : media.openFolder(recorded)) ??
-          media.reserveFolder(
-            onlyField(before, 'title')?.trim() ?? existing.title,
-            optionalYear(onlyField(before, 'year')) ?? existing.year
-          )
-      );
+      const { onFile, uploads } = collectUploads(media, (before) => {
+        const folder = recorded === null ? null : media.openFolder(recorded);
+        if (folder !== null) {
+          return folder;
+        }
+        reserved = media.reserveFolder(
+          onlyField(before, 'title')?.trim() ?? existing.title,
+          optionalYear(onlyField(before, 'year')) ?? existing.year
+        );
+        return reserved;
+      });
 
       /**
        * Take back the bytes this request put on disk — and nothing beside them.
        *
-       * The POST's rollback removes the folder, because everything in it is
-       * this request's. Here the folder is the movie's own and full of files a
-       * refused edit has no business touching, so the rollback is file by file.
+       * A folder this request reserved is all its own, so it goes whole, as
+       * the POST's does. A reused folder is the movie's own and full of files
+       * a refused edit has no business touching, so that rollback is file by
+       * file.
        */
       const rollback = (): void => {
+        if (reserved !== null) {
+          media.removeFolder(reserved);
+          return;
+        }
         for (const written of [
           uploads.video,
           uploads.poster,
@@ -1930,6 +1941,7 @@ export function createApiRouter(
           videoPath,
           posterPath,
           subtitles,
+          ...(reserved === null ? {} : { mediaFolder: basename(reserved) }),
         });
       } catch {
         // `updateMovie` is transactional, so a throw here has left the row as
