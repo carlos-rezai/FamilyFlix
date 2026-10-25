@@ -854,6 +854,25 @@ export function createApiRouter(
     }
   }
 
+  /**
+   * A Delete's first step, the **Recycle choice**: with `?files=trash` the
+   * title's **Linked files** go to the Recycle Bin first (`trashedFirst`);
+   * anything else keeps the files and records the title's **Left-out
+   * videos**, so a scan won't add it again. `true` to go on.
+   */
+  async function recycleChoiceFirst(
+    kind: 'movie' | 'series',
+    id: string,
+    req: Request<{ id: string }>,
+    res: Response
+  ): Promise<boolean> {
+    if (queryString(req.query.files) === 'trash') {
+      return trashedFirst(kind, id, res);
+    }
+    storage.leaveOut(titleVideos(storage, kind, id));
+    return true;
+  }
+
   // The whole browse home in one request: the in-progress movies, the favorited
   // ones, plus a row per populated genre, alphabetical, each capped at 15
   // movies with the genre's true total. The favorites shelf arrives on this
@@ -994,13 +1013,8 @@ export function createApiRouter(
       if (!series) {
         return;
       }
-      if (req.query.files === 'trash') {
-        if (!(await trashedFirst('series', series.id, res))) {
-          return;
-        }
-      } else {
-        // A keep-files Delete: the videos stay on disk, so a scan skips them.
-        storage.leaveOut(titleVideos(storage, 'series', series.id));
+      if (!(await recycleChoiceFirst('series', series.id, req, res))) {
+        return;
       }
 
       const folder = storage.mediaFolderOf('series', series.id);
@@ -2006,13 +2020,8 @@ export function createApiRouter(
     if (!movie) {
       return;
     }
-    if (req.query.files === 'trash') {
-      if (!(await trashedFirst('movie', movie.id, res))) {
-        return;
-      }
-    } else {
-      // A keep-files Delete: the video stays on disk, so a scan skips it.
-      storage.leaveOut(titleVideos(storage, 'movie', movie.id));
+    if (!(await recycleChoiceFirst('movie', movie.id, req, res))) {
+      return;
     }
 
     const folder = storage.mediaFolderOf('movie', movie.id);
