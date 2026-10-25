@@ -111,7 +111,10 @@ export interface MovieDetailModel {
   /** The placeholder gradient stops — the same ones the movie's card draws. */
   g1: string;
   g2: string;
-  /** The uppercase caption over the gradient; `null` when there is a poster. */
+  /**
+   * The uppercase caption over the Default poster, drawn only when the frame
+   * draws no poster; `null` when there is neither a genre nor a year.
+   */
   topTag: string | null;
   /** Its **Linked files**, `null` for a copied film: what the Delete dialog tells. */
   linkedFiles: LinkedFiles | null;
@@ -227,7 +230,10 @@ export interface SeriesPageModel {
   /** The placeholder gradient stops — the same ones the series' card draws. */
   g1: string;
   g2: string;
-  /** The uppercase caption over the gradient; `null` when there is a poster. */
+  /**
+   * The uppercase caption over the Default poster, drawn only when the frame
+   * draws no poster; `null` when there is neither a genre nor a year.
+   */
   topTag: string | null;
   /** The series' heart. */
   isFavorite: boolean;

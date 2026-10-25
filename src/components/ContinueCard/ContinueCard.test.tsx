@@ -201,17 +201,17 @@ describe('ContinueCard — the poster on the tile', () => {
   it('holds the movie’s poster in its art layer', () => {
     renderCard({ movie: { ...movie, posterUrl: POSTER_URL } });
 
-    expect(window.getComputedStyle(art()).backgroundImage).toContain(
-      POSTER_URL
-    );
+    expect(art().querySelector(`img[src="${POSTER_URL}"]`)).not.toBeNull();
   });
 
   it('crops that poster to the key art, covering the tile at center 25%', () => {
     renderCard({ movie: { ...movie, posterUrl: POSTER_URL } });
 
-    const layer = resolvedStyle(art());
-    expect(layer['background-position']).toBe(normCss('center 25%'));
-    expect(layer['background-size']).toBe('cover');
+    const img = art().querySelector('img');
+    if (img === null) throw new Error('the art layer draws no poster <img>');
+    const poster = resolvedStyle(img);
+    expect(poster['object-position']).toBe(normCss('center 25%'));
+    expect(poster['object-fit']).toBe('cover');
   });
 
   it('draws no Wordmark over a real poster', () => {

@@ -38,13 +38,18 @@ const HEADING_ID = 'enrichment-seasons-heading';
  */
 export function SeasonChoices({ seasons, onChoose }: SeasonChoicesProps) {
   const [picked, setPicked] = useState<Record<number, string>>({});
+  // The held poster urls that failed to load: a held tile whose poster is one
+  // of them draws the gradient alone, as a poster-less tile does.
+  const [failed, setFailed] = useState<ReadonlySet<string>>(new Set());
   if (seasons.length === 0) return null;
 
   return (
     <div role="group" aria-labelledby={HEADING_ID}>
       <GroupHeading id={HEADING_ID}>Seasons</GroupHeading>
       <Cards>
-        {seasons.map(({ season, posterUrl, choices }) => {
+        {seasons.map(({ season, posterUrl: heldUrl, choices }) => {
+          const posterUrl =
+            heldUrl !== null && failed.has(heldUrl) ? null : heldUrl;
           const label = formatEpisodeTag({ season });
           const { g1, g2 } = gradientFromId(label);
           return (
@@ -52,7 +57,17 @@ export function SeasonChoices({ seasons, onChoose }: SeasonChoicesProps) {
               <Picker role="group" aria-label={`Posters for ${label}`}>
                 <Held>
                   <HeldTile>
-                    <HeldArt url={posterUrl} g1={g1} g2={g2} />
+                    <HeldArt
+                      url={posterUrl}
+                      image
+                      g1={g1}
+                      g2={g2}
+                      onError={() =>
+                        setFailed((held) =>
+                          heldUrl === null ? held : new Set(held).add(heldUrl)
+                        )
+                      }
+                    />
                     <Numeral>{label}</Numeral>
                   </HeldTile>
                   <HeldCaption>

@@ -201,7 +201,8 @@ describe('EpisodeRow — the still', () => {
   it('draws the still in the thumbnail when the episode has one', () => {
     renderRow({ episode: { stillUrl: STILL } as Partial<Episode> });
 
-    expect(paints().some((bg) => bg.includes(STILL))).toBe(true);
+    expect(thumbnail().querySelector(`img[src="${STILL}"]`)).not.toBeNull();
+    expect(paints().some((bg) => bg.includes('linear-gradient'))).toBe(true);
   });
 
   it('keeps the resume bar over the still', () => {
@@ -210,7 +211,7 @@ describe('EpisodeRow — the still', () => {
     });
 
     expect(within(thumbnail()).getByRole('progressbar')).toBeDefined();
-    expect(paints().some((bg) => bg.includes(STILL))).toBe(true);
+    expect(thumbnail().querySelector(`img[src="${STILL}"]`)).not.toBeNull();
   });
 });
 

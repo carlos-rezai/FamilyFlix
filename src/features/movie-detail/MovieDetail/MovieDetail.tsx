@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -78,6 +79,9 @@ export function MovieDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const detail = useMovieDetail(id ?? '');
+  // The poster url that failed to load: while it is still the title's, the
+  // frame draws the captioned Default poster as if it had none.
+  const [failedPosterUrl, setFailedPosterUrl] = useState<string | null>(null);
 
   if (detail.status === 'loading') {
     return <LoadingDetail />;
@@ -107,6 +111,8 @@ export function MovieDetail() {
   }
 
   const { movie } = detail;
+  const posterUrl =
+    movie.posterUrl === failedPosterUrl ? null : movie.posterUrl;
 
   return (
     <>
@@ -121,10 +127,17 @@ export function MovieDetail() {
       <Content>
         <PosterColumn>
           <PosterFrame>
-            <Artwork poster url={movie.posterUrl} g1={movie.g1} g2={movie.g2} />
+            <Artwork
+              poster
+              image
+              url={posterUrl}
+              g1={movie.g1}
+              g2={movie.g2}
+              onError={() => setFailedPosterUrl(movie.posterUrl)}
+            />
             {/* Overlays caption the Default poster only — a real poster is
                 never covered by text that duplicates the heading beside it. */}
-            {movie.hasPoster ? null : (
+            {posterUrl ? null : (
               <>
                 {movie.topTag === null ? null : <TopTag>{movie.topTag}</TopTag>}
                 <PosterTitle>{movie.title}</PosterTitle>

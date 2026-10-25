@@ -112,5 +112,7 @@ export const PlayBadge = styled.div`
  * anchor moves — the cover is `Artwork`'s, for every caller.
  */
 export const Art = styled(Artwork)`
-  background-position: center 25%;
+  & > img {
+    object-position: center 25%;
+  }
 `;

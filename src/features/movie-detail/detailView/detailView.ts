@@ -53,17 +53,13 @@ function toPlayLabel(movie: Movie): string {
 }
 
 /**
- * The small uppercase line drawn on the poster. It exists to caption the
- * Default poster, so over a real poster it is not composed at all — it
- * would be text laid on top of the picture it describes. Like the meta line, its
- * separator is generated *between* the halves that survive, so a lone "· 1994"
- * is unrepresentable.
+ * The small uppercase line that captions the Default poster. It is composed
+ * even for a film with a poster, because a poster that fails to load falls
+ * back to the Default poster (issue #464); the page draws it only when the
+ * frame draws no poster. Like the meta line, its separator is generated
+ * *between* the halves that survive, so a lone "· 1994" is unrepresentable.
  */
-function toTopTag(movie: Movie, hasPoster: boolean): string | null {
-  if (hasPoster) {
-    return null;
-  }
-
+function toTopTag(movie: Movie): string | null {
   const parts: string[] = [];
   const [primaryGenre] = movie.genres;
 
@@ -134,7 +130,7 @@ export function detailView(
     hasPoster,
     g1,
     g2,
-    topTag: toTopTag(movie, hasPoster),
+    topTag: toTopTag(movie),
     linkedFiles: movie.linkedFiles ?? null,
   };
 }

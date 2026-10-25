@@ -352,8 +352,9 @@ describe('detailView — artwork and the gradient fallback', () => {
 
 /**
  * The small uppercase line drawn on the poster. It exists to caption the
- * gradient when there is no artwork; over a real poster it would be text laid
- * on top of the picture it duplicates, so it is not composed at all.
+ * gradient when there is no artwork. Over a real poster the page does not draw
+ * it, but it is still composed (issue #464): a poster that fails to load falls
+ * back to the captioned Default poster.
  */
 describe('detailView — the poster overlay tag', () => {
   it('captions the fallback with the primary genre and the year', () => {
@@ -403,7 +404,7 @@ describe('detailView — the poster overlay tag', () => {
     expect(vm.topTag).toBeNull();
   });
 
-  it('composes no tag when there is real artwork to cover', () => {
+  it('composes the tag even over real artwork, for a poster that fails to load', () => {
     const vm = detailView(
       makeMovie({
         posterPath: 'abc/poster.jpg',
@@ -413,7 +414,7 @@ describe('detailView — the poster overlay tag', () => {
       false
     );
 
-    expect(vm.topTag).toBeNull();
+    expect(vm.topTag).toBe('Drama · 1994');
   });
 });
 
@@ -433,7 +434,7 @@ describe('detailView — hasPoster', () => {
     expect(vm.hasPoster).toBe(true);
   });
 
-  it('is true when both a poster and a backdrop are set, and composes no tag', () => {
+  it('is true when both a poster and a backdrop are set, the tag still composed', () => {
     const vm = detailView(
       makeMovie({
         posterPath: 'abc/poster.jpg',
@@ -445,7 +446,7 @@ describe('detailView — hasPoster', () => {
     );
 
     expect(vm.hasPoster).toBe(true);
-    expect(vm.topTag).toBeNull();
+    expect(vm.topTag).toBe('Drama · 1994');
   });
 
   it('is false for a backdrop alone, and the top tag is filled', () => {

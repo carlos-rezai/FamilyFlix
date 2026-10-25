@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
 import { Artwork, PlayIcon, ProgressBar } from '@/primitives';
@@ -45,6 +46,10 @@ export function EpisodeRow({
   const title = episode.title || 'Untitled episode';
   const inProgress =
     !episode.watched && episode.progress > 0 && episode.progress < 100;
+  // The still url that failed to load: while it is still the episode's, the
+  // thumbnail draws the gradient alone, as a still-less row does.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const stillUrl = episode.stillUrl === failedUrl ? null : episode.stillUrl;
 
   const handleOpenKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!ACTIVATION_KEYS.includes(event.key)) return;
@@ -74,8 +79,14 @@ export function EpisodeRow({
       onKeyDown={handleOpenKey}
     >
       <Thumb $g1={episode.g1} $g2={episode.g2}>
-        {episode.stillUrl ? (
-          <Artwork url={episode.stillUrl} g1={episode.g1} g2={episode.g2} />
+        {stillUrl ? (
+          <Artwork
+            url={stillUrl}
+            image
+            g1={episode.g1}
+            g2={episode.g2}
+            onError={() => setFailedUrl(stillUrl)}
+          />
         ) : null}
         <PlayHover aria-hidden="true">
           <PlayDisc>

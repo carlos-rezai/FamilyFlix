@@ -406,7 +406,7 @@ describe('seriesView — the Shown rating', () => {
  * captioned Default poster in front of the backdrop.
  */
 describe('seriesView — hasPoster', () => {
-  it('is true when a poster is set, and composes no tag', () => {
+  it('is true when a poster is set, the tag still composed', () => {
     const vm = seriesView(
       makeDetail([makeSeason(1, 10)], makeEpisode(1, 1), {
         posterPath: 'harbor-2019/poster.jpg',
@@ -416,7 +416,7 @@ describe('seriesView — hasPoster', () => {
     );
 
     expect(vm.hasPoster).toBe(true);
-    expect(vm.topTag).toBeNull();
+    expect(vm.topTag).toBe('Drama · 2019–2023');
   });
 
   it('is false for a backdrop alone, and the top tag is filled', () => {

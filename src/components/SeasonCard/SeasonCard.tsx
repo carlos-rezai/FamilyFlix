@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { Artwork, ProgressBar, StatusBadge } from '@/primitives';
 import type { SeasonCardSeason } from '@/types';
 import { formatEpisodeTag } from '@/utils';
@@ -33,11 +35,21 @@ export function SeasonCard({ season, onOpen }: SeasonCardProps) {
   const subLabel = inProgress
     ? `${watched} of ${total} watched`
     : `${total} episode${total === 1 ? '' : 's'}`;
+  // The poster url that failed to load: while it is still the season's, the
+  // tile draws the gradient alone, as a poster-less tile does.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const posterUrl = season.posterUrl === failedUrl ? null : season.posterUrl;
 
   return (
     <Root type="button" onClick={onOpen}>
       <Tile>
-        <Artwork url={season.posterUrl} g1={season.g1} g2={season.g2} />
+        <Artwork
+          url={posterUrl}
+          image
+          g1={season.g1}
+          g2={season.g2}
+          onError={() => setFailedUrl(season.posterUrl ?? null)}
+        />
         <Numeral>{formatEpisodeTag({ season: number })}</Numeral>
         {complete ? (
           <BadgeWrap>

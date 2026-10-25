@@ -39,17 +39,15 @@ function toProgressLabel(watched: number, total: number): string {
 
 /**
  * The uppercase caption over the gradient poster — the first genre and the
- * year range, `detailView`'s shape — and none over a real poster. The halves
- * are joined only where both survive.
+ * year range, `detailView`'s shape. Composed even for a show with a poster, as
+ * a poster that fails to load falls back to the Default poster (issue #464);
+ * the page draws it only when the frame draws no poster. The halves are joined
+ * only where both survive.
  */
 function toTopTag(
   detail: SeriesDetail,
-  yearLabel: string | null,
-  hasPoster: boolean
+  yearLabel: string | null
 ): string | null {
-  if (hasPoster) {
-    return null;
-  }
   const [primaryGenre] = detail.series.genres;
   const parts = [primaryGenre?.name ?? null, yearLabel].filter(
     (part): part is string => part !== null
@@ -102,7 +100,7 @@ export function seriesView(
     hasPoster,
     g1,
     g2,
-    topTag: toTopTag(detail, yearLabel, hasPoster),
+    topTag: toTopTag(detail, yearLabel),
     isFavorite: series.isFavorite,
     linkedFiles: detail.linkedFiles ?? null,
     seasons: seasons.map((season) => ({

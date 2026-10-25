@@ -173,26 +173,27 @@ describe('SeasonCard — the badge and the bar', () => {
 /**
  * 39 — Season posters, Slice 2 (issue #322): the season gains
  * `posterUrl?: string | null`, the **Season poster**. With one, the tile
- * paints it over the series' gradient — a url that fails to load shows the
- * gradient through — and the numeral, the badge, the bar and the caption are
- * all still drawn. It stays a non-**Poster surface**: with none, the gradient
+ * draws it as an `<img>` over the series' gradient (issue #464: a url that
+ * fails to load drops it, below) and the numeral, the badge, the bar and the
+ * caption are all still drawn. It stays a non-**Poster surface**: with none, the gradient
  * alone and never the Wordmark.
  */
 describe('SeasonCard — the Season poster', () => {
   const POSTER = '/api/images/harbor-vine-2019/S02-poster.jpg';
 
-  /** Whether the tile paints the poster anywhere under it. */
-  const paintsPoster = () =>
-    backgroundsUnder(tile()).some((bg) => bg.includes(POSTER));
+  /** The poster's `<img>` on the tile, or `null` when it draws none. */
+  const posterImage = () => tile().querySelector(`img[src="${POSTER}"]`);
 
-  it('paints the poster on the tile’s art layer, over the gradient', () => {
+  /** Whether the tile draws the poster anywhere under it. */
+  const paintsPoster = () => posterImage() !== null;
+
+  it('draws the poster on the tile’s art layer, over the gradient', () => {
     renderCard({ season: { posterUrl: POSTER } });
 
-    const layered = backgroundsUnder(tile()).find((bg) => bg.includes(POSTER));
-    expect(layered).toBeDefined();
-    expect(layered).toContain('linear-gradient');
-    expect(layered?.indexOf(POSTER)).toBeLessThan(
-      layered?.indexOf('linear-gradient') ?? -1
+    const layer = posterImage()?.parentElement ?? null;
+    if (layer === null) throw new Error('the tile draws no poster <img>');
+    expect(window.getComputedStyle(layer).backgroundImage).toContain(
+      'linear-gradient'
     );
   });
 

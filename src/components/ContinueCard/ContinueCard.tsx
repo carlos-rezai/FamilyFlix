@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { PlayIcon, ProgressBar } from '@/primitives';
 import type { ContinueCardMovie } from '@/types';
 import {
@@ -32,10 +34,22 @@ export interface ContinueCardProps {
  * for the eye, not part of what the control is called.
  */
 export function ContinueCard({ movie, onOpen }: ContinueCardProps) {
+  // The poster url that failed to load: while it is still the movie's, the
+  // tile draws the Default poster as if it had none (`PosterCard`'s pattern).
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const posterUrl = movie.posterUrl === failedUrl ? null : movie.posterUrl;
+
   return (
     <Root type="button" aria-label={movie.title} onClick={onOpen}>
       <Tile>
-        <Art url={movie.posterUrl} poster g1={movie.g1} g2={movie.g2} />
+        <Art
+          url={posterUrl}
+          poster
+          image
+          g1={movie.g1}
+          g2={movie.g2}
+          onError={() => setFailedUrl(movie.posterUrl)}
+        />
         <Scrim />
         <TextWrap>
           <Title>{movie.title}</Title>
