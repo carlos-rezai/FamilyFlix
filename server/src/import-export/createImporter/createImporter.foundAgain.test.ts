@@ -338,3 +338,32 @@ describe('createImporter.scan — two missing films of one file name', () => {
     expect(videoUpdates(run)).toHaveLength(1);
   });
 });
+
+describe('createImporter.scan: a second folder keying to a film found again earlier in the run', () => {
+  it('is Already in library, and the library holds one film', async () => {
+    const box = sandbox();
+    deadCopy(box);
+    // A folder whose name keys to the dead copy's title and year, its video
+    // named otherwise, walked after the `Star Wars` folder that finds it.
+    const keyed = `${STAR_WARS} (1977)`;
+    mkdirSync(join(box.films.path, keyed));
+    copyFileSync(
+      join(box.films.path, STAR_WARS, FILE_NAME),
+      join(box.films.path, keyed, 'A New Hope.mp4')
+    );
+
+    const run = await scanOnce(box, 'link');
+
+    expect(videoUpdates(run)).toHaveLength(1);
+    expect(
+      run.log.filter(
+        (line) => line.text === `· Already in library ${STAR_WARS} (1977)`
+      )
+    ).toHaveLength(1);
+    expect(
+      box.db
+        .prepare('SELECT COUNT(*) AS count FROM movies WHERE title = ?')
+        .get(STAR_WARS)
+    ).toEqual({ count: 1 });
+  });
+});

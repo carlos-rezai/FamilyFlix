@@ -1398,15 +1398,17 @@ export function createImporter({
 
   /**
    * The film the **Title key** holds where a found video is at stake: one
-   * whose video is a **Missing video** is passed over, so the found video is
-   * imported; an `unreachable` one still holds.
+   * still in the run's `missing` map is passed over, so the found video is
+   * imported; an `unreachable` one still holds, and so does one **Found
+   * again** earlier in the run, which has come off the map.
    */
   const heldByKey = (
     filmsByKey: Map<string, Movie>,
+    missing: Map<string, Movie>,
     row: SheetRow
   ): string | null => {
     const movie = filmsByKey.get(filmKey(row.title, row.year));
-    if (movie === undefined || playback.videoFile(movie).kind === 'missing') {
+    if (movie === undefined || missing.has(movie.id)) {
       return null;
     }
     return movie.id;
@@ -1702,7 +1704,7 @@ export function createImporter({
       ) ??
       heldByVideo(storage.titleHolding, folder, scan.videos, 'movie') ??
       heldByMissingVideo(missing, scan.videos) ??
-      heldByKey(filmsByKey, row)
+      heldByKey(filmsByKey, missing, row)
     );
   };
 
