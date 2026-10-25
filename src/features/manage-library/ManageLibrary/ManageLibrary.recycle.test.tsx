@@ -141,7 +141,7 @@ describe('ManageLibrary — the Recycle choice, in the shell', () => {
     confirmDelete('Coco');
 
     await waitFor(() => expect(writes()).toHaveLength(1));
-    const [input, init] = writes()[0]!;
+    const [input, init] = writes()[0];
     expect(String(input)).toBe('/api/movies/m1');
     expect(init?.method?.toUpperCase()).toBe('DELETE');
   });
@@ -156,7 +156,7 @@ describe('ManageLibrary — the Recycle choice, in the shell', () => {
     confirmDelete('Coco');
 
     await waitFor(() => expect(writes()).toHaveLength(1));
-    const [input, init] = writes()[0]!;
+    const [input, init] = writes()[0];
     expect(String(input)).toBe('/api/movies/m1?files=trash');
     expect(init?.method?.toUpperCase()).toBe('DELETE');
   });
@@ -171,7 +171,7 @@ describe('ManageLibrary — the Recycle choice, in the shell', () => {
     confirmDelete('Bluey');
 
     await waitFor(() => expect(writes()).toHaveLength(1));
-    expect(String(writes()[0]![0])).toBe('/api/series/s1?files=trash');
+    expect(String(writes()[0][0])).toBe('/api/series/s1?files=trash');
   });
 
   it('chooses Keep the files on every open, even after a Recycle Bin pick', async () => {
@@ -207,6 +207,6 @@ describe('ManageLibrary — the Recycle choice, in a browser', () => {
     confirmDelete('Coco');
 
     await waitFor(() => expect(writes()).toHaveLength(1));
-    expect(String(writes()[0]![0])).toBe('/api/movies/m1');
+    expect(String(writes()[0][0])).toBe('/api/movies/m1');
   });
 });

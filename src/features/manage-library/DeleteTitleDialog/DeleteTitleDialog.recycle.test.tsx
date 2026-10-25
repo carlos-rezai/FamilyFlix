@@ -125,10 +125,10 @@ describe('DeleteTitleDialog — the Recycle choice, in the shell', () => {
       });
       const radios = within(group).getAllByRole('radio');
       expect(radios).toHaveLength(2);
-      expect(radios[0]!.textContent).toContain(KEEP);
-      expect(radios[0]!.textContent).toContain(KEEP_LINE);
-      expect(radios[1]!.textContent).toContain(TRASH);
-      expect(radios[1]!.textContent).toContain(TRASH_LINE);
+      expect(radios[0].textContent).toContain(KEEP);
+      expect(radios[0].textContent).toContain(KEEP_LINE);
+      expect(radios[1].textContent).toContain(TRASH);
+      expect(radios[1].textContent).toContain(TRASH_LINE);
     }
   );
 

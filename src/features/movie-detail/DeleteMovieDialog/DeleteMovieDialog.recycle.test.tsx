@@ -148,7 +148,7 @@ describe('DeleteMovieDialog — the Recycle choice, in the shell', () => {
     fireEvent.click(confirm());
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [input, init] = fetchMock.mock.calls[0]!;
+    const [input, init] = fetchMock.mock.calls[0];
     expect(String(input)).toBe('/api/movies/m1');
     expect(init?.method?.toUpperCase()).toBe('DELETE');
   });
@@ -160,7 +160,7 @@ describe('DeleteMovieDialog — the Recycle choice, in the shell', () => {
     fireEvent.click(confirm());
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [input, init] = fetchMock.mock.calls[0]!;
+    const [input, init] = fetchMock.mock.calls[0];
     expect(String(input)).toBe('/api/movies/m1?files=trash');
     expect(init?.method?.toUpperCase()).toBe('DELETE');
   });
@@ -229,6 +229,6 @@ describe('DeleteMovieDialog — the Recycle choice, in a browser', () => {
     fireEvent.click(confirm());
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    expect(String(fetchMock.mock.calls[0]![0])).toBe('/api/movies/m1');
+    expect(String(fetchMock.mock.calls[0][0])).toBe('/api/movies/m1');
   });
 });
