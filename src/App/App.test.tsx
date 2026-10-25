@@ -191,6 +191,7 @@ beforeEach(() => {
         continueWatching: [],
         favorites: [],
         rows: homeRows(),
+        other: null,
       };
       return Promise.resolve(okResponse(payload));
     }
@@ -809,6 +810,7 @@ describe('App — a typed title becomes a row on the home screen', () => {
           continueWatching: [],
           favorites: [],
           rows: [{ genre: 'Action', count: library.length, movies: library }],
+          other: null,
         };
         return Promise.resolve(okResponse(payload));
       }
@@ -969,6 +971,7 @@ describe('App — a film filed under two genres reaches both rows', () => {
           continueWatching: [],
           favorites: [],
           rows: rowsFrom(library),
+          other: null,
         };
         return Promise.resolve(okResponse(payload));
       }

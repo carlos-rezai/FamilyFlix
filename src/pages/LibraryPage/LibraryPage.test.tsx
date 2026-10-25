@@ -44,6 +44,7 @@ function homeResponse(rows: HomeRow[]): Response {
     continueWatching: [],
     favorites: [],
     rows,
+    other: null,
   };
   return okResponse(payload);
 }

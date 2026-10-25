@@ -133,6 +133,9 @@ function buildListQuery(
   if (query.inProgressOnly) {
     where.push(IN_PROGRESS);
   }
+  if (query.genreLessOnly) {
+    where.push('m.id NOT IN (SELECT mg.movie_id FROM movie_genres mg)');
+  }
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
   const limitClause = query.limit === undefined ? '' : ' LIMIT ?';

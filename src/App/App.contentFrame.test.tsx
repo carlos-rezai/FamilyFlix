@@ -78,6 +78,7 @@ beforeEach(() => {
         continueWatching: [],
         favorites: [],
         rows: [{ genre: 'Action', count: 1, movies: [NORTHWIND] }],
+        other: null,
       };
       return Promise.resolve(okResponse(payload));
     }

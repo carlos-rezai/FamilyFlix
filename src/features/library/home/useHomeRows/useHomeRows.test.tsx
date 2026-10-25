@@ -30,6 +30,7 @@ const HOME_PAYLOAD: HomePayload = {
       ],
     },
   ],
+  other: null,
 };
 
 /**
@@ -48,6 +49,7 @@ const STARTED_PAYLOAD: HomePayload = {
   ],
   favorites: [],
   rows: HOME_PAYLOAD.rows,
+  other: null,
 };
 
 /**
@@ -73,6 +75,7 @@ const IN_PROGRESS_PAYLOAD: HomePayload = {
   ],
   favorites: [],
   rows: HOME_PAYLOAD.rows,
+  other: null,
 };
 
 /**
@@ -92,6 +95,7 @@ const FAVORITES_PAYLOAD: HomePayload = {
     }),
   ],
   rows: HOME_PAYLOAD.rows,
+  other: null,
 };
 
 /**
@@ -125,6 +129,7 @@ const SHELF_PAYLOAD: HomePayload = {
       ],
     },
   ],
+  other: null,
 };
 
 /** The same movie tagged with two genres — it earns a card in both rows. */
@@ -143,6 +148,7 @@ const SHARED_MOVIE_PAYLOAD: HomePayload = {
       movies: [makeMovie({ id: 'x1', title: 'Ironclad', isFavorite: false })],
     },
   ],
+  other: null,
 };
 
 let fetchMock: ReturnType<
@@ -395,6 +401,7 @@ describe('useHomeRows — the settled query', () => {
         movies: [makeMovie({ id: 'c1', title: 'Comet Season' })],
       },
     ],
+    other: null,
   };
 
   /** Answer the first home request from `first`, every later one from `rest`. */
@@ -931,6 +938,7 @@ describe('useHomeRows — the sort order', () => {
         movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
       },
     ],
+    other: null,
   };
 
   it('asks with the order the URL was opened on, so a shared link loads sorted', async () => {
@@ -1039,6 +1047,7 @@ describe('useHomeRows — the genre filter', () => {
         movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
       },
     ],
+    other: null,
   };
 
   it('asks with the genre the URL was opened on, so a shared link loads filtered', async () => {
@@ -1167,6 +1176,7 @@ describe('useHomeRows — the minimum rating', () => {
         movies: [makeMovie({ id: 'a1', title: 'Northwind', rating: 9 })],
       },
     ],
+    other: null,
   };
 
   it('asks with the minimum the URL was opened on, so a shared link loads filtered', async () => {
@@ -1324,6 +1334,7 @@ const ROW_HEART_PAYLOAD: HomePayload = {
       movies: [makeMovie({ id: 'a1', title: 'Northwind', isFavorite: false })],
     },
   ],
+  other: null,
 };
 
 /**
@@ -1343,6 +1354,7 @@ const ROW_HEART_SAVED_PAYLOAD: HomePayload = {
       movie.id === 'a1' ? { ...movie, isFavorite: true } : movie
     ),
   })),
+  other: null,
 };
 
 /**

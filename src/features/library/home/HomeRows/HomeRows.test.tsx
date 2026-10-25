@@ -144,7 +144,7 @@ function homePayload(
   continueWatching: Movie[] = [],
   favorites: Movie[] = []
 ): HomePayload {
-  return { continueWatching, favorites, rows };
+  return { continueWatching, favorites, rows, other: null };
 }
 
 let fetchMock: ReturnType<

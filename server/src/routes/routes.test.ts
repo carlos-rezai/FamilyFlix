@@ -257,7 +257,12 @@ describe('GET /api/home', () => {
 
     // Not a 404 and not an error — a Library query that matched nothing is a
     // normal answer the screen renders as "No results".
-    expect(home).toEqual({ continueWatching: [], favorites: [], rows: [] });
+    expect(home).toEqual({
+      continueWatching: [],
+      favorites: [],
+      rows: [],
+      other: null,
+    });
   });
 
   /** Regression guards on the new parameter — green before and after. */
@@ -1207,6 +1212,7 @@ describe('GET /api/home?genre=', () => {
       continueWatching: [],
       favorites: [],
       rows: [],
+      other: null,
     });
   });
 

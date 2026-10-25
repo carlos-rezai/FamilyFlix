@@ -115,6 +115,29 @@ export function createHome(browse: Browse): Home {
   }
 
   /**
+   * The **Other row**: the genre-less films a genre row can never hold, so a
+   * folder scanned with no Sync still shows on the home. It is narrowed by the
+   * caller's query like a row, its `count` the unfiltered genre-less total
+   * like a row's. A genre filter names a genre these films lack, so it leaves
+   * the row out; a row with nothing left is `null`, never drawn blank. Its
+   * `genre` stays blank: the title is the screen's to draw.
+   */
+  function listOther(query: LibraryQuery): HomeRow | null {
+    if (query.genre !== undefined) return null;
+    const movies = browse.listMovies({
+      ...query,
+      genreLessOnly: true,
+      limit: HOME_ROW_LIMIT,
+    });
+    if (movies.length === 0) return null;
+    const count = browse.listMovies({
+      sort: DEFAULT_MOVIE_SORT,
+      genreLessOnly: true,
+    }).length;
+    return { genre: '', count, movies };
+  }
+
+  /**
    * One flat section: the caller's query, narrowed by the single flag that
    * makes it the section it is, in the order that section is built in, under
    * the shared cap. Both of them are that composition and nothing else, so it
@@ -154,6 +177,7 @@ export function createHome(browse: Browse): Home {
       continueWatching: listSection(query, 'inProgressOnly', CONTINUE_SORT),
       favorites: listSection(query, 'favoritesOnly', query.sort),
       rows: listRows(query),
+      other: listOther(query),
     };
   }
 

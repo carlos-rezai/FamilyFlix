@@ -41,11 +41,19 @@ function LoadingRows() {
   );
 }
 
+/** The title the screen draws over the **Other row**; the payload names none. */
+const OTHER_ROW_TITLE = 'Other movies';
+
+/** Where the Other row's _View all_ goes: its own route, never `/genre/Other`. */
+const GENRE_LESS_PATH = '/genre-less';
+
 /**
  * The body of the browse home: what the family is part-way through, then what
- * they have starred, then every populated genre as its own row — all three
- * sections from the one request, so the screen paints at once. Owns every result state — skeleton rows, a retryable
- * failure, and the three ways of coming back with nothing.
+ * they have starred, then every populated genre as its own row, and last the
+ * **Other row**, _Other movies_, holding every film with no genre, so a folder
+ * scanned with no Sync still shows. Every section comes from the one request,
+ * so the screen paints at once. Owns every result state: skeleton rows, a
+ * retryable failure, and the three ways of coming back with nothing.
  *
  * Those three are deliberately worded apart. "Your library is empty" is a shelf
  * with nothing on it; a search that matched nothing is a working library and a
@@ -68,6 +76,7 @@ export function HomeRows() {
     rows,
     continueWatching,
     favorites,
+    other,
     retry,
     toggleFavorite,
   } = useHomeRows();
@@ -90,9 +99,8 @@ export function HomeRows() {
     );
   }
 
-  // Every section, as the cards it actually draws — one list, in the order the
-  // screen draws them, rather than a term per section in a growing chain. A
-  // fourth section is one entry here, beside the three it joins.
+  // Every section, as the cards it actually draws: one list, in the order the
+  // screen draws them, rather than a term per section in a growing chain.
   //
   // What a section **renders** is the test, not what it holds. Two of these
   // make those identical, because they draw a card per movie they were given.
@@ -101,13 +109,17 @@ export function HomeRows() {
   // length there once read a populated library off a shelf with nothing on it,
   // skipped all three messages, and left the screen blank (74). Any future
   // section rendering a derived view of its data joins the same rule.
-  const drawn = [rows, continueWatching, shelvedFavorites(favorites)];
+  const drawn = [
+    rows,
+    continueWatching,
+    shelvedFavorites(favorites),
+    other?.movies ?? [],
+  ];
 
-  // An untagged movie earns no genre row, so empty rows alone don't mean an
-  // empty library — something in progress is proof there are movies, and so is
-  // something on the favorites shelf: a watched, untagged favorite reaches
-  // neither of the other two sections. There is no action here: an empty
-  // library has nothing to retry.
+  // An untagged movie earns no genre row but lands in the Other row, so a
+  // library of only genre-less films is not an empty one, and neither is a
+  // search that matched only those. There is no action here: an empty library
+  // has nothing to retry.
   if (drawn.every((section) => section.length === 0)) {
     if (search !== undefined) {
       return (
@@ -167,6 +179,14 @@ export function HomeRows() {
           onToggleFavorite={toggleFavorite}
         />
       ))}
+      {other !== null && (
+        <GenreRow
+          row={{ ...other, genre: OTHER_ROW_TITLE }}
+          onOpenAll={() => navigate(GENRE_LESS_PATH)}
+          onOpenMovie={openMovie}
+          onToggleFavorite={toggleFavorite}
+        />
+      )}
     </>
   );
 }

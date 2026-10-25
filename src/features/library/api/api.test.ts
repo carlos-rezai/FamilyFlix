@@ -22,6 +22,7 @@ const HOME_PAYLOAD: HomePayload = {
   continueWatching: [],
   favorites: [],
   rows: [{ genre: 'Action', count: 3, movies: [] }],
+  other: null,
 };
 
 let fetchMock: ReturnType<

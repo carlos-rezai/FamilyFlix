@@ -787,14 +787,16 @@ describe('library: getHome under a Library query', () => {
 // --- payload shape -------------------------------------------------------------
 
 describe('library: getHome payload shape', () => {
-  it('returns all three sections empty for an empty library', () => {
+  it('returns every section empty for an empty library', () => {
     const storage = freshStorage();
 
-    // Declared in the order the screen renders them: continue, favorites, rows.
+    // Declared in the order the screen renders them: continue, favorites,
+    // rows, then the Other row.
     expect(storage.getHome()).toEqual({
       continueWatching: [],
       favorites: [],
       rows: [],
+      other: null,
     });
   });
 

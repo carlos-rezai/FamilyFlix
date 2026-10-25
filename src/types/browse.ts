@@ -106,6 +106,8 @@ export interface MovieQuery {
   favoritesOnly?: boolean;
   /** Keep only in-progress movies (`resumePositionSeconds > 0` and not watched). */
   inProgressOnly?: boolean;
+  /** Keep only movies tagged with no genre at all: the **Other row**'s films. */
+  genreLessOnly?: boolean;
   /**
    * Cap how many movies come back, applied after the filters and the sort (SQL
    * `LIMIT`). Omitted means no cap — every matching movie is returned.
@@ -178,6 +180,12 @@ export interface HomePayload {
   continueWatching: Movie[];
   favorites: Movie[];
   rows: HomeRow[];
+  /**
+   * The **Other row**: every film with no genre, under the same cap and the
+   * caller's filters and sort. `null` under a genre filter, and when no
+   * genre-less film is left. Its `genre` is blank; the screen draws the title.
+   */
+  other: HomeRow | null;
 }
 
 /**

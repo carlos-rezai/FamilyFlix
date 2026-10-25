@@ -19,11 +19,12 @@ import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 
-/** The home's three sections as the screen renders them. */
+/** The home's sections as the screen renders them. */
 interface HomeSections {
   rows: GenreRowModel[];
   continueWatching: ContinueCardMovie[];
   favorites: PosterCardMovie[];
+  other: GenreRowModel | null;
 }
 
 /**
@@ -35,10 +36,11 @@ const NO_PAYLOAD: HomePayload = {
   rows: [],
   continueWatching: [],
   favorites: [],
+  other: null,
 };
 
 /**
- * The held payload drawn as the three sections, under _Fill in ratings from
+ * The held payload drawn as its sections, under _Fill in ratings from
  * TMDB_. The shelf holds poster cards, so its movies take the same narrowing a
  * genre row's do — `view`, not a mapper of its own.
  */
@@ -47,23 +49,32 @@ function toSections(payload: HomePayload, tmdbRatings: boolean): HomeSections {
     rows: payload.rows.map((row) => toGenreRow(row, tmdbRatings)),
     continueWatching: payload.continueWatching.map(continueView),
     favorites: payload.favorites.map((movie) => view(movie, tmdbRatings)),
+    other:
+      payload.other === null ? null : toGenreRow(payload.other, tmdbRatings),
   };
 }
 
 /**
- * The payload with one movie's favorite value set everywhere it carries it —
- * every genre row it is in, and the shelf, which gains the movie at its front
- * when the heart is new to it.
+ * The payload with one movie's favorite value set everywhere it carries it:
+ * every genre row it is in, the Other row, and the shelf, which gains the movie
+ * at its front when the heart is new to it.
  */
 function withHeart(
   payload: HomePayload,
   id: string,
   favorite: boolean
 ): HomePayload {
+  const other = payload.other === null ? [] : [payload.other];
   return {
     ...payload,
     rows: withFavorite(payload.rows, id, favorite),
-    favorites: withShelved(payload.favorites, payload.rows, id, favorite),
+    favorites: withShelved(
+      payload.favorites,
+      [...payload.rows, ...other],
+      id,
+      favorite
+    ),
+    other: payload.other === null ? null : withFavorite(other, id, favorite)[0],
   };
 }
 
@@ -85,6 +96,8 @@ export interface UseHomeRowsResult {
   continueWatching: ContinueCardMovie[];
   /** The favorites shelf between the two; empty unless `status` is `ready`. */
   favorites: PosterCardMovie[];
+  /** The **Other row** drawn after the genre rows; `null` unless one came. */
+  other: GenreRowModel | null;
   /** Re-run the load after a failure. */
   retry: () => void;
   /** Save one movie's favorite flag, showing the new value immediately. */
@@ -171,7 +184,7 @@ export function useHomeRows(): UseHomeRowsResult {
   // The held records drawn per render under the preference, so a flip in
   // Settings redraws what is loaded without reading the home again.
   const tmdbRatings = useTmdbRatings();
-  const { rows, continueWatching, favorites } = useMemo(
+  const { rows, continueWatching, favorites, other } = useMemo(
     () => toSections(held, tmdbRatings),
     [held, tmdbRatings]
   );
@@ -246,6 +259,7 @@ export function useHomeRows(): UseHomeRowsResult {
     rows,
     continueWatching,
     favorites,
+    other,
     retry,
     toggleFavorite,
   };
