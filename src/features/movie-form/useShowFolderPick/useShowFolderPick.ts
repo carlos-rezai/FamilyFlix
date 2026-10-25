@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
@@ -17,8 +17,11 @@ export interface UseShowFolderPickInput {
   holdShowFolder: (rows: EpisodeFormRow[]) => void;
   /** The episode list's: take the folder's rows off, the hand-added ones stay. */
   removeShowFolder: () => void;
-  /** Fill an empty title with the read's **Title guess**; a typed one stays. */
-  prefillTitle: (guess: string) => void;
+  /**
+   * Fill the title with the read's **Title guess** when it is empty, or still
+   * `picked`, the guess an earlier pick filled in; a typed one stays.
+   */
+  prefillTitle: (guess: string, picked?: string) => void;
   /** `useImportMode`'s: whether Link can be for the picked folder. */
   setShowLink: (available: boolean) => void;
 }
@@ -47,7 +50,8 @@ export interface UseShowFolderPickResult {
  * **Title guess**, and its Library folder says whether Link can be. A cancel
  * changes nothing; a refusal — unreadable, empty, or a held series's own
  * folder, worded by that series's title — adds no rows. A second pick
- * replaces only the first pick's rows.
+ * replaces only the first pick's rows, and the title the first pick filled
+ * in, never a typed one.
  */
 export function useShowFolderPick({
   plainAdd,
@@ -59,6 +63,9 @@ export function useShowFolderPick({
   const [showFolder, setShowFolder] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [straySubtitles, setStraySubtitles] = useState(0);
+  // The **Title guess** the last pick offered, so a new pick knows the title
+  // it may replace.
+  const pickedTitle = useRef<string | null>(null);
   const bridge = folderBridge();
 
   const pickShowFolder = useCallback(async () => {
@@ -87,7 +94,12 @@ export function useShowFolderPick({
     setStraySubtitles(read.straySubtitles);
     setShowLink(read.libraryFolderId !== null);
     holdShowFolder(showFolderRows(read));
-    prefillTitle(read.titleGuess);
+    if (pickedTitle.current === null) {
+      prefillTitle(read.titleGuess);
+    } else {
+      prefillTitle(read.titleGuess, pickedTitle.current);
+    }
+    pickedTitle.current = read.titleGuess;
   }, [bridge, holdShowFolder, prefillTitle, setShowLink]);
 
   const addShowFolder = useCallback(() => {

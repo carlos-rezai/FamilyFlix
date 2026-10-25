@@ -11,7 +11,7 @@ import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFold
 import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import type { StoredLibraryFolder } from '../../library';
 import type { HeldVideo } from '../../library/holding/holding';
-import { groupShows } from '../groupShows/groupShows';
+import { groupShows, showFolderOf } from '../groupShows/groupShows';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { titleGuess } from '../titleKey/titleKey';
 import type { ShowFolderEpisode, ShowFolderRead } from '@/types';
@@ -57,7 +57,7 @@ function seriesHoldingAny(
   return null;
 }
 
-/** A video's path inside the picked folder, spelled with forward slashes. */
+/** A video's path inside the Show folder, spelled with forward slashes. */
 const insideShow = (dir: string, video: string): string =>
   relative(dir, video).split(sep).join('/');
 
@@ -82,7 +82,9 @@ async function scansUnder(dir: string): Promise<MovieFolderScan[]> {
  * filename's, loose tagged videos are numbered off their tags, and each
  * episode keeps its stem-matched subtitles. A folder read as a film answers
  * its videos as **Unplaced**. The **Title guess** is the importer's own rule
- * on the folder's name.
+ * on the folder's name. A picked **Season folder** reads only its own videos
+ * but stands for its Show folder (`showFolderOf`): titled by the show's
+ * name, held-checked as the show, each path answered inside the show.
  *
  * Its `libraryFolderId` is the listed **Library folder** it lies inside, by
  * `listedFolderOf`, or `null`. A folder that is already a held series's
@@ -110,6 +112,9 @@ export async function readShowFolder(
     return { kind: 'refused', refusal: 'unreadable' };
   }
 
+  // A picked **Season folder** is read for its own videos, but titled,
+  // held-checked and spelled by its Show folder.
+  const showFolder = showFolderOf(dir);
   const { shows, films } = groupShows(scans);
   const episodes: ShowFolderEpisode[] = shows
     .flatMap((show) => show.episodes)
@@ -118,7 +123,7 @@ export async function readShowFolder(
       number: episode.episode,
       title: episode.title,
       video: episode.video,
-      relativePath: insideShow(dir, episode.video),
+      relativePath: insideShow(showFolder, episode.video),
       subtitles: episode.subtitles.map(({ path, language }) => ({
         path,
         language,
@@ -138,12 +143,15 @@ export async function readShowFolder(
     kind: 'read',
     read: {
       path: dir,
-      titleGuess: titleGuess(basename(dir)),
+      titleGuess: titleGuess(basename(showFolder)),
       libraryFolderId: listed?.id ?? null,
       heldSeriesId:
         listed === null
           ? null
-          : (context.heldSeriesAt(listed.id, relative(listed.path, dir)) ??
+          : (context.heldSeriesAt(
+              listed.id,
+              relative(listed.path, showFolder)
+            ) ??
             seriesHoldingAny(
               listed,
               [...episodes.map((episode) => episode.video), ...unplaced],
@@ -151,7 +159,7 @@ export async function readShowFolder(
             )),
       episodes,
       unplaced,
-      unplacedRelative: unplaced.map((video) => insideShow(dir, video)),
+      unplacedRelative: unplaced.map((video) => insideShow(showFolder, video)),
       straySubtitles: shows.reduce(
         (count, show) => count + show.straySubtitles.length,
         0

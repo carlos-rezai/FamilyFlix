@@ -629,12 +629,14 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
-  // The **Show folder pick**, `useShowFolderPick`'s: an empty title takes
-  // the read's **Title guess**, and its Library folder says whether Link can
-  // be.
-  const prefillTitle = useCallback((guess: string) => {
+  // The **Show folder pick**, `useShowFolderPick`'s: an empty title, or one
+  // an earlier pick filled in, takes the read's **Title guess**, and its
+  // Library folder says whether Link can be.
+  const prefillTitle = useCallback((guess: string, picked?: string) => {
     setValues((current) =>
-      current.title.trim() === '' ? { ...current, title: guess } : current
+      current.title.trim() === '' || current.title === picked
+        ? { ...current, title: guess }
+        : current
     );
   }, []);
   const showFolderPick = useShowFolderPick({
