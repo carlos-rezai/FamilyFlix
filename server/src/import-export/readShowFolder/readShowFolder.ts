@@ -8,10 +8,10 @@ import {
   type MovieFolderScan,
 } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
-import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import type { StoredLibraryFolder } from '../../library';
 import type { HeldTitle } from '../../library/holding/holding';
 import { groupShows, showFolderOf } from '../groupShows/groupShows';
+import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { titleGuess } from '../titleKey/titleKey';
 import type { ShowFolderEpisode, ShowFolderRead } from '@/types';
@@ -34,27 +34,6 @@ export interface ShowFolderContext {
   heldSeriesAt(folderId: string, sourceFolder: string): string | null;
   /** The **Held video** rule: the title playing a video, `null` for none. */
   titleHolding(folderId: string, videoPath: string): HeldTitle | null;
-}
-
-/**
- * The series one of `videos` is a held episode's, asked of the **Held video**
- * rule by its path relative to `listed`, spelled with forward slashes.
- */
-function seriesHoldingAny(
-  listed: StoredLibraryFolder,
-  videos: readonly string[],
-  context: ShowFolderContext
-): string | null {
-  for (const video of videos) {
-    const held = context.titleHolding(
-      listed.id,
-      spellLinkedVideo(listed.path, video)
-    );
-    if (held?.kind === 'series') {
-      return held.id;
-    }
-  }
-  return null;
 }
 
 /** A video's path inside the Show folder, spelled with forward slashes. */
@@ -152,10 +131,11 @@ export async function readShowFolder(
               listed.id,
               relative(listed.path, showFolder)
             ) ??
-            seriesHoldingAny(
+            heldByVideo(
+              context.titleHolding,
               listed,
               [...episodes.map((episode) => episode.video), ...unplaced],
-              context
+              'series'
             )),
       episodes,
       unplaced,

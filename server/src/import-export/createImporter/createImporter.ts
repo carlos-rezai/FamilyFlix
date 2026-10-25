@@ -21,6 +21,7 @@ import {
   type ShowEpisode,
   type ShowScan,
 } from '../groupShows/groupShows';
+import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { filmSourceOf, sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
@@ -1678,27 +1679,6 @@ export function createImporter({
   };
 
   /**
-   * The **Held video** rule: the first title of `kind` one of these found
-   * videos already belongs to, whatever it is called; `null` for none.
-   */
-  const holderOf = (
-    kind: HeldTitle['kind'],
-    folder: StoredLibraryFolder,
-    videos: readonly string[]
-  ): string | null => {
-    for (const video of videos) {
-      const held = storage.titleHolding(
-        folder.id,
-        spellLinkedVideo(folder.path, video)
-      );
-      if (held !== null && held.kind === kind) {
-        return held.id;
-      }
-    }
-    return null;
-  };
-
-  /**
    * The film the library already holds for a **Source folder**, by the three
    * **Already in library** rules in order: the folder on record first,
    * whatever its title now says — a **Collection folder** film by its Source
@@ -1720,7 +1700,7 @@ export function createImporter({
         source.sourceFolder,
         source.sourceFile
       ) ??
-      holderOf('movie', folder, scan.videos) ??
+      heldByVideo(storage.titleHolding, folder, scan.videos, 'movie') ??
       missingHolderOf(missing, scan.videos) ??
       heldByKey(filmsByKey, row)
     );
@@ -1795,10 +1775,11 @@ export function createImporter({
       folder.id,
       relative(folder.path, show.dir)
     );
-    const holder = holderOf(
-      'series',
+    const holder = heldByVideo(
+      storage.titleHolding,
       folder,
-      show.episodes.map((episode) => episode.video)
+      show.episodes.map((episode) => episode.video),
+      'series'
     );
     return (
       held.find((entry) => entry.series.id === atFolder) ??
