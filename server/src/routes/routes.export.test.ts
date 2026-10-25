@@ -494,7 +494,7 @@ describe.each(FORMATS)(
 
       expect(run).toMatchObject({
         phase: 'review',
-        found: 2,
+        found: 3,
         matched: 0,
         total: 0,
         done: 0,

@@ -628,18 +628,18 @@ const isUnder = (folder: string, path: string): boolean => {
 };
 
 /**
- * How many folders the scan went through: every **Source folder** and every
- * shelf between it and its Library folder — `Drama/` counts, the Library
- * folder does not.
+ * Add to `folders` every folder a scan went through: its **Source folder** and
+ * every shelf between it and its Library folder — `Drama/` counts, the
+ * Library folder does not.
  */
-function foldersUnder(listed: string, scans: MovieFolderScan[]): number {
-  const folders = new Set<string>();
-  for (const scan of scans) {
-    for (let dir = scan.dir; isUnder(listed, dir); dir = dirname(dir)) {
-      folders.add(dir);
-    }
+function addFoldersUnder(
+  folders: Set<string>,
+  listed: string,
+  scan: MovieFolderScan
+): void {
+  for (let dir = scan.dir; isUnder(listed, dir); dir = dirname(dir)) {
+    folders.add(dir);
   }
-  return folders.size;
 }
 
 /**
@@ -1484,8 +1484,7 @@ export function createImporter({
   const walkListed = async (
     current: ImportRun,
     folders: StoredLibraryFolder[],
-    signal: AbortSignal,
-    isHeldShow: (folder: StoredLibraryFolder, show: ShowScan) => boolean
+    signal: AbortSignal
   ): Promise<WalkedFolder[] | null> => {
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
@@ -1494,8 +1493,10 @@ export function createImporter({
 
     const walked: WalkedFolder[] = [];
     let found = 0;
-    let shelves = 0;
     let leftOut = 0;
+    // Every folder the walk went through, by the found line's rule, before
+    // left-out videos come off: `run.found` follows it as the walk goes.
+    const walkedFolders = new Set<string>();
     for (const folder of folders) {
       if ((await readableFolder(folder.path)) !== 'readable') {
         log(current, `⚠ Can't reach ${folder.path}, skipped`, 'warning');
@@ -1506,7 +1507,8 @@ export function createImporter({
         scans = await walkLibraryFolder(
           folder.path,
           (scan) => {
-            current.found += 1;
+            addFoldersUnder(walkedFolders, folder.path, scan);
+            current.found = walkedFolders.size;
             current.currentItem = scan.dir;
           },
           (dir) => {
@@ -1520,26 +1522,26 @@ export function createImporter({
       if (signal.aborted) {
         return null;
       }
+      for (const scan of scans) {
+        addFoldersUnder(walkedFolders, folder.path, scan);
+      }
+      current.found = walkedFolders.size;
       const kept = withoutLeftOut(folder, scans);
       leftOut += kept.skipped;
       scans = kept.scans;
-      shelves += foldersUnder(folder.path, scans);
       const grouped = groupShows(scans);
       for (const film of grouped.films) {
         wholeFolders.set(film.dir, film);
       }
       const films = splitCollections(grouped.films);
-      // Titles, not folders: a new series is one, a held one gaining
-      // episodes none.
-      found +=
-        films.length +
-        grouped.shows.filter((show) => !isHeldShow(folder, show)).length;
+      // Titles, not folders: every film and every show grouped, held or new.
+      found += films.length + grouped.shows.length;
       walked.push({ folder, films, shows: grouped.shows });
     }
 
     log(
       current,
-      `✓ Found ${count(found)} titles across ${count(shelves)} folders. Starting import…`,
+      `✓ Found ${count(found)} titles across ${count(walkedFolders.size)} folders. Starting import…`,
       'success'
     );
     if (leftOut > 0) {
@@ -1714,14 +1716,7 @@ export function createImporter({
     const seriesByKey = heldSeriesByKey(held);
     const genres = genreReader();
 
-    const walked = await walkListed(
-      current,
-      folders,
-      signal,
-      (folder, show) =>
-        heldShow(held, seriesByKey, folder, show, guessedRow(show.name)) !==
-        null
-    );
+    const walked = await walkListed(current, folders, signal);
     if (walked === null) {
       return;
     }
@@ -1890,14 +1885,7 @@ export function createImporter({
     const held = heldSeriesList();
     const seriesByKey = heldSeriesByKey(held);
 
-    const walked = await walkListed(
-      current,
-      folders,
-      signal,
-      (folder, show) =>
-        heldShow(held, seriesByKey, folder, show, guessedRow(show.name)) !==
-        null
-    );
+    const walked = await walkListed(current, folders, signal);
     if (walked === null) {
       return;
     }

@@ -218,7 +218,7 @@ describe('POST /api/import — starting a run', () => {
 
     expect(run).toMatchObject({
       phase: 'review',
-      found: 2,
+      found: 3,
       matched: 2,
       total: 2,
       done: 2,
@@ -466,7 +466,7 @@ describe('GET /api/import/current', () => {
     expect(run.id).toBe(started.id);
     expect(run).toMatchObject({
       phase: 'review',
-      found: 2,
+      found: 3,
       total: 2,
       done: 2,
       matched: 2,

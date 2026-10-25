@@ -14,7 +14,7 @@ export const Headline = styled.div`
   color: ${({ theme }) => theme.colors.text};
 `;
 
-/** "Found N movies so far" / "N of M imported", under the headline, above the bar. */
+/** "Found N folders so far" / "N of M imported", under the headline, above the bar. */
 export const StatLine = styled.div`
   margin-bottom: ${({ theme }) => theme.space.s4};
   font-family: ${({ theme }) => theme.fonts.sans};

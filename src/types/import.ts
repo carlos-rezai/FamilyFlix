@@ -152,7 +152,7 @@ export interface ImportRun {
   phase: ImportPhase;
   /** An ISO stamp, as every date in the app is. */
   startedAt: string;
-  /** **Source folders** found so far by the walk. */
+  /** Folders the walk has gone through so far: every **Source folder** and every shelf above it. */
   found: number;
   /** Matches to import, known once the scan completes. */
   total: number;

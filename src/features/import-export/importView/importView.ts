@@ -10,7 +10,7 @@ import { formatElapsed } from '@/utils';
 export interface ImportView {
   /** "Scanning your library…" / "Importing movies…" */
   headline: string;
-  /** "Found N movies so far" / "N of M imported" */
+  /** "Found N folders so far" / "N of M imported" */
   statLine: string;
   /** The bar has no known total while scanning. */
   indeterminate: boolean;
@@ -56,7 +56,7 @@ export function importView(run: ImportRun, now: Date): ImportView {
   return {
     headline: scanning ? 'Scanning your library…' : 'Importing movies…',
     statLine: scanning
-      ? `Found ${count(run.found)} movies so far`
+      ? `Found ${count(run.found)} folders so far`
       : `${count(run.done)} of ${count(run.total)} imported`,
     indeterminate: scanning,
     percent: run.total === 0 ? 0 : Math.round((run.done / run.total) * 100),

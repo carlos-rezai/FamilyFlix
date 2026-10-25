@@ -394,7 +394,7 @@ describe('createImporter — the snapshot', () => {
     expect(importer.current()?.id).toBe(started.id);
   });
 
-  it('counts the run out: two found, two matched, two of two done', async () => {
+  it('counts the run out: three folders found, two matched, two of two done', async () => {
     const { importer, root, sheet } = sandbox();
 
     await importer.start(sheet);
@@ -402,7 +402,7 @@ describe('createImporter — the snapshot', () => {
 
     expect(run).toMatchObject({
       phase: 'review',
-      found: 2,
+      found: 3,
       matched: 2,
       total: 2,
       done: 2,
@@ -480,7 +480,7 @@ describe('createImporter — the snapshot', () => {
     // every row matched: the phase is importing, and `found` and `total` are
     // already the numbers review will show.
     expect(seen.length).toBeGreaterThan(0);
-    expect(seen[0]).toMatchObject({ phase: 'importing', found: 2, total: 2 });
+    expect(seen[0]).toMatchObject({ phase: 'importing', found: 3, total: 2 });
   });
 });
 
@@ -716,7 +716,7 @@ describe('createImporter — a row already in the library', () => {
     // Skipped rows are counted as neither: nothing to import, nothing to fix.
     expect(run).toMatchObject({
       phase: 'review',
-      found: 2,
+      found: 3,
       matched: 0,
       total: 0,
       done: 0,
