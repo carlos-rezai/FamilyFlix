@@ -1354,7 +1354,7 @@ export function createImporter({
    * name of one of these found videos, when exactly one missing film has it;
    * `null` for none, and for two or more.
    */
-  const missingHolderOf = (
+  const heldByMissingVideo = (
     missing: Map<string, Movie>,
     videos: readonly string[]
   ): string | null => {
@@ -1679,11 +1679,11 @@ export function createImporter({
   };
 
   /**
-   * The film the library already holds for a **Source folder**, by the three
+   * The film the library already holds for a **Source folder**, by the
    * **Already in library** rules in order: the folder on record first,
-   * whatever its title now says — a **Collection folder** film by its Source
-   * file — then the **Held video** rule, then the **Missing video** rule,
-   * then the title key and year the row or the folder gives, passing over a
+   * whatever its title now says (a **Collection folder** film by its Source
+   * file), then `heldByVideo`, then `heldByMissingVideo`, then `heldByKey`,
+   * the title key and year the row or the folder gives, passing over a
    * **Missing video**.
    */
   const heldFilm = (
@@ -1701,7 +1701,7 @@ export function createImporter({
         source.sourceFile
       ) ??
       heldByVideo(storage.titleHolding, folder, scan.videos, 'movie') ??
-      missingHolderOf(missing, scan.videos) ??
+      heldByMissingVideo(missing, scan.videos) ??
       heldByKey(filmsByKey, row)
     );
   };
@@ -1760,9 +1760,10 @@ export function createImporter({
   };
 
   /**
-   * The same three rules for a **Show folder**, over the held series: the
-   * folder on record, then the series any one episode video is held by,
-   * found in their list; the key and year in their map.
+   * The same rules for a **Show folder**, over the held series: the folder
+   * on record, then `heldByVideo` over its episode videos, found in their
+   * list; then the key and year in their map. A series has no Missing video
+   * rule.
    */
   const heldShow = (
     held: HeldSeries[],
