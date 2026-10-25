@@ -24,7 +24,7 @@
 // **Playback component**, and a raw handle on the same database for the two
 // columns no shared type carries.
 
-import { copyFileSync, mkdirSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -55,6 +55,8 @@ interface Sandbox {
   storage: LibraryStorage;
   db: SqliteDatabase;
   importer: Importer;
+  /** The managed media directory. */
+  media: string;
   /** The Library folder the film fixture was copied into. */
   films: string;
   /** The Library folder the series fixture was copied into. */
@@ -90,6 +92,7 @@ function sandbox(): Sandbox {
     storage,
     db,
     importer,
+    media,
     films,
     shows,
     gone: join(dir, 'gone'),
@@ -375,6 +378,9 @@ describe('createImporter.scan — a title already held by title key and year', (
       year: 1988,
       videoPath: 'die-hard-1988/video.mp4',
     });
+    // Its copied video is there: a **Missing video** would not hold by key.
+    mkdirSync(join(box.media, 'die-hard-1988'));
+    writeFileSync(join(box.media, 'die-hard-1988', 'video.mp4'), '');
 
     await scanOnce(box.importer, [folders.films, folders.shows]);
 

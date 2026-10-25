@@ -57,6 +57,8 @@ interface Sandbox {
   storage: LibraryStorage;
   db: SqliteDatabase;
   importer: Importer;
+  /** The managed media directory. */
+  media: string;
   /** The Library folder the film fixture was copied into. */
   films: string;
   /** The Library folder the series fixture was copied into. */
@@ -107,6 +109,7 @@ function sandbox(): Sandbox {
     storage,
     db,
     importer,
+    media,
     films,
     shows,
     gone: join(dir, 'gone'),
@@ -334,6 +337,9 @@ describe('createImporter.start — Already in library', () => {
       year: 1988,
       videoPath: 'die-hard-1988/video.mp4',
     });
+    // Its copied video is there: a **Missing video** would not hold by key.
+    mkdirSync(join(box.media, 'die-hard-1988'));
+    writeFileSync(join(box.media, 'die-hard-1988', 'video.mp4'), '');
 
     const run = await runOnce(box.importer, box.sheet);
 

@@ -1320,15 +1320,30 @@ export function createImporter({
     );
 
   /**
-   * Every film the library holds, by key and year, to its id — read once per
-   * run.
+   * Every film the library holds, by key and year — read once per run.
    */
-  const heldFilmsByKey = (): Map<string, string> =>
+  const heldFilmsByKey = (): Map<string, Movie> =>
     new Map(
       storage
         .listMovies({ sort: 'a-z' })
-        .map((movie: Movie) => [filmKey(movie.title, movie.year), movie.id])
+        .map((movie: Movie) => [filmKey(movie.title, movie.year), movie])
     );
+
+  /**
+   * The film the **Title key** holds where a found video is at stake: one
+   * whose video is a **Missing video** is passed over, so the found video is
+   * imported; an `unreachable` one still holds.
+   */
+  const heldByKey = (
+    filmsByKey: Map<string, Movie>,
+    row: SheetRow
+  ): string | null => {
+    const movie = filmsByKey.get(filmKey(row.title, row.year));
+    if (movie === undefined || playback.videoFile(movie).kind === 'missing') {
+      return null;
+    }
+    return movie.id;
+  };
 
   /**
    * Import one folder from the **Review step** under one row — the **Folder
@@ -1609,10 +1624,10 @@ export function createImporter({
    * **Already in library** rules in order: the folder on record first,
    * whatever its title now says — a **Collection folder** film by its Source
    * file — then the **Held video** rule, then the title key and year the row
-   * or the folder gives.
+   * or the folder gives, passing over a **Missing video**.
    */
   const heldFilm = (
-    filmsByKey: Map<string, string>,
+    filmsByKey: Map<string, Movie>,
     folder: StoredLibraryFolder,
     scan: MovieFolderScan,
     row: SheetRow
@@ -1625,8 +1640,7 @@ export function createImporter({
         source.sourceFile
       ) ??
       holderOf('movie', folder, scan.videos) ??
-      filmsByKey.get(filmKey(row.title, row.year)) ??
-      null
+      heldByKey(filmsByKey, row)
     );
   };
 
@@ -1794,7 +1808,7 @@ export function createImporter({
       // A row for a title held with no folder found is reached by its key and
       // year, and filled.
       const key = filmKey(row.title, row.year);
-      const heldId = filmsByKey.get(key);
+      const heldId = filmsByKey.get(key)?.id;
       const heldSeries = seriesByKey.get(key);
       const heldTitle: HeldTitle | null =
         heldId !== undefined

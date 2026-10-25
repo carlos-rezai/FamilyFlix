@@ -21,7 +21,7 @@
 // sandbox **Library root**, a real `Media` over a sandbox managed directory,
 // the absent **Playback component**.
 
-import { mkdirSync, readdirSync } from 'node:fs';
+import { mkdirSync, readdirSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -210,12 +210,15 @@ describe('createImporter — an added title carries its Source folder', () => {
 
 describe('createImporter — an Already-in-library title carries its Source folder', () => {
   it('records the folder on a film the library already held', async () => {
-    const { storage, db, importer, root, sheet } = sandbox();
+    const { storage, db, importer, media, root, sheet } = sandbox();
     const held = storage.addMovie({
       title: 'Die Hard',
       year: 1988,
       videoPath: 'die-hard-1988/video.mp4',
     });
+    // Its copied video is there: a **Missing video** would not hold by key.
+    mkdirSync(join(media, 'die-hard-1988'));
+    writeFileSync(join(media, 'die-hard-1988', 'video.mp4'), '');
 
     await runOnce(importer, sheet);
 

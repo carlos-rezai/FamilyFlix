@@ -738,14 +738,16 @@ describe('createImporter — a row already in the library', () => {
   });
 
   it('skips by title key and year: the same film under another spelling, not a remake', async () => {
-    const { storage, importer, root, sheet } = sandbox();
+    const { storage, importer, media, root, sheet } = sandbox();
     // The key of `Die.Hard` is the key of `Die Hard`, and the year agrees:
-    // the row is the film already there.
+    // the row is the film already there, its copied video present.
     storage.addMovie({
       title: 'Die.Hard',
       year: 1988,
       videoPath: 'elsewhere/die-hard.mp4',
     });
+    mkdirSync(join(media, 'elsewhere'));
+    writeFileSync(join(media, 'elsewhere', 'die-hard.mp4'), '');
     // Key-equal, but another year: a different film, so the row imports.
     storage.addMovie({
       title: 'Amélie',
