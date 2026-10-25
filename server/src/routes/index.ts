@@ -799,14 +799,6 @@ export function createApiRouter(
   router.use(express.json());
 
   /**
-   * A `?files=trash` delete's first step: the title's **Linked files** to the
-   * Recycle Bin through `media.trashLinked`, before any row goes. A plain
-   * Delete never calls it, so it keeps the files and never asks the shell.
-   * `true` to go on: a copied title, an `unreachable` one, a `shared` one (no
-   * path of its own to trash), or every file moved. Else the `409` sentence is
-   * answered and every row kept.
-   */
-  /**
    * One title's **Linked files** kind, for its detail read's Delete dialog,
    * as the Manage library list reads it now; `null` for a copied title.
    */
@@ -820,6 +812,14 @@ export function createApiRouter(
     );
   }
 
+  /**
+   * A `?files=trash` delete's first step: the title's **Linked files** to the
+   * Recycle Bin through `media.trashLinked`, before any row goes. A plain
+   * Delete never calls it, so it keeps the files and never asks the shell.
+   * `true` to go on: a copied title, an `unreachable` one, a `shared` one (no
+   * path of its own to trash), or every file moved. Else the `409` sentence is
+   * answered and every row kept.
+   */
   async function trashedFirst(
     kind: 'movie' | 'series',
     id: string,
