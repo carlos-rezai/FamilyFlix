@@ -711,7 +711,7 @@ export function seriesResolveRows(
   ).map(({ path, season, number, title }, index) => ({
     key: `${FOUND_KEY}episode-${index}`,
     // Named by its path: the folder is what tells two `Episode 1`s apart.
-    file: { kind: 'found' as const, path, filename: path },
+    file: foundFile(path, path),
     season: String(season),
     number: String(number),
     title: title ?? '',
