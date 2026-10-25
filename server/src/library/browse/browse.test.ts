@@ -1086,6 +1086,37 @@ describe('library: countMovies', () => {
   });
 });
 
+// --- 51, Library audit, refactor (issue #472): the Other row's count --------------
+
+describe('library: countGenreLess', () => {
+  it('counts the films with no genre, and 0 when every film has one', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Tagged', genres: ['Drama'] }));
+
+    expect(storage.countGenreLess()).toBe(0);
+
+    storage.addMovie(newMovie({ title: 'Untagged' }));
+    storage.addMovie(newMovie({ title: 'Also untagged' }));
+
+    expect(storage.countGenreLess()).toBe(2);
+  });
+
+  it('counts every genre-less film, whatever a search narrows the list to', () => {
+    const storage = freshStorage();
+    storage.addMovie(newMovie({ title: 'Harbor Lights' }));
+    storage.addMovie(newMovie({ title: 'Tidewater' }));
+
+    expect(
+      storage.listMovies({
+        sort: 'a-z',
+        search: 'Harbor',
+        genreLessOnly: true,
+      })
+    ).toHaveLength(1);
+    expect(storage.countGenreLess()).toBe(2);
+  });
+});
+
 // --- the Shown rating (issue #373) ----------------------------------------------
 //
 // _Highest rated_ and the Minimum rating read the **Shown rating**: the household

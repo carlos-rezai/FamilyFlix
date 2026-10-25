@@ -189,6 +189,8 @@ export interface LibraryStorage {
    * row — is counted too. `0` for an empty library.
    */
   countMovies(): number;
+  /** How many films the library holds under no genre: the **Other row**'s count. */
+  countGenreLess(): number;
   /**
    * The browse home in one call: the in-progress movies as `continueWatching`,
    * the favorited ones as `favorites`, plus a `rows` entry per populated genre
@@ -525,6 +527,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     listGenres: browse.listGenres,
     listGenrePool: browse.listGenrePool,
     countMovies: browse.countMovies,
+    countGenreLess: browse.countGenreLess,
     getHome: home.getHome,
     getGenre: genre.getGenre,
     getGenreLess: genre.getGenreLess,

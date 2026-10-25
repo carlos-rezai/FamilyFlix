@@ -68,10 +68,7 @@ export function createGenre(browse: Browse): GenreAggregate {
   function getGenreLess(query: Partial<GenreQuery> = {}): GenrePayload {
     return {
       genre: '',
-      total: browse.listMovies({
-        sort: DEFAULT_MOVIE_SORT,
-        genreLessOnly: true,
-      }).length,
+      total: browse.countGenreLess(),
       movies: browse.listMovies({
         ...query,
         sort: query.sort ?? DEFAULT_MOVIE_SORT,

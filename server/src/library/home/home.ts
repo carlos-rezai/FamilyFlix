@@ -130,11 +130,7 @@ export function createHome(browse: Browse): Home {
       limit: HOME_ROW_LIMIT,
     });
     if (movies.length === 0) return null;
-    const count = browse.listMovies({
-      sort: DEFAULT_MOVIE_SORT,
-      genreLessOnly: true,
-    }).length;
-    return { genre: '', count, movies };
+    return { genre: '', count: browse.countGenreLess(), movies };
   }
 
   /**

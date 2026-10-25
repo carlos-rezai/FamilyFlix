@@ -15,6 +15,9 @@ import type { MovieReader, MovieRow } from '../read/read';
  */
 const IN_PROGRESS = 'm.watched = 0 AND m.resume_position_seconds > 0';
 
+/** A film filed under no genre: the **Other row**'s clause. */
+const GENRE_LESS = 'm.id NOT IN (SELECT mg.movie_id FROM movie_genres mg)';
+
 /** `recently-added`'s body, named because `last-watched` ends with it. */
 const RECENTLY_ADDED = 'm.created_at DESC, m.id';
 
@@ -134,7 +137,7 @@ function buildListQuery(
     where.push(IN_PROGRESS);
   }
   if (query.genreLessOnly) {
-    where.push('m.id NOT IN (SELECT mg.movie_id FROM movie_genres mg)');
+    where.push(GENRE_LESS);
   }
 
   const whereClause = where.length > 0 ? `WHERE ${where.join(' AND ')}` : '';
@@ -148,13 +151,14 @@ function buildListQuery(
 
 /** The read-only browse slice of the repository: the parameterized `listMovies`
  *  query, the `searchMovies` shorthand over it, the home-screen genre rows, and
- *  the library's movie count. */
+ *  the library's movie and genre-less counts. */
 export interface Browse {
   listMovies(query: MovieQuery): Movie[];
   searchMovies(text: string): Movie[];
   listGenres(): GenreCount[];
   listGenrePool(): Genre[];
   countMovies(): number;
+  countGenreLess(): number;
 }
 
 /**
@@ -179,6 +183,10 @@ export function createBrowse(
   );
 
   const selectMovieCount = db.prepare('SELECT COUNT(*) AS count FROM movies');
+
+  const selectGenreLessCount = db.prepare(
+    `SELECT COUNT(*) AS count FROM movies m WHERE ${GENRE_LESS}`
+  );
 
   function listMovies(query: MovieQuery): Movie[] {
     const { sql, params, whereClause, whereParams } = buildListQuery(
@@ -242,5 +250,21 @@ export function createBrowse(
     return (selectMovieCount.get() as { count: number }).count;
   }
 
-  return { listMovies, searchMovies, listGenres, listGenrePool, countMovies };
+  /**
+   * How many films the library holds under no genre: the **Other row**'s
+   * count and its _View all_ page's total, unfiltered as a genre row's count
+   * is. The clause is `listMovies`' `genreLessOnly`.
+   */
+  function countGenreLess(): number {
+    return (selectGenreLessCount.get() as { count: number }).count;
+  }
+
+  return {
+    listMovies,
+    searchMovies,
+    listGenres,
+    listGenrePool,
+    countMovies,
+    countGenreLess,
+  };
 }
