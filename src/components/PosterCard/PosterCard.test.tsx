@@ -312,6 +312,68 @@ describe('PosterCard — the Default poster', () => {
 });
 
 /**
+ * Library audit (issue #464): a card whose `posterUrl` names a file that no
+ * longer exists used to draw an empty gradient, with no Wordmark and no
+ * caption. A poster that fails to load now falls back to the same **Default
+ * poster** a poster-less card draws: the **Gradient fallback**, the Wordmark
+ * and the title.
+ */
+describe('PosterCard — a poster that fails to load', () => {
+  const MISSING_POSTER = '/api/images/star-wars/poster.jpg';
+  const missing: PosterCardMovie = { ...movie, posterUrl: MISSING_POSTER };
+
+  /** Fails the card's poster the way the browser does when the file is gone. */
+  function failPoster(container: HTMLElement) {
+    const img = container.querySelector(`img[src="${MISSING_POSTER}"]`);
+    if (img === null) {
+      throw new Error('the card loads no <img> of its poster to fail');
+    }
+    fireEvent.error(img);
+  }
+
+  it('draws the Wordmark once its poster fails to load', () => {
+    const { container } = renderCard({ movie: missing });
+
+    failPoster(container);
+
+    expect(screen.getByText('Family')).toBeTruthy();
+    expect(screen.getByText('Flix')).toBeTruthy();
+  });
+
+  it('draws the title caption on the poster, over the title below', () => {
+    const { container } = renderCard({ movie: missing });
+
+    failPoster(container);
+
+    // One on the poster, one under it: as on a poster-less card.
+    expect(screen.getAllByText('Comet Season')).toHaveLength(2);
+  });
+
+  it('paints the gradient, not the missing file, behind the stand-in', () => {
+    const { container } = renderCard({ movie: missing });
+
+    failPoster(container);
+
+    const backgrounds = Array.from(container.querySelectorAll('*')).map(
+      (element) => window.getComputedStyle(element).backgroundImage
+    );
+    expect(backgrounds.some((bg) => bg.includes('linear-gradient'))).toBe(true);
+    expect(backgrounds.some((bg) => bg.includes(MISSING_POSTER))).toBe(false);
+  });
+
+  it('is still named by its title alone with the stand-in drawn', () => {
+    const { container } = renderCard({ movie: missing });
+
+    failPoster(container);
+
+    expect(screen.getByRole('button', { name: 'Comet Season' })).toBeTruthy();
+    expect(screen.getByText('Flix').closest('[aria-hidden="true"]')).not.toBe(
+      null
+    );
+  });
+});
+
+/**
  * 21 — Motion & interaction states, Phase 5 (issue #185): the poster on the
  * Card vocabulary — `cardLift` on the tile, `cardFocus` on the root — and the
  * heart on the Control's, as `mol.PosterCard.dc.html` draws them.
