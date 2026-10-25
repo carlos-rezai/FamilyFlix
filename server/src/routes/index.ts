@@ -10,12 +10,7 @@ import type {
 } from '../enrichment/createEnrichment/createEnrichment';
 import express, { type Request, type Response, type Router } from 'express';
 
-import type {
-  LeftOutVideo,
-  LibraryStorage,
-  SeriesUpdate,
-  StoredLibraryFolder,
-} from '../library';
+import type { LibraryStorage, SeriesUpdate } from '../library';
 import { clashSentence } from '../library/folders/folderOverlap/folderOverlap';
 import { yearSpan } from '../library/series/yearSpan/yearSpan';
 import {
@@ -47,10 +42,8 @@ import {
   type FilmSource,
 } from '../import-export/placeFilmFolder/placeFilmFolder';
 import { listedFolderOf } from '../import-export/listedFolderOf/listedFolderOf';
-import {
-  placeFoundVideo,
-  placeFoundVideos,
-} from '../import-export/placeFoundVideo/placeFoundVideo';
+import { leftOutEntries } from '../import-export/leftOutEntries/leftOutEntries';
+import { placeFoundVideos } from '../import-export/placeFoundVideo/placeFoundVideo';
 import { placeShowFolder } from '../import-export/placeShowFolder/placeShowFolder';
 import { foundPathRefusal } from './foundPathRefusal/foundPathRefusal';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
@@ -239,24 +232,6 @@ const REMOVE_REFUSALS: Record<
     error: 'The playback component could not be removed.',
   },
 };
-
-/**
- * The **Left-out video** entries a hand add's found videos would have: each
- * one under a listed Library folder, spelled as its Link placement. A picked
- * row's bytes (`undefined`) and a path under no listed folder have none.
- */
-function leftOutEntries(
-  folders: StoredLibraryFolder[],
-  paths: readonly (string | undefined)[]
-): LeftOutVideo[] {
-  return paths.flatMap((path) => {
-    const placed =
-      path === undefined ? null : placeFoundVideo(folders, path, 'link');
-    return placed === null || placed.videoFolderId === null
-      ? []
-      : [{ folderId: placed.videoFolderId, videoPath: placed.videoPath }];
-  });
-}
 
 function writeSignal<V>(
   storage: LibraryStorage,
