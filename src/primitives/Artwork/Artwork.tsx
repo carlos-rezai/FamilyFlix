@@ -22,6 +22,11 @@ export interface ArtworkProps {
   /** The **Gradient fallback**'s two stops, as `gradientFromId` derives them. */
   g1: string;
   g2: string;
+  /**
+   * Called when the `image` mode's `<img>` fails to load, so a caller can
+   * stop passing the url and draw its stand-in instead.
+   */
+  onError?: () => void;
   /** Set by `styled(Artwork)` — how a caller clips or layers it. */
   className?: string;
 }
@@ -48,11 +53,12 @@ export function Artwork({
   image = false,
   g1,
   g2,
+  onError,
   className,
 }: ArtworkProps) {
   return (
     <Root className={className} $url={image ? null : url} $g1={g1} $g2={g2}>
-      {image && url ? <Image src={url} alt="" /> : null}
+      {image && url ? <Image src={url} alt="" onError={onError} /> : null}
       {poster && !url ? (
         <PosterMark aria-hidden="true">
           <Wordmark />

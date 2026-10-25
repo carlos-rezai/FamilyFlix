@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { KeyboardEvent, MouseEvent } from 'react';
 
 import {
@@ -62,6 +63,11 @@ export function PosterCard({
   onToggleFavorite,
 }: PosterCardProps) {
   const inProgress = !movie.watched && movie.progress > 0;
+  // The poster url that failed to load: while it is still the movie's, the
+  // card draws the Default poster as if it had none. Keyed by url, so a new
+  // poster gets its own chance to load.
+  const [failedUrl, setFailedUrl] = useState<string | null>(null);
+  const posterUrl = movie.posterUrl === failedUrl ? null : movie.posterUrl;
 
   const handleOpenKey = (event: KeyboardEvent<HTMLDivElement>) => {
     if (!ACTIVATION_KEYS.includes(event.key)) {
@@ -101,7 +107,14 @@ export function PosterCard({
       onKeyDown={handleOpenKey}
     >
       <Poster>
-        <Artwork url={movie.posterUrl} poster g1={movie.g1} g2={movie.g2} />
+        <Artwork
+          url={posterUrl}
+          poster
+          image
+          g1={movie.g1}
+          g2={movie.g2}
+          onError={() => setFailedUrl(movie.posterUrl)}
+        />
         <InnerBorder />
         <FavoriteButton
           label="Favorite"
@@ -118,7 +131,7 @@ export function PosterCard({
             <HeartOutlineIcon size={18} />
           )}
         </FavoriteButton>
-        {movie.posterUrl ? null : <TitleOverlay>{movie.title}</TitleOverlay>}
+        {posterUrl ? null : <TitleOverlay>{movie.title}</TitleOverlay>}
         {movie.watched ? (
           <BadgeWrap>
             <StatusBadge size={30} />
