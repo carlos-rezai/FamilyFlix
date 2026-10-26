@@ -438,6 +438,11 @@
             if(want.startsWith(held+'\\')) return 'That folder is inside '+f.path+', which is already a library folder.';
             if(held.startsWith(want+'\\')) return 'That folder holds '+f.path+', which is already a library folder.';
           }
+          // Log 52 Q10: the Media directory refusal, after the overlap with listed folders.
+          // The sample's Managed media directory is C:\FamilyFlix\Media; being it, lying
+          // inside it or holding it are each refused.
+          const media=norm('C:\\FamilyFlix\\Media');
+          if(want===media||want.startsWith(media+'\\')||media.startsWith(want+'\\')) return 'That folder overlaps where FamilyFlix keeps its own copies. Choose another one.';
           return null;
         }
         addFolder(path){
