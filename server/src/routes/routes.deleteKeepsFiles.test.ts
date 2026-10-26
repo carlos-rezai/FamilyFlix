@@ -1,15 +1,13 @@
 // @vitest-environment node
 //
-// 51, Library audit, slice 4: "a plain Delete keeps the files" (issue #451).
+// 51, Library audit, slice 4: "a plain Delete keeps the files" (issue #451);
+// 52, Keep originals, slice 2: "a Delete keeps originals" (issue #476).
 //
 // The delete contract: `DELETE /api/movies/:id` and `DELETE /api/series/:id`
-// keep a linked title's files by default and never ask the shell, so a
-// browser's plain Delete answers `204`, never the no-shell `409`. With
-// `?files=trash` the delete runs `trashedFirst` over the title's **Linked
-// files**, which never hold a video another held title links: when every
-// video is shared they are `shared` and nothing is trashed. Every Delete,
-// either way, still removes the row, the art, the subtitles and the **Media
-// folder**. A copied title's Delete is unchanged.
+// read no query. Each records the title's **Left-out videos**, removes its
+// rows, then its **Media folder**, and never asks the shell, so no Delete
+// answers `409`. A `?files=trash` from an old client is ignored: it keeps
+// every file exactly as a plain Delete does. An unknown id answers `404`.
 //
 // Over a real listener, a real `:memory:` library, a sandboxed media root and
 // a sandboxed Library folder (`routes.linkedDelete`'s harness), the shell
@@ -188,6 +186,9 @@ function remove(api: Api, kind: 'movies' | 'series', id: string, query = '') {
   });
 }
 
+const leftOut = (api: Api): string[] =>
+  [...api.storage.leftOut(api.folderId)].sort();
+
 describe('a plain Delete keeps a linked title’s files', () => {
   it('deletes a linked film and leaves its file where it lies, never asking the shell', async () => {
     const api = freshApi();
@@ -199,6 +200,7 @@ describe('a plain Delete keeps a linked title’s files', () => {
     expect(api.asked).toEqual([]);
     expect(api.storage.getMovie(film.id)).toBeNull();
     expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
+    expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
   });
 
   it('deletes a linked show and leaves its Show folder whole, never asking the shell', async () => {
@@ -223,94 +225,95 @@ describe('a plain Delete keeps a linked title’s files', () => {
         join(api.library, 'Harbor and Vine', 'Season 01', 'S01E02.mkv')
       )
     ).toBe(true);
+    expect(leftOut(api)).toEqual([
+      'Harbor and Vine/Season 01/S01E01.mkv',
+      'Harbor and Vine/Season 01/S01E02.mkv',
+    ]);
   });
 });
 
-describe('a plain Delete in a browser, with no shell', () => {
-  it('deletes a linked film with 204, not the no-shell 409', async () => {
+describe('?files=trash changes nothing', () => {
+  it('deletes a linked film with 204, its file kept and left out, never asking the shell', async () => {
+    const api = freshApi();
+    const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
+
+    const response = await remove(api, 'movies', film.id, '?files=trash');
+
+    expect(response.status).toBe(204);
+    expect(api.asked).toEqual([]);
+    expect(api.storage.getMovie(film.id)).toBeNull();
+    expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
+    expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
+  });
+
+  it('deletes a linked show with 204, its episodes kept and left out, never asking the shell', async () => {
+    const api = freshApi();
+    const show = linkedShow(api, 'Harbor', '', [
+      'Harbor.S01E01.mkv',
+      'Harbor.S01E02.mkv',
+    ]);
+
+    const response = await remove(api, 'series', show.id, '?files=trash');
+
+    expect(response.status).toBe(204);
+    expect(api.asked).toEqual([]);
+    expect(api.storage.getSeries(show.id)).toBeNull();
+    expect(existsSync(join(api.library, 'Harbor.S01E01.mkv'))).toBe(true);
+    expect(existsSync(join(api.library, 'Harbor.S01E02.mkv'))).toBe(true);
+    expect(leftOut(api)).toEqual(['Harbor.S01E01.mkv', 'Harbor.S01E02.mkv']);
+  });
+
+  it('removes the film’s Media folder as a plain Delete does, never asking the shell', async () => {
+    const api = freshApi();
+    const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
+
+    const response = await remove(api, 'movies', film.id, '?files=trash');
+
+    expect(response.status).toBe(204);
+    expect(api.asked).toEqual([]);
+    expect(existsSync(join(api.media, 'coco-managed'))).toBe(false);
+  });
+});
+
+describe('no Delete answers 409, even with no shell', () => {
+  it('deletes a linked film under ?files=trash with 204, not the no-shell 409', async () => {
     const api = freshApi({ kind: 'unavailable' });
     const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
 
-    const response = await remove(api, 'movies', film.id);
+    const response = await remove(api, 'movies', film.id, '?files=trash');
 
     expect(response.status).toBe(204);
     expect(api.asked).toEqual([]);
     expect(api.storage.getMovie(film.id)).toBeNull();
   });
 
-  it('deletes a linked show with 204, not the no-shell 409', async () => {
+  it('deletes a linked show under ?files=trash with 204, not the no-shell 409', async () => {
     const api = freshApi({ kind: 'unavailable' });
     const show = linkedShow(api, 'Harbor and Vine', 'Harbor and Vine', [
       'Harbor and Vine/Season 01/S01E01.mkv',
     ]);
 
-    const response = await remove(api, 'series', show.id);
-
-    expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
-    expect(api.storage.getSeries(show.id)).toBeNull();
-  });
-});
-
-describe('?files=trash trashes only the unshared paths', () => {
-  it('trashes a show’s own episodes and keeps the one a film also links', async () => {
-    const api = freshApi();
-    const show = linkedShow(api, 'Harbor', '', [
-      'Harbor.S01E01.mkv',
-      'Harbor.S01E02.mkv',
-    ]);
-    const double = api.storage.addMovie({
-      title: 'Harbor Pilot',
-      videoPath: 'Harbor.S01E01.mkv',
-      videoFolderId: api.folderId,
-      mediaFolder: 'harbor-pilot-managed',
-    });
-
     const response = await remove(api, 'series', show.id, '?files=trash');
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([[join(api.library, 'Harbor.S01E02.mkv')]]);
-    expect(existsSync(join(api.library, 'Harbor.S01E01.mkv'))).toBe(true);
+    expect(api.asked).toEqual([]);
     expect(api.storage.getSeries(show.id)).toBeNull();
-    expect(api.storage.getMovie(double.id)).not.toBeNull();
   });
 
-  it('trashes nothing for a Collection folder film whose video another title plays, and deletes it', async () => {
+  it('answers 404 for an unknown film or show, plain or under ?files=trash', async () => {
     const api = freshApi();
-    const heat = linkedFilm(api, 'Heat', 'Collection', 'Heat.mkv', 'Heat.mkv');
-    const double = linkedFilm(
-      api,
-      'Heat Again',
-      'Collection',
-      'Heat.mkv',
-      'Heat.mkv'
-    );
 
-    const response = await remove(api, 'movies', heat.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
-    expect(api.storage.getMovie(heat.id)).toBeNull();
-    expect(api.storage.getMovie(double.id)).not.toBeNull();
-    expect(existsSync(join(api.library, 'Collection', 'Heat.mkv'))).toBe(true);
-  });
-
-  it('never trashes a film’s own folder whole when another title plays its video', async () => {
-    const api = freshApi();
-    const coco = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
-    const double = linkedFilm(api, 'Coco Again', 'Coco (2017)', 'Coco.mkv');
-
-    const response = await remove(api, 'movies', coco.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
-    expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
-    expect(api.storage.getMovie(double.id)).not.toBeNull();
+    for (const kind of ['movies', 'series'] as const) {
+      for (const query of ['', '?files=trash']) {
+        const response = await remove(api, kind, 'no-such-id', query);
+        expect(response.status, `${kind}${query}`).toBe(404);
+      }
+    }
   });
 });
 
 describe('a copied title’s Delete is unchanged', () => {
-  it('deletes a copied film under ?files=trash without a word to the Trash', async () => {
+  it('deletes a copied film under ?files=trash, its original kept and left out', async () => {
     const api = freshApi({ kind: 'unavailable' });
     place(api.library, 'Heat (1995)/Heat.1995.mkv');
     managed(api, 'heat-1995');
@@ -331,6 +334,7 @@ describe('a copied title’s Delete is unchanged', () => {
     expect(existsSync(join(api.library, 'Heat (1995)', 'Heat.1995.mkv'))).toBe(
       true
     );
+    expect(leftOut(api)).toEqual(['Heat (1995)/Heat.1995.mkv']);
   });
 });
 
@@ -361,28 +365,5 @@ describe('art, subtitles and the Media folder go on every Delete', () => {
     expect(response.status).toBe(204);
     expect(existsSync(join(api.media, 'harbor-managed'))).toBe(false);
     expect(existsSync(join(api.library, 'Harbor.S01E01.mkv'))).toBe(true);
-  });
-
-  it('removes a trash-deleted film’s Media folder too', async () => {
-    const api = freshApi();
-    const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
-
-    const response = await remove(api, 'movies', film.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(api.asked).toEqual([[join(api.library, 'Coco (2017)')]]);
-    expect(existsSync(join(api.media, 'coco-managed'))).toBe(false);
-  });
-
-  it('removes the Media folder of a film whose shared video stays, under ?files=trash', async () => {
-    const api = freshApi();
-    const heat = linkedFilm(api, 'Heat', 'Collection', 'Heat.mkv', 'Heat.mkv');
-    linkedFilm(api, 'Heat Again', 'Collection', 'Heat.mkv', 'Heat.mkv');
-
-    const response = await remove(api, 'movies', heat.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(existsSync(join(api.media, 'heat-managed'))).toBe(false);
-    expect(existsSync(join(api.media, 'heat again-managed'))).toBe(true);
   });
 });

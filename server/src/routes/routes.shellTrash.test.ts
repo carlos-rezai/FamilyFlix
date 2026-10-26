@@ -8,10 +8,11 @@
 // from disk, as the Recycle Bin would take them, and answered with a
 // `trashed` command carrying its id.
 //
-// Under the shell a linked delete moves its files out of the Library folder,
-// so a later **Folder scan** does not bring the title back. With no parent
-// port the Shell trash answers `unavailable`, and a standalone server still
-// refuses with the no-shell sentence, every row kept.
+// Since issue #476 no Delete reaches the Shell trash, even under an old
+// client's `?files=trash`: under the shell a linked delete asks main nothing
+// and keeps its files, and its **Left-out videos** keep a later **Folder
+// scan** from bringing the title back. A standalone server answers `204`,
+// never the no-shell `409`.
 
 import express from 'express';
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -33,9 +34,6 @@ import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import type { ServerMessage, ShellCommand } from '../../../src/types/shell';
 import type { ImportRun, LibraryTitles } from '@/types';
-
-const NO_SHELL =
-  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -169,7 +167,7 @@ async function titles(api: Api): Promise<LibraryTitles> {
 }
 
 describe('a linked delete under the Shell trash', () => {
-  it('moves a film’s Source folder out, and a later Folder scan does not bring it back', async () => {
+  it('keeps a film’s Source folder under ?files=trash, never asking main, and a later Folder scan does not bring it back', async () => {
     const main = fakeMain();
     const api = await freshApi(main.port);
     place(api.library, 'Coco (2017)/Coco.mkv');
@@ -186,8 +184,8 @@ describe('a linked delete under the Shell trash', () => {
     );
 
     expect(response.status).toBe(204);
-    expect(main.requests).toEqual([[join(api.library, 'Coco (2017)')]]);
-    expect(existsSync(join(api.library, 'Coco (2017)'))).toBe(false);
+    expect(main.requests).toEqual([]);
+    expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
 
     await scanToReview(api);
 
@@ -196,7 +194,7 @@ describe('a linked delete under the Shell trash', () => {
     expect(after).toContain('Heat');
   });
 
-  it('moves a show’s folder out, and a later Folder scan does not bring it back', async () => {
+  it('keeps a show’s folder under ?files=trash, never asking main, and a later Folder scan does not bring it back', async () => {
     const main = fakeMain();
     const api = await freshApi(main.port);
     place(api.library, 'Harbor and Vine/Season 01/S01E01.mkv');
@@ -215,7 +213,12 @@ describe('a linked delete under the Shell trash', () => {
     );
 
     expect(response.status).toBe(204);
-    expect(main.requests).toEqual([[join(api.library, 'Harbor and Vine')]]);
+    expect(main.requests).toEqual([]);
+    expect(
+      existsSync(
+        join(api.library, 'Harbor and Vine', 'Season 01', 'S01E01.mkv')
+      )
+    ).toBe(true);
 
     await scanToReview(api);
 
@@ -224,7 +227,7 @@ describe('a linked delete under the Shell trash', () => {
 });
 
 describe('a linked delete on a standalone server', () => {
-  it('answers 409 with the no-shell sentence, the title and its files kept', async () => {
+  it('answers 204 under ?files=trash, not the no-shell 409, its files kept', async () => {
     const api = await freshApi(undefined);
     place(api.library, 'Coco (2017)/Coco.mkv');
     await scanToReview(api);
@@ -238,9 +241,10 @@ describe('a linked delete on a standalone server', () => {
       }
     );
 
-    expect(response.status).toBe(409);
-    expect(await response.json()).toEqual({ error: NO_SHELL });
-    expect((await titles(api)).movies.map((m) => m.title)).toContain('Coco');
+    expect(response.status).toBe(204);
+    expect((await titles(api)).movies.map((m) => m.title)).not.toContain(
+      'Coco'
+    );
     expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
   });
 });

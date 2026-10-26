@@ -12,9 +12,9 @@
 // And the app never removes a linked video itself: not a **Delete**, not a
 // **Factory reset**, and not an edit that supersedes it — `removeFile` is never
 // handed a linked path, so a managed file that happens to share that relative
-// path is never removed in its place. Since issue #411 a Delete hands a linked
-// title's files to the injected `Trash` — the shell's Recycle Bin — and that
-// is the only way one leaves; here the Trash records and moves nothing.
+// path is never removed in its place. Since issue #476 a Delete never asks the
+// injected `Trash` either, even under an old client's `?files=trash`: here
+// the Trash records every request and moves nothing.
 //
 // Over a real listener, a real `:memory:` library, a sandboxed media root and a
 // sandboxed Library folder, with the Playback's folder reader composed over
@@ -325,7 +325,7 @@ describe('a linked title’s subtitles', () => {
 });
 
 describe('the app never removes a linked video', () => {
-  it('leaves a linked film’s video to the Trash after a Delete, removing it itself never', async () => {
+  it('keeps a linked film’s video after a Delete, never asking the Trash', async () => {
     const { storage, baseUrl, media, library, folderId, trashed } = freshApi();
     const file = placeFixture(library, LINKED_FILM);
     placeFile(media, 'heat-1995/poster.jpg', 'poster');
@@ -346,10 +346,10 @@ describe('the app never removes a linked video', () => {
     expect(response.status).toBe(204);
     expect(existsSync(join(media, 'heat-1995'))).toBe(false);
     expect(existsSync(file)).toBe(true);
-    expect(trashed).toHaveLength(1);
+    expect(trashed).toEqual([]);
   });
 
-  it('leaves a linked episode’s video to the Trash after a series Delete', async () => {
+  it('keeps a linked episode’s video after a series Delete, never asking the Trash', async () => {
     const { storage, baseUrl, library, folderId, trashed } = freshApi();
     const file = placeFixture(library, LINKED_EPISODE);
     const series = addLinkedSeries(storage, folderId);
@@ -367,7 +367,7 @@ describe('the app never removes a linked video', () => {
 
     expect(response.status).toBe(204);
     expect(existsSync(file)).toBe(true);
-    expect(trashed).toHaveLength(1);
+    expect(trashed).toEqual([]);
   });
 
   it('leaves every linked video on disk after a Factory reset', async () => {
