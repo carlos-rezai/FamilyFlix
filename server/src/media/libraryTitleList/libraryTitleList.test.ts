@@ -3,8 +3,9 @@
 // The **Manage library page**'s read out of the route: every **Library
 // title** with its `path` — copied, its Media folder; a linked **Collection
 // folder** film, its video; linked, its Source folder; linked with no Source
-// folder, its first video's folder — and `linkedFilesOf`, each title's
-// **Linked files** as a delete trashes them, `null` for a copied title.
+// folder, its first video's folder — and each title's **Linked files**, the
+// kind alone (Keep originals, phase 5, issue #478), `null` for a copied title.
+// The list answers its titles and nothing else: no paths beside them.
 //
 // Over a real `:memory:` library, a sandboxed media root and a sandboxed
 // Library folder, the route suites' harness.
@@ -121,10 +122,30 @@ describe('libraryTitleList — each title’s path', () => {
   });
 });
 
-describe('libraryTitleList — each title’s Linked files', () => {
+describe('libraryTitleList — each title’s Linked files, the kind only', () => {
+  /** A title of the list by name, film or show. */
+  const named = (
+    list: Awaited<ReturnType<typeof libraryTitleList>>,
+    title: string
+  ) =>
+    [...list.titles.movies, ...list.titles.series].find(
+      (entry) => entry.title === title
+    );
+
+  it('answers the titles alone, with no Linked files paths beside them', async () => {
+    const at = fresh();
+    linkedFilm(at, 'Heat', 'Heat (1995)/Heat.1995.mkv', {
+      folder: 'Heat (1995)',
+    });
+
+    const list = await libraryTitleList(at.storage, at.media);
+
+    expect(Object.keys(list)).toEqual(['titles']);
+  });
+
   it('answers null for a copied title', async () => {
     const at = fresh();
-    const film = at.storage.addMovie({
+    at.storage.addMovie({
       title: 'Heat',
       videoPath: 'heat-1995/Heat.mkv',
       mediaFolder: 'heat-1995',
@@ -132,28 +153,23 @@ describe('libraryTitleList — each title’s Linked files', () => {
 
     const list = await libraryTitleList(at.storage, at.media);
 
-    expect(list.titles.movies[0]?.linkedFiles).toBeNull();
-    expect(list.linkedFilesOf('movie', film.id)).toBeNull();
+    expect(named(list, 'Heat')?.linkedFiles).toBeNull();
   });
 
-  it('answers a Source folder of its own whole, as folder', async () => {
+  it('answers folder for a Source folder of its own', async () => {
     const at = fresh();
-    const film = linkedFilm(at, 'Heat', 'Heat (1995)/Heat.1995.mkv', {
+    linkedFilm(at, 'Heat', 'Heat (1995)/Heat.1995.mkv', {
       folder: 'Heat (1995)',
     });
 
     const list = await libraryTitleList(at.storage, at.media);
 
-    expect(list.titles.movies[0]?.linkedFiles).toBe('folder');
-    expect(list.linkedFilesOf('movie', film.id)).toEqual({
-      kind: 'folder',
-      paths: [join(at.library, 'Heat (1995)')],
-    });
+    expect(named(list, 'Heat')?.linkedFiles).toBe('folder');
   });
 
-  it('answers a shared Collection folder’s film as its videos', async () => {
+  it('answers videos for a shared Collection folder’s film', async () => {
     const at = fresh();
-    const heat = linkedFilm(at, 'Heat', 'Collection/Heat.mkv', {
+    linkedFilm(at, 'Heat', 'Collection/Heat.mkv', {
       folder: 'Collection',
       file: 'Heat.mkv',
     });
@@ -164,32 +180,41 @@ describe('libraryTitleList — each title’s Linked files', () => {
 
     const list = await libraryTitleList(at.storage, at.media);
 
-    expect(list.linkedFilesOf('movie', heat.id)).toEqual({
-      kind: 'videos',
-      paths: [join(at.library, 'Collection', 'Heat.mkv')],
-    });
+    expect(named(list, 'Heat')?.linkedFiles).toBe('videos');
   });
 
-  it('answers a title in an unreadable Library folder as unreachable, with no paths', async () => {
+  it('answers shared for a film whose video another held title plays', async () => {
     const at = fresh();
-    const film = linkedFilm(at, 'Heat', 'Heat (1995)/Heat.1995.mkv', {
+    linkedFilm(at, 'Heat', 'Collection/Heat.mkv', {
+      folder: 'Collection',
+      file: 'Heat.mkv',
+    });
+    linkedFilm(at, 'Heat Again', 'Collection/Heat.mkv', {
+      folder: 'Collection',
+      file: 'Heat.mkv',
+    });
+
+    const list = await libraryTitleList(at.storage, at.media);
+
+    expect(named(list, 'Heat')?.linkedFiles).toBe('shared');
+  });
+
+  it('answers unreachable for a title in an unreadable Library folder', async () => {
+    const at = fresh();
+    linkedFilm(at, 'Heat', 'Heat (1995)/Heat.1995.mkv', {
       folder: 'Heat (1995)',
     });
     renameSync(at.library, join(at.root, 'Unplugged'));
 
     const list = await libraryTitleList(at.storage, at.media);
 
-    expect(list.titles.movies[0]).toMatchObject({
+    expect(named(list, 'Heat')).toMatchObject({
       linkedFiles: 'unreachable',
       path: join(at.library, 'Heat (1995)'),
     });
-    expect(list.linkedFilesOf('movie', film.id)).toEqual({
-      kind: 'unreachable',
-      paths: [],
-    });
   });
 
-  it('answers a show by its own kind, never a film’s id', async () => {
+  it('answers a show its own kind', async () => {
     const at = fresh();
     place(at.library, 'Harbor and Vine/Season 01/S01E01.mkv');
     const show = at.storage.addSeries(
@@ -207,7 +232,6 @@ describe('libraryTitleList — each title’s Linked files', () => {
 
     const list = await libraryTitleList(at.storage, at.media);
 
-    expect(list.linkedFilesOf('series', show.id)?.kind).toBe('folder');
-    expect(list.linkedFilesOf('movie', show.id)).toBeNull();
+    expect(named(list, 'Harbor and Vine')?.linkedFiles).toBe('folder');
   });
 });

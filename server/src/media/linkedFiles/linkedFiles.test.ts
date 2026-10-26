@@ -1,22 +1,20 @@
 // @vitest-environment node
 //
-// 47 — Manage library, Phase 1: "the list, read-only" (issue #407).
+// 47 — Manage library, Phase 1: "the list, read-only" (issue #407); a kind
+// only since 52, Keep originals, phase 5 (issue #478).
 //
-// `linkedFiles`, pure: a title's **Linked files** — what a Delete would move
-// to the Recycle Bin — off its linked videos, its **Source folder**, its
-// **Library folder**'s path and reach, and every other held title's linked
-// videos. Shared by the list read (the badge and the unreachable line) and,
-// later, the delete:
+// `linkedFiles`, pure: a title's **Linked files**, what a Delete leaves where
+// it lies, off its linked videos, its **Source folder**, its **Library
+// folder**'s path and reach, and every other held title's linked videos. It
+// answers the kind alone, `LinkedFiles | null`, never a path:
 //
-// - `folder` — the Source folder holds no other held title's video and is not
-//   a Library folder itself: the folder goes whole, its path the folder;
-// - `videos` — the folder is shared (a **Collection folder**, or a show's
-//   loose episodes at a Library folder's root): the title's linked videos
-//   alone;
-// - `unreachable` — the Library folder can't be read: no paths;
-// - `null` — no linked video, a copied title.
-//
-// Every path is absolute, joined here the way the route joins them.
+// - `folder`: the Source folder holds no other held title's video and is not
+//   a Library folder itself;
+// - `videos`: the folder is shared (a **Collection folder**, or a show's
+//   loose episodes at a Library folder's root), or the title partly linked;
+// - `shared`: every one of its videos is another held title's too;
+// - `unreachable`: the Library folder can't be read;
+// - `null`: no linked video, a copied title.
 
 import { join, resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -28,7 +26,7 @@ const reachable = { path: LIBRARY, reachable: true };
 const at = (...parts: string[]) => join(LIBRARY, ...parts);
 
 describe('linkedFiles — folder', () => {
-  it('answers the Source folder whole for a film alone in it', () => {
+  it('answers folder for a film alone in its Source folder', () => {
     expect(
       linkedFiles({
         videos: [at('Heat (1995)', 'Heat.1995.mkv')],
@@ -37,10 +35,10 @@ describe('linkedFiles — folder', () => {
         libraryFolder: reachable,
         others: [at('Coco (2017)', 'Coco.mkv')],
       })
-    ).toEqual({ kind: 'folder', paths: [at('Heat (1995)')] });
+    ).toBe('folder');
   });
 
-  it('answers a show’s Show folder whole when nothing else lies in it', () => {
+  it('answers folder for a show whose Show folder holds nothing else', () => {
     expect(
       linkedFiles({
         videos: [
@@ -52,7 +50,7 @@ describe('linkedFiles — folder', () => {
         libraryFolder: reachable,
         others: [],
       })
-    ).toEqual({ kind: 'folder', paths: [at('Harbor and Vine')] });
+    ).toBe('folder');
   });
 
   it('does not take a folder whose name only begins with the Source folder’s for a share', () => {
@@ -64,12 +62,12 @@ describe('linkedFiles — folder', () => {
         libraryFolder: reachable,
         others: [at('Heat 2', 'Heat 2.mkv')],
       })
-    ).toEqual({ kind: 'folder', paths: [at('Heat')] });
+    ).toBe('folder');
   });
 });
 
 describe('linkedFiles — videos', () => {
-  it('answers a Collection folder film’s own video alone', () => {
+  it('answers videos for a Collection folder film', () => {
     expect(
       linkedFiles({
         videos: [at('Collection', 'Heat.mkv')],
@@ -78,10 +76,10 @@ describe('linkedFiles — videos', () => {
         libraryFolder: reachable,
         others: [at('Collection', 'Coco.mkv')],
       })
-    ).toEqual({ kind: 'videos', paths: [at('Collection', 'Heat.mkv')] });
+    ).toBe('videos');
   });
 
-  it('answers a show’s loose episodes at a Library folder’s root as its videos', () => {
+  it('answers videos for a show’s loose episodes at a Library folder’s root', () => {
     const episodes = [at('Harbor.S01E01.mkv'), at('Harbor.S01E02.mkv')];
 
     expect(
@@ -92,10 +90,10 @@ describe('linkedFiles — videos', () => {
         libraryFolder: reachable,
         others: [],
       })
-    ).toEqual({ kind: 'videos', paths: episodes });
+    ).toBe('videos');
   });
 
-  it('never answers folder for a Source folder that is the Library folder itself', () => {
+  it('answers videos, never folder, for a Source folder that is the Library folder itself', () => {
     const answer = linkedFiles({
       videos: [at('Heat.mkv')],
       allLinked: true,
@@ -104,13 +102,12 @@ describe('linkedFiles — videos', () => {
       others: [],
     });
 
-    expect(answer?.kind).not.toBe('folder');
-    expect(answer?.paths).not.toContain(LIBRARY);
+    expect(answer).toBe('videos');
   });
 
-  it('answers a mixed show’s linked episodes only', () => {
-    // S01E02 was copied in: its original in the Show folder is the family's,
-    // and never trashed, so the folder cannot go whole.
+  it('answers videos for a mixed show', () => {
+    // S01E02 was copied in: the title is only partly linked, so its Source
+    // folder is not wholly its own.
     expect(
       linkedFiles({
         videos: [at('Harbor and Vine', 'Season 01', 'S01E01.mkv')],
@@ -119,15 +116,12 @@ describe('linkedFiles — videos', () => {
         libraryFolder: reachable,
         others: [],
       })
-    ).toEqual({
-      kind: 'videos',
-      paths: [at('Harbor and Vine', 'Season 01', 'S01E01.mkv')],
-    });
+    ).toBe('videos');
   });
 });
 
 describe('linkedFiles — unreachable and copied', () => {
-  it('answers unreachable, with no paths, when the Library folder can’t be read', () => {
+  it('answers unreachable when the Library folder can’t be read', () => {
     expect(
       linkedFiles({
         videos: [at('Heat (1995)', 'Heat.1995.mkv')],
@@ -136,7 +130,7 @@ describe('linkedFiles — unreachable and copied', () => {
         libraryFolder: { path: LIBRARY, reachable: false },
         others: [],
       })
-    ).toEqual({ kind: 'unreachable', paths: [] });
+    ).toBe('unreachable');
   });
 
   it('answers null for a copied title', () => {
@@ -164,11 +158,11 @@ describe('linkedFiles — unreachable and copied', () => {
   });
 });
 
-// 51, Library audit, slice 4 (issue #451): a Delete never trashes a video
-// another held title plays. `videos` drops every path another held title
-// links; when none is left the answer is `shared`, with no paths.
+// 51, Library audit, slice 4 (issue #451): a video another held title plays
+// is never the title's alone; when every one of its videos is shared the
+// answer is `shared`.
 describe('linkedFiles: shared videos', () => {
-  it('drops from videos an episode another held title links', () => {
+  it('answers videos while one of a show’s episodes is its own alone', () => {
     expect(
       linkedFiles({
         videos: [at('Harbor.S01E01.mkv'), at('Harbor.S01E02.mkv')],
@@ -177,10 +171,10 @@ describe('linkedFiles: shared videos', () => {
         libraryFolder: reachable,
         others: [at('Harbor.S01E01.mkv')],
       })
-    ).toEqual({ kind: 'videos', paths: [at('Harbor.S01E02.mkv')] });
+    ).toBe('videos');
   });
 
-  it('answers shared, with no paths, for a Collection folder film whose video another title plays', () => {
+  it('answers shared for a Collection folder film whose video another title plays', () => {
     expect(
       linkedFiles({
         videos: [at('Collection', 'Heat.mkv')],
@@ -189,7 +183,7 @@ describe('linkedFiles: shared videos', () => {
         libraryFolder: reachable,
         others: [at('Collection', 'Heat.mkv'), at('Collection', 'Coco.mkv')],
       })
-    ).toEqual({ kind: 'shared', paths: [] });
+    ).toBe('shared');
   });
 
   it('answers shared, never folder, for a film alone in its folder whose video another title plays', () => {
@@ -201,7 +195,7 @@ describe('linkedFiles: shared videos', () => {
         libraryFolder: reachable,
         others: [at('Coco (2017)', 'Coco.mkv')],
       })
-    ).toEqual({ kind: 'shared', paths: [] });
+    ).toBe('shared');
   });
 
   it('answers shared when every one of a show’s episodes is another title’s too', () => {
@@ -215,7 +209,7 @@ describe('linkedFiles: shared videos', () => {
         libraryFolder: reachable,
         others: episodes,
       })
-    ).toEqual({ kind: 'shared', paths: [] });
+    ).toBe('shared');
   });
 
   it('still answers unreachable while the Library folder can’t be read, shared or not', () => {
@@ -227,6 +221,6 @@ describe('linkedFiles: shared videos', () => {
         libraryFolder: { path: LIBRARY, reachable: false },
         others: [at('Collection', 'Heat.mkv')],
       })
-    ).toEqual({ kind: 'unreachable', paths: [] });
+    ).toBe('unreachable');
   });
 });
