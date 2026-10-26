@@ -635,7 +635,10 @@ const PROBLEM_REFUSALS: Record<'not-found' | 'refused', number> = {
   refused: 400,
 };
 
-/** How each refused folder add is answered: a `400` and its one sentence. */
+/**
+ * How each refused folder add is answered: a status and its one sentence,
+ * `409` for the **Media directory refusal** and `400` for the rest.
+ */
 const FOLDER_REFUSALS: Record<
   FolderRefusal,
   { status: number; error: string }
@@ -646,6 +649,11 @@ const FOLDER_REFUSALS: Record<
     error: 'Type the folder’s full path, starting with its drive.',
   },
   missing: { status: 400, error: 'No folder at that path.' },
+  media: {
+    status: 409,
+    error:
+      'That folder overlaps where FamilyFlix keeps its own copies. Choose another one.',
+  },
 };
 
 /** How each refused **Show folder read** is answered: a `400`'s one sentence. */
@@ -2252,12 +2260,14 @@ export function createApiRouter(
 
   // Add one folder: `201` with it, `400` for no path, a relative one or one
   // that is not a readable directory, `409` for a folder that is, is inside
-  // or holds one already listed. Every refusal is one sentence.
+  // or holds one already listed or the media directory. Every refusal is one
+  // sentence.
   router.post('/library-folders', async (req: Request, res: Response) => {
     const { path } = (req.body ?? {}) as { path?: unknown };
     const admission = await admitFolder(
       storage,
-      typeof path === 'string' ? path : ''
+      typeof path === 'string' ? path : '',
+      mediaPath
     );
     switch (admission.kind) {
       case 'added':
