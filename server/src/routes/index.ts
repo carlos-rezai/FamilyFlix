@@ -795,67 +795,6 @@ export function createApiRouter(
         };
   }
 
-  /**
-   * A `?files=trash` delete's first step: the title's **Linked files** to the
-   * Recycle Bin through `media.trashLinked`, before any row goes. A plain
-   * Delete never calls it, so it keeps the files and never asks the shell.
-   * `true` to go on: a copied title, an `unreachable` one, a `shared` one (no
-   * path of its own to trash), or every file moved. Else the `409` sentence is
-   * answered and every row kept.
-   */
-  async function trashedFirst(
-    kind: 'movie' | 'series',
-    id: string,
-    res: Response
-  ): Promise<boolean> {
-    const linked = (await libraryTitleList(storage, mediaPath)).linkedFilesOf(
-      kind,
-      id
-    );
-    if (
-      linked === null ||
-      linked.kind === 'unreachable' ||
-      linked.kind === 'shared'
-    ) {
-      return true;
-    }
-    const outcome = await media.trashLinked(linked.paths);
-    switch (outcome.kind) {
-      case 'trashed':
-        return true;
-      case 'unavailable':
-        res.status(409).json({
-          error:
-            'Only the desktop app can move a linked title’s files to the Recycle Bin.',
-        });
-        return false;
-      case 'failed':
-        res.status(409).json({
-          error: `Couldn’t move ${outcome.path} to the Recycle Bin. Close anything playing it and try again.`,
-        });
-        return false;
-    }
-  }
-
-  /**
-   * A Delete's first step, the **Recycle choice**: with `?files=trash` the
-   * title's **Linked files** go to the Recycle Bin first (`trashedFirst`);
-   * anything else keeps the files and records the title's **Left-out
-   * videos**, so a scan won't add it again. `true` to go on.
-   */
-  async function recycleChoiceFirst(
-    kind: 'movie' | 'series',
-    id: string,
-    req: Request<{ id: string }>,
-    res: Response
-  ): Promise<boolean> {
-    if (queryString(req.query.files) === 'trash') {
-      return trashedFirst(kind, id, res);
-    }
-    storage.leaveOut(titleVideos(storage, kind, id));
-    return true;
-  }
-
   // The whole browse home in one request: the in-progress movies, the favorited
   // ones, plus a row per populated genre, alphabetical, each capped at 15
   // movies with the genre's true total. The favorites shelf arrives on this
@@ -980,17 +919,16 @@ export function createApiRouter(
   // **Row first, then bytes, best-effort**: the cascade takes the episodes,
   // genres and subtitles, then `removeTitleFolder` takes the Series folder
   // and swallows its own failure.
-  // No `409` guard, the movie delete's precedent.
+  // It reads no query: the title's **Left-out videos** are recorded first, so
+  // a scan won't add it again, and every original is kept.
   router.delete(
     '/series/:id',
-    async (req: Request<{ id: string }>, res: Response) => {
+    (req: Request<{ id: string }>, res: Response) => {
       const series = seriesOr404(storage, req.params.id, res);
       if (!series) {
         return;
       }
-      if (!(await recycleChoiceFirst('series', series.id, req, res))) {
-        return;
-      }
+      storage.leaveOut(titleVideos(storage, 'series', series.id));
 
       const folder = storage.mediaFolderOf('series', series.id);
       storage.deleteSeries(series.id);
@@ -1984,14 +1922,12 @@ export function createApiRouter(
   // whole one. **Row first, then bytes, best-effort**: `removeTitleFolder`
   // swallows its own failure, so a video the stream route still has open
   // leaves a stranded folder and this `204`, never a ghost row and a `500`.
-  router.delete('/movies/:id', async (req: Request<{ id: string }>, res) => {
+  router.delete('/movies/:id', (req: Request<{ id: string }>, res) => {
     const movie = movieOr404(storage, req.params.id, res);
     if (!movie) {
       return;
     }
-    if (!(await recycleChoiceFirst('movie', movie.id, req, res))) {
-      return;
-    }
+    storage.leaveOut(titleVideos(storage, 'movie', movie.id));
 
     const folder = storage.mediaFolderOf('movie', movie.id);
     storage.deleteMovie(movie.id);
@@ -2282,8 +2218,7 @@ export function createApiRouter(
 
   // The **Manage library page**'s one read for both tabs, `media/`'s
   // `libraryTitleList`: every title A–Z, its paths absolute and its **Linked
-  // files** read against the disk now. The delete's `trashedFirst` and the
-  // clear's echo read the same list.
+  // files** read against the disk now. The clear's echo reads the same list.
   router.get('/library-titles', async (_req: Request, res: Response) => {
     res.json((await libraryTitleList(storage, mediaPath)).titles);
   });
