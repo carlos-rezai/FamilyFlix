@@ -528,8 +528,7 @@
         editMovie(){ const m=this.cur(); if(!m)return; const cr=this.credits[m.id]||{dir:'',cast:[]}; this.setState({fTitle:m.title,fYear:String(m.year),fDirector:cr.dir,fCast:cr.cast.join(', '),fDescription:m.syn,fGenres:[...m.genres],fVideo:m.title.toLowerCase().replace(/[^a-z0-9]+/g,'-')+'.mp4',fPoster:'poster.jpg',fSubs:[{filename:'subtitles.en.srt',lang:'English'}],fRating:this.ratingOf(m),fRatingHover:null,addMode:'manual',scanned:true,screen:'add',editMenuOpen:false,addContext:'edit',resolveId:null}); }
         // ---- the series ⋯ menu (SeriesEditMenu) and its Delete dialog ----
         toggleSeriesMenu(){ this.setState(s=>({seriesMenuOpen:!s.seriesMenuOpen})); }
-        // Log 51 Q6: Keep the files on every open, never remembered.
-        openSeriesDelete(){ this.setState({seriesMenuOpen:false,seriesDeleteOpen:true,seriesDeleting:false,seriesDeleteFiles:'keep'}); }
+        openSeriesDelete(){ this.setState({seriesMenuOpen:false,seriesDeleteOpen:true,seriesDeleting:false}); }
         closeSeriesDelete(){ this.setState({seriesDeleteOpen:false}); }
         // Simulated: the real wire is DELETE /api/series/:id — 204, then back one step, the Series tab when nothing is behind.
         runSeriesDelete(){ const id=this.state.seriesId; this.setState({seriesDeleting:true});
@@ -1225,14 +1224,10 @@
                 onEdit:()=>this.editSeries(), onFetchTmdb:()=>this.enrichSeries(), onDelete:()=>this.openSeriesDelete(),
                 del:{ open:s.seriesDeleteOpen, deleting:s.seriesDeleting, deleteLabel:s.seriesDeleting?'Deleting\u2026':'Delete series',
                   heading:'Delete \u201c'+x.title+'\u201d?',
-                  // Log 51 Q6: What goes / What stays, and the Recycle choice for a linked show in the shell.
-                  removed:['Its details, poster and artwork','Its watch history, rating and heart'].concat(!x.linked?['FamilyFlix’s copy of its videos and subtitles']:(s.folderBridge&&s.seriesDeleteFiles==='trash')?['Its folder, to the Recycle Bin']:[]),
-                  kept:x.linked&&!(s.folderBridge&&s.seriesDeleteFiles==='trash')?['Its folder, in your library folder']:[],
-                  keptNone:!x.linked||(s.folderBridge&&s.seriesDeleteFiles==='trash'),
-                  warnLinked:!!x.linked&&s.folderBridge&&s.seriesDeleteFiles==='trash',
-                  showChoice:!!x.linked&&s.folderBridge,
-                  choices:[['keep','Keep the files','They stay in your library folder. A scan won’t add it again.'],['trash','Move them to the Recycle Bin','From your library folder, so it can be restored from there.']].map(([v,label,line])=>({key:v,label,line,checked:(s.seriesDeleteFiles||'keep')===v,onSelect:()=>this.setState({seriesDeleteFiles:v}),cardStyle:exCard((s.seriesDeleteFiles||'keep')===v),dotStyle:exDot((s.seriesDeleteFiles||'keep')===v)})),
-                  hasRefusal:!!s.seriesDeleteRefusal, refusal:s.seriesDeleteRefusal||'',
+                  // Log 52 Q4, Q5: What goes / What stays, the same in the shell and a browser; a linked show's folder stays.
+                  removed:['Its details, poster and artwork','Its watch history, rating and heart'].concat(!x.linked?['FamilyFlix’s copy of its videos and subtitles']:[]),
+                  kept:x.linked?['Its folder, in your library folder']:[],
+                  keptNone:!x.linked,
                   onConfirm:()=>{ if(!s.seriesDeleting) this.runSeriesDelete(); }, onClose:()=>this.closeSeriesDelete(), stopProp:(e)=>this.stopProp(e) },
                 progressLabel: pr.watched===0 ? 'Not started' : pr.watched>=pr.total ? 'All '+pr.total+' episodes watched' : pr.watched+' of '+pr.total+' episodes watched',
                 isWatched:(pr.total>0&&pr.watched>=pr.total), watchedTip:(pr.total>0&&pr.watched>=pr.total)?'Watched, click to unmark':'Mark as watched',

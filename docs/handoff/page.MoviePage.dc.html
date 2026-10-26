@@ -183,9 +183,8 @@
                 🗑 Delete movie
               </div>
               <!-- The Danger row opens the Delete dialog (log 12), drawn below as
-                   DeleteMovieDialog: What goes / What stays and, for a linked film in the
-                   shell, the Recycle choice (log 51 Q6), then Delete movie (danger) before
-                   Cancel. -->
+                   DeleteMovieDialog: What goes / What stays, then Delete movie (danger)
+                   before Cancel. -->
             </div>
           </sc-if>
         </div>
@@ -546,14 +545,11 @@
 
       <!-- ========================= DELETE DIALOG (DeleteMovieDialog) =========================
            On Modal: Delete "<title>"? over This can't be undone., then the Manage library Delete
-           dialog's What goes / What stays and, for a linked film in the shell, the Recycle choice
-           (log 51 Q6): Keep the files (chosen on every open) or Move them to the Recycle Bin.
-           What goes, What stays and the danger callout follow the choice; the callout shows only
-           on the second card, and Delete movie never changes. A copied film and a browser draw no
-           cards. A film whose videos are all another title's draws no cards, and What stays reads
-           "Its video file(s), which another title plays". A route's 409 sentence is one 13px line
-           in danger ink above the buttons until the next press is answered (log 47 Q16). Escape,
-           the scrim, the close button and Cancel each close it with nothing sent. -->
+           dialog's What goes / What stays, the same in the shell and a browser (log 52 Q4, Q5):
+           a linked film's files are in What stays, where they lie. A film whose videos are all
+           another title's reads "Its video file(s), which another title plays". No Delete is
+           refused (log 52 Q7). Escape, the scrim, the close button and Cancel each close it with
+           nothing sent. -->
       <sc-if value="{{ detail.del.open }}" hint-placeholder-val="{{ false }}">
         <div
           onClick="{{ detail.del.onClose }}"
@@ -743,116 +739,6 @@
                   </sc-if>
                 </div>
               </div>
-
-              <!-- The Recycle choice (log 51 Q6): two ChoiceCards, the Import mode's pixels, drawn
-                   only for a linked title in the shell whose Linked files aren't shared (never a
-                   copied title, never a browser). Keep the files is chosen on every open, never
-                   remembered; What goes, What stays and the callout follow the choice, and the
-                   confirm's words never change. Only the second card sends files=trash. -->
-              <sc-if
-                value="{{ detail.del.showChoice }}"
-                hint-placeholder-val="{{ false }}"
-              >
-                <div
-                  role="radiogroup"
-                  aria-label="Its files"
-                  style="display: flex; gap: 10px"
-                >
-                  <sc-for
-                    list="{{ detail.del.choices }}"
-                    as="c"
-                    hint-placeholder-count="2"
-                  >
-                    <button
-                      role="radio"
-                      aria-checked="{{ c.checked }}"
-                      onClick="{{ c.onSelect }}"
-                      style="{{ c.cardStyle }}"
-                    >
-                      <div
-                        style="
-                          display: flex;
-                          align-items: center;
-                          justify-content: space-between;
-                          gap: 10px;
-                        "
-                      >
-                        <span
-                          style="
-                            font-family: var(--font-sans);
-                            font-size: 16px;
-                            font-weight: 600;
-                            color: var(--color-text);
-                            text-align: left;
-                          "
-                          >{{ c.label }}</span
-                        ><span style="{{ c.dotStyle }}"></span>
-                      </div>
-                      <div
-                        style="
-                          font-family: var(--font-sans);
-                          font-size: 12.5px;
-                          color: var(--color-text-faint);
-                          margin-top: 4px;
-                          text-align: left;
-                        "
-                      >
-                        {{ c.line }}
-                      </div>
-                    </button>
-                  </sc-for>
-                </div>
-              </sc-if>
-
-              <sc-if
-                value="{{ detail.del.warnLinked }}"
-                hint-placeholder-val="{{ false }}"
-              >
-                <div
-                  style="
-                    display: flex;
-                    gap: 10px;
-                    padding: 12px 14px;
-                    background: rgba(201, 122, 106, 0.1);
-                    border: 1px solid rgba(201, 122, 106, 0.32);
-                    border-radius: 9px;
-                    font-family: var(--font-sans);
-                    font-size: 13px;
-                    line-height: 1.5;
-                    color: var(--color-text);
-                    text-wrap: pretty;
-                  "
-                >
-                  <span
-                    style="
-                      flex: 0 0 auto;
-                      color: var(--color-danger);
-                      font-weight: 700;
-                    "
-                    >!</span
-                  >
-                  <span
-                    >This is a linked title. Its files go from your library
-                    folder to the Recycle Bin, not just out of FamilyFlix.</span
-                  >
-                </div>
-              </sc-if>
-              <!-- Log 47 Q16: a route's 409 sentence, one 13px line in danger ink above the
-                   buttons, until the next press is answered. -->
-              <sc-if
-                value="{{ detail.del.hasRefusal }}"
-                hint-placeholder-val="{{ false }}"
-              >
-                <div
-                  style="
-                    font-family: var(--font-sans);
-                    font-size: 13px;
-                    color: var(--color-danger);
-                  "
-                >
-                  {{ detail.del.refusal }}
-                </div>
-              </sc-if>
               <div
                 style="
                   display: flex;

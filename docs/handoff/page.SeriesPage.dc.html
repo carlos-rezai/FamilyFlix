@@ -529,13 +529,10 @@
            On Modal, the movie's Delete dialog worded for a series: the title in the heading,
            the episode count in the body. Escape, the scrim, ✕ and Cancel each close it with
            nothing sent. Delete series comes first and reads Deleting… and is disabled in flight.
-           Log 51 Q6: the body is the Manage library Delete dialog's What goes / What stays, then
-           the Recycle choice for a linked show in the shell: Keep the files (chosen on every
-           open) or Move them to the Recycle Bin. What goes, What stays and the danger callout
-           follow the choice; the callout shows only on the second card, and Delete series never
-           changes. A copied show and a browser draw no cards. A show whose videos are all another
-           title's draws no cards, and What stays reads "Its video file(s), which another title
-           plays". -->
+           Log 52 Q4, Q5: the body is the Manage library Delete dialog's What goes / What stays,
+           the same in the shell and a browser: a linked show's files are in What stays, where
+           they lie. A show whose videos are all another title's reads "Its video file(s), which
+           another title plays". No Delete is refused (log 52 Q7). -->
       <sc-if value="{{ sr.del.open }}" hint-placeholder-val="{{ false }}">
         <div
           onClick="{{ sr.del.onClose }}"
@@ -725,116 +722,6 @@
                   </sc-if>
                 </div>
               </div>
-
-              <!-- The Recycle choice (log 51 Q6): two ChoiceCards, the Import mode's pixels, drawn
-                   only for a linked title in the shell whose Linked files aren't shared (never a
-                   copied title, never a browser). Keep the files is chosen on every open, never
-                   remembered; What goes, What stays and the callout follow the choice, and the
-                   confirm's words never change. Only the second card sends files=trash. -->
-              <sc-if
-                value="{{ sr.del.showChoice }}"
-                hint-placeholder-val="{{ false }}"
-              >
-                <div
-                  role="radiogroup"
-                  aria-label="Its files"
-                  style="display: flex; gap: 10px"
-                >
-                  <sc-for
-                    list="{{ sr.del.choices }}"
-                    as="c"
-                    hint-placeholder-count="2"
-                  >
-                    <button
-                      role="radio"
-                      aria-checked="{{ c.checked }}"
-                      onClick="{{ c.onSelect }}"
-                      style="{{ c.cardStyle }}"
-                    >
-                      <div
-                        style="
-                          display: flex;
-                          align-items: center;
-                          justify-content: space-between;
-                          gap: 10px;
-                        "
-                      >
-                        <span
-                          style="
-                            font-family: var(--font-sans);
-                            font-size: 16px;
-                            font-weight: 600;
-                            color: var(--color-text);
-                            text-align: left;
-                          "
-                          >{{ c.label }}</span
-                        ><span style="{{ c.dotStyle }}"></span>
-                      </div>
-                      <div
-                        style="
-                          font-family: var(--font-sans);
-                          font-size: 12.5px;
-                          color: var(--color-text-faint);
-                          margin-top: 4px;
-                          text-align: left;
-                        "
-                      >
-                        {{ c.line }}
-                      </div>
-                    </button>
-                  </sc-for>
-                </div>
-              </sc-if>
-
-              <sc-if
-                value="{{ sr.del.warnLinked }}"
-                hint-placeholder-val="{{ false }}"
-              >
-                <div
-                  style="
-                    display: flex;
-                    gap: 10px;
-                    padding: 12px 14px;
-                    background: rgba(201, 122, 106, 0.1);
-                    border: 1px solid rgba(201, 122, 106, 0.32);
-                    border-radius: 9px;
-                    font-family: var(--font-sans);
-                    font-size: 13px;
-                    line-height: 1.5;
-                    color: var(--color-text);
-                    text-wrap: pretty;
-                  "
-                >
-                  <span
-                    style="
-                      flex: 0 0 auto;
-                      color: var(--color-danger);
-                      font-weight: 700;
-                    "
-                    >!</span
-                  >
-                  <span
-                    >This is a linked title. Its files go from your library
-                    folder to the Recycle Bin, not just out of FamilyFlix.</span
-                  >
-                </div>
-              </sc-if>
-              <!-- Log 47 Q16: a route's 409 sentence, one 13px line in danger ink above the
-                   buttons, until the next press is answered. -->
-              <sc-if
-                value="{{ sr.del.hasRefusal }}"
-                hint-placeholder-val="{{ false }}"
-              >
-                <div
-                  style="
-                    font-family: var(--font-sans);
-                    font-size: 13px;
-                    color: var(--color-danger);
-                  "
-                >
-                  {{ sr.del.refusal }}
-                </div>
-              </sc-if>
               <div
                 style="
                   display: flex;
