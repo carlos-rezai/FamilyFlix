@@ -4,7 +4,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
 
 import { PageHeader, PillTabs } from '@/components';
-import type { DeleteFiles, LibraryTitle } from '@/types';
+import type { LibraryTitle } from '@/types';
 import { ClearDialog } from '../ClearDialog/ClearDialog';
 import { DeleteTitleDialog } from '../DeleteTitleDialog/DeleteTitleDialog';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
@@ -24,11 +24,11 @@ import { Empty, List, Summary, Toolbar } from './ManageLibrary.styles';
  * the echo, with the `success` notice. A refused one leaves it open, live.
  * _Delete…_ opens the **Delete dialog** the same way: a delete that lands
  * closes it, the row off the list, with _“Coco” was deleted._ The in-flight
- * states and the refusal — held against its title — are `useLibraryTitles`';
+ * states are `useLibraryTitles`';
  * the organism holds only which dialog is open, and for which title.
  */
 export function ManageLibrary() {
-  const { titles, clearing, clearDetails, deleting, deleteTitle, refusalFor } =
+  const { titles, clearing, clearDetails, deleting, deleteTitle } =
     useLibraryTitles();
   const { notify } = useSnackbar();
   const [asked, setAsked] = useState<LibraryTitle | null>(null);
@@ -45,8 +45,8 @@ export function ManageLibrary() {
   }
   const [doomed, setDoomed] = useState<LibraryTitle | null>(null);
 
-  async function confirmDelete(title: LibraryTitle, files: DeleteFiles) {
-    const deleted = await deleteTitle(title, files);
+  async function confirmDelete(title: LibraryTitle) {
+    const deleted = await deleteTitle(title);
     if (deleted) {
       setDoomed(null);
       notify({ variant: 'success', message: `“${title.title}” was deleted.` });
@@ -119,8 +119,7 @@ export function ManageLibrary() {
         <DeleteTitleDialog
           title={doomed}
           deleting={deleting}
-          refusal={refusalFor(doomed)}
-          onConfirm={(files) => void confirmDelete(doomed, files)}
+          onConfirm={() => void confirmDelete(doomed)}
           onClose={() => setDoomed(null)}
         />
       )}

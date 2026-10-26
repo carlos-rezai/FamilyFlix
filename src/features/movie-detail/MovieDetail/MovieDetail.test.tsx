@@ -1458,7 +1458,8 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
  * 47 — Manage library, issue #413, on the page: the Delete dialog reads
  * the film's **Linked files** off the record the page already holds (since
  * log 51 Q6 answered by the detail read, now as `deleteFacts`), and a `409` leaves
- * the page on the film with the route's sentence in the dialog.
+ * the page on the film. Since keep-originals (issue #477) no route refuses a
+ * Delete, so the dialog draws no refusal line.
  */
 describe('MovieDetail — deleting a linked film', () => {
   const KEPT = 'Its video file(s), in your library folder';
@@ -1489,7 +1490,7 @@ describe('MovieDetail — deleting a linked film', () => {
     expect(within(dialog).getByText(KEPT)).toBeDefined();
   });
 
-  it('stays on the film with the refusal in the dialog on a 409', async () => {
+  it('stays on the film on a 409, no refusal line drawn', async () => {
     fetchMock.mockImplementation((input, init) => {
       if ((init?.method ?? 'GET').toUpperCase() === 'DELETE') {
         return Promise.resolve(conflictResponse(NO_SHELL));
@@ -1508,7 +1509,23 @@ describe('MovieDetail — deleting a linked film', () => {
       within(dialog).getByRole('button', { name: 'Delete movie' })
     );
 
-    expect(await within(dialog).findByText(NO_SHELL)).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([, init]) => (init?.method ?? 'GET').toUpperCase() === 'DELETE'
+        )
+      ).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (
+          within(dialog).getByRole('button', {
+            name: 'Delete movie',
+          }) as HTMLButtonElement
+        ).disabled
+      ).toBe(false)
+    );
+    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
     expect(pathname()).toBe('/movie/m1');
     expect(
       screen.getByRole('heading', { level: 1, name: 'Northwind' })

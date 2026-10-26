@@ -19,10 +19,8 @@ export interface DeleteSeriesDialogProps {
 /**
  * The series' **Delete dialog**, `DeleteMovieDialog`'s twin (`page.SeriesPage`):
  * the show named in the heading over _This can’t be undone._, then
- * `DeleteTitleBody`: **What goes / What stays**, the **Recycle choice** for a
- * linked show in the shell, **Keep the files** on every open, and _Delete
- * series_ before _Cancel_. A `409`'s sentence is drawn in danger ink above
- * the buttons until the next press is answered.
+ * `DeleteTitleBody`: **What goes / What stays**, and _Delete series_ before
+ * _Cancel_. A failure leaves the dialog where it is with nothing changed.
  */
 export function DeleteSeriesDialog({
   seriesId,
@@ -31,7 +29,7 @@ export function DeleteSeriesDialog({
   open,
   onClose,
 }: DeleteSeriesDialogProps) {
-  const { deleting, refusal, deleteSeries } = useDeleteSeries(seriesId);
+  const { deleting, deleteSeries } = useDeleteSeries(seriesId);
 
   return (
     <Modal
@@ -44,9 +42,8 @@ export function DeleteSeriesDialog({
       <DeleteTitleBody
         title={{ kind: 'series', title, ...deleteFacts }}
         deleting={deleting}
-        refusal={refusal}
-        onConfirm={(files) => {
-          void deleteSeries(files).catch(() => undefined);
+        onConfirm={() => {
+          void deleteSeries().catch(() => undefined);
         }}
         onClose={onClose}
       />

@@ -3,7 +3,6 @@ import { useCallback, useState } from 'react';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { seriesTabPath } from '@/utils';
 import { deleteSeries as sendDelete } from '@/api/deleteSeries/deleteSeries';
-import type { DeleteFiles } from '@/types';
 
 /** Where a delete lands with nothing behind the page: the Series tab. */
 const LANDING = seriesTabPath();
@@ -12,16 +11,10 @@ export interface DeleteSeries {
   /** True for the life of the request, false before and after. */
   deleting: boolean;
   /**
-   * The route's `409` sentence, `null` until a press is refused; held until
-   * the next press is answered — cleared when it deletes, replaced when it is
-   * refused again. Nothing moves on a refusal.
-   */
-  refusal: string | null;
-  /**
    * Sends the delete and, once the series is gone, leaves its page. Rejects
    * with the request's own error when the server refused, nothing moved.
    */
-  deleteSeries: (files: DeleteFiles) => Promise<void>;
+  deleteSeries: () => Promise<void>;
 }
 
 /**
@@ -32,26 +25,16 @@ export interface DeleteSeries {
 export function useDeleteSeries(seriesId: string): DeleteSeries {
   const goBack = useGoBack(LANDING);
   const [deleting, setDeleting] = useState(false);
-  const [refusal, setRefusal] = useState<string | null>(null);
 
-  const deleteSeries = useCallback(
-    async (files: DeleteFiles) => {
-      setDeleting(true);
-      let outcome;
-      try {
-        outcome = await sendDelete(seriesId, files);
-      } finally {
-        setDeleting(false);
-      }
-      if (outcome.kind === 'refused') {
-        setRefusal(outcome.sentence);
-        throw new Error(outcome.sentence);
-      }
-      setRefusal(null);
-      goBack();
-    },
-    [seriesId, goBack]
-  );
+  const deleteSeries = useCallback(async () => {
+    setDeleting(true);
+    try {
+      await sendDelete(seriesId);
+    } finally {
+      setDeleting(false);
+    }
+    goBack();
+  }, [seriesId, goBack]);
 
-  return { deleting, refusal, deleteSeries };
+  return { deleting, deleteSeries };
 }

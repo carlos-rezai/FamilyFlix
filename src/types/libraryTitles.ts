@@ -7,18 +7,12 @@ export const DETAILS_STATES = ['synced', 'own', 'none'] as const;
 export type DetailsState = (typeof DETAILS_STATES)[number];
 
 /**
- * A title's **Linked files**, what a Delete that asks for the Recycle Bin
- * would move there: its Source folder whole, its unshared linked videos alone,
- * nothing when every video is another held title's too (`shared`), or nothing
- * while its Library folder can't be read. A copied title has none: `null`.
+ * A title's **Linked files**, the kind a Delete keeps: its Source folder
+ * whole, its unshared linked videos alone, videos another held title plays
+ * too (`shared`), or files whose Library folder can't be read right now. A
+ * copied title has none: `null`.
  */
 export type LinkedFiles = 'folder' | 'videos' | 'shared' | 'unreachable';
-
-/**
- * The **Recycle choice** a Delete is confirmed with: `keep` the title's
- * Linked files where they lie, or `trash` them to the Recycle Bin.
- */
-export type DeleteFiles = 'keep' | 'trash';
 
 /** What both kinds of **Library title** carry. */
 interface LibraryTitleBase {

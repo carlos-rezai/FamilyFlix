@@ -891,7 +891,8 @@ describe('SeriesDetail — the Shown rating', () => {
  * 47 — Manage library, issue #413, on the page: the series' Delete dialog
  * reads the show's **Linked files** off the record the page already holds
  * (since log 51 Q6 answered by the detail read, now as `deleteFacts`), and a `409`
- * leaves the page on the show with the route's sentence in the dialog.
+ * leaves the page on the show. Since keep-originals (issue #477) no route
+ * refuses a Delete, so the dialog draws no refusal line.
  */
 describe('SeriesDetail — deleting a linked show', () => {
   const KEPT = 'Its folder, in your library folder';
@@ -931,7 +932,7 @@ describe('SeriesDetail — deleting a linked show', () => {
     expect(within(openDeleteDialog()).getByText(KEPT)).toBeDefined();
   });
 
-  it('stays on the show with the refusal in the dialog on a 409', async () => {
+  it('stays on the show on a 409, no refusal line drawn', async () => {
     const detail = oneLinkedEpisode();
     fetchMock.mockImplementation((input, init) => {
       if ((init?.method ?? 'GET').toUpperCase() === 'DELETE') {
@@ -950,7 +951,23 @@ describe('SeriesDetail — deleting a linked show', () => {
       within(dialog).getByRole('button', { name: 'Delete series' })
     );
 
-    expect(await within(dialog).findByText(NO_SHELL)).toBeTruthy();
+    await waitFor(() =>
+      expect(
+        fetchMock.mock.calls.some(
+          ([, init]) => (init?.method ?? 'GET').toUpperCase() === 'DELETE'
+        )
+      ).toBe(true)
+    );
+    await waitFor(() =>
+      expect(
+        (
+          within(dialog).getByRole('button', {
+            name: 'Delete series',
+          }) as HTMLButtonElement
+        ).disabled
+      ).toBe(false)
+    );
+    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
     expect(pathname()).toBe('/series/harbor');
     expect(
       screen.getByRole('heading', { level: 1, name: 'Harbor & Vine' })
