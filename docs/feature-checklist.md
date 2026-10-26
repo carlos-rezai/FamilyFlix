@@ -64,6 +64,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Start on Series — open FamilyFlix on the Series tab | ✅ Done    |
 | Subtitle picker — choose a track in the player      | ✅ Done    |
 | Library audit: every Library flow, tested live      | ✅ Done    |
+| Keep originals: a Delete never touches your files   | 🔜 Planned |
 | Loading states — spinners and an FF loading overlay | 🔜 Planned |
 | Scan new folders — and sync only what a run added   | 🔜 Planned |
 
