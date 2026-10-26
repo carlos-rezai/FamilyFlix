@@ -10,7 +10,6 @@ import {
 import { useDeleteSeries } from './useDeleteSeries';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import {
-  conflictResponse,
   noContentResponse,
   notFoundResponse,
   serverErrorResponse,
@@ -43,17 +42,20 @@ afterEach(() => {
 
 /** A screen whose only control is the one this hook returns. */
 function Screen() {
-  const { deleting, refusal, deleteSeries } = useDeleteSeries('harbor');
+  const answered = useDeleteSeries('harbor');
+  const { deleting, deleteSeries } = answered;
 
   return (
     <>
       <span>Series screen</span>
       <span data-testid="deleting">{String(deleting)}</span>
-      <span data-testid="refusal">{refusal ?? 'none'}</span>
+      <span data-testid="answers">
+        {Object.keys(answered).sort().join(', ')}
+      </span>
       <button
         type="button"
         onClick={() => {
-          void Promise.resolve(deleteSeries('keep')).catch(() => undefined);
+          void Promise.resolve(deleteSeries()).catch(() => undefined);
         }}
       >
         Delete series
@@ -184,67 +186,16 @@ describe('useDeleteSeries — deleting', () => {
 });
 
 /**
- * 47 — Manage library, issue #413: `useDeleteMovie`'s twin. A `409`'s one
- * sentence is held as `refusal` until the next press is answered — cleared
- * when it deletes, replaced when it is refused again. Nothing moves on a
- * refusal.
+ * 52, Keep originals, Phase 4 (issue #477): `useDeleteMovie`'s twin. No
+ * route refuses a Delete any more, so the hook holds no `refusal`: it
+ * answers `deleting` and `deleteSeries()`, and nothing more.
  */
-const NO_SHELL =
-  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
-const LOCKED =
-  'Couldn’t move Harbor & Vine to the Recycle Bin. Close anything playing it and try again.';
-const refusal = () => screen.getByTestId('refusal').textContent;
+describe('useDeleteSeries — what it answers', () => {
+  it('answers deleting and deleteSeries, and no refusal', () => {
+    renderAt(['/', '/series/harbor'], 1);
 
-describe('useDeleteSeries — refusal', () => {
-  it('holds the route’s sentence on a 409, and stays on the show', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
-    renderAt(['/', '/?tab=series', '/series/harbor'], 2);
-    expect(refusal()).toBe('none');
-
-    confirm();
-
-    await waitFor(() => expect(refusal()).toBe(NO_SHELL));
-    expect(deleting()).toBe('false');
-    expect(url()).toBe('/series/harbor');
-  });
-
-  it('holds the sentence until the next press is answered', async () => {
-    fetchMock.mockResolvedValueOnce(conflictResponse(NO_SHELL));
-    renderAt(['/', '/?tab=series', '/series/harbor'], 2);
-    confirm();
-    await waitFor(() => expect(refusal()).toBe(NO_SHELL));
-
-    holdDelete();
-    confirm();
-
-    await waitFor(() => expect(deleting()).toBe('true'));
-    expect(refusal()).toBe(NO_SHELL);
-  });
-
-  it('replaces the sentence with the next press’s own refusal', async () => {
-    fetchMock
-      .mockResolvedValueOnce(conflictResponse(NO_SHELL))
-      .mockResolvedValueOnce(conflictResponse(LOCKED));
-    renderAt(['/', '/?tab=series', '/series/harbor'], 2);
-
-    confirm();
-    await waitFor(() => expect(refusal()).toBe(NO_SHELL));
-    confirm();
-
-    await waitFor(() => expect(refusal()).toBe(LOCKED));
-    expect(url()).toBe('/series/harbor');
-  });
-
-  it('clears the sentence and goes back once the next press deletes', async () => {
-    fetchMock
-      .mockResolvedValueOnce(conflictResponse(LOCKED))
-      .mockResolvedValueOnce(noContentResponse());
-    renderAt(['/', '/?tab=series', '/series/harbor'], 2);
-
-    confirm();
-    await waitFor(() => expect(refusal()).toBe(LOCKED));
-    confirm();
-
-    await waitFor(() => expect(url()).toBe('/?tab=series'));
+    expect(screen.getByTestId('answers').textContent).toBe(
+      'deleteSeries, deleting'
+    );
   });
 });

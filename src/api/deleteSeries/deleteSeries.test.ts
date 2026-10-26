@@ -14,11 +14,11 @@ import {
  * `deleteSeries(id)`, moved up from `features/series/api/` because two
  * features now call it — the series page's Delete dialog and the **Manage
  * library page**'s. The route is unchanged: `DELETE /api/series/:id`, no
- * body. It answers `factoryReset`'s shape: `deleted` on the `204` — and on a
- * `404`, **gone is gone**, as the detail page always held — `refused` with
- * the route's own sentence on a `409`, and rejects otherwise.
+ * body. Since keep-originals (issue #477) it answers `factoryReset`'s shape,
+ * `Promise<void>`: resolved on the `204`, and on a `404`, **gone is gone**,
+ * as the detail page always held; rejected otherwise, a `409` too.
  */
-const LOCKED =
+const SENTENCE =
   'Couldn’t move E:\\Series\\Bluey to the Recycle Bin. Close anything playing it and try again.';
 
 let fetchMock: ReturnType<
@@ -66,35 +66,22 @@ describe('deleteSeries', () => {
     expect(onlyRequest().url).toBe('/api/series/a%2F1%20b');
   });
 
-  it('answers deleted on a 204, never reading a body', async () => {
+  it('resolves with nothing on a 204, never reading a body', async () => {
     fetchMock.mockResolvedValue(noContentResponse());
 
-    await expect(deleteSeries('s1')).resolves.toEqual({ kind: 'deleted' });
+    await expect(deleteSeries('s1')).resolves.toBeUndefined();
   });
 
-  it('answers deleted on a 404 too — gone is gone', async () => {
+  it('resolves with nothing on a 404 too: gone is gone', async () => {
     fetchMock.mockResolvedValue(notFoundResponse('Unknown series: s1'));
 
-    await expect(deleteSeries('s1')).resolves.toEqual({ kind: 'deleted' });
+    await expect(deleteSeries('s1')).resolves.toBeUndefined();
   });
 
-  it('answers refused with the route’s own sentence on a 409', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(LOCKED));
+  it('rejects a 409, even one naming its reason', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(SENTENCE));
 
-    await expect(deleteSeries('s1')).resolves.toEqual({
-      kind: 'refused',
-      sentence: LOCKED,
-    });
-  });
-
-  it('rejects a 409 that names no reason', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 409,
-      json: () => Promise.resolve({}),
-    } as unknown as Response);
-
-    await expect(deleteSeries('s1')).rejects.toThrow();
+    await expect(deleteSeries('s1')).rejects.toThrow(/409/);
   });
 
   it('rejects on a 500', async () => {

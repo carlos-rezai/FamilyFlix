@@ -255,7 +255,7 @@ describe('useLibraryTitles — clearDetails', () => {
 /**
  * 47 — Manage library, Phase 4: "delete a copied title" (issue #410).
  *
- * `deleteTitle(title, 'keep')` sends the title's delete over the unchanged route —
+ * `deleteTitle(title)` sends the title's delete over the unchanged route —
  * `DELETE /api/movies/:id` or `/api/series/:id`, through the shared
  * `deleteMovie` / `deleteSeries` — and on `deleted` takes that row off its
  * list with no re-read, so the tab's count and the summary follow at once.
@@ -273,7 +273,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
 
     expect(writesOf()).toHaveLength(1);
     const [input, init] = writesOf()[0]!;
@@ -287,7 +287,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.series[0]!, 'keep'));
+    await act(() => result.current.deleteTitle(LISTED.series[0]!));
 
     expect(String(writesOf()[0]?.[0])).toBe('/api/series/s1');
   });
@@ -297,7 +297,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
 
     expect(result.current.titles?.movies).toEqual([
       LISTED.movies[0],
@@ -311,7 +311,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.series[0]!, 'keep'));
+    await act(() => result.current.deleteTitle(LISTED.series[0]!));
 
     expect(result.current.titles?.series).toEqual([]);
     expect(result.current.titles?.movies).toEqual(LISTED.movies);
@@ -322,7 +322,7 @@ describe('useLibraryTitles — deleteTitle', () => {
       Promise.resolve(noContentResponse())
     );
 
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
+    await act(() => result.current.deleteTitle(LISTED.movies[1]!));
 
     expect(
       fetchMock.mock.calls.filter(
@@ -340,7 +340,7 @@ describe('useLibraryTitles — deleteTitle', () => {
 
     let pending: Promise<boolean> | undefined;
     act(() => {
-      pending = result.current.deleteTitle(LISTED.movies[1]!, 'keep');
+      pending = result.current.deleteTitle(LISTED.movies[1]!);
     });
     expect(result.current.deleting).toBe(true);
 
@@ -358,7 +358,7 @@ describe('useLibraryTitles — deleteTitle', () => {
 
     let deleted: boolean | undefined;
     await act(async () => {
-      deleted = await result.current.deleteTitle(LISTED.movies[1]!, 'keep');
+      deleted = await result.current.deleteTitle(LISTED.movies[1]!);
     });
 
     expect(deleted).toBe(true);
@@ -374,7 +374,7 @@ describe('useLibraryTitles — deleteTitle', () => {
 
       let deleted: boolean | undefined;
       await act(async () => {
-        deleted = await result.current.deleteTitle(LISTED.movies[1]!, 'keep');
+        deleted = await result.current.deleteTitle(LISTED.movies[1]!);
       });
 
       expect(deleted).toBe(false);
@@ -384,93 +384,29 @@ describe('useLibraryTitles — deleteTitle', () => {
 });
 
 /**
- * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
+ * 47 — Manage library, Phase 5: "delete a linked title" (issue #411), as 52,
+ * Keep originals, Phase 4 (issue #477) leaves it.
  *
- * A linked delete the route refuses — `409` with one sentence, no shell or a
- * path the shell could not trash — is held against its title, `refusalFor`, the
- * `useFactoryReset` rule: `null` until a press is refused, the route's own
- * sentence then, and replaced by the next press's own answer — cleared when
- * that press deletes, the newer sentence when it is refused again. The row
- * stays on a refusal.
+ * A Delete keeps originals, so no route refuses one: a `409` is a failure
+ * like any other, resolving `false` with the row kept, and the hook holds no
+ * refusal, `refusalFor` gone with it.
  */
-describe('useLibraryTitles — refusalFor', () => {
-  const NO_SHELL =
-    'Only the desktop app can move a linked title’s files to the Recycle Bin.';
-  const LOCKED =
+describe('useLibraryTitles — a 409', () => {
+  const SENTENCE =
     'Couldn’t move E:\\Movies\\Coco (2017) to the Recycle Bin. Close anything playing it and try again.';
 
-  it('holds no refusal before a delete is refused', async () => {
+  it('is a failure like any other: false, the row kept, no refusal held', async () => {
     const { result } = await loadedHook(() =>
-      Promise.resolve(noContentResponse())
-    );
-
-    expect(result.current.refusalFor(LISTED.movies[1]!)).toBeNull();
-  });
-
-  it('holds the route’s sentence on a 409, the row kept, resolving false', async () => {
-    const { result } = await loadedHook(() =>
-      Promise.resolve(conflictResponse(NO_SHELL))
+      Promise.resolve(conflictResponse(SENTENCE))
     );
 
     let deleted: boolean | undefined;
     await act(async () => {
-      deleted = await result.current.deleteTitle(LISTED.movies[1]!, 'keep');
+      deleted = await result.current.deleteTitle(LISTED.movies[1]!);
     });
 
     expect(deleted).toBe(false);
-    expect(result.current.refusalFor(LISTED.movies[1]!)).toBe(NO_SHELL);
     expect(result.current.titles).toEqual(LISTED);
-  });
-
-  it('clears the refusal once the next press deletes', async () => {
-    const answers = [conflictResponse(LOCKED), noContentResponse()];
-    const { result } = await loadedHook(() =>
-      Promise.resolve(answers.shift() ?? noContentResponse())
-    );
-
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
-    expect(result.current.refusalFor(LISTED.movies[1]!)).toBe(LOCKED);
-
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
-
-    expect(result.current.refusalFor(LISTED.movies[1]!)).toBeNull();
-    expect(result.current.titles?.movies.map((row) => row.id)).toEqual([
-      'm0',
-      'm2',
-    ]);
-  });
-
-  it('replaces the refusal with the next press’s own sentence', async () => {
-    const answers = [conflictResponse(NO_SHELL), conflictResponse(LOCKED)];
-    const { result } = await loadedHook(() =>
-      Promise.resolve(answers.shift() ?? noContentResponse())
-    );
-
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
-
-    expect(result.current.refusalFor(LISTED.movies[1]!)).toBe(LOCKED);
-  });
-
-  it('refuses a show’s delete the same way', async () => {
-    const { result } = await loadedHook(() =>
-      Promise.resolve(conflictResponse(NO_SHELL))
-    );
-
-    await act(() => result.current.deleteTitle(LISTED.series[0]!, 'keep'));
-
-    expect(result.current.refusalFor(LISTED.series[0]!)).toBe(NO_SHELL);
-    expect(result.current.titles?.series).toEqual(LISTED.series);
-  });
-
-  it('holds a refusal against the title it answered, never another', async () => {
-    const { result } = await loadedHook(() =>
-      Promise.resolve(conflictResponse(NO_SHELL))
-    );
-
-    await act(() => result.current.deleteTitle(LISTED.movies[1]!, 'keep'));
-
-    expect(result.current.refusalFor(LISTED.movies[0]!)).toBeNull();
-    expect(result.current.refusalFor(LISTED.series[0]!)).toBeNull();
+    expect(result.current).not.toHaveProperty('refusalFor');
   });
 });

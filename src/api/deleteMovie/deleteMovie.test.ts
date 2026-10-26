@@ -55,4 +55,11 @@ describe('deleteMovie', () => {
 
     expect(onlyRequest().url).toBe('/api/movies/a%2F1%20b');
   });
+
+  /** 52, Keep originals, Phase 4 (issue #477): `deleteTitleAt`'s `void`. */
+  it('resolves with nothing once the movie is gone', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await expect(deleteMovie('m1')).resolves.toBeUndefined();
+  });
 });

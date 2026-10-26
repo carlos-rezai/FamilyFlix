@@ -9,12 +9,14 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
- * 47 — Manage library: `deleteTitleAt(endpoint)`, the `DELETE` `deleteMovie`
- * and `deleteSeries` share — `factoryReset`'s shape. `deleted` on the `204`,
- * and on a `404`, **gone is gone**; `refused` with the route's own sentence
- * on a `409`; and it rejects otherwise.
+ * 52, Keep originals, Phase 4 (issue #477): `deleteTitleAt(route)`, the
+ * `DELETE` `deleteMovie` and `deleteSeries` share, back in Factory reset's
+ * shape, `Promise<void>`. Any `2xx` resolves, and so does a `404`: **gone is
+ * gone**. Anything else rejects, a `409` too: a Delete keeps originals, so
+ * no route refuses one any more. The request is the route itself, a plain
+ * `DELETE` with no query and no body.
  */
-const LOCKED =
+const SENTENCE =
   'Couldn’t move E:\\Movies\\Coco (2017) to the Recycle Bin. Close anything playing it and try again.';
 
 const ENDPOINT = '/api/movies/m1';
@@ -38,35 +40,34 @@ afterEach(() => {
 });
 
 describe('deleteTitleAt', () => {
-  it('answers deleted on a 204, never reading a body', async () => {
+  it('sends a plain DELETE to the route, with no query and no body', async () => {
     fetchMock.mockResolvedValue(noContentResponse());
 
-    await expect(deleteTitleAt(ENDPOINT)).resolves.toEqual({ kind: 'deleted' });
+    await deleteTitleAt(ENDPOINT);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [input, init] = fetchMock.mock.calls[0]!;
+    expect(String(input)).toBe(ENDPOINT);
+    expect(init?.method?.toUpperCase()).toBe('DELETE');
+    expect(init?.body).toBeUndefined();
   });
 
-  it('answers deleted on a 404 too — gone is gone', async () => {
+  it('resolves with nothing on a 204, never reading a body', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await expect(deleteTitleAt(ENDPOINT)).resolves.toBeUndefined();
+  });
+
+  it('resolves with nothing on a 404 too: gone is gone', async () => {
     fetchMock.mockResolvedValue(notFoundResponse('Unknown movie: m1'));
 
-    await expect(deleteTitleAt(ENDPOINT)).resolves.toEqual({ kind: 'deleted' });
+    await expect(deleteTitleAt(ENDPOINT)).resolves.toBeUndefined();
   });
 
-  it('answers refused with the route’s own sentence on a 409', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(LOCKED));
+  it('rejects a 409, even one naming its reason', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(SENTENCE));
 
-    await expect(deleteTitleAt(ENDPOINT)).resolves.toEqual({
-      kind: 'refused',
-      sentence: LOCKED,
-    });
-  });
-
-  it('rejects a 409 that names no reason', async () => {
-    fetchMock.mockResolvedValue({
-      ok: false,
-      status: 409,
-      json: () => Promise.resolve({}),
-    } as unknown as Response);
-
-    await expect(deleteTitleAt(ENDPOINT)).rejects.toThrow();
+    await expect(deleteTitleAt(ENDPOINT)).rejects.toThrow(/409/);
   });
 
   it('rejects on a 500', async () => {

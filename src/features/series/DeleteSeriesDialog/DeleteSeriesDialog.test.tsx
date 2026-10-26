@@ -13,6 +13,7 @@ import { DeleteSeriesDialog } from './DeleteSeriesDialog';
 import type { LinkedFiles } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import {
   conflictResponse,
@@ -225,80 +226,55 @@ describe('DeleteSeriesDialog — the ways out', () => {
 });
 
 /**
- * The refusal line, the overview's: a `409`'s one sentence drawn in danger ink
- * above the buttons, held until the next press is answered — cleared when it
- * deletes, replaced when it is refused again. The page stays on the show.
+ * 52, Keep originals, Phase 4 (issue #477): a Delete keeps originals, so no
+ * route refuses one and the dialog draws no refusal line. A `409` is a
+ * failure like any other: the dialog up, Delete series live again, the page
+ * still on the show. And it is one dialog everywhere: a linked show in the
+ * shell (a **Folder bridge** present) draws no card and no callout, its
+ * folder under What stays, and its confirm sends the plain `DELETE`.
  */
-const NO_SHELL =
-  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
-const LOCKED =
+const SENTENCE =
   'Couldn’t move E:\\Series\\Harbor & Vine to the Recycle Bin. Close anything playing it and try again.';
-const DANGER = 'rgb(201, 122, 106)';
 
-describe('DeleteSeriesDialog — the refusal line', () => {
-  it('draws a 409’s sentence in danger ink above the buttons', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
-    renderDialog({ linkedFiles: 'folder' });
-    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
-
-    fireEvent.click(confirmButton());
-
-    const line = await within(dialog()).findByText(NO_SHELL);
-    expect(getComputedStyle(line).color).toBe(DANGER);
-    expect(comesBefore(line, confirmButton())).toBe(true);
-    expect(comesBefore(line, cancelButton())).toBe(true);
-  });
-
-  it('stays on the show, the dialog up and Delete series live again', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
+describe('DeleteSeriesDialog — a 409 is a failure like any other', () => {
+  it('draws no refusal line, the dialog up and Delete series live again', async () => {
+    fetchMock.mockResolvedValue(conflictResponse(SENTENCE));
     renderDialog({ linkedFiles: 'folder' });
 
     fireEvent.click(confirmButton());
-    await within(dialog()).findByText(NO_SHELL);
 
-    expect(url()).toBe('/series/ftd');
-    expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('holds the sentence while the next press is in flight', async () => {
-    fetchMock.mockResolvedValueOnce(conflictResponse(NO_SHELL));
-    renderDialog({ linkedFiles: 'folder' });
-    fireEvent.click(confirmButton());
-    await within(dialog()).findByText(NO_SHELL);
-
-    holdDelete();
-    fireEvent.click(confirmButton());
-
-    await waitFor(() => expect(deletingButton()).toBeTruthy());
-    expect(within(dialog()).getByText(NO_SHELL)).toBeTruthy();
-  });
-
-  it('replaces the sentence with the next press’s own refusal', async () => {
-    fetchMock
-      .mockResolvedValueOnce(conflictResponse(NO_SHELL))
-      .mockResolvedValueOnce(conflictResponse(LOCKED));
-    renderDialog({ linkedFiles: 'folder' });
-
-    fireEvent.click(confirmButton());
-    await within(dialog()).findByText(NO_SHELL);
-    fireEvent.click(confirmButton());
-
-    expect(await within(dialog()).findByText(LOCKED)).toBeTruthy();
-    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    await waitFor(() =>
+      expect((confirmButton() as HTMLButtonElement).disabled).toBe(false)
+    );
+    expect(within(dialog()).queryByText(SENTENCE)).toBeNull();
     expect(url()).toBe('/series/ftd');
   });
+});
 
-  it('lands as it does today once the next press deletes', async () => {
-    fetchMock
-      .mockResolvedValueOnce(conflictResponse(LOCKED))
-      .mockResolvedValueOnce(noContentResponse());
+describe('DeleteSeriesDialog — a linked show, in the shell', () => {
+  fakeFolderBridge();
+
+  it('draws no card and no callout, its folder kept', () => {
     renderDialog({ linkedFiles: 'folder' });
 
-    fireEvent.click(confirmButton());
-    await within(dialog()).findByText(LOCKED);
+    expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
+    expect(within(dialog()).queryByText(/Recycle Bin/)).toBeNull();
+    expect(
+      within(dialog()).getByText('Its folder, in your library folder')
+    ).toBeTruthy();
+  });
+
+  it('sends the plain DELETE, with no query', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+    renderDialog({ linkedFiles: 'folder' });
+    expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
+
     fireEvent.click(confirmButton());
 
-    await waitFor(() => expect(url()).toBe('/?tab=series'));
-    expect(screen.queryByText(LOCKED)).toBeNull();
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [input, init] = fetchMock.mock.calls[0]!;
+    expect(String(input)).toBe('/api/series/ftd');
+    expect(init?.method?.toUpperCase()).toBe('DELETE');
   });
 });

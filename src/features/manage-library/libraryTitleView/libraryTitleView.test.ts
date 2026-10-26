@@ -236,114 +236,109 @@ describe('deleteView — the confirm', () => {
 });
 
 /**
- * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
+ * 52, Keep originals, Phase 4 (issue #477).
  *
- * `deleteView` learns the **Linked files** (log 47 Q12): What goes ends, by
- * the title's files, in _Its folder, to the Recycle Bin_ for `folder` and
- * _Its video file(s), to the Recycle Bin_ for `videos`, and in nothing more
- * for `unreachable`, whose What stays is _Its files on <path> — they can’t be
- * reached right now_. A linked title with reachable files stays _Nothing_.
- * The `callout`, for `folder` and `videos` only: _This is a linked title. Its
- * files go from your library folder to the Recycle Bin, not just out of
- * FamilyFlix._ — `null` for a copied or unreachable title.
- *
- * Since log 51 Q6 these are the **Recycle choice**'s second card, `'trash'`.
+ * A Delete keeps originals, so `deleteView(title)` takes the title alone and
+ * words every **Linked files** kind as it did for keeping (log 52 Q4, Q8):
+ * What goes is the details and history only; What stays is _Its folder, in
+ * your library folder_ (`folder`), _Its video file(s), in your library
+ * folder_ (`videos`), _Its video file(s), which another title plays_
+ * (`shared`), or _Its files on <path> — they can’t be reached right now_
+ * (`unreachable`). No view carries a callout any more, a copied one neither.
  */
 const SHARED_GOES = [
   'Its details, poster and artwork',
   'Its watch history, rating and heart',
 ];
-const LINKED_CALLOUT =
-  'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
+const COCO_WORDS = {
+  heading: 'Delete “Coco”?',
+  subtitle:
+    'This takes the movie out of FamilyFlix. It can’t be undone from here.',
+  confirm: 'Delete movie',
+};
 
-describe('deleteView — a linked folder', () => {
-  const COCO = makeLibraryMovie({
-    linkedFiles: 'folder',
-    path: 'E:\\Movies\\Coco (2017)',
+describe('deleteView — a linked title keeps its files', () => {
+  it('keeps a linked folder in its library folder', () => {
+    const coco = makeLibraryMovie({
+      title: 'Coco',
+      linkedFiles: 'folder',
+      path: 'E:\\Movies\\Coco (2017)',
+    });
+
+    expect(deleteView(coco)).toEqual({
+      ...COCO_WORDS,
+      goes: SHARED_GOES,
+      stays: ['Its folder, in your library folder'],
+    });
   });
 
-  it('sends its folder to the Recycle Bin', () => {
-    expect(deleteView(COCO, 'trash').goes).toEqual([
-      ...SHARED_GOES,
-      'Its folder, to the Recycle Bin',
-    ]);
+  it('keeps linked videos in their library folder', () => {
+    const coco = makeLibraryMovie({
+      title: 'Coco',
+      linkedFiles: 'videos',
+      path: 'E:\\Movies\\Collection\\Coco.mkv',
+    });
+
+    expect(deleteView(coco)).toEqual({
+      ...COCO_WORDS,
+      goes: SHARED_GOES,
+      stays: ['Its video file(s), in your library folder'],
+    });
   });
 
-  it('keeps Nothing', () => {
-    expect(deleteView(COCO, 'trash').stays).toEqual(['Nothing']);
+  it('keeps video files another title plays', () => {
+    const coco = makeLibraryMovie({
+      title: 'Coco',
+      linkedFiles: 'shared',
+      path: 'E:\\Movies\\Collection\\Coco.mkv',
+    });
+
+    expect(deleteView(coco)).toEqual({
+      ...COCO_WORDS,
+      goes: SHARED_GOES,
+      stays: ['Its video file(s), which another title plays'],
+    });
   });
 
-  it('draws the linked callout', () => {
-    expect(deleteView(COCO, 'trash').callout).toBe(LINKED_CALLOUT);
+  it('keeps an unreachable title’s files on their path', () => {
+    const coco = makeLibraryMovie({
+      title: 'Coco',
+      linkedFiles: 'unreachable',
+      path: 'F:\\Movies\\Coco (2017)',
+    });
+
+    expect(deleteView(coco)).toEqual({
+      ...COCO_WORDS,
+      goes: SHARED_GOES,
+      stays: [
+        'Its files on F:\\Movies\\Coco (2017) — they can’t be reached right now',
+      ],
+    });
   });
 
-  it('says the same for a linked show', () => {
-    const view = deleteView(
-      makeLibrarySeries({ linkedFiles: 'folder' }),
-      'trash'
-    );
-    expect(view.goes).toEqual([
-      ...SHARED_GOES,
-      'Its folder, to the Recycle Bin',
-    ]);
-    expect(view.callout).toBe(LINKED_CALLOUT);
-  });
-});
-
-describe('deleteView — linked videos in a shared folder', () => {
-  const HEAT = makeLibraryMovie({
-    title: 'Heat',
-    linkedFiles: 'videos',
-    path: 'E:\\Movies\\Collection\\Heat.mkv',
-  });
-
-  it('sends its video file(s) alone to the Recycle Bin', () => {
-    expect(deleteView(HEAT, 'trash').goes).toEqual([
-      ...SHARED_GOES,
-      'Its video file(s), to the Recycle Bin',
-    ]);
-  });
-
-  it('keeps Nothing', () => {
-    expect(deleteView(HEAT, 'trash').stays).toEqual(['Nothing']);
-  });
-
-  it('draws the linked callout', () => {
-    expect(deleteView(HEAT, 'trash').callout).toBe(LINKED_CALLOUT);
-  });
-});
-
-describe('deleteView — an unreachable linked title', () => {
-  const GONE = makeLibraryMovie({
-    linkedFiles: 'unreachable',
-    path: 'F:\\Movies\\Coco (2017)',
-  });
-
-  it('lists only its details and history in What goes', () => {
-    expect(deleteView(GONE).goes).toEqual(SHARED_GOES);
-  });
-
-  it('keeps its files on their path, which can’t be reached', () => {
-    expect(deleteView(GONE).stays).toEqual([
-      'Its files on F:\\Movies\\Coco (2017) — they can’t be reached right now',
-    ]);
-  });
-
-  it('draws no callout', () => {
-    expect(deleteView(GONE).callout).toBeNull();
-  });
-});
-
-describe('deleteView — a copied title’s callout', () => {
-  it('draws none, with or without an original', () => {
+  it('words a linked show the same way', () => {
     expect(
-      deleteView(makeLibraryMovie({ originalPath: null })).callout
-    ).toBeNull();
-    expect(
-      deleteView(makeLibrarySeries({ originalPath: 'E:\\Series\\Bluey' }))
-        .callout
-    ).toBeNull();
+      deleteView(makeLibrarySeries({ title: 'Bluey', linkedFiles: 'folder' }))
+    ).toEqual({
+      heading: 'Delete “Bluey”?',
+      subtitle:
+        'This takes the series out of FamilyFlix. It can’t be undone from here.',
+      goes: SHARED_GOES,
+      stays: ['Its folder, in your library folder'],
+      confirm: 'Delete series',
+    });
   });
+});
+
+describe('deleteView — no callout', () => {
+  it.each(['folder', 'videos', 'shared', 'unreachable', null] as const)(
+    'carries none for linked files %s',
+    (linkedFiles) => {
+      expect(deleteView(makeLibraryMovie({ linkedFiles }))).not.toHaveProperty(
+        'callout'
+      );
+    }
+  );
 });
 
 describe('emptyLine', () => {

@@ -10,7 +10,6 @@ import {
 import { useDeleteMovie } from './useDeleteMovie';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import {
-  conflictResponse,
   noContentResponse,
   notFoundResponse,
   serverErrorResponse,
@@ -45,19 +44,22 @@ afterEach(() => {
  * screen matters — the hook is the unit, and what it does is move the router.
  */
 function Screen() {
-  const { deleting, refusal, deleteMovie } = useDeleteMovie('m1');
+  const answered = useDeleteMovie('m1');
+  const { deleting, deleteMovie } = answered;
 
   return (
     <>
       <span>Movie screen</span>
       <span data-testid="deleting">{String(deleting)}</span>
-      <span data-testid="refusal">{refusal ?? 'none'}</span>
+      <span data-testid="answers">
+        {Object.keys(answered).sort().join(', ')}
+      </span>
       <button
         type="button"
         // Whether the hook swallows a refusal or rethrows it is the dialog's
         // concern, not this file's; the location is what is asserted here.
         onClick={() => {
-          void Promise.resolve(deleteMovie('keep')).catch(() => undefined);
+          void Promise.resolve(deleteMovie()).catch(() => undefined);
         }}
       >
         Delete movie
@@ -216,69 +218,16 @@ describe('useDeleteMovie — deleting', () => {
 });
 
 /**
- * 47 — Manage library, issue #413: a `409` is the route's one sentence — no
- * shell, or a path the shell could not trash — held as `refusal`, the
- * `useFactoryReset` rule: `null` until a press is refused, the sentence then,
- * and replaced by the next press's own answer — cleared when that press
- * deletes, the newer sentence when it is refused again. Nothing moves on a
- * refusal.
+ * 52, Keep originals, Phase 4 (issue #477): a Delete keeps originals, so no
+ * route refuses one and the hook holds no `refusal`. It answers `deleting`
+ * and `deleteMovie()`, which asks nothing of the files, and nothing more.
  */
-const NO_SHELL =
-  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
-const LOCKED =
-  'Couldn’t move Northwind (1994) to the Recycle Bin. Close anything playing it and try again.';
-const refusal = () => screen.getByTestId('refusal').textContent;
+describe('useDeleteMovie — what it answers', () => {
+  it('answers deleting and deleteMovie, and no refusal', () => {
+    renderAt(['/', '/movie/m1'], 1);
 
-describe('useDeleteMovie — refusal', () => {
-  it('holds the route’s sentence on a 409, and stays on the movie', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(NO_SHELL));
-    renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
-    expect(refusal()).toBe('none');
-
-    confirm();
-
-    await waitFor(() => expect(refusal()).toBe(NO_SHELL));
-    expect(deleting()).toBe('false');
-    expect(url()).toBe('/movie/m1');
-  });
-
-  it('holds the sentence until the next press is answered', async () => {
-    fetchMock.mockResolvedValueOnce(conflictResponse(NO_SHELL));
-    renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
-    confirm();
-    await waitFor(() => expect(refusal()).toBe(NO_SHELL));
-
-    holdDelete();
-    confirm();
-
-    await waitFor(() => expect(deleting()).toBe('true'));
-    expect(refusal()).toBe(NO_SHELL);
-  });
-
-  it('replaces the sentence with the next press’s own refusal', async () => {
-    fetchMock
-      .mockResolvedValueOnce(conflictResponse(NO_SHELL))
-      .mockResolvedValueOnce(conflictResponse(LOCKED));
-    renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
-
-    confirm();
-    await waitFor(() => expect(refusal()).toBe(NO_SHELL));
-    confirm();
-
-    await waitFor(() => expect(refusal()).toBe(LOCKED));
-    expect(url()).toBe('/movie/m1');
-  });
-
-  it('clears the sentence and goes back once the next press deletes', async () => {
-    fetchMock
-      .mockResolvedValueOnce(conflictResponse(LOCKED))
-      .mockResolvedValueOnce(noContentResponse());
-    renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
-
-    confirm();
-    await waitFor(() => expect(refusal()).toBe(LOCKED));
-    confirm();
-
-    await waitFor(() => expect(url()).toBe('/genre/Drama'));
+    expect(screen.getByTestId('answers').textContent).toBe(
+      'deleteMovie, deleting'
+    );
   });
 });

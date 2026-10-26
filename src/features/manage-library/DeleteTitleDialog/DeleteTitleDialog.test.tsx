@@ -6,6 +6,7 @@ import { DeleteTitleDialog } from './DeleteTitleDialog';
 import type { LibraryTitle } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import {
   makeLibraryMovie,
   makeLibrarySeries,
@@ -48,13 +49,11 @@ const COCO = makeLibraryMovie({
 function renderDialog({
   title = COCO,
   deleting = false,
-  refusal = null,
   onConfirm = () => undefined,
   onClose = () => undefined,
 }: {
   title?: LibraryTitle;
   deleting?: boolean;
-  refusal?: string | null;
   onConfirm?: () => void;
   onClose?: () => void;
 } = {}) {
@@ -63,7 +62,6 @@ function renderDialog({
       <DeleteTitleDialog
         title={title}
         deleting={deleting}
-        refusal={refusal}
         onConfirm={onConfirm}
         onClose={onClose}
       />
@@ -199,13 +197,14 @@ describe('DeleteTitleDialog — the buttons', () => {
     expect(confirm().textContent).toBe('Delete series');
   });
 
-  it('confirms on Delete movie', () => {
+  it('confirms on Delete movie, asking nothing of the files', () => {
     const onConfirm = vi.fn();
     renderDialog({ onConfirm });
 
     fireEvent.click(confirm());
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm.mock.calls[0]).toEqual([]);
   });
 
   it('reads Deleting… and is inert while the request runs', () => {
@@ -260,25 +259,21 @@ describe('DeleteTitleDialog — focus', () => {
 });
 
 /**
- * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
+ * 47 — Manage library, Phase 5: "delete a linked title" (issue #411), as
+ * 52, Keep originals, Phase 4 (issue #477) leaves it.
  *
- * For a linked title the dialog draws `deleteView`'s linked words: What goes
- * ends in _Its folder, to the Recycle Bin_ (`folder`) or _Its video file(s),
- * to the Recycle Bin_ (`videos`), with the callout _This is a linked title.
- * Its files go from your library folder to the Recycle Bin, not just out of
- * FamilyFlix._; an `unreachable` title keeps _Its files on <path> — they
- * can’t be reached right now_ and draws no callout. And the `refusal` prop —
- * the route's `409` sentence the organism holds — is drawn in danger ink
- * above the buttons, the **Reset dialog**'s line; nothing while `null`.
- *
- * Since log 51 Q6 a linked title's words follow the **Recycle choice**, in
- * `DeleteTitleDialog.recycle.test.tsx`.
+ * A Delete keeps originals, so a linked title's dialog is today's _Keep the
+ * files_ state with its cards and callout gone, every word unchanged: What
+ * goes is its details and history, What stays its files where they lie; an
+ * `unreachable` title keeps _Its files on <path> — they can’t be reached
+ * right now_. No title draws the callout, and no refusal line is drawn: the
+ * dialog takes no `refusal`. It is one dialog everywhere: in the shell (a
+ * **Folder bridge** present) it draws exactly what a browser draws, and its
+ * confirm asks nothing of the files.
  */
 const CALLOUT =
   'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
 const SHARED_GOES = GOES.slice(0, 2);
-const NO_SHELL =
-  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
 
 describe('DeleteTitleDialog — an unreachable title', () => {
   const GONE = makeLibraryMovie({
@@ -311,24 +306,48 @@ describe('DeleteTitleDialog — a copied title draws no callout', () => {
   });
 });
 
-describe('DeleteTitleDialog — the refusal line', () => {
-  it('draws the refusal in danger ink above the buttons', () => {
+const LINKED = [
+  {
+    linkedFiles: 'folder',
+    path: 'E:\\Movies\\Coco (2017)',
+    stays: 'Its folder, in your library folder',
+  },
+  {
+    linkedFiles: 'videos',
+    path: 'E:\\Movies\\Collection\\Coco.mkv',
+    stays: 'Its video file(s), in your library folder',
+  },
+] as const;
+
+describe('DeleteTitleDialog — a linked title, in the shell', () => {
+  fakeFolderBridge();
+
+  it.each(LINKED)(
+    'draws no card and no callout for $linkedFiles, its files kept',
+    ({ linkedFiles, path, stays }) => {
+      renderDialog({
+        title: makeLibraryMovie({ title: 'Coco', linkedFiles, path }),
+      });
+
+      expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
+      expect(within(dialog()).queryByText(/Recycle Bin/)).toBeNull();
+      expect(within(dialog()).queryByText(CALLOUT)).toBeNull();
+      expect(itemsOf(listUnder('What goes'))).toEqual(SHARED_GOES);
+      expect(itemsOf(listUnder('What stays'))).toEqual([stays]);
+    }
+  );
+
+  it('confirms asking nothing of the files', () => {
+    const onConfirm = vi.fn();
     renderDialog({
       title: makeLibraryMovie({ title: 'Coco', linkedFiles: 'folder' }),
-      refusal: NO_SHELL,
+      onConfirm,
     });
+    expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
 
-    const line = within(dialog()).getByText(NO_SHELL);
-    expect(getComputedStyle(line).color).toBe(DANGER);
-    expect(comesBefore(line, confirm())).toBe(true);
-    expect(comesBefore(line, cancel())).toBe(true);
-  });
+    fireEvent.click(confirm());
 
-  it('draws no refusal while there is none', () => {
-    renderDialog({
-      title: makeLibraryMovie({ title: 'Coco', linkedFiles: 'folder' }),
-    });
-
-    expect(within(dialog()).queryByText(NO_SHELL)).toBeNull();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm.mock.calls[0]).toEqual([]);
   });
 });

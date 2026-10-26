@@ -14,6 +14,7 @@ import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import type { LibraryTitles } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
+import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import {
   LocationProbe,
   navigationType,
@@ -958,11 +959,11 @@ describe('ManageLibrary — Delete…', () => {
 /**
  * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
  *
- * _Delete…_ is offered on every row, linked titles included. The dialog for a
- * linked title draws its Recycle Bin words and callout; a `409` from the
- * unchanged route holds its one sentence in danger above the buttons — the
- * dialog open and the row kept, no notice — until the next press is
- * answered. An unreachable title's delete answers `204` like any other.
+ * _Delete…_ is offered on every row, linked titles included. Since 52, Keep
+ * originals (issue #477), a linked title's dialog keeps its files and draws
+ * no callout; a `409` is a failure like any other, no refusal line drawn,
+ * the dialog open and the row kept, no notice. An unreachable title's delete
+ * answers `204` like any other.
  */
 const LINKED: LibraryTitles = {
   movies: [
@@ -985,7 +986,6 @@ const NO_SHELL =
   'Only the desktop app can move a linked title’s files to the Recycle Bin.';
 const CALLOUT =
   'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
-const DANGER = 'rgb(201, 122, 106)';
 
 /** The list read answered with LINKED, each write by the next of `answers`. */
 function serveLinked(answers: Response[]) {
@@ -1011,7 +1011,7 @@ describe('ManageLibrary — deleting a linked title', () => {
     ).toBeDefined();
   });
 
-  it('holds a refusal in danger above the buttons, the dialog and row kept', async () => {
+  it('takes a 409 as any failure: no refusal line, the dialog and row kept', async () => {
     serveLinked([conflictResponse(NO_SHELL)]);
     renderPage();
     await loaded();
@@ -1019,72 +1019,15 @@ describe('ManageLibrary — deleting a linked title', () => {
 
     confirmDelete();
 
+    await waitFor(() => expect(writes()).toHaveLength(1));
     const dialog = deleteDialog() as HTMLElement;
-    const line = await within(dialog).findByText(NO_SHELL);
-    expect(getComputedStyle(line).color).toBe(DANGER);
-    const confirm = within(dialog).getByRole('button', {
+    const confirm = await within(dialog).findByRole('button', {
       name: 'Delete movie',
     });
-    expect(comesBefore(line, confirm)).toBe(true);
     expect((confirm as HTMLButtonElement).disabled).toBe(false);
+    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
     expect(rowOf('Coco')).toBeDefined();
     expect(screen.queryByText('“Coco” was deleted.')).toBeNull();
-  });
-
-  it('clears the refusal once the next press is answered', async () => {
-    serveLinked([conflictResponse(NO_SHELL), noContentResponse()]);
-    renderPage();
-    await loaded();
-    openDeleteOn('Coco');
-    confirmDelete();
-    await within(deleteDialog() as HTMLElement).findByText(NO_SHELL);
-
-    confirmDelete();
-
-    await waitFor(() => expect(deleteDialog()).toBeNull());
-    expect(screen.queryByText(NO_SHELL)).toBeNull();
-    expect(screen.queryByText('Coco')).toBeNull();
-    expect(await screen.findByText('“Coco” was deleted.')).toBeDefined();
-  });
-
-  it('draws no refusal in another title’s dialog', async () => {
-    serveLinked([conflictResponse(NO_SHELL)]);
-    renderPage();
-    await loaded();
-    openDeleteOn('Coco');
-    confirmDelete();
-    await within(deleteDialog() as HTMLElement).findByText(NO_SHELL);
-    fireEvent.click(
-      within(deleteDialog() as HTMLElement).getByRole('button', {
-        name: 'Cancel',
-      })
-    );
-
-    openDeleteOn('Heat');
-
-    const dialog = deleteDialog('Heat') as HTMLElement;
-    expect(dialog).not.toBeNull();
-    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
-  });
-
-  it('still draws the refusal when the same title’s dialog is reopened', async () => {
-    serveLinked([conflictResponse(NO_SHELL)]);
-    renderPage();
-    await loaded();
-    openDeleteOn('Coco');
-    confirmDelete();
-    await within(deleteDialog() as HTMLElement).findByText(NO_SHELL);
-    fireEvent.click(
-      within(deleteDialog() as HTMLElement).getByRole('button', {
-        name: 'Cancel',
-      })
-    );
-
-    openDeleteOn('Coco');
-
-    expect(
-      within(deleteDialog() as HTMLElement).getByText(NO_SHELL)
-    ).toBeDefined();
   });
 
   it('deletes an unreachable title, its row taken off', async () => {
@@ -1098,5 +1041,50 @@ describe('ManageLibrary — deleting a linked title', () => {
     await waitFor(() => expect(deleteDialog('Heat')).toBeNull());
     expect(screen.queryByText('Heat')).toBeNull();
     expect(String(writes()[0]?.[0])).toBe('/api/movies/m2');
+  });
+});
+
+/**
+ * 52, Keep originals, Phase 4 (issue #477): one dialog everywhere. In the
+ * shell (a **Folder bridge** present) a linked title's Delete dialog draws
+ * what a browser draws, no card and no callout, its folder under What
+ * stays; confirming sends the plain `DELETE`, no query, the row then off
+ * the list.
+ */
+describe('ManageLibrary — deleting a linked title, in the shell', () => {
+  fakeFolderBridge();
+
+  it('draws no card and no callout, its files kept', async () => {
+    serveLinked([]);
+    renderPage();
+    await loaded();
+
+    openDeleteOn('Coco');
+
+    const dialog = deleteDialog() as HTMLElement;
+    expect(within(dialog).queryAllByRole('radio')).toEqual([]);
+    expect(within(dialog).queryByText(/Recycle Bin/)).toBeNull();
+    expect(
+      within(dialog).getByText('Its folder, in your library folder')
+    ).toBeDefined();
+  });
+
+  it('sends the plain DELETE, with no query, and takes the row off', async () => {
+    serveLinked([noContentResponse()]);
+    renderPage();
+    await loaded();
+    openDeleteOn('Coco');
+    expect(
+      within(deleteDialog() as HTMLElement).queryAllByRole('radio')
+    ).toEqual([]);
+
+    confirmDelete();
+
+    await waitFor(() => expect(deleteDialog()).toBeNull());
+    expect(writes()).toHaveLength(1);
+    const [input, init] = writes()[0]!;
+    expect(String(input)).toBe('/api/movies/m1');
+    expect(init?.method?.toUpperCase()).toBe('DELETE');
+    expect(screen.queryByText('Coco')).toBeNull();
   });
 });
