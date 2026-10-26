@@ -85,7 +85,6 @@ function failingStart() {
     fork: () => child,
     launch: LAUNCH,
     onExit: vi.fn(),
-    trash: async () => null,
   });
   return { child, server };
 }

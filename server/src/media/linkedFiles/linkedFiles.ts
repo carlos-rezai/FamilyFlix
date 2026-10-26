@@ -15,12 +15,6 @@ export interface LinkedFilesInput {
   others: readonly string[];
 }
 
-/** A title's **Linked files**: the kind, and the absolute paths to trash. */
-export interface LinkedFilesAnswer {
-  kind: LinkedFiles;
-  paths: string[];
-}
-
 /** Whether `path` is `folder` or lies under it — `folderOverlap`'s reading. */
 function within(folder: string, path: string): boolean {
   const overlap = folderOverlap(path, [folder])?.overlap;
@@ -28,15 +22,14 @@ function within(folder: string, path: string): boolean {
 }
 
 /**
- * Pure: a title's **Linked files**, what a `?files=trash` Delete would move to
- * the Recycle Bin. A video another held title also links (an exact path match
- * in `others`) is never among them. `unreachable`, with no paths, while its
- * Library folder can't be read, shared videos or not; `shared`, with no paths,
- * when every one of its videos is another title's too; `folder` when its
- * Source folder holds every one of its videos, no other held title's, and is
- * not a Library folder itself; else `videos`, its unshared videos alone, when
- * the folder is shared or the title only partly linked; `null` for a title
- * with no linked video.
+ * Pure: the kind of a title's **Linked files**, what a Delete leaves where it
+ * lies. A video another held title also links (an exact path match in
+ * `others`) is never the title's alone. `unreachable` while its Library
+ * folder can't be read, shared videos or not; `shared` when every one of its
+ * videos is another title's too; `folder` when its Source folder holds every
+ * one of its videos, no other held title's, and is not a Library folder
+ * itself; else `videos`, when the folder is shared or the title only partly
+ * linked; `null` for a title with no linked video.
  */
 export function linkedFiles({
   videos,
@@ -44,15 +37,14 @@ export function linkedFiles({
   sourceFolder,
   libraryFolder,
   others,
-}: LinkedFilesInput): LinkedFilesAnswer | null {
+}: LinkedFilesInput): LinkedFiles | null {
   if (videos.length === 0) return null;
   if (libraryFolder === null || !libraryFolder.reachable) {
-    return { kind: 'unreachable', paths: [] };
+    return 'unreachable';
   }
   const shared = new Set(others);
-  const unshared = videos.filter((video) => !shared.has(video));
-  if (unshared.length === 0) {
-    return { kind: 'shared', paths: [] };
+  if (videos.every((video) => shared.has(video))) {
+    return 'shared';
   }
   const wholeFolder =
     allLinked &&
@@ -60,7 +52,5 @@ export function linkedFiles({
     folderOverlap(sourceFolder, [libraryFolder.path])?.overlap !== 'same' &&
     videos.every((video) => within(sourceFolder, video)) &&
     !others.some((other) => within(sourceFolder, other));
-  return wholeFolder && sourceFolder !== null
-    ? { kind: 'folder', paths: [sourceFolder] }
-    : { kind: 'videos', paths: unshared };
+  return wholeFolder ? 'folder' : 'videos';
 }

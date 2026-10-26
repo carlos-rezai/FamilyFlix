@@ -12,9 +12,9 @@
 // And the app never removes a linked video itself: not a **Delete**, not a
 // **Factory reset**, and not an edit that supersedes it — `removeFile` is never
 // handed a linked path, so a managed file that happens to share that relative
-// path is never removed in its place. Since issue #476 a Delete never asks the
-// injected `Trash` either, even under an old client's `?files=trash`: here
-// the Trash records every request and moves nothing.
+// path is never removed in its place. Since issue #476 a Delete keeps every
+// video even under an old client's `?files=trash`, and since issue #478 the
+// Media domain has no shell to ask.
 //
 // Over a real listener, a real `:memory:` library, a sandboxed media root and a
 // sandboxed Library folder, with the Playback's folder reader composed over
@@ -38,7 +38,7 @@ import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import { createMedia, type Trash } from '../media/createMedia/createMedia';
+import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
   PlaybackComponent,
@@ -106,8 +106,6 @@ function freshApi(component: PlaybackComponent | null = null): {
   media: string;
   library: string;
   folderId: string;
-  /** Every request the Trash was asked, in order. */
-  trashed: string[][];
 } {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
@@ -119,14 +117,7 @@ function freshApi(component: PlaybackComponent | null = null): {
   mkdirSync(library);
   const folderId = storage.addLibraryFolder(library).id;
 
-  const trashed: string[][] = [];
-  const trash: Trash = {
-    trash: (paths) => {
-      trashed.push([...paths]);
-      return Promise.resolve({ kind: 'trashed' });
-    },
-  };
-  const mediaDomain = createMedia(media, trash);
+  const mediaDomain = createMedia(media);
   // A Factory reset takes back the uploaded component; this slot never had
   // one, so it answers as a real slot with nothing uploaded does.
   const playback = createPlayback(
@@ -165,7 +156,6 @@ function freshApi(component: PlaybackComponent | null = null): {
     media,
     library,
     folderId,
-    trashed,
   };
 }
 
@@ -326,7 +316,7 @@ describe('a linked title’s subtitles', () => {
 
 describe('the app never removes a linked video', () => {
   it('keeps a linked film’s video after a Delete, never asking the Trash', async () => {
-    const { storage, baseUrl, media, library, folderId, trashed } = freshApi();
+    const { storage, baseUrl, media, library, folderId } = freshApi();
     const file = placeFixture(library, LINKED_FILM);
     placeFile(media, 'heat-1995/poster.jpg', 'poster');
     const movie = addLinkedFilm(storage, folderId, {
@@ -346,11 +336,10 @@ describe('the app never removes a linked video', () => {
     expect(response.status).toBe(204);
     expect(existsSync(join(media, 'heat-1995'))).toBe(false);
     expect(existsSync(file)).toBe(true);
-    expect(trashed).toEqual([]);
   });
 
   it('keeps a linked episode’s video after a series Delete, never asking the Trash', async () => {
-    const { storage, baseUrl, library, folderId, trashed } = freshApi();
+    const { storage, baseUrl, library, folderId } = freshApi();
     const file = placeFixture(library, LINKED_EPISODE);
     const series = addLinkedSeries(storage, folderId);
     const [episode] = storage.listEpisodes(series.id);
@@ -367,7 +356,6 @@ describe('the app never removes a linked video', () => {
 
     expect(response.status).toBe(204);
     expect(existsSync(file)).toBe(true);
-    expect(trashed).toEqual([]);
   });
 
   it('leaves every linked video on disk after a Factory reset', async () => {

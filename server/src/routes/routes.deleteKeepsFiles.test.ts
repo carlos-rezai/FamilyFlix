@@ -10,26 +10,22 @@
 // every file exactly as a plain Delete does. An unknown id answers `404`.
 //
 // Over a real listener, a real `:memory:` library, a sandboxed media root and
-// a sandboxed Library folder (`routes.linkedDelete`'s harness), the shell
-// faked at the `Trash` seam: it records each request and moves what it
-// trashes into a sandboxed bin, or answers one outcome for every request.
+// a sandboxed Library folder (`routes.linkedDelete`'s harness). The Media
+// domain is made from its media path alone (issue #478): there is no shell
+// for a Delete to ask.
 
 import express from 'express';
-import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import {
-  createMedia,
-  type Trash,
-  type TrashOutcome,
-} from '../media/createMedia/createMedia';
+import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
@@ -56,38 +52,20 @@ function place(root: string, relative: string): void {
 
 /**
  * A fresh library behind a listening API, a managed media root, one listed
- * Library folder, `Movies/`, and a Trash that records every request. With an
- * `answer` it answers that and moves nothing (`unavailable` is a browser, no
- * shell); without, it moves each path into the bin.
+ * Library folder, `Movies/`.
  */
-function freshApi(answer?: TrashOutcome) {
+function freshApi() {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
 
   const root = sandboxRoot('familyflix-delete-keeps-');
   const media = join(root, 'media');
   const library = join(root, 'Movies');
-  const bin = join(root, 'bin');
   mkdirSync(media);
   mkdirSync(library);
-  mkdirSync(bin);
   const folderId = storage.addLibraryFolder(library).id;
 
-  const asked: string[][] = [];
-  const trash: Trash = {
-    trash: (paths) => {
-      asked.push([...paths]);
-      if (answer !== undefined) {
-        return Promise.resolve(answer);
-      }
-      for (const path of paths) {
-        renameSync(path, join(bin, basename(path)));
-      }
-      return Promise.resolve({ kind: 'trashed' } as const);
-    },
-  };
-
-  const mediaDomain = createMedia(media, trash);
+  const mediaDomain = createMedia(media);
   const playback = createPlayback(
     media,
     fixedSlot(null),
@@ -121,7 +99,6 @@ function freshApi(answer?: TrashOutcome) {
     media,
     library,
     folderId,
-    asked,
   };
 }
 
@@ -197,7 +174,6 @@ describe('a plain Delete keeps a linked title’s files', () => {
     const response = await remove(api, 'movies', film.id);
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getMovie(film.id)).toBeNull();
     expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
     expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
@@ -213,7 +189,6 @@ describe('a plain Delete keeps a linked title’s files', () => {
     const response = await remove(api, 'series', show.id);
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getSeries(show.id)).toBeNull();
     expect(
       existsSync(
@@ -240,7 +215,6 @@ describe('?files=trash changes nothing', () => {
     const response = await remove(api, 'movies', film.id, '?files=trash');
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getMovie(film.id)).toBeNull();
     expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
     expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
@@ -256,7 +230,6 @@ describe('?files=trash changes nothing', () => {
     const response = await remove(api, 'series', show.id, '?files=trash');
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getSeries(show.id)).toBeNull();
     expect(existsSync(join(api.library, 'Harbor.S01E01.mkv'))).toBe(true);
     expect(existsSync(join(api.library, 'Harbor.S01E02.mkv'))).toBe(true);
@@ -270,25 +243,23 @@ describe('?files=trash changes nothing', () => {
     const response = await remove(api, 'movies', film.id, '?files=trash');
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(existsSync(join(api.media, 'coco-managed'))).toBe(false);
   });
 });
 
 describe('no Delete answers 409, even with no shell', () => {
   it('deletes a linked film under ?files=trash with 204, not the no-shell 409', async () => {
-    const api = freshApi({ kind: 'unavailable' });
+    const api = freshApi();
     const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
 
     const response = await remove(api, 'movies', film.id, '?files=trash');
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getMovie(film.id)).toBeNull();
   });
 
   it('deletes a linked show under ?files=trash with 204, not the no-shell 409', async () => {
-    const api = freshApi({ kind: 'unavailable' });
+    const api = freshApi();
     const show = linkedShow(api, 'Harbor and Vine', 'Harbor and Vine', [
       'Harbor and Vine/Season 01/S01E01.mkv',
     ]);
@@ -296,7 +267,6 @@ describe('no Delete answers 409, even with no shell', () => {
     const response = await remove(api, 'series', show.id, '?files=trash');
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getSeries(show.id)).toBeNull();
   });
 
@@ -314,7 +284,7 @@ describe('no Delete answers 409, even with no shell', () => {
 
 describe('a copied title’s Delete is unchanged', () => {
   it('deletes a copied film under ?files=trash, its original kept and left out', async () => {
-    const api = freshApi({ kind: 'unavailable' });
+    const api = freshApi();
     place(api.library, 'Heat (1995)/Heat.1995.mkv');
     managed(api, 'heat-1995');
     place(api.media, 'heat-1995/Heat.1995.mkv');
@@ -328,7 +298,6 @@ describe('a copied title’s Delete is unchanged', () => {
     const response = await remove(api, 'movies', film.id, '?files=trash');
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getMovie(film.id)).toBeNull();
     expect(existsSync(join(api.media, 'heat-1995'))).toBe(false);
     expect(existsSync(join(api.library, 'Heat (1995)', 'Heat.1995.mkv'))).toBe(

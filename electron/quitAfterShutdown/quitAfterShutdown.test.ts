@@ -23,7 +23,6 @@ async function runningServer() {
     fork: () => child,
     launch: { entry: 'electron/dist/server.js', env: {} },
     onExit: vi.fn(),
-    trash: async () => null,
   });
   const started = server.start();
   child.post({ type: 'ready', port: 41720 });

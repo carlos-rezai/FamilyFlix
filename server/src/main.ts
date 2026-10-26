@@ -15,7 +15,6 @@ import {
   orderedShutdown,
   shutdownOnSignals,
 } from './shell/orderedShutdown/orderedShutdown';
-import { createShellTrash } from './shell/shellTrash/shellTrash';
 import {
   parentPortOf,
   shellHandshake,
@@ -67,9 +66,7 @@ async function start(): Promise<Started> {
     (id) =>
       storage.libraryFolders().find((folder) => folder.id === id)?.path ?? null
   );
-  // A linked delete's files go to the Recycle Bin through main — the **Shell
-  // trash** — and standalone it answers `unavailable`.
-  const media = createMedia(MEDIA_PATH, createShellTrash(parentPort));
+  const media = createMedia(MEDIA_PATH);
 
   // The import domain over the same library and managed directory the routes
   // write through, so an imported film is a hand-added one to every read in

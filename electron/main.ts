@@ -37,7 +37,6 @@ import { serverHandle, type ServerChild } from './serverHandle/serverHandle';
 import { serverLaunch, type ServerLaunch } from './serverLaunch/serverLaunch';
 import { shellMode } from './shellMode/shellMode';
 import { shellPaths } from './shellPaths/shellPaths';
-import { trashItems, type TrashWorld } from './trashItems/trashItems';
 import {
   startServer,
   stoppedUnexpectedly,
@@ -129,12 +128,6 @@ const mediaFolderWorld: MediaFolderWorld = {
   mkdir: (path) => mkdirSync(path, { recursive: true }),
   openPath: (path) => shell.openPath(path),
   log: (text) => log.main(text),
-};
-
-/** Node's `existsSync` and Electron's `shell.trashItem`, for the **Shell trash**. */
-const trashWorld: TrashWorld = {
-  exists: (path) => existsSync(path),
-  trashItem: (path) => shell.trashItem(path),
 };
 
 /** `utilityProcess.fork()` over a launch: the server on Electron's own Node. */
@@ -249,7 +242,6 @@ if (!app.requestSingleInstanceLock()) {
         log.main(`Server exited unexpectedly with code ${code}.`);
         void stoppedUnexpectedly(dialogWorld);
       },
-      trash: (paths) => trashItems(paths, trashWorld),
     });
 
     // Quit waits out the server's **Ordered shutdown**, killing it at 5 s.

@@ -13,11 +13,10 @@
 //   records the same as a plain one, every file kept.
 //
 // End to end over the real router: a real library, a real `Media` over a
-// sandbox managed directory whose Trash removes what it is given (as the
-// Recycle Bin would take it), and one listed Library folder.
+// sandbox managed directory, and one listed Library folder.
 
 import express from 'express';
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join } from 'node:path';
@@ -27,7 +26,7 @@ import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import { createMedia, type Trash } from '../media/createMedia/createMedia';
+import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
@@ -45,16 +44,6 @@ afterEach(async () => {
     storage.close();
   }
 });
-
-/** The Recycle Bin, faked: every path given is removed from disk. */
-const removingTrash: Trash = {
-  trash: (paths) => {
-    for (const path of paths) {
-      rmSync(path, { recursive: true, force: true });
-    }
-    return Promise.resolve({ kind: 'trashed' });
-  },
-};
 
 /** A file at a path under a root, its directories made. */
 function place(root: string, relative: string): void {
@@ -74,7 +63,7 @@ async function freshApi() {
   mkdirSync(media);
   mkdirSync(library);
 
-  const mediaDomain = createMedia(media, removingTrash);
+  const mediaDomain = createMedia(media);
   const playback = createPlayback(
     media,
     fixedSlot(null),

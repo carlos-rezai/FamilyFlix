@@ -193,32 +193,7 @@ export interface Media {
    * throws: it runs after the library's rows have gone.
    */
   emptyRoot(): void;
-
-  /**
-   * Send a **Linked video**'s files to the Recycle Bin through the injected
-   * {@link Trash} — the delete's one way there, so no route learns there is a
-   * shell. A path already gone counts as trashed, so a retry after a partial
-   * failure asks only for what is still there; an empty list asks nothing.
-   * Answers the Trash's own outcome.
-   */
-  trashLinked(paths: readonly string[]): Promise<TrashOutcome>;
 }
-
-/** What the Recycle Bin answered: all moved, one that would not, or no shell. */
-export type TrashOutcome =
-  | { kind: 'trashed' }
-  | { kind: 'failed'; path: string }
-  | { kind: 'unavailable' };
-
-/** The shell's Recycle Bin, injected: absolute paths in, one outcome out. */
-export interface Trash {
-  trash(paths: readonly string[]): Promise<TrashOutcome>;
-}
-
-/** The Trash with no shell behind it — standalone and in a browser. */
-export const NO_TRASH: Trash = {
-  trash: () => Promise.resolve({ kind: 'unavailable' }),
-};
 
 /**
  * Compose the media domain over a **Managed media directory**.
@@ -234,7 +209,7 @@ export const NO_TRASH: Trash = {
  * own rather than a second spelling of it, because a second spelling is where
  * the two drift apart.
  */
-export function createMedia(mediaPath: string, trash: Trash = NO_TRASH): Media {
+export function createMedia(mediaPath: string): Media {
   /**
    * A free name for a folder, without creating it: the slug itself if nothing
    * holds it, and `-2`, `-3` … until something is free.
@@ -464,11 +439,6 @@ export function createMedia(mediaPath: string, trash: Trash = NO_TRASH): Media {
           // An entry that will not go is left; the others still go.
         }
       }
-    },
-
-    trashLinked: async (paths) => {
-      const there = paths.filter((path) => existsSync(path));
-      return there.length === 0 ? { kind: 'trashed' } : trash.trash(there);
     },
   };
 }

@@ -11,23 +11,22 @@
 // folder and leaves its original, if any, as a Left-out video.
 //
 // Over a real listener, a real `:memory:` library, a sandboxed media root and
-// a sandboxed Library folder (`routes.libraryTitles`' harness), with the
-// shell faked at the `Trash` seam: a Trash that records each request and
-// moves what it is given into a sandboxed bin, so a request that reached it
-// would show on disk.
+// a sandboxed Library folder (`routes.libraryTitles`' harness). The Media
+// domain is made from its media path alone (issue #478): there is no shell
+// for a Delete to ask, so every video is checked on disk.
 
 import express from 'express';
 import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { basename, join } from 'node:path';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
-import { createMedia, type Trash } from '../media/createMedia/createMedia';
+import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
@@ -54,7 +53,7 @@ function place(root: string, relative: string): void {
 
 /**
  * A fresh library behind a listening API, a managed media root, one listed
- * Library folder, `Movies/`, and a Trash that records and moves.
+ * Library folder, `Movies/`.
  */
 function freshApi() {
   const storage = createSqliteStorage(':memory:');
@@ -63,24 +62,11 @@ function freshApi() {
   const root = sandboxRoot('familyflix-linked-delete-');
   const media = join(root, 'media');
   const library = join(root, 'Movies');
-  const bin = join(root, 'bin');
   mkdirSync(media);
   mkdirSync(library);
-  mkdirSync(bin);
   const folderId = storage.addLibraryFolder(library).id;
 
-  const asked: string[][] = [];
-  const trash: Trash = {
-    trash: (paths) => {
-      asked.push([...paths]);
-      for (const path of paths) {
-        renameSync(path, join(bin, basename(path)));
-      }
-      return Promise.resolve({ kind: 'trashed' } as const);
-    },
-  };
-
-  const mediaDomain = createMedia(media, trash);
+  const mediaDomain = createMedia(media);
   const playback = createPlayback(
     media,
     fixedSlot(null),
@@ -115,7 +101,6 @@ function freshApi() {
     media,
     library,
     folderId,
-    asked,
   };
 }
 
@@ -180,7 +165,6 @@ describe('DELETE a linked title, unreachable', () => {
     const response = await remove(api, 'movies', film.id);
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getMovie(film.id)).toBeNull();
     expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
     expect(
@@ -198,7 +182,6 @@ describe('DELETE a linked title, unreachable', () => {
     const response = await remove(api, 'series', show.id);
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(api.storage.getSeries(show.id)).toBeNull();
     expect(leftOut(api)).toEqual(['Harbor and Vine/Season 01/S01E01.mkv']);
   });
@@ -217,7 +200,6 @@ describe('DELETE a copied title, never asks the Trash', () => {
     const response = await remove(api, 'movies', film.id);
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(existsSync(join(api.media, 'heat-1995'))).toBe(false);
   });
 
@@ -235,7 +217,6 @@ describe('DELETE a copied title, never asks the Trash', () => {
     const response = await remove(api, 'movies', film.id);
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(existsSync(join(api.library, 'Heat (1995)', 'Heat.1995.mkv'))).toBe(
       true
     );
@@ -253,7 +234,6 @@ describe('DELETE a copied title, never asks the Trash', () => {
     const response = await remove(api, 'series', show.id);
 
     expect(response.status).toBe(204);
-    expect(api.asked).toEqual([]);
     expect(existsSync(join(api.media, 'harbor'))).toBe(false);
   });
 });

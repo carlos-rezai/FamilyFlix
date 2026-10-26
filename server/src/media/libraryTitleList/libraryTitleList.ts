@@ -5,21 +5,13 @@ import type {
   StoredLibraryMovie,
   StoredLibrarySeries,
 } from '../../library';
-import {
-  linkedFiles,
-  type LinkedFilesAnswer,
-} from '../linkedFiles/linkedFiles';
+import { linkedFiles } from '../linkedFiles/linkedFiles';
 import { readableFolder } from '../readableFolder/readableFolder';
 import type { LibraryTitles } from '@/types';
 
-/** The **Manage library page**'s read, and each title's Linked files beside it. */
+/** The **Manage library page**'s read: its titles, each Linked files a kind. */
 export interface LibraryTitleList {
   titles: LibraryTitles;
-  /**
-   * One title's **Linked files** as the list reads them now — the kind and
-   * the absolute paths a delete trashes — or `null` for a copied title.
-   */
-  linkedFilesOf(kind: 'movie' | 'series', id: string): LinkedFilesAnswer | null;
 }
 
 /**
@@ -33,22 +25,6 @@ export async function libraryTitleList(
   storage: LibraryStorage,
   mediaPath: string
 ): Promise<LibraryTitleList> {
-  const { titles, linked } = await readLibraryTitles(storage, mediaPath);
-  return {
-    titles,
-    linkedFilesOf: (kind, id) => linked.get(`${kind}:${id}`) ?? null,
-  };
-}
-
-/** The list read, with each title's Linked files' paths beside it by kind and id. */
-async function readLibraryTitles(
-  storage: LibraryStorage,
-  mediaPath: string
-): Promise<{
-  titles: LibraryTitles;
-  linked: Map<string, LinkedFilesAnswer | null>;
-}> {
-  const answers = new Map<string, LinkedFilesAnswer | null>();
   const folders = new Map(
     await Promise.all(
       storage.libraryFolders().map(
@@ -78,7 +54,6 @@ async function readLibraryTitles(
     [...linked].flatMap(([other, videos]) => (other === id ? [] : videos));
 
   function placed(
-    kind: 'movie' | 'series',
     title: StoredLibraryMovie | StoredLibrarySeries,
     allLinked: boolean,
     sourceFile: string | null
@@ -100,7 +75,6 @@ async function readLibraryTitles(
       libraryFolder,
       others: othersOf(title.id),
     });
-    answers.set(`${kind}:${title.id}`, answer);
     return {
       id: title.id,
       title: title.title,
@@ -112,7 +86,7 @@ async function readLibraryTitles(
         sourceFile,
         videos,
       }),
-      linkedFiles: answer?.kind ?? null,
+      linkedFiles: answer,
       originalPath: answer === null ? sourceFolder : null,
       details: title.details,
     };
@@ -121,18 +95,12 @@ async function readLibraryTitles(
   const titles: LibraryTitles = {
     movies: movies.map((movie) => ({
       kind: 'movie' as const,
-      ...placed(
-        'movie',
-        movie,
-        movie.linkedVideos.length > 0,
-        movie.sourceFile
-      ),
+      ...placed(movie, movie.linkedVideos.length > 0, movie.sourceFile),
       files: movie.files,
     })),
     series: series.map((show) => ({
       kind: 'series' as const,
       ...placed(
-        'series',
         show,
         show.episodes > 0 && show.linkedVideos.length === show.episodes,
         null
@@ -142,7 +110,7 @@ async function readLibraryTitles(
       episodes: show.episodes,
     })),
   };
-  return { titles, linked: answers };
+  return { titles };
 }
 
 /**
