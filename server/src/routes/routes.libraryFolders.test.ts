@@ -11,6 +11,10 @@
 //   empty path, a relative path or a path that is not a readable directory;
 //   `409` for an overlap with a listed folder. Every refusal is one sentence.
 // - `DELETE /api/library-folders/:id` → `204`, or `404` for an id not listed.
+//
+// 52 — Keep originals, issue #479: the **Media directory refusal**. A folder
+// that is, lies inside or holds the server's **Managed media directory** is
+// answered `409` in one sentence, after every rule before it.
 
 import express from 'express';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -46,6 +50,8 @@ interface Api {
   baseUrl: string;
   /** A sandbox the test makes the family's folders in. */
   disk: string;
+  /** The server's **Managed media directory**. */
+  media: string;
 }
 
 /** A fresh library behind a listening API, composed the way `main.ts` is. */
@@ -82,7 +88,7 @@ function freshApi(): Api {
   const server = app.listen(0);
   servers.push(server);
   const { port } = server.address() as AddressInfo;
-  return { baseUrl: `http://127.0.0.1:${port}`, disk };
+  return { baseUrl: `http://127.0.0.1:${port}`, disk, media };
 }
 
 /** A directory under the sandbox's disk, made. */
@@ -305,5 +311,73 @@ describe('DELETE /api/library-folders/:id', () => {
 
     expect(response.status).toBe(404);
     expect(await sentence(response)).toMatch(ONE_SENTENCE);
+  });
+});
+
+describe('POST /api/library-folders — the Media directory refusal', () => {
+  const MEDIA_REFUSAL =
+    'That folder overlaps where FamilyFlix keeps its own copies. Choose another one.';
+
+  it('answers 409 for the media directory itself, and lists nothing', async () => {
+    const api = freshApi();
+
+    const response = await add(api, { path: api.media });
+
+    expect(response.status).toBe(409);
+    expect(await sentence(response)).toBe(MEDIA_REFUSAL);
+    expect(await list(api)).toEqual([]);
+  });
+
+  it('answers 409 for a folder inside the media directory, and lists nothing', async () => {
+    const api = freshApi();
+    const inner = join(api.media, 'the-lantern-keeper-2019');
+    mkdirSync(inner);
+
+    const response = await add(api, { path: inner });
+
+    expect(response.status).toBe(409);
+    expect(await sentence(response)).toBe(MEDIA_REFUSAL);
+    expect(await list(api)).toEqual([]);
+  });
+
+  it('answers 409 for a folder holding the media directory, and lists nothing', async () => {
+    const api = freshApi();
+
+    const response = await add(api, { path: join(api.media, '..') });
+
+    expect(response.status).toBe(409);
+    expect(await sentence(response)).toBe(MEDIA_REFUSAL);
+    expect(await list(api)).toEqual([]);
+  });
+
+  it('takes a folder beside the media directory that only shares a name prefix', async () => {
+    const api = freshApi();
+    const beside = `${api.media}2`;
+    mkdirSync(beside);
+
+    const response = await add(api, { path: beside });
+
+    expect(response.status).toBe(201);
+    expect(await list(api)).toHaveLength(1);
+  });
+
+  it('answers a missing folder inside the media directory 400, No folder at that path.', async () => {
+    const api = freshApi();
+
+    const response = await add(api, { path: join(api.media, 'Nowhere') });
+
+    expect(response.status).toBe(400);
+    expect(await sentence(response)).toBe('No folder at that path.');
+  });
+
+  it('answers a relative path 400 with its own sentence still', async () => {
+    const api = freshApi();
+
+    const response = await add(api, { path: join('media', 'Kids') });
+
+    expect(response.status).toBe(400);
+    expect(await sentence(response)).toBe(
+      'Type the folder’s full path, starting with its drive.'
+    );
   });
 });

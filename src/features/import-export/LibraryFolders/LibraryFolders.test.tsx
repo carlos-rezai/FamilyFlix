@@ -254,6 +254,30 @@ describe('LibraryFolders — a typed add', () => {
     await waitFor(() => expect(screen.getByText('D:\\Kids')).toBeDefined());
     expect(screen.queryByText(INSIDE)).toBeNull();
   });
+
+  // 52 — Keep originals, issue #479: the **Media directory refusal**.
+  it('shows the Media directory refusal under the add, and lists nothing', async () => {
+    const MEDIA_REFUSAL =
+      'That folder overlaps where FamilyFlix keeps its own copies. Choose another one.';
+    fetchMock.mockImplementation((_input, init) =>
+      Promise.resolve(
+        init?.method === 'POST'
+          ? refusedResponse(409, MEDIA_REFUSAL)
+          : okResponse([])
+      )
+    );
+    renderPage();
+    await loaded();
+
+    await userEvent.type(field(), 'C:\\FamilyFlix\\Media');
+    await userEvent.click(addButton());
+
+    const line = await screen.findByText(MEDIA_REFUSAL);
+    expect(getComputedStyle(line).color).toBe(DANGER);
+    expect(getComputedStyle(line).fontSize).toBe('13px');
+    expect(field().value).toBe('C:\\FamilyFlix\\Media');
+    expect(screen.getByText('No folders yet.')).toBeDefined();
+  });
 });
 
 describe('LibraryFolders — remove', () => {
