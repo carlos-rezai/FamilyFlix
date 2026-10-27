@@ -855,12 +855,12 @@ with no genre is drawn. Shipped (✅).
 | **Missing video** (new)      | A held film's video whose file is not there: `playback.videoFile` answers `missing` (an `unreachable` one is not missing). Such a film holds a found video only on evidence, never by **Title key**. The **Missing video** rule, third in **Already in library**: a found video no earlier rule placed, named as exactly one held film's Missing video (a copy keeps its source's name). Films only (log 51 follow-up). | dead record, broken title, orphan, lost file     |
 | **Found again** (new)        | A held film with a **Missing video** taking a found video that its folder on record or the **Missing video** rule matched: placed by the run's **Import mode**, its runtime derived again, its folder recorded, its title, details and watch history untouched. Logged as the `✓ Updated` line naming `video`.                                                                                                          | relink, repair, restore, recover                 |
 
-## Keep originals (new)
+## Keep originals
 
 Design log 52: step 35, initiative `keep-originals`. FamilyFlix never deletes
 an **Original**: a Delete of a linked title removes only its link, and of a
 copied title only FamilyFlix's own copy. The **Recycle choice** and the
-**Shell trash** are retired. Planned (🔜).
+**Shell trash** are retired.
 
 | Term                              | Definition                                                                                                                                                                                                                                                                                                                        | Aliases to avoid                                                             |
 | --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
@@ -1749,7 +1749,7 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Dev:** "And a copied film, _Solo_?"
 > **Domain expert:** "Its **Managed copy** goes with its managed folder, since that copy is FamilyFlix's own. `Star Wars/Solo (2018).mp4` in the **Library folder** stays, left out until _Bring back_."
 > **Dev:** "Could Dad add the app's media folder as a Library folder?"
-> **Domain expert:** "No, that's the **Media directory refusal**. Otherwise a **Factory reset** emptying the **Managed media directory** would reach his originals."
+> **Domain expert:** "No, that's the **Media directory refusal**. Otherwise a **Factory reset** emptying the **Managed media directory** would reach the household's originals."
 
 ## Flagged ambiguities
 

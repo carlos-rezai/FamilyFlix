@@ -64,7 +64,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Start on Series — open FamilyFlix on the Series tab | ✅ Done    |
 | Subtitle picker — choose a track in the player      | ✅ Done    |
 | Library audit: every Library flow, tested live      | ✅ Done    |
-| Keep originals: a Delete never touches your files   | 🔜 Planned |
+| Keep originals: a Delete never touches your files   | ✅ Done    |
 | Loading states — spinners and an FF loading overlay | 🔜 Planned |
 | Scan new folders — and sync only what a run added   | 🔜 Planned |
 
@@ -269,3 +269,13 @@ to end. It is done (design log 51):
     sits in _Other movies_ until it has one. A film whose file has gone is
     found again when a scan meets its file, and a poster that won't load
     draws the stand-in.
+
+Step 35 came out of a linked series' Delete that sent a thousand episodes to
+a Recycle Bin, which purged them. It is done (design log 52):
+
+35. ✅ **Keep originals**: a Delete never touches a file in a Library folder,
+    linked or copied, and there is nothing to choose: the title leaves
+    FamilyFlix, its own art and subtitles go, and every video stays where it
+    lies, out of every scan until _Bring back_. The Delete dialog is the same
+    in the app and in a browser. FamilyFlix's own media folder can't be added
+    as a Library folder, so nothing it clears can reach your files.

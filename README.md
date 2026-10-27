@@ -51,7 +51,7 @@ The main screen is genre rows, like a streaming app, with search and filtering o
 
 ### Looking after the library
 
-A rescan never adds a title twice: a video FamilyFlix already plays is known wherever it lies and whatever its folder is now called, and a film whose file has gone missing is found again when a scan meets its file. Season folders are read the way real shows name them (`Season 1`, `Seizoen 1`, `Season 1 (2008)`, a release's `S01` folder, `Specials`), and a show folder pick names each episode by its path inside the show. Deleting a title takes it out of FamilyFlix and leaves its files where they lie, unless you ask for the Recycle Bin, and a file another title plays is never thrown away. A title taken out stays out of every scan until _Bring back_ on its Library folder, or until you add it again by hand. A poster that won't load draws the stand-in.
+A rescan never adds a title twice: a video FamilyFlix already plays is known wherever it lies and whatever its folder is now called, and a film whose file has gone missing is found again when a scan meets its file. Season folders are read the way real shows name them (`Season 1`, `Seizoen 1`, `Season 1 (2008)`, a release's `S01` folder, `Specials`), and a show folder pick names each episode by its path inside the show. Deleting a title takes it out of FamilyFlix and leaves its files where they lie, and never deletes a file of yours. A title taken out stays out of every scan until _Bring back_ on its Library folder, or until you add it again by hand. A poster that won't load draws the stand-in.
 
 ---
 
