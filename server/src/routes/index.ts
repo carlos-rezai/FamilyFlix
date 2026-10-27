@@ -927,8 +927,10 @@ export function createApiRouter(
   // **Row first, then bytes, best-effort**: the cascade takes the episodes,
   // genres and subtitles, then `removeTitleFolder` takes the Series folder
   // and swallows its own failure.
-  // It reads no query: the title's **Left-out videos** are recorded first, so
-  // a scan won't add it again, and every original is kept.
+  //
+  // The title's **Left-out videos** are recorded first, so a scan won't add it
+  // again, and every **Original** stays where it lies; the route reads no
+  // query.
   router.delete(
     '/series/:id',
     (req: Request<{ id: string }>, res: Response) => {
@@ -1930,6 +1932,10 @@ export function createApiRouter(
   // whole one. **Row first, then bytes, best-effort**: `removeTitleFolder`
   // swallows its own failure, so a video the stream route still has open
   // leaves a stranded folder and this `204`, never a ghost row and a `500`.
+  //
+  // The title's **Left-out videos** are recorded first, so a scan won't add it
+  // again, and every **Original** stays where it lies; the route reads no
+  // query.
   router.delete('/movies/:id', (req: Request<{ id: string }>, res) => {
     const movie = movieOr404(storage, req.params.id, res);
     if (!movie) {
