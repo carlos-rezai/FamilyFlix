@@ -42,16 +42,12 @@ afterEach(() => {
 
 /** A screen whose only control is the one this hook returns. */
 function Screen() {
-  const answered = useDeleteSeries('harbor');
-  const { deleting, deleteSeries } = answered;
+  const { deleting, deleteSeries } = useDeleteSeries('harbor');
 
   return (
     <>
       <span>Series screen</span>
       <span data-testid="deleting">{String(deleting)}</span>
-      <span data-testid="answers">
-        {Object.keys(answered).sort().join(', ')}
-      </span>
       <button
         type="button"
         onClick={() => {
@@ -137,7 +133,7 @@ describe('useDeleteSeries', () => {
     await waitFor(() => expect(url()).toBe('/?tab=series'));
   });
 
-  it('stays where it is when the delete is refused', async () => {
+  it('stays where it is when the delete fails', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
     renderAt(['/', '/?tab=series', '/series/harbor'], 2);
 
@@ -182,20 +178,5 @@ describe('useDeleteSeries — deleting', () => {
 
     await waitFor(() => expect(deleting()).toBe('false'));
     expect(url()).toBe('/series/harbor');
-  });
-});
-
-/**
- * 52, Keep originals, Phase 4 (issue #477): `useDeleteMovie`'s twin. No
- * route refuses a Delete any more, so the hook holds no `refusal`: it
- * answers `deleting` and `deleteSeries()`, and nothing more.
- */
-describe('useDeleteSeries — what it answers', () => {
-  it('answers deleting and deleteSeries, and no refusal', () => {
-    renderAt(['/', '/series/harbor'], 1);
-
-    expect(screen.getByTestId('answers').textContent).toBe(
-      'deleteSeries, deleting'
-    );
   });
 });

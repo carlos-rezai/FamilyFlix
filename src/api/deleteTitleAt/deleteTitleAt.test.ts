@@ -16,9 +16,6 @@ import {
  * no route refuses one any more. The request is the route itself, a plain
  * `DELETE` with no query and no body.
  */
-const SENTENCE =
-  'Couldn’t move E:\\Movies\\Coco (2017) to the Recycle Bin. Close anything playing it and try again.';
-
 const ENDPOINT = '/api/movies/m1';
 
 let fetchMock: ReturnType<
@@ -64,16 +61,13 @@ describe('deleteTitleAt', () => {
     await expect(deleteTitleAt(ENDPOINT)).resolves.toBeUndefined();
   });
 
-  it('rejects a 409, even one naming its reason', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(SENTENCE));
+  it.each([
+    [409, conflictResponse()],
+    [500, serverErrorResponse()],
+  ])('rejects on a %i', async (status, response) => {
+    fetchMock.mockResolvedValue(response);
 
-    await expect(deleteTitleAt(ENDPOINT)).rejects.toThrow(/409/);
-  });
-
-  it('rejects on a 500', async () => {
-    fetchMock.mockResolvedValue(serverErrorResponse());
-
-    await expect(deleteTitleAt(ENDPOINT)).rejects.toThrow(/500/);
+    await expect(deleteTitleAt(ENDPOINT)).rejects.toThrow(String(status));
   });
 
   it('rejects when the request itself cannot be made', async () => {

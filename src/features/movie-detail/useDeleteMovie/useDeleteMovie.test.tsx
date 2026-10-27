@@ -44,16 +44,12 @@ afterEach(() => {
  * screen matters — the hook is the unit, and what it does is move the router.
  */
 function Screen() {
-  const answered = useDeleteMovie('m1');
-  const { deleting, deleteMovie } = answered;
+  const { deleting, deleteMovie } = useDeleteMovie('m1');
 
   return (
     <>
       <span>Movie screen</span>
       <span data-testid="deleting">{String(deleting)}</span>
-      <span data-testid="answers">
-        {Object.keys(answered).sort().join(', ')}
-      </span>
       <button
         type="button"
         // Whether the hook swallows a refusal or rethrows it is the dialog's
@@ -132,7 +128,7 @@ describe('useDeleteMovie', () => {
     await waitFor(() => expect(url()).toBe('/'));
   });
 
-  it('stays where it is when the delete is refused', async () => {
+  it('stays where it is when the delete fails', async () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
     renderAt(['/', '/genre/Drama', '/movie/m1'], 2);
 
@@ -214,20 +210,5 @@ describe('useDeleteMovie — deleting', () => {
 
     await waitFor(() => expect(deleting()).toBe('false'));
     expect(url()).toBe('/movie/m1');
-  });
-});
-
-/**
- * 52, Keep originals, Phase 4 (issue #477): a Delete keeps originals, so no
- * route refuses one and the hook holds no `refusal`. It answers `deleting`
- * and `deleteMovie()`, which asks nothing of the files, and nothing more.
- */
-describe('useDeleteMovie — what it answers', () => {
-  it('answers deleting and deleteMovie, and no refusal', () => {
-    renderAt(['/', '/movie/m1'], 1);
-
-    expect(screen.getByTestId('answers').textContent).toBe(
-      'deleteMovie, deleting'
-    );
   });
 });

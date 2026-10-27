@@ -18,9 +18,6 @@ import {
  * `Promise<void>`: resolved on the `204`, and on a `404`, **gone is gone**,
  * as the detail page always held; rejected otherwise, a `409` too.
  */
-const SENTENCE =
-  'Couldn’t move E:\\Series\\Bluey to the Recycle Bin. Close anything playing it and try again.';
-
 let fetchMock: ReturnType<
   typeof vi.fn<
     (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -78,16 +75,13 @@ describe('deleteSeries', () => {
     await expect(deleteSeries('s1')).resolves.toBeUndefined();
   });
 
-  it('rejects a 409, even one naming its reason', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(SENTENCE));
+  it.each([
+    [409, conflictResponse()],
+    [500, serverErrorResponse()],
+  ])('rejects on a %i', async (status, response) => {
+    fetchMock.mockResolvedValue(response);
 
-    await expect(deleteSeries('s1')).rejects.toThrow(/409/);
-  });
-
-  it('rejects on a 500', async () => {
-    fetchMock.mockResolvedValue(serverErrorResponse());
-
-    await expect(deleteSeries('s1')).rejects.toThrow(/500/);
+    await expect(deleteSeries('s1')).rejects.toThrow(String(status));
   });
 
   it('rejects when the request itself cannot be made', async () => {

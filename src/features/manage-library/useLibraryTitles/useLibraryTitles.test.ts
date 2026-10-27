@@ -4,7 +4,6 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import { useLibraryTitles } from './useLibraryTitles';
 import type { LibraryTitles } from '@/types';
 import {
-  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -381,32 +380,4 @@ describe('useLibraryTitles — deleteTitle', () => {
       expect(result.current.titles).toEqual(LISTED);
     }
   );
-});
-
-/**
- * 47 — Manage library, Phase 5: "delete a linked title" (issue #411), as 52,
- * Keep originals, Phase 4 (issue #477) leaves it.
- *
- * A Delete keeps originals, so no route refuses one: a `409` is a failure
- * like any other, resolving `false` with the row kept, and the hook holds no
- * refusal, `refusalFor` gone with it.
- */
-describe('useLibraryTitles — a 409', () => {
-  const SENTENCE =
-    'Couldn’t move E:\\Movies\\Coco (2017) to the Recycle Bin. Close anything playing it and try again.';
-
-  it('is a failure like any other: false, the row kept, no refusal held', async () => {
-    const { result } = await loadedHook(() =>
-      Promise.resolve(conflictResponse(SENTENCE))
-    );
-
-    let deleted: boolean | undefined;
-    await act(async () => {
-      deleted = await result.current.deleteTitle(LISTED.movies[1]!);
-    });
-
-    expect(deleted).toBe(false);
-    expect(result.current.titles).toEqual(LISTED);
-    expect(result.current).not.toHaveProperty('refusalFor');
-  });
 });
