@@ -250,7 +250,7 @@ describe('DeleteSeriesDialog — a linked show, in the shell', () => {
     fireEvent.click(confirmButton());
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [input, init] = fetchMock.mock.calls[0]!;
+    const [input, init] = fetchMock.mock.calls[0];
     expect(String(input)).toBe('/api/series/ftd');
     expect(init?.method?.toUpperCase()).toBe('DELETE');
   });

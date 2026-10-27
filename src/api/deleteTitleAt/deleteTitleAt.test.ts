@@ -43,7 +43,7 @@ describe('deleteTitleAt', () => {
     await deleteTitleAt(ENDPOINT);
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    const [input, init] = fetchMock.mock.calls[0]!;
+    const [input, init] = fetchMock.mock.calls[0];
     expect(String(input)).toBe(ENDPOINT);
     expect(init?.method?.toUpperCase()).toBe('DELETE');
     expect(init?.body).toBeUndefined();

@@ -550,7 +550,7 @@ describe('DeleteMovieDialog — a linked film, in the shell', () => {
     fireEvent.click(confirmButton());
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [input, init] = fetchMock.mock.calls[0]!;
+    const [input, init] = fetchMock.mock.calls[0];
     expect(String(input)).toBe('/api/movies/m1');
     expect(init?.method?.toUpperCase()).toBe('DELETE');
   });

@@ -1053,7 +1053,7 @@ describe('ManageLibrary — deleting a linked title, in the shell', () => {
 
     await waitFor(() => expect(deleteDialog()).toBeNull());
     expect(writes()).toHaveLength(1);
-    const [input, init] = writes()[0]!;
+    const [input, init] = writes()[0];
     expect(String(input)).toBe('/api/movies/m1');
     expect(init?.method?.toUpperCase()).toBe('DELETE');
     expect(screen.queryByText('Coco')).toBeNull();
