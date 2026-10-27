@@ -790,7 +790,7 @@ export function createApiRouter(
     kind: 'movie' | 'series',
     id: string
   ): Promise<DeleteFacts | undefined> {
-    const { titles } = await libraryTitleList(storage, mediaPath);
+    const titles = await libraryTitleList(storage, mediaPath);
     const title = (kind === 'movie' ? titles.movies : titles.series).find(
       (entry) => entry.id === id
     );
@@ -2228,7 +2228,7 @@ export function createApiRouter(
   // `libraryTitleList`: every title A–Z, its paths absolute and its **Linked
   // files** read against the disk now. The clear's echo reads the same list.
   router.get('/library-titles', async (_req: Request, res: Response) => {
-    res.json((await libraryTitleList(storage, mediaPath)).titles);
+    res.json(await libraryTitleList(storage, mediaPath));
   });
 
   // **Clear details**: `200` with the redrawn **Library title**, the row the
@@ -2252,7 +2252,7 @@ export function createApiRouter(
       for (const path of letGo) {
         media.removeFile(path);
       }
-      const { titles } = await libraryTitleList(storage, mediaPath);
+      const titles = await libraryTitleList(storage, mediaPath);
       res.json(titles[kind].find((title) => title.id === id));
     };
   router.post('/movies/:id/clear-details', clearDetailsRoute('movies'));

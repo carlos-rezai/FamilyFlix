@@ -9,22 +9,18 @@ import { linkedFiles } from '../linkedFiles/linkedFiles';
 import { readableFolder } from '../readableFolder/readableFolder';
 import type { LibraryTitles } from '@/types';
 
-/** The **Manage library page**'s read: its titles, each Linked files a kind. */
-export interface LibraryTitleList {
-  titles: LibraryTitles;
-}
-
 /**
  * The **Manage library page**'s read: the stored facts made absolute — a
  * linked title's Source folder (a Collection folder film's video), else its
  * Media folder; a copied title's original in a Library folder — and each
  * title's **Linked files** off `media/linkedFiles`, every Library folder's
- * reach read afresh, once per folder. Answers a value and never throws.
+ * reach read afresh, once per folder. Answers the titles, A to Z, and never
+ * throws.
  */
 export async function libraryTitleList(
   storage: LibraryStorage,
   mediaPath: string
-): Promise<LibraryTitleList> {
+): Promise<LibraryTitles> {
   const folders = new Map(
     await Promise.all(
       storage.libraryFolders().map(
@@ -92,7 +88,7 @@ export async function libraryTitleList(
     };
   }
 
-  const titles: LibraryTitles = {
+  return {
     movies: movies.map((movie) => ({
       kind: 'movie' as const,
       ...placed(movie, movie.linkedVideos.length > 0, movie.sourceFile),
@@ -110,7 +106,6 @@ export async function libraryTitleList(
       episodes: show.episodes,
     })),
   };
-  return { titles };
 }
 
 /**
