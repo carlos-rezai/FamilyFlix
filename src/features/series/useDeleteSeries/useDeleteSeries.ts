@@ -12,7 +12,7 @@ export interface DeleteSeries {
   deleting: boolean;
   /**
    * Sends the delete and, once the series is gone, leaves its page. Rejects
-   * with the request's own error when the server refused, nothing moved.
+   * with the request's own error when the delete failed, nothing moved.
    */
   deleteSeries: () => Promise<void>;
 }

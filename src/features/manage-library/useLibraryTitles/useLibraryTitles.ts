@@ -22,9 +22,9 @@ export interface LibraryTitlesState {
   /** True for the life of a delete's request, false before and after. */
   deleting: boolean;
   /**
-   * Deletes a title over its unchanged route, a plain `DELETE`: `true` once
-   * its row is off its list, with no re-read; `false` for any failure, the
-   * list as it was. Never rejects.
+   * Deletes a title with a plain `DELETE`: `true` once its row is off its
+   * list, with no re-read; `false` for any failure, the list as it was.
+   * Never rejects.
    */
   deleteTitle: (title: LibraryTitle) => Promise<boolean>;
 }
@@ -36,8 +36,8 @@ const listOf = (title: LibraryTitle) =>
 /**
  * The **Library titles** the Manage library page draws, read once on mount —
  * **Blank until it lands** — and the writes that redraw a row from its echo,
- * each with its in-flight state, the bargain
- * `useDeleteMovie` and `useFactoryReset` keep. Neither write rejects.
+ * each with its in-flight state, the bargain `useDeleteMovie` and
+ * `useFactoryReset` keep. Neither write rejects.
  */
 export function useLibraryTitles(): LibraryTitlesState {
   const [titles, setTitles] = useState<LibraryTitles | null>(null);

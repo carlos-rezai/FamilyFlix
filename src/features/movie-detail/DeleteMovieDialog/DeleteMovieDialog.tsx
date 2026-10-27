@@ -21,8 +21,8 @@ export interface DeleteMovieDialogProps {
  * over _This can’t be undone._, then the Manage library dialog's body,
  * `DeleteTitleBody`: **What goes / What stays** by the film's Delete facts,
  * and the hook's confirm. A failure leaves the dialog where it is with
- * nothing changed. Dismissing does not cancel the
- * request, and a success after a dismissal still goes back.
+ * nothing changed. Dismissing does not cancel the request, and a success
+ * after a dismissal still goes back.
  */
 export function DeleteMovieDialog({
   movieId,

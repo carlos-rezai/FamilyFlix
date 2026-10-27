@@ -8,7 +8,7 @@ export interface DeleteMovie {
   deleting: boolean;
   /**
    * Sends the delete and, once the movie is gone, leaves its page. Rejects
-   * with the request's own error when the server refused, in which case
+   * with the request's own error when the delete failed, in which case
    * nothing moved.
    */
   deleteMovie: () => Promise<void>;

@@ -24,8 +24,8 @@ import { Empty, List, Summary, Toolbar } from './ManageLibrary.styles';
  * the echo, with the `success` notice. A refused one leaves it open, live.
  * _Delete…_ opens the **Delete dialog** the same way: a delete that lands
  * closes it, the row off the list, with _“Coco” was deleted._ The in-flight
- * states are `useLibraryTitles`';
- * the organism holds only which dialog is open, and for which title.
+ * states are `useLibraryTitles`'; the organism holds only which dialog is
+ * open, and for which title.
  */
 export function ManageLibrary() {
   const { titles, clearing, clearDetails, deleting, deleteTitle } =
