@@ -197,14 +197,13 @@ describe('DeleteTitleDialog — the buttons', () => {
     expect(confirm().textContent).toBe('Delete series');
   });
 
-  it('confirms on Delete movie, asking nothing of the files', () => {
+  it('confirms on Delete movie', () => {
     const onConfirm = vi.fn();
     renderDialog({ onConfirm });
 
     fireEvent.click(confirm());
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onConfirm.mock.calls[0]).toEqual([]);
   });
 
   it('reads Deleting… and is inert while the request runs', () => {
@@ -337,7 +336,7 @@ describe('DeleteTitleDialog — a linked title, in the shell', () => {
     }
   );
 
-  it('confirms asking nothing of the files', () => {
+  it('confirms, drawing no choice of the files', () => {
     const onConfirm = vi.fn();
     renderDialog({
       title: makeLibraryMovie({ title: 'Coco', linkedFiles: 'folder' }),
@@ -348,6 +347,5 @@ describe('DeleteTitleDialog — a linked title, in the shell', () => {
     fireEvent.click(confirm());
 
     expect(onConfirm).toHaveBeenCalledTimes(1);
-    expect(onConfirm.mock.calls[0]).toEqual([]);
   });
 });

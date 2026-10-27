@@ -38,7 +38,7 @@ export function DeleteTitleBody({
           label={deleting ? 'Deleting…' : view.confirm}
           variant="danger"
           disabled={deleting}
-          onClick={() => onConfirm()}
+          onClick={onConfirm}
         />
         <Button label="Cancel" variant="secondary" onClick={onClose} />
       </Actions>
