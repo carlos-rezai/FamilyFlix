@@ -11,6 +11,114 @@ Newest entry first.
 
 ---
 
+## 2026-10-27: Keep originals, the refactor (issue 481)
+
+Fourteen commits against
+`docs/refactor-plans/52-keep-originals-refactor.md`, one per plan commit, the
+initiative's closing round. **10955 tests pass across 675 files**, against
+10977 across 677 at the end of the build (`a8533b14`): no new suite, two
+suites gone (the source readers, six cases), and sixteen more cases gone,
+every one an absence that could not fail or a second copy of the stray-query
+case. `tsc -b --force` is clean. `eslint src server electron` reports one
+error and 133 warnings, against one and 138: the four this initiative added
+are gone, and one more went with a deleted case.
+
+### What shipped
+
+Log 52's step 35: the prototype revisions (474, 475) and the build slices 476
+to 480. No Delete reaches an **Original**: both Delete routes read no query,
+record the title's **Left-out videos**, then remove the rows, then the
+**Media folder**. The **Recycle choice** and the **Shell trash** are gone
+whole; the handshake is `ready | fatal` and `shutdown`, and `createMedia`
+takes its media path alone. The Delete dialog is one dialog everywhere, with
+no card, no callout and no refusal. `admitFolder` answers the **Media
+directory refusal**, and `routes.keepsOriginals` runs every removal
+FamilyFlix makes and finds every original byte-identical.
+
+### What each group changed
+
+- **Group 1, the list read without its trash** (`ec851268`, `b560fdd1`,
+  `eb4ecc9a`). `libraryTitleList` answers `LibraryTitles`, the one-field
+  `LibraryTitleList` gone, and its three route callers read it directly. Both
+  Delete routes carry the same paragraph on Left-out videos and originals;
+  `admitFolder`'s docblock is rewrapped.
+- **Group 2, comments that say what the code does now** (`67843fe6`,
+  `5e0e8670`). The client's docblocks lose the refusal; `useDeleteMovie` and
+  `useDeleteSeries` reject "when the delete failed". `DeleteTitleBody` hands
+  `Button` its confirm.
+- **Group 3, suites that test what is left, on the client** (`2148bad5`,
+  `884c80e0`, `72aba0e3`). `deleteTitleAt.noRecycleChoice` and
+  `shellHandshake.noTrash` are deleted. The wire folds `409` and `500` into
+  one `it.each`; `useLibraryTitles`' `409` case, its `refusalFor` check and
+  the two hooks' key-list cases go. The dialogs lose `CALLOUT`, `NO_SHELL`,
+  the Recycle Bin sentences and their `409` cases; the shell's no-`radio`
+  check stays. The two detail pages' only delete failure takes a `500`.
+- **Group 4, one place pins a stray query, on the server** (`73117afa`,
+  `3df5e826`). `routes.deleteKeepsFiles`, `routes.linkedDelete`,
+  `routes.leftOut` and `routes.linkedVideo` send a plain Delete; the `404`
+  case survives in `deleteKeepsFiles`' first `describe`. Every _never asking
+  the shell_ / _the Trash_ clause leaves its case name. `routes.keepsOriginals`
+  alone runs `?files=trash` (the PRD's story 32).
+- **Group 5, lint, prose and the docs** (`83b524a3`, `ee5ca85a`, `579ef0d9`
+  and this commit). The four new non-null assertions go; eleven em dashes in
+  eight suites take Library audit's forms; the checklist ticks step 35, and
+  the README, CLAUDE.md's **Media** rule, the release checklist and the
+  glossary know originals are kept.
+
+### Where this round left the plan
+
+- **Commit 1 deleted a case** the plan said would carry unchanged:
+  `libraryTitleList`'s _answers the titles alone_ asserted the wrapper's key
+  list, `['titles']`, which no longer exists.
+- **Commit 5 changed two assertions** the plan named as its guard:
+  `DeleteTitleDialog.test`'s confirm cases checked `mock.calls[0]` was `[]`,
+  the argument list `Button`'s click event now fills. Each keeps its one call,
+  and the shell case its no-`radio` check; both are renamed for what they pin.
+- **The lint count ends at 133 warnings, not 134**: one warning went with a
+  deleted case in group 3.
+- **Commit 12 changed eleven dashes, not twenty-odd**: most went with the
+  cases groups 3 and 4 removed. The lines this initiative only edited or
+  rewrapped (`admitFolder.test`'s first line, `libraryTitleList.test`'s
+  header and `describe`, `useLibraryTitles.test`'s 47 header) keep their
+  older dash.
+- **One flake**: at commit 10, `routes.enrichment`'s "answers 409 to a second
+  start while one runs" failed once under the full suite; it passed alone and
+  in the next full run. The file is untouched by this round.
+- The full suite ran after every commit, green each time; `tsc -b --force`
+  and `eslint` at the end of each group.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: `useDeleteMovie` and `useDeleteSeries`
+as twins, the Delete routes as a domain step, `linkedFiles`' `folder` /
+`videos` split, `ShellCommand` as a one-member union, a boot-time check of
+listed Library folders against the Managed media directory, em dashes older
+than this initiative and the household's copy, step 30's frozen handoff, and
+everything log 52 put out of scope.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **`libraryTitleView.test`'s _deleteView: no callout_**, a
+  `not.toHaveProperty('callout')` over every kind: the same kind of key-list
+  absence this round removed elsewhere, missed by the plan.
+- **The Delete routes as a domain step**, with the routes file's
+  reserve-or-reuse closures.
+- **`useDeleteMovie` and `useDeleteSeries` as one hook**.
+- **From earlier entries**: a shared error-reason helper and a plural helper,
+  a text-button primitive, the `routes.enrichment` 409 case under load and
+  the sandbox teardown flake, a shared held-response and player-harness test
+  helper, the repo-wide em dash pass, and the lint error in
+  `EnrichmentReview.test.tsx`.
+
+### The initiative
+
+**Keep originals is done**: the prototype revisions (474, 475), the slices
+(476 to 480) and this round (481). Issue 473 is closed with it.
+
+---
+
 ## 2026-10-25: Library audit, the refactor (issue 472)
 
 Twenty-six commits against
