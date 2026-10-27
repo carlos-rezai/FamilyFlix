@@ -1023,7 +1023,7 @@ describe('ManageLibrary — deleting a linked title', () => {
  * what a browser draws, no choice of the files, its folder under What stays;
  * confirming sends the plain `DELETE`, no query, the row then off the list.
  */
-describe('ManageLibrary — deleting a linked title, in the shell', () => {
+describe('ManageLibrary: deleting a linked title, in the shell', () => {
   fakeFolderBridge();
 
   it('draws no choice of the files, its files kept', async () => {

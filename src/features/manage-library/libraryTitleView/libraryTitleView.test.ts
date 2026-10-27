@@ -257,7 +257,7 @@ const COCO_WORDS = {
   confirm: 'Delete movie',
 };
 
-describe('deleteView — a linked title keeps its files', () => {
+describe('deleteView: a linked title keeps its files', () => {
   it('keeps a linked folder in its library folder', () => {
     const coco = makeLibraryMovie({
       title: 'Coco',
@@ -330,7 +330,7 @@ describe('deleteView — a linked title keeps its files', () => {
   });
 });
 
-describe('deleteView — no callout', () => {
+describe('deleteView: no callout', () => {
   it.each(['folder', 'videos', 'shared', 'unreachable', null] as const)(
     'carries none for linked files %s',
     (linkedFiles) => {

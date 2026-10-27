@@ -299,7 +299,7 @@ const LINKED = [
   },
 ] as const;
 
-describe('DeleteTitleDialog — a linked title, in the shell', () => {
+describe('DeleteTitleDialog: a linked title, in the shell', () => {
   fakeFolderBridge();
 
   it.each(LINKED)(

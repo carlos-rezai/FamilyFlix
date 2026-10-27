@@ -530,7 +530,7 @@ describe('DeleteMovieDialog — confirming', () => {
  * files, its folder under What stays, and its confirm sends the plain
  * `DELETE`.
  */
-describe('DeleteMovieDialog — a linked film, in the shell', () => {
+describe('DeleteMovieDialog: a linked film, in the shell', () => {
   fakeFolderBridge();
 
   it('draws no choice of the files, its folder kept', () => {

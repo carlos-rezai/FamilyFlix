@@ -230,7 +230,7 @@ describe('DeleteSeriesDialog — the ways out', () => {
  * files, its folder under What stays, and its confirm sends the plain
  * `DELETE`.
  */
-describe('DeleteSeriesDialog — a linked show, in the shell', () => {
+describe('DeleteSeriesDialog: a linked show, in the shell', () => {
   fakeFolderBridge();
 
   it('draws no choice of the files, its folder kept', () => {

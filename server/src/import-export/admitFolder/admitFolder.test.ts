@@ -6,7 +6,7 @@
 // something typed, an absolute path, a readable directory, and no overlap
 // with a listed **Library folder**, answered as a value and never a throw.
 //
-// 52 — Keep originals, issue #479: a fourth rule after the overlap with
+// 52, Keep originals, issue #479: a fourth rule after the overlap with
 // listed folders, the **Media directory refusal**. A folder that is, lies
 // inside or holds the **Managed media directory** is refused as `'media'`.
 //
@@ -155,7 +155,7 @@ describe('admitFolder — the clashes', () => {
   });
 });
 
-describe('admitFolder — the Media directory refusal', () => {
+describe('admitFolder: the Media directory refusal', () => {
   /** A real media directory, with a sandbox around it for the household. */
   function mediaOnDisk(): string {
     return folderOnDisk('FamilyFlix', 'Media');

@@ -255,7 +255,7 @@ describe('LibraryFolders — a typed add', () => {
     expect(screen.queryByText(INSIDE)).toBeNull();
   });
 
-  // 52 — Keep originals, issue #479: the **Media directory refusal**.
+  // 52, Keep originals, issue #479: the **Media directory refusal**.
   it('shows the Media directory refusal under the add, and lists nothing', async () => {
     const MEDIA_REFUSAL =
       'That folder overlaps where FamilyFlix keeps its own copies. Choose another one.';

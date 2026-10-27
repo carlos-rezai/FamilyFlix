@@ -12,7 +12,7 @@
 //   `409` for an overlap with a listed folder. Every refusal is one sentence.
 // - `DELETE /api/library-folders/:id` → `204`, or `404` for an id not listed.
 //
-// 52 — Keep originals, issue #479: the **Media directory refusal**. A folder
+// 52, Keep originals, issue #479: the **Media directory refusal**. A folder
 // that is, lies inside or holds the server's **Managed media directory** is
 // answered `409` in one sentence, after every rule before it.
 
@@ -314,7 +314,7 @@ describe('DELETE /api/library-folders/:id', () => {
   });
 });
 
-describe('POST /api/library-folders — the Media directory refusal', () => {
+describe('POST /api/library-folders: the Media directory refusal', () => {
   const MEDIA_REFUSAL =
     'That folder overlaps where FamilyFlix keeps its own copies. Choose another one.';
 
