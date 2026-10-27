@@ -16,7 +16,6 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import {
-  conflictResponse,
   noContentResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
@@ -226,40 +225,18 @@ describe('DeleteSeriesDialog — the ways out', () => {
 });
 
 /**
- * 52, Keep originals, Phase 4 (issue #477): a Delete keeps originals, so no
- * route refuses one and the dialog draws no refusal line. A `409` is a
- * failure like any other: the dialog up, Delete series live again, the page
- * still on the show. And it is one dialog everywhere: a linked show in the
- * shell (a **Folder bridge** present) draws no card and no callout, its
- * folder under What stays, and its confirm sends the plain `DELETE`.
+ * 52, Keep originals, Phase 4 (issue #477): one dialog everywhere. A linked
+ * show in the shell (a **Folder bridge** present) draws no choice of the
+ * files, its folder under What stays, and its confirm sends the plain
+ * `DELETE`.
  */
-const SENTENCE =
-  'Couldn’t move E:\\Series\\Harbor & Vine to the Recycle Bin. Close anything playing it and try again.';
-
-describe('DeleteSeriesDialog — a 409 is a failure like any other', () => {
-  it('draws no refusal line, the dialog up and Delete series live again', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(SENTENCE));
-    renderDialog({ linkedFiles: 'folder' });
-
-    fireEvent.click(confirmButton());
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect((confirmButton() as HTMLButtonElement).disabled).toBe(false)
-    );
-    expect(within(dialog()).queryByText(SENTENCE)).toBeNull();
-    expect(url()).toBe('/series/ftd');
-  });
-});
-
 describe('DeleteSeriesDialog — a linked show, in the shell', () => {
   fakeFolderBridge();
 
-  it('draws no card and no callout, its folder kept', () => {
+  it('draws no choice of the files, its folder kept', () => {
     renderDialog({ linkedFiles: 'folder' });
 
     expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
-    expect(within(dialog()).queryByText(/Recycle Bin/)).toBeNull();
     expect(
       within(dialog()).getByText('Its folder, in your library folder')
     ).toBeTruthy();

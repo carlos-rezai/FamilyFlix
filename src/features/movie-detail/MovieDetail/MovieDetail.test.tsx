@@ -28,10 +28,10 @@ import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBackgrounds';
 import {
-  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
+  serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 
@@ -1457,14 +1457,11 @@ describe('MovieDetail — TMDB’s rating as the picker’s placeholder', () => 
 /**
  * 47 — Manage library, issue #413, on the page: the Delete dialog reads
  * the film's **Linked files** off the record the page already holds (since
- * log 51 Q6 answered by the detail read, now as `deleteFacts`), and a `409` leaves
- * the page on the film. Since keep-originals (issue #477) no route refuses a
- * Delete, so the dialog draws no refusal line.
+ * log 51 Q6 answered by the detail read, now as `deleteFacts`), and a failed
+ * delete leaves the page on the film, the dialog's confirm live again.
  */
 describe('MovieDetail — deleting a linked film', () => {
   const KEPT = 'Its video file(s), in your library folder';
-  const NO_SHELL =
-    'Only the desktop app can move a linked title’s files to the Recycle Bin.';
 
   async function openDeleteDialog(title = 'Northwind') {
     await findTitle(title);
@@ -1490,10 +1487,10 @@ describe('MovieDetail — deleting a linked film', () => {
     expect(within(dialog).getByText(KEPT)).toBeDefined();
   });
 
-  it('stays on the film on a 409, no refusal line drawn', async () => {
+  it('stays on the film when the delete fails', async () => {
     fetchMock.mockImplementation((input, init) => {
       if ((init?.method ?? 'GET').toUpperCase() === 'DELETE') {
-        return Promise.resolve(conflictResponse(NO_SHELL));
+        return Promise.resolve(serverErrorResponse());
       }
       if (String(input).includes('/api/movies/')) {
         return Promise.resolve(
@@ -1525,7 +1522,6 @@ describe('MovieDetail — deleting a linked film', () => {
         ).disabled
       ).toBe(false)
     );
-    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
     expect(pathname()).toBe('/movie/m1');
     expect(
       screen.getByRole('heading', { level: 1, name: 'Northwind' })

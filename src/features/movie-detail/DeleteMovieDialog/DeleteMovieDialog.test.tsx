@@ -18,7 +18,6 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
-  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -526,40 +525,18 @@ describe('DeleteMovieDialog — confirming', () => {
 });
 
 /**
- * 52, Keep originals, Phase 4 (issue #477): a Delete keeps originals, so no
- * route refuses one and the dialog draws no refusal line. A `409` is a
- * failure like any other: the dialog up, Delete movie live again, the page
- * still on the movie. And it is one dialog everywhere: a linked film in the
- * shell (a **Folder bridge** present) draws no card and no callout, its
- * folder under What stays, and its confirm sends the plain `DELETE`.
+ * 52, Keep originals, Phase 4 (issue #477): one dialog everywhere. A linked
+ * film in the shell (a **Folder bridge** present) draws no choice of the
+ * files, its folder under What stays, and its confirm sends the plain
+ * `DELETE`.
  */
-const SENTENCE =
-  'Couldn’t move E:\\Movies\\Northwind (1994) to the Recycle Bin. Close anything playing it and try again.';
-
-describe('DeleteMovieDialog — a 409 is a failure like any other', () => {
-  it('draws no refusal line, the dialog up and Delete movie live again', async () => {
-    fetchMock.mockResolvedValue(conflictResponse(SENTENCE));
-    renderHosted();
-
-    fireEvent.click(confirmButton());
-
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    await waitFor(() =>
-      expect((confirmButton() as HTMLButtonElement).disabled).toBe(false)
-    );
-    expect(within(dialog()).queryByText(SENTENCE)).toBeNull();
-    expect(url()).toBe('/movie/m1');
-  });
-});
-
 describe('DeleteMovieDialog — a linked film, in the shell', () => {
   fakeFolderBridge();
 
-  it('draws no card and no callout, its folder kept', () => {
+  it('draws no choice of the files, its folder kept', () => {
     renderDialog({ linkedFiles: 'folder' });
 
     expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
-    expect(within(dialog()).queryByText(/Recycle Bin/)).toBeNull();
     expect(
       within(dialog()).getByText('Its folder, in your library folder')
     ).toBeTruthy();

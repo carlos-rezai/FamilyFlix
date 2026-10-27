@@ -261,17 +261,12 @@ describe('DeleteTitleDialog — focus', () => {
  * 47 — Manage library, Phase 5: "delete a linked title" (issue #411), as
  * 52, Keep originals, Phase 4 (issue #477) leaves it.
  *
- * A Delete keeps originals, so a linked title's dialog is today's _Keep the
- * files_ state with its cards and callout gone, every word unchanged: What
- * goes is its details and history, What stays its files where they lie; an
- * `unreachable` title keeps _Its files on <path> — they can’t be reached
- * right now_. No title draws the callout, and no refusal line is drawn: the
- * dialog takes no `refusal`. It is one dialog everywhere: in the shell (a
- * **Folder bridge** present) it draws exactly what a browser draws, and its
- * confirm asks nothing of the files.
+ * A Delete keeps originals: a linked title's What goes is its details and
+ * history, What stays its files where they lie; an `unreachable` title keeps
+ * _Its files on <path> — they can’t be reached right now_. It is one dialog
+ * everywhere: in the shell (a **Folder bridge** present) it draws exactly
+ * what a browser draws, with no choice of the files.
  */
-const CALLOUT =
-  'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
 const SHARED_GOES = GOES.slice(0, 2);
 
 describe('DeleteTitleDialog — an unreachable title', () => {
@@ -288,20 +283,6 @@ describe('DeleteTitleDialog — an unreachable title', () => {
     expect(itemsOf(listUnder('What stays'))).toEqual([
       'Its files on F:\\Movies\\Coco (2017) — they can’t be reached right now',
     ]);
-  });
-
-  it('draws no callout', () => {
-    renderDialog({ title: GONE });
-
-    expect(within(dialog()).queryByText(CALLOUT)).toBeNull();
-  });
-});
-
-describe('DeleteTitleDialog — a copied title draws no callout', () => {
-  it('has none', () => {
-    renderDialog();
-
-    expect(within(dialog()).queryByText(CALLOUT)).toBeNull();
   });
 });
 
@@ -322,15 +303,13 @@ describe('DeleteTitleDialog — a linked title, in the shell', () => {
   fakeFolderBridge();
 
   it.each(LINKED)(
-    'draws no card and no callout for $linkedFiles, its files kept',
+    'draws no choice for $linkedFiles, its files kept',
     ({ linkedFiles, path, stays }) => {
       renderDialog({
         title: makeLibraryMovie({ title: 'Coco', linkedFiles, path }),
       });
 
       expect(within(dialog()).queryAllByRole('radio')).toEqual([]);
-      expect(within(dialog()).queryByText(/Recycle Bin/)).toBeNull();
-      expect(within(dialog()).queryByText(CALLOUT)).toBeNull();
       expect(itemsOf(listUnder('What goes'))).toEqual(SHARED_GOES);
       expect(itemsOf(listUnder('What stays'))).toEqual([stays]);
     }

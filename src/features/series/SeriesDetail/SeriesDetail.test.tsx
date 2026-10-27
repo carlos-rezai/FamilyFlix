@@ -24,7 +24,6 @@ import {
   pathname,
 } from '@/test-support/LocationProbe/LocationProbe';
 import {
-  conflictResponse,
   notFoundResponse,
   okResponse,
   serverErrorResponse,
@@ -890,14 +889,11 @@ describe('SeriesDetail — the Shown rating', () => {
 /**
  * 47 — Manage library, issue #413, on the page: the series' Delete dialog
  * reads the show's **Linked files** off the record the page already holds
- * (since log 51 Q6 answered by the detail read, now as `deleteFacts`), and a `409`
- * leaves the page on the show. Since keep-originals (issue #477) no route
- * refuses a Delete, so the dialog draws no refusal line.
+ * (since log 51 Q6 answered by the detail read, now as `deleteFacts`), and a
+ * failed delete leaves the page on the show, the dialog's confirm live again.
  */
 describe('SeriesDetail — deleting a linked show', () => {
   const KEPT = 'Its folder, in your library folder';
-  const NO_SHELL =
-    'Only the desktop app can move a linked title’s files to the Recycle Bin.';
 
   /** Two seasons of 10 and 12, the last episode of season 2 linked. */
   function oneLinkedEpisode(): SeriesDetailPayload {
@@ -932,11 +928,11 @@ describe('SeriesDetail — deleting a linked show', () => {
     expect(within(openDeleteDialog()).getByText(KEPT)).toBeDefined();
   });
 
-  it('stays on the show on a 409, no refusal line drawn', async () => {
+  it('stays on the show when the delete fails', async () => {
     const detail = oneLinkedEpisode();
     fetchMock.mockImplementation((input, init) => {
       if ((init?.method ?? 'GET').toUpperCase() === 'DELETE') {
-        return Promise.resolve(conflictResponse(NO_SHELL));
+        return Promise.resolve(serverErrorResponse());
       }
       if (String(input).includes('/api/series/')) {
         return Promise.resolve(okResponse(detail));
@@ -967,7 +963,6 @@ describe('SeriesDetail — deleting a linked show', () => {
         ).disabled
       ).toBe(false)
     );
-    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
     expect(pathname()).toBe('/series/harbor');
     expect(
       screen.getByRole('heading', { level: 1, name: 'Harbor & Vine' })

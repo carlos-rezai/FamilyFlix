@@ -27,7 +27,6 @@ import { movieFormPath } from '@/utils/movieFormPath/movieFormPath';
 import { moviePath } from '@/utils/moviePath/moviePath';
 import { seriesPath } from '@/utils/seriesPath/seriesPath';
 import {
-  conflictResponse,
   noContentResponse,
   notFoundResponse,
   okResponse,
@@ -959,11 +958,9 @@ describe('ManageLibrary — Delete…', () => {
 /**
  * 47 — Manage library, Phase 5: "delete a linked title" (issue #411).
  *
- * _Delete…_ is offered on every row, linked titles included. Since 52, Keep
- * originals (issue #477), a linked title's dialog keeps its files and draws
- * no callout; a `409` is a failure like any other, no refusal line drawn,
- * the dialog open and the row kept, no notice. An unreachable title's delete
- * answers `204` like any other.
+ * _Delete…_ is offered on every row, linked titles included. A linked
+ * title's dialog keeps its files under What stays (52, Keep originals), and
+ * an unreachable title's delete answers `204` like any other.
  */
 const LINKED: LibraryTitles = {
   movies: [
@@ -982,10 +979,6 @@ const LINKED: LibraryTitles = {
   ],
   series: [],
 };
-const NO_SHELL =
-  'Only the desktop app can move a linked title’s files to the Recycle Bin.';
-const CALLOUT =
-  'This is a linked title. Its files go from your library folder to the Recycle Bin, not just out of FamilyFlix.';
 
 /** The list read answered with LINKED, each write by the next of `answers`. */
 function serveLinked(answers: Response[]) {
@@ -997,7 +990,7 @@ function serveLinked(answers: Response[]) {
 }
 
 describe('ManageLibrary — deleting a linked title', () => {
-  it('opens the linked Delete dialog; a browser keeps the files, no callout', async () => {
+  it('opens the linked Delete dialog; a browser keeps the files', async () => {
     serveLinked([]);
     renderPage();
     await loaded();
@@ -1005,29 +998,9 @@ describe('ManageLibrary — deleting a linked title', () => {
     openDeleteOn('Coco');
 
     const dialog = deleteDialog() as HTMLElement;
-    expect(within(dialog).queryByText(CALLOUT)).toBeNull();
     expect(
       within(dialog).getByText('Its folder, in your library folder')
     ).toBeDefined();
-  });
-
-  it('takes a 409 as any failure: no refusal line, the dialog and row kept', async () => {
-    serveLinked([conflictResponse(NO_SHELL)]);
-    renderPage();
-    await loaded();
-    openDeleteOn('Coco');
-
-    confirmDelete();
-
-    await waitFor(() => expect(writes()).toHaveLength(1));
-    const dialog = deleteDialog() as HTMLElement;
-    const confirm = await within(dialog).findByRole('button', {
-      name: 'Delete movie',
-    });
-    expect((confirm as HTMLButtonElement).disabled).toBe(false);
-    expect(within(dialog).queryByText(NO_SHELL)).toBeNull();
-    expect(rowOf('Coco')).toBeDefined();
-    expect(screen.queryByText('“Coco” was deleted.')).toBeNull();
   });
 
   it('deletes an unreachable title, its row taken off', async () => {
@@ -1047,14 +1020,13 @@ describe('ManageLibrary — deleting a linked title', () => {
 /**
  * 52, Keep originals, Phase 4 (issue #477): one dialog everywhere. In the
  * shell (a **Folder bridge** present) a linked title's Delete dialog draws
- * what a browser draws, no card and no callout, its folder under What
- * stays; confirming sends the plain `DELETE`, no query, the row then off
- * the list.
+ * what a browser draws, no choice of the files, its folder under What stays;
+ * confirming sends the plain `DELETE`, no query, the row then off the list.
  */
 describe('ManageLibrary — deleting a linked title, in the shell', () => {
   fakeFolderBridge();
 
-  it('draws no card and no callout, its files kept', async () => {
+  it('draws no choice of the files, its files kept', async () => {
     serveLinked([]);
     renderPage();
     await loaded();
@@ -1063,7 +1035,6 @@ describe('ManageLibrary — deleting a linked title, in the shell', () => {
 
     const dialog = deleteDialog() as HTMLElement;
     expect(within(dialog).queryAllByRole('radio')).toEqual([]);
-    expect(within(dialog).queryByText(/Recycle Bin/)).toBeNull();
     expect(
       within(dialog).getByText('Its folder, in your library folder')
     ).toBeDefined();
