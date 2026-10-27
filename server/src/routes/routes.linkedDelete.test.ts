@@ -4,16 +4,14 @@
 // #411); 52, Keep originals, slice 2: "a Delete keeps originals" (issue #476).
 //
 // `DELETE /api/movies/:id` and `DELETE /api/series/:id` keep their path and
-// their `204`, and never reach the shell: an old client's `?files=trash` is
-// ignored. A linked title's Delete records its **Left-out videos**, removes
-// its rows, then its **Media folder** best-effort, and leaves every video
-// where it lies, reachable or not. A copied title's Delete removes its Media
-// folder and leaves its original, if any, as a Left-out video.
+// their `204`. A linked title's Delete records its **Left-out videos**,
+// removes its rows, then its **Media folder** best-effort, and leaves every
+// video where it lies, reachable or not. A copied title's Delete removes its
+// Media folder and leaves its original, if any, as a Left-out video.
 //
 // Over a real listener, a real `:memory:` library, a sandboxed media root and
-// a sandboxed Library folder (`routes.libraryTitles`' harness). The Media
-// domain is made from its media path alone (issue #478): there is no shell
-// for a Delete to ask, so every video is checked on disk.
+// a sandboxed Library folder (`routes.libraryTitles`' harness). Every video
+// is checked on disk.
 
 import express from 'express';
 import { existsSync, mkdirSync, renameSync, writeFileSync } from 'node:fs';
@@ -149,11 +147,8 @@ function linkedShow(
   return show;
 }
 
-/** An old client's Delete, still asking for the Recycle Bin: ignored. */
 function remove(api: Api, kind: 'movies' | 'series', id: string) {
-  return fetch(`${api.baseUrl}/api/${kind}/${id}?files=trash`, {
-    method: 'DELETE',
-  });
+  return fetch(`${api.baseUrl}/api/${kind}/${id}`, { method: 'DELETE' });
 }
 
 describe('DELETE a linked title, unreachable', () => {
@@ -187,8 +182,8 @@ describe('DELETE a linked title, unreachable', () => {
   });
 });
 
-describe('DELETE a copied title, never asks the Trash', () => {
-  it('deletes a copied film without a word to the Trash', async () => {
+describe('DELETE a copied title', () => {
+  it('deletes a copied film, its Media folder gone', async () => {
     const api = freshApi();
     place(api.media, 'heat-1995/Heat.mkv');
     const film = api.storage.addMovie({
@@ -223,7 +218,7 @@ describe('DELETE a copied title, never asks the Trash', () => {
     expect(leftOut(api)).toEqual(['Heat (1995)/Heat.1995.mkv']);
   });
 
-  it('deletes a copied show without a word to the Trash', async () => {
+  it('deletes a copied show, its Media folder gone', async () => {
     const api = freshApi();
     place(api.media, 'harbor/season-01/S01E01.mkv');
     const show = api.storage.addSeries(

@@ -5,14 +5,11 @@
 //
 // The delete contract: `DELETE /api/movies/:id` and `DELETE /api/series/:id`
 // read no query. Each records the title's **Left-out videos**, removes its
-// rows, then its **Media folder**, and never asks the shell, so no Delete
-// answers `409`. A `?files=trash` from an old client is ignored: it keeps
-// every file exactly as a plain Delete does. An unknown id answers `404`.
+// rows, then its **Media folder**, and answers `204`, every **Original** kept
+// where it lies. An unknown id answers `404`.
 //
 // Over a real listener, a real `:memory:` library, a sandboxed media root and
-// a sandboxed Library folder (`routes.linkedDelete`'s harness). The Media
-// domain is made from its media path alone (issue #478): there is no shell
-// for a Delete to ask.
+// a sandboxed Library folder (`routes.linkedDelete`'s harness).
 
 import express from 'express';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
@@ -157,17 +154,15 @@ function linkedShow(
   return show;
 }
 
-function remove(api: Api, kind: 'movies' | 'series', id: string, query = '') {
-  return fetch(`${api.baseUrl}/api/${kind}/${id}${query}`, {
-    method: 'DELETE',
-  });
+function remove(api: Api, kind: 'movies' | 'series', id: string) {
+  return fetch(`${api.baseUrl}/api/${kind}/${id}`, { method: 'DELETE' });
 }
 
 const leftOut = (api: Api): string[] =>
   [...api.storage.leftOut(api.folderId)].sort();
 
 describe('a plain Delete keeps a linked title’s files', () => {
-  it('deletes a linked film and leaves its file where it lies, never asking the shell', async () => {
+  it('deletes a linked film and leaves its file where it lies', async () => {
     const api = freshApi();
     const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
 
@@ -179,7 +174,7 @@ describe('a plain Delete keeps a linked title’s files', () => {
     expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
   });
 
-  it('deletes a linked show and leaves its Show folder whole, never asking the shell', async () => {
+  it('deletes a linked show and leaves its Show folder whole', async () => {
     const api = freshApi();
     const show = linkedShow(api, 'Harbor and Vine', 'Harbor and Vine', [
       'Harbor and Vine/Season 01/S01E01.mkv',
@@ -205,85 +200,19 @@ describe('a plain Delete keeps a linked title’s files', () => {
       'Harbor and Vine/Season 01/S01E02.mkv',
     ]);
   });
-});
 
-describe('?files=trash changes nothing', () => {
-  it('deletes a linked film with 204, its file kept and left out, never asking the shell', async () => {
-    const api = freshApi();
-    const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
-
-    const response = await remove(api, 'movies', film.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(api.storage.getMovie(film.id)).toBeNull();
-    expect(existsSync(join(api.library, 'Coco (2017)', 'Coco.mkv'))).toBe(true);
-    expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
-  });
-
-  it('deletes a linked show with 204, its episodes kept and left out, never asking the shell', async () => {
-    const api = freshApi();
-    const show = linkedShow(api, 'Harbor', '', [
-      'Harbor.S01E01.mkv',
-      'Harbor.S01E02.mkv',
-    ]);
-
-    const response = await remove(api, 'series', show.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(api.storage.getSeries(show.id)).toBeNull();
-    expect(existsSync(join(api.library, 'Harbor.S01E01.mkv'))).toBe(true);
-    expect(existsSync(join(api.library, 'Harbor.S01E02.mkv'))).toBe(true);
-    expect(leftOut(api)).toEqual(['Harbor.S01E01.mkv', 'Harbor.S01E02.mkv']);
-  });
-
-  it('removes the film’s Media folder as a plain Delete does, never asking the shell', async () => {
-    const api = freshApi();
-    const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
-
-    const response = await remove(api, 'movies', film.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(existsSync(join(api.media, 'coco-managed'))).toBe(false);
-  });
-});
-
-describe('no Delete answers 409, even with no shell', () => {
-  it('deletes a linked film under ?files=trash with 204, not the no-shell 409', async () => {
-    const api = freshApi();
-    const film = linkedFilm(api, 'Coco', 'Coco (2017)', 'Coco.mkv');
-
-    const response = await remove(api, 'movies', film.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(api.storage.getMovie(film.id)).toBeNull();
-  });
-
-  it('deletes a linked show under ?files=trash with 204, not the no-shell 409', async () => {
-    const api = freshApi();
-    const show = linkedShow(api, 'Harbor and Vine', 'Harbor and Vine', [
-      'Harbor and Vine/Season 01/S01E01.mkv',
-    ]);
-
-    const response = await remove(api, 'series', show.id, '?files=trash');
-
-    expect(response.status).toBe(204);
-    expect(api.storage.getSeries(show.id)).toBeNull();
-  });
-
-  it('answers 404 for an unknown film or show, plain or under ?files=trash', async () => {
+  it('answers 404 for an unknown film or show', async () => {
     const api = freshApi();
 
     for (const kind of ['movies', 'series'] as const) {
-      for (const query of ['', '?files=trash']) {
-        const response = await remove(api, kind, 'no-such-id', query);
-        expect(response.status, `${kind}${query}`).toBe(404);
-      }
+      const response = await remove(api, kind, 'no-such-id');
+      expect(response.status, kind).toBe(404);
     }
   });
 });
 
-describe('a copied title’s Delete is unchanged', () => {
-  it('deletes a copied film under ?files=trash, its original kept and left out', async () => {
+describe('a copied title’s Delete', () => {
+  it('deletes a copied film, its original kept and left out', async () => {
     const api = freshApi();
     place(api.library, 'Heat (1995)/Heat.1995.mkv');
     managed(api, 'heat-1995');
@@ -295,7 +224,7 @@ describe('a copied title’s Delete is unchanged', () => {
     });
     api.storage.setSourceFolder(film.id, api.folderId, 'Heat (1995)');
 
-    const response = await remove(api, 'movies', film.id, '?files=trash');
+    const response = await remove(api, 'movies', film.id);
 
     expect(response.status).toBe(204);
     expect(api.storage.getMovie(film.id)).toBeNull();
