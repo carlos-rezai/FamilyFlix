@@ -20,11 +20,11 @@ export type FolderAdmission =
 
 /**
  * Add a typed path to the **Library folders**, by the add's rules in order:
- * something typed, an absolute path, a readable directory, and no overlap
- * with a folder already listed, and no overlap with the **Managed media
- * directory** (the **Media directory refusal**). Answers a value and never throws — two adds
- * racing past the overlap check meet the schema's unique path, and the one
- * that loses is answered as the `same` clash it is.
+ * something typed, an absolute path, a readable directory, no overlap with a
+ * folder already listed, and no overlap with the **Managed media directory**
+ * (the **Media directory refusal**). Answers a value and never throws — two
+ * adds racing past the overlap check meet the schema's unique path, and the
+ * one that loses is answered as the `same` clash it is.
  *
  * The folder answered is `reachable`: it has just been read.
  */
