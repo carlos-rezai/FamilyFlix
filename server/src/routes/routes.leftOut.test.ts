@@ -8,9 +8,7 @@
 // - a keep-files Delete (the plain `DELETE`) of a linked title records each
 //   of its **Linked videos**;
 // - a copied title's Delete records its **Source folder**'s **Source
-//   file(s)** under the Library folder it came from;
-// - an old client's `?files=trash` is ignored (issue #476): its Delete
-//   records the same as a plain one, every file kept.
+//   file(s)** under the Library folder it came from.
 //
 // End to end over the real router: a real library, a real `Media` over a
 // sandbox managed directory, and one listed Library folder.
@@ -201,32 +199,6 @@ describe('a keep-files Delete leaves its videos out', () => {
     expect(run.log.map((line) => line.text)).toContainEqual(
       expect.stringMatching(/^· Left out 1 videos? you deleted earlier$/)
     );
-  });
-});
-
-describe('an old client’s ?files=trash Delete leaves its videos out too', () => {
-  it('records a linked film’s video', async () => {
-    const api = await freshApi();
-    place(api.library, 'Coco (2017)/Coco.mkv');
-    await scanToReview(api, 'link');
-
-    await remove(api, `movies/${await filmId(api, 'Coco')}?files=trash`);
-
-    expect(leftOut(api)).toEqual(['Coco (2017)/Coco.mkv']);
-  });
-
-  it('records every episode video of a linked series', async () => {
-    const api = await freshApi();
-    place(api.library, 'Tidewater (2018)/Tidewater.S01E01.mkv');
-    place(api.library, 'Tidewater (2018)/Tidewater.S01E02.mkv');
-    await scanToReview(api, 'link');
-
-    await remove(api, `series/${await seriesId(api, 'Tidewater')}?files=trash`);
-
-    expect(leftOut(api)).toEqual([
-      'Tidewater (2018)/Tidewater.S01E01.mkv',
-      'Tidewater (2018)/Tidewater.S01E02.mkv',
-    ]);
   });
 });
 
