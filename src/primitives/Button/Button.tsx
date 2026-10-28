@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { BusyPhase } from '@/types';
@@ -82,15 +82,16 @@ export function Button({
   ...form
 }: ButtonProps) {
   const busy = form.busy ?? 'idle';
+  const isBusy = busy !== 'idle';
   const rootRef = useRef<HTMLButtonElement>(null);
-  // The idle width, read off the idle button as `busy` leaves `idle` and held
-  // as `min-width` until it returns, so the _-ing_ label never resizes it.
-  const heldWidth = useRef<number | null>(null);
-  if (busy === 'idle') {
-    heldWidth.current = null;
-  } else if (heldWidth.current === null && rootRef.current !== null) {
-    heldWidth.current = rootRef.current.offsetWidth || null;
-  }
+  // The idle width, read as `busy` leaves `idle` and held as `min-width` until
+  // it returns, so the _-ing_ label never resizes it. The `waiting` face still
+  // draws the idle label, so the width read then is the idle one; a layout
+  // effect reads it before paint, so no frame draws without it.
+  const [heldWidth, setHeldWidth] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    setHeldWidth(isBusy ? rootRef.current?.offsetWidth || null : null);
+  }, [isBusy]);
 
   const face = {
     className,
@@ -113,7 +114,6 @@ export function Button({
   }
 
   // Busy: locked, so `onClick` cannot fire, but on the variant's own face.
-  const isBusy = busy !== 'idle';
   return (
     <Root
       ref={rootRef}
@@ -124,8 +124,8 @@ export function Button({
       aria-busy={isBusy ? 'true' : undefined}
       onClick={isBusy ? undefined : form.onClick}
       style={
-        isBusy && heldWidth.current !== null
-          ? { minWidth: `${heldWidth.current}px` }
+        isBusy && heldWidth !== null
+          ? { minWidth: `${heldWidth}px` }
           : undefined
       }
     >
