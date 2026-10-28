@@ -3,7 +3,7 @@ import styled from 'styled-components';
 /**
  * The furniture the **Clear dialog** and the **Delete dialog** share — one
  * handoff card for both — flat as `movie-form/filesCard.styles.ts` is: the
- * title's path in the mono well and the two buttons. **What goes** beside
+ * title's path in the mono well, a failure's line and the two buttons. **What goes** beside
  * **What stays** is `GoesAndStays`'. Neither dialog owns it; both import it.
  */
 
@@ -17,6 +17,16 @@ export const PathWell = styled.div`
   font-size: 13px;
   color: ${({ theme }) => theme.colors.textDim};
   overflow-wrap: anywhere;
+`;
+
+/**
+ * A failed delete's line, above the buttons in the **Reset dialog**'s
+ * refusal style: one 13px line in danger ink.
+ */
+export const Failure = styled.div`
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.danger};
 `;
 
 /** The two buttons, the confirm first. */

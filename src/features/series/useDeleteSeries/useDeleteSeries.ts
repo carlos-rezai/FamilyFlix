@@ -1,5 +1,7 @@
 import { useCallback, useState } from 'react';
 
+import type { BusyPhase } from '@/types';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { seriesTabPath } from '@/utils';
 import { deleteSeries as sendDelete } from '@/api/deleteSeries/deleteSeries';
@@ -8,8 +10,14 @@ import { deleteSeries as sendDelete } from '@/api/deleteSeries/deleteSeries';
 const LANDING = seriesTabPath();
 
 export interface DeleteSeries {
-  /** True for the life of the request, false before and after. */
-  deleting: boolean;
+  /**
+   * The delete's **Busy phase**, on the **Loader timing**: `waiting` from
+   * the confirm, `shown` once it has run 300ms. Its outcome, the leaving or
+   * the failure, lands only once the loader's hold is out.
+   */
+  deleting: BusyPhase;
+  /** Whether the last delete failed; the next confirm clears it. */
+  failed: boolean;
   /**
    * Sends the delete and, once the series is gone, leaves its page. Rejects
    * with the request's own error when the delete failed, nothing moved.
@@ -24,17 +32,19 @@ export interface DeleteSeries {
  */
 export function useDeleteSeries(seriesId: string): DeleteSeries {
   const goBack = useGoBack(LANDING);
-  const [deleting, setDeleting] = useState(false);
+  const { phase: deleting, run } = useDelayedBusy();
+  const [failed, setFailed] = useState(false);
 
   const deleteSeries = useCallback(async () => {
-    setDeleting(true);
+    setFailed(false);
     try {
-      await sendDelete(seriesId);
-    } finally {
-      setDeleting(false);
+      await run(() => sendDelete(seriesId));
+    } catch (error: unknown) {
+      setFailed(true);
+      throw error;
     }
     goBack();
-  }, [seriesId, goBack]);
+  }, [seriesId, goBack, run]);
 
-  return { deleting, deleteSeries };
+  return { deleting, failed, deleteSeries };
 }

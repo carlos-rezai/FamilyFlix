@@ -25,8 +25,8 @@ import {
  *
  * The series' **Delete dialog** on `Modal`, worded the movie dialog's way
  * (log 38 Q18, `page.SeriesPage.dc.html`): the show named in the heading, the
- * episode count in the body, _Delete series_ before _Cancel_, _Deleting…_ in
- * flight, and four ways out that send nothing.
+ * episode count in the body, _Delete series_ before _Cancel_, busy on its
+ * label in flight (53, #488), and four ways out that send nothing.
  */
 let fetchMock: ReturnType<
   typeof vi.fn<
@@ -92,8 +92,9 @@ const confirmButton = () =>
   within(dialog()).getByRole('button', { name: 'Delete series' });
 const cancelButton = () =>
   within(dialog()).getByRole('button', { name: 'Cancel' });
+/** The confirm while the delete runs: busy on its idle label (53, #488). */
 const deletingButton = () =>
-  within(dialog()).getByRole('button', { name: 'Deleting…' });
+  within(dialog()).getByRole('button', { name: 'Delete series', busy: true });
 
 /** A delete the test settles by hand, so the dialog can be read in flight. */
 function holdDelete() {
@@ -162,7 +163,7 @@ describe('DeleteSeriesDialog — the two buttons', () => {
     expect(init?.method?.toUpperCase()).toBe('DELETE');
   });
 
-  it('reads Deleting… and is disabled while the request runs', async () => {
+  it('is busy on its label and disabled while the request runs', async () => {
     holdDelete();
     renderDialog();
 
@@ -170,9 +171,6 @@ describe('DeleteSeriesDialog — the two buttons', () => {
 
     await waitFor(() => expect(deletingButton()).toBeTruthy());
     expect((deletingButton() as HTMLButtonElement).disabled).toBe(true);
-    expect(
-      within(dialog()).queryByRole('button', { name: 'Delete series' })
-    ).toBeNull();
     fireEvent.click(deletingButton());
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
@@ -186,7 +184,7 @@ describe('DeleteSeriesDialog — the two buttons', () => {
     await waitFor(() => expect(url()).toBe('/?tab=series'));
   });
 
-  it('puts the button back and stays put when the delete is refused', async () => {
+  it('puts the button back with the failure line and stays put when the delete is refused', async () => {
     const request = holdDelete();
     renderDialog();
 
@@ -195,7 +193,13 @@ describe('DeleteSeriesDialog — the two buttons', () => {
 
     request.settle(serverErrorResponse());
 
-    await waitFor(() => expect(confirmButton()).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        within(dialog()).getByText(
+          'Couldn’t delete “F’ck That’s Delicious”. Try again.'
+        )
+      ).toBeTruthy()
+    );
     expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
     expect(url()).toBe('/series/ftd');
   });

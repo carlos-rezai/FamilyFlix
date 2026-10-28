@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { DeleteTitleDialog } from './DeleteTitleDialog';
-import type { LibraryTitle } from '@/types';
+import type { BusyPhase, LibraryTitle } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
@@ -23,7 +23,8 @@ import {
  * subtitles_) beside **What stays** (_Your original in its library folder —
  * Scan folders would bring it back_ when there is an original, else
  * _Nothing_), then _Delete movie_ / _Delete series_ in `danger` —
- * _Deleting…_ and inert while the request runs — before _Cancel_. Focus
+ * busy on its label and **Locked** from the press, the **Dialog loader**
+ * once **Shown** (53, issue #488), before _Cancel_. Focus
  * lands on the card, so Enter alone deletes nothing.
  *
  * Presentational over its props: the organism owns the request.
@@ -48,12 +49,14 @@ const COCO = makeLibraryMovie({
 
 function renderDialog({
   title = COCO,
-  deleting = false,
+  deleting = 'idle',
+  failed = false,
   onConfirm = () => undefined,
   onClose = () => undefined,
 }: {
   title?: LibraryTitle;
-  deleting?: boolean;
+  deleting?: BusyPhase;
+  failed?: boolean;
   onConfirm?: () => void;
   onClose?: () => void;
 } = {}) {
@@ -62,6 +65,7 @@ function renderDialog({
       <DeleteTitleDialog
         title={title}
         deleting={deleting}
+        failed={failed}
         onConfirm={onConfirm}
         onClose={onClose}
       />
@@ -206,14 +210,37 @@ describe('DeleteTitleDialog — the buttons', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('reads Deleting… and is inert while the request runs', () => {
+  it('is busy on its idle label and inert, Cancel disabled, while waiting', () => {
     const onConfirm = vi.fn();
-    renderDialog({ deleting: true, onConfirm });
+    const onClose = vi.fn();
+    renderDialog({ deleting: 'waiting', onConfirm, onClose });
 
-    expect(confirm().textContent).toBe('Deleting…');
+    expect(confirm().textContent).toBe('Delete movie');
+    expect(confirm().getAttribute('aria-busy')).toBe('true');
     expect((confirm() as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(confirm());
     expect(onConfirm).not.toHaveBeenCalled();
+    const cancel = screen.getByRole('button', { name: 'Cancel' });
+    expect((cancel as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(cancel);
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('becomes the dialog loader reading Deleting “Coco” once shown', () => {
+    renderDialog({ deleting: 'shown' });
+
+    expect(
+      screen.getByRole('status', { name: 'Deleting “Coco”' })
+    ).toBeDefined();
+    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+  });
+
+  it('draws the failure line above the buttons once a delete failed', () => {
+    renderDialog({ failed: true });
+
+    expect(
+      screen.getByText('Couldn’t delete “Coco”. Try again.')
+    ).toBeDefined();
   });
 });
 

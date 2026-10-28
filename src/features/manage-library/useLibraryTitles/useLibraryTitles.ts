@@ -21,12 +21,17 @@ export interface LibraryTitlesState {
    * the loader's hold is out. Never rejects.
    */
   clearDetails: (title: LibraryTitle) => Promise<boolean>;
-  /** True for the life of a delete's request, false before and after. */
-  deleting: boolean;
+  /** A delete's **Busy phase**, on the **Loader timing**. */
+  deleting: BusyPhase;
+  /**
+   * Whether the last delete failed, raised once its hold is out and cleared
+   * by the next confirm.
+   */
+  deleteFailed: boolean;
   /**
    * Deletes a title with a plain `DELETE`: `true` once its row is off its
    * list, with no re-read; `false` for any failure, the list as it was.
-   * Never rejects.
+   * Settles only once the loader's hold is out. Never rejects.
    */
   deleteTitle: (title: LibraryTitle) => Promise<boolean>;
 }
@@ -44,7 +49,8 @@ const listOf = (title: LibraryTitle) =>
 export function useLibraryTitles(): LibraryTitlesState {
   const [titles, setTitles] = useState<LibraryTitles | null>(null);
   const { phase: clearing, run: runClear } = useDelayedBusy();
-  const [deleting, setDeleting] = useState(false);
+  const { phase: deleting, run: runDelete } = useDelayedBusy();
+  const [deleteFailed, setDeleteFailed] = useState(false);
 
   /** `echo` in place of the row it redraws, on the list its kind sits on. */
   const replaced = useCallback(
@@ -95,13 +101,13 @@ export function useLibraryTitles(): LibraryTitlesState {
 
   const deleteTitle = useCallback(
     async (title: LibraryTitle): Promise<boolean> => {
-      setDeleting(true);
+      setDeleteFailed(false);
       try {
-        if (title.kind === 'movie') {
-          await deleteMovie(title.id);
-        } else {
-          await deleteSeries(title.id);
-        }
+        await runDelete(() =>
+          title.kind === 'movie'
+            ? deleteMovie(title.id)
+            : deleteSeries(title.id)
+        );
         const list = listOf(title);
         setTitles((held) =>
           held === null
@@ -113,12 +119,11 @@ export function useLibraryTitles(): LibraryTitlesState {
         );
         return true;
       } catch {
+        setDeleteFailed(true);
         return false;
-      } finally {
-        setDeleting(false);
       }
     },
-    []
+    [runDelete]
   );
 
   return {
@@ -126,6 +131,7 @@ export function useLibraryTitles(): LibraryTitlesState {
     clearing,
     clearDetails,
     deleting,
+    deleteFailed,
     deleteTitle,
   };
 }

@@ -47,7 +47,7 @@ function Screen() {
   return (
     <>
       <span>Series screen</span>
-      <span data-testid="deleting">{String(deleting)}</span>
+      <span data-testid="deleting">{deleting}</span>
       <button
         type="button"
         onClick={() => {
@@ -147,19 +147,19 @@ describe('useDeleteSeries', () => {
 });
 
 describe('useDeleteSeries — deleting', () => {
-  it('is false before anything is asked', () => {
+  it('is idle before anything is asked', () => {
     renderAt(['/', '/series/harbor'], 1);
 
-    expect(deleting()).toBe('false');
+    expect(deleting()).toBe('idle');
   });
 
-  it('is true for the life of the request', async () => {
+  it('is busy for the life of the request', async () => {
     const request = holdDelete();
     renderAt(['/', '/?tab=series', '/series/harbor'], 2);
 
     confirm();
 
-    await waitFor(() => expect(deleting()).toBe('true'));
+    await waitFor(() => expect(deleting()).toBe('waiting'));
     expect(url()).toBe('/series/harbor');
 
     request.settle(noContentResponse());
@@ -167,16 +167,16 @@ describe('useDeleteSeries — deleting', () => {
     await waitFor(() => expect(url()).toBe('/?tab=series'));
   });
 
-  it('is false again after a refusal, with the location untouched', async () => {
+  it('is idle again after a refusal, with the location untouched', async () => {
     const request = holdDelete();
     renderAt(['/', '/?tab=series', '/series/harbor'], 2);
 
     confirm();
-    await waitFor(() => expect(deleting()).toBe('true'));
+    await waitFor(() => expect(deleting()).toBe('waiting'));
 
     request.settle(serverErrorResponse());
 
-    await waitFor(() => expect(deleting()).toBe('false'));
+    await waitFor(() => expect(deleting()).toBe('idle'));
     expect(url()).toBe('/series/harbor');
   });
 });

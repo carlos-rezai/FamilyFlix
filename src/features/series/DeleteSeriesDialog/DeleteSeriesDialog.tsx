@@ -1,4 +1,4 @@
-import { Modal } from '@/components';
+import { DialogLoader, Modal } from '@/components';
 import { DeleteTitleBody } from '@/features/manage-library/DeleteTitleBody/DeleteTitleBody';
 import type { DeleteFacts } from '@/types';
 import { useDeleteSeries } from '../useDeleteSeries/useDeleteSeries';
@@ -20,7 +20,8 @@ export interface DeleteSeriesDialogProps {
  * The series' **Delete dialog**, `DeleteMovieDialog`'s twin (`page.SeriesPage`):
  * the show named in the heading over _This can’t be undone._, then
  * `DeleteTitleBody`: **What goes / What stays**, and _Delete series_ before
- * _Cancel_. A failure leaves the dialog where it is with nothing changed.
+ * _Cancel_. **Locked** from the confirm press, the **Dialog loader** once
+ * **Shown**; a failure returns the live idle face with the failure line.
  */
 export function DeleteSeriesDialog({
   seriesId,
@@ -29,11 +30,16 @@ export function DeleteSeriesDialog({
   open,
   onClose,
 }: DeleteSeriesDialogProps) {
-  const { deleting, deleteSeries } = useDeleteSeries(seriesId);
+  const { deleting, failed, deleteSeries } = useDeleteSeries(seriesId);
+
+  if (open && deleting === 'shown') {
+    return <DialogLoader label={`Deleting “${title}”`} />;
+  }
 
   return (
     <Modal
       open={open}
+      locked={deleting !== 'idle'}
       title={`Delete “${title}”?`}
       subtitle="This can’t be undone."
       icon="🗑"
@@ -42,6 +48,7 @@ export function DeleteSeriesDialog({
       <DeleteTitleBody
         title={{ kind: 'series', title, ...deleteFacts }}
         deleting={deleting}
+        failed={failed}
         onConfirm={() => {
           void deleteSeries().catch(() => undefined);
         }}

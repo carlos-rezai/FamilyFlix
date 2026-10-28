@@ -862,7 +862,7 @@ describe('ManageLibrary — Delete…', () => {
     expect(String(writes()[0]?.[0])).toBe('/api/series/s1');
   });
 
-  it('reads Deleting… and is inert while the delete runs', async () => {
+  it('is busy on its label and inert while the delete runs', async () => {
     const held = heldClear();
     serveWith(() => held.pending);
     renderPage();
@@ -871,10 +871,10 @@ describe('ManageLibrary — Delete…', () => {
 
     confirmDelete();
 
-    const button = await within(deleteDialog() as HTMLElement).findByRole(
-      'button',
-      { name: 'Deleting…' }
-    );
+    const button = within(deleteDialog() as HTMLElement).getByRole('button', {
+      name: 'Delete movie',
+    });
+    expect(button.getAttribute('aria-busy')).toBe('true');
     expect((button as HTMLButtonElement).disabled).toBe(true);
     held.settle(noContentResponse());
     await waitFor(() => expect(deleteDialog()).toBeNull());
@@ -945,9 +945,9 @@ describe('ManageLibrary — Delete…', () => {
     await waitFor(() => expect(writes()).toHaveLength(1));
     await waitFor(() =>
       expect(
-        within(deleteDialog() as HTMLElement).getByRole('button', {
-          name: 'Delete movie',
-        })
+        within(deleteDialog() as HTMLElement).getByText(
+          'Couldn’t delete “Coco”. Try again.'
+        )
       ).toBeDefined()
     );
     expect(within(rowOf('Coco')).getByText('Synced with TMDB')).toBeDefined();

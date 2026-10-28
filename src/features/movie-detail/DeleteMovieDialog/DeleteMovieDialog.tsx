@@ -1,4 +1,4 @@
-import { Modal } from '@/components';
+import { DialogLoader, Modal } from '@/components';
 import { DeleteTitleBody } from '@/features/manage-library/DeleteTitleBody/DeleteTitleBody';
 import type { DeleteFacts } from '@/types';
 import { useDeleteMovie } from '../useDeleteMovie/useDeleteMovie';
@@ -20,9 +20,10 @@ export interface DeleteMovieDialogProps {
  * The movie page's **Delete dialog** (`page.MoviePage`): _Delete “<title>”?_
  * over _This can’t be undone._, then the Manage library dialog's body,
  * `DeleteTitleBody`: **What goes / What stays** by the film's Delete facts,
- * and the hook's confirm. A failure leaves the dialog where it is with
- * nothing changed. Dismissing does not cancel the request, and a success
- * after a dismissal still goes back.
+ * and the hook's confirm. From the confirm press the dialog is **Locked**
+ * and _Cancel_ disabled until the delete settles; once **Shown** it becomes
+ * the **Dialog loader** reading _Deleting “<title>”_. A failure returns it
+ * to its live idle face with the failure line, nothing changed.
  */
 export function DeleteMovieDialog({
   movieId,
@@ -31,11 +32,16 @@ export function DeleteMovieDialog({
   open,
   onClose,
 }: DeleteMovieDialogProps) {
-  const { deleting, deleteMovie } = useDeleteMovie(movieId);
+  const { deleting, failed, deleteMovie } = useDeleteMovie(movieId);
+
+  if (open && deleting === 'shown') {
+    return <DialogLoader label={`Deleting “${title}”`} />;
+  }
 
   return (
     <Modal
       open={open}
+      locked={deleting !== 'idle'}
       title={`Delete “${title}”?`}
       subtitle="This can’t be undone."
       icon="🗑"
@@ -44,6 +50,7 @@ export function DeleteMovieDialog({
       <DeleteTitleBody
         title={{ kind: 'movie', title, ...deleteFacts }}
         deleting={deleting}
+        failed={failed}
         onConfirm={() => {
           void deleteMovie().catch(() => undefined);
         }}

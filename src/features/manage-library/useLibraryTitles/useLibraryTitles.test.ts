@@ -341,24 +341,24 @@ describe('useLibraryTitles — deleteTitle', () => {
     ).toHaveLength(1);
   });
 
-  it('holds deleting true for the life of the request, false after', async () => {
+  it('holds deleting busy for the life of the request, idle after', async () => {
     let answer: (response: Response) => void = () => undefined;
     const { result } = await loadedHook(
       () => new Promise<Response>((resolve) => (answer = resolve))
     );
-    expect(result.current.deleting).toBe(false);
+    expect(result.current.deleting).toBe('idle');
 
     let pending: Promise<boolean> | undefined;
     act(() => {
       pending = result.current.deleteTitle(LISTED.movies[1]!);
     });
-    expect(result.current.deleting).toBe(true);
+    expect(result.current.deleting).toBe('waiting');
 
     await act(async () => {
       answer(noContentResponse());
       await pending;
     });
-    expect(result.current.deleting).toBe(false);
+    expect(result.current.deleting).toBe('idle');
   });
 
   it('resolves true once the row is gone', async () => {

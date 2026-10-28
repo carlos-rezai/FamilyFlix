@@ -302,13 +302,16 @@ function holdDelete() {
   };
 }
 
+/** The confirm while the delete runs: busy on its idle label (53, #488). */
 const deletingButton = () =>
-  within(dialog()).getByRole('button', { name: 'Deleting…' });
+  within(dialog()).getByRole('button', { name: 'Delete movie', busy: true });
+
+const FAILED = 'Couldn’t delete “Northwind”. Try again.';
 
 /**
  * The dialog as `EditMenu` hosts it: mounted for the life of the page, with
- * `open` held above it and dropped by Cancel. Dismissing closes the Modal; it
- * does not unmount the dialog, and so does not cancel the request it started.
+ * `open` held above it and dropped by Cancel. From the confirm press it is
+ * **Locked** (53, #488), so nothing dismisses it mid-flight.
  */
 function Host() {
   const [open, setOpen] = useState(true);
@@ -347,7 +350,7 @@ function renderHosted() {
 
 /**
  * What confirming does: where it lands, what it reads while the request runs,
- * that a dismissal does not cancel it, and what a refusal leaves behind.
+ * that nothing dismisses it mid-flight, and what a refusal leaves behind.
  */
 describe('DeleteMovieDialog — confirming', () => {
   describe('afterwards', () => {
@@ -367,34 +370,30 @@ describe('DeleteMovieDialog — confirming', () => {
   });
 
   describe('in flight', () => {
-    it('reads "Deleting…" and is disabled while the request runs', async () => {
+    it('is busy on its label and disabled while the request runs', async () => {
       holdDelete();
       renderDialog();
 
       fireEvent.click(confirmButton());
 
-      // The one place the delete shows its cost. The label says the work
-      // started, and the disabled button is what stops a second request from an
-      // impatient second press.
+      // The disabled button is what stops a second request from an impatient
+      // second press.
       await waitFor(() => expect(deletingButton()).toBeTruthy());
       expect((deletingButton() as HTMLButtonElement).disabled).toBe(true);
-      expect(
-        within(dialog()).queryByRole('button', { name: 'Delete movie' })
-      ).toBeNull();
       expect(fetchMock).toHaveBeenCalledTimes(1);
     });
 
-    it('keeps Cancel enabled while the request runs', async () => {
+    it('disables Cancel while the request runs', async () => {
       holdDelete();
       renderDialog();
 
       fireEvent.click(confirmButton());
 
       await waitFor(() => expect(deletingButton()).toBeTruthy());
-      expect((cancelButton() as HTMLButtonElement).disabled).toBe(false);
+      expect((cancelButton() as HTMLButtonElement).disabled).toBe(true);
     });
 
-    it('still closes from Cancel while the request runs', async () => {
+    it('does not close from Cancel while the request runs', async () => {
       holdDelete();
       const onClose = vi.fn();
       renderDialog({ onClose });
@@ -404,23 +403,22 @@ describe('DeleteMovieDialog — confirming', () => {
 
       fireEvent.click(cancelButton());
 
-      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
     });
 
-    it('still closes from the ✕ while the request runs', async () => {
+    it('draws no ✕ while the request runs', async () => {
       holdDelete();
-      const onClose = vi.fn();
-      renderDialog({ onClose });
+      renderDialog();
 
       fireEvent.click(confirmButton());
       await waitFor(() => expect(deletingButton()).toBeTruthy());
 
-      fireEvent.click(within(dialog()).getByRole('button', { name: 'Close' }));
-
-      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(
+        within(dialog()).queryByRole('button', { name: 'Close' })
+      ).toBeNull();
     });
 
-    it('still closes from Escape while the request runs', async () => {
+    it('does not close from Escape while the request runs', async () => {
       holdDelete();
       const onClose = vi.fn();
       renderDialog({ onClose });
@@ -432,22 +430,22 @@ describe('DeleteMovieDialog — confirming', () => {
         key: 'Escape',
       });
 
-      expect(onClose).toHaveBeenCalledTimes(1);
+      expect(onClose).not.toHaveBeenCalled();
     });
   });
 
   describe('dismissed mid-flight', () => {
-    it('still goes back when a 204 lands after the dialog was dismissed', async () => {
+    it('stays up through a Cancel press, and goes back when a 204 lands', async () => {
       const request = holdDelete();
       renderHosted();
 
       fireEvent.click(confirmButton());
       await waitFor(() => expect(deletingButton()).toBeTruthy());
 
-      // Dismissing closes the dialog and nothing more: the request keeps going,
-      // and once the movie is gone its page has nothing left to show.
+      // Locked from the press: Cancel is disabled, so the dialog stays up
+      // until the delete settles.
       fireEvent.click(cancelButton());
-      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(screen.queryByRole('dialog')).not.toBeNull();
       expect(url()).toBe('/movie/m1');
 
       request.settle(noContentResponse());
@@ -455,7 +453,7 @@ describe('DeleteMovieDialog — confirming', () => {
       await waitFor(() => expect(url()).toBe('/genre/Drama?sort=az'));
     });
 
-    it('still goes back when a 404 lands after the dialog was dismissed', async () => {
+    it('stays up through a Cancel press, and goes back when a 404 lands', async () => {
       const request = holdDelete();
       renderHosted();
 
@@ -463,7 +461,7 @@ describe('DeleteMovieDialog — confirming', () => {
       await waitFor(() => expect(deletingButton()).toBeTruthy());
 
       fireEvent.click(cancelButton());
-      expect(screen.queryByRole('dialog')).toBeNull();
+      expect(screen.queryByRole('dialog')).not.toBeNull();
 
       request.settle(notFoundResponse('Unknown movie: m1'));
 
@@ -481,14 +479,13 @@ describe('DeleteMovieDialog — confirming', () => {
 
       request.settle(serverErrorResponse());
 
-      // The form's precedent: the prototype designs no error state on this
-      // screen, so a refusal puts the button back and changes nothing else — no
-      // navigation, no snackbar, the dialog still up for a second try.
-      await waitFor(() => expect(confirmButton()).toBeTruthy());
+      // A refusal puts the button back with the failure line above it and
+      // changes nothing else: no navigation, no snackbar, the dialog still up
+      // for a second try.
+      await waitFor(() => expect(screen.getByText(FAILED)).toBeTruthy());
       expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
       expect(screen.getByRole('dialog')).toBeTruthy();
       expect(url()).toBe('/movie/m1');
-      expect(screen.queryByText(/error|failed|try again/i)).toBeNull();
     });
 
     it('re-enables Delete movie when there is no server, and stays put', async () => {
@@ -500,7 +497,7 @@ describe('DeleteMovieDialog — confirming', () => {
 
       request.refuse(new TypeError('Failed to fetch'));
 
-      await waitFor(() => expect(confirmButton()).toBeTruthy());
+      await waitFor(() => expect(screen.getByText(FAILED)).toBeTruthy());
       expect((confirmButton() as HTMLButtonElement).disabled).toBe(false);
       expect(screen.getByRole('dialog')).toBeTruthy();
       expect(url()).toBe('/movie/m1');
@@ -513,7 +510,7 @@ describe('DeleteMovieDialog — confirming', () => {
       fireEvent.click(confirmButton());
       await waitFor(() => expect(deletingButton()).toBeTruthy());
       request.settle(serverErrorResponse());
-      await waitFor(() => expect(confirmButton()).toBeTruthy());
+      await waitFor(() => expect(screen.getByText(FAILED)).toBeTruthy());
 
       fetchMock.mockResolvedValue(noContentResponse());
       fireEvent.click(confirmButton());

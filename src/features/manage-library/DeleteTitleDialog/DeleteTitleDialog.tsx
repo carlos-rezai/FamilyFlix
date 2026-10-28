@@ -1,6 +1,6 @@
-import { Modal } from '@/components';
+import { DialogLoader, Modal } from '@/components';
 import { BinIcon } from '@/primitives';
-import type { LibraryTitle } from '@/types';
+import type { BusyPhase, LibraryTitle } from '@/types';
 
 import { deleteView } from '../libraryTitleView/libraryTitleView';
 import { DeleteTitleBody } from '../DeleteTitleBody/DeleteTitleBody';
@@ -9,8 +9,10 @@ import { PathWell } from '../titleDialog.styles';
 export interface DeleteTitleDialogProps {
   /** The title the delete is asked of. */
   title: LibraryTitle;
-  /** Whether the delete is in flight: _Deleting…_, and inert. */
-  deleting: boolean;
+  /** The delete's **Busy phase**: **Locked** from the press, the loader once `shown`. */
+  deleting: BusyPhase;
+  /** Whether the last delete failed, its line drawn above the buttons. */
+  failed: boolean;
   /** _Delete movie_ / _Delete series_. */
   onConfirm: () => void;
   /** What Cancel, the ✕, Escape and the scrim ask for. */
@@ -22,20 +24,27 @@ export interface DeleteTitleDialogProps {
  * shape: _Delete “Coco”?_ and its sentence, the title's path in the mono
  * well, then `DeleteTitleBody`: **What goes** beside **What stays**, and
  * the confirm in `danger` before _Cancel_. Focus lands on the card, the
- * Modal's own rule, so Enter alone deletes nothing. Presentational, the
- * organism owns the request.
+ * Modal's own rule, so Enter alone deletes nothing. From the confirm press
+ * it is **Locked**; once **Shown** it becomes the **Dialog loader** reading
+ * _Deleting “<title>”_. Presentational, the organism owns the request.
  */
 export function DeleteTitleDialog({
   title,
   deleting,
+  failed,
   onConfirm,
   onClose,
 }: DeleteTitleDialogProps) {
   const view = deleteView(title);
 
+  if (deleting === 'shown') {
+    return <DialogLoader label={`Deleting “${title.title}”`} />;
+  }
+
   return (
     <Modal
       open
+      locked={deleting !== 'idle'}
       title={view.heading}
       subtitle={view.subtitle}
       icon={<BinIcon size={22} />}
@@ -45,6 +54,7 @@ export function DeleteTitleDialog({
       <DeleteTitleBody
         title={title}
         deleting={deleting}
+        failed={failed}
         onConfirm={onConfirm}
         onClose={onClose}
       />

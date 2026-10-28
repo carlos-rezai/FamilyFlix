@@ -28,8 +28,14 @@ import { Empty, List, Summary, Toolbar } from './ManageLibrary.styles';
  * open, and for which title.
  */
 export function ManageLibrary() {
-  const { titles, clearing, clearDetails, deleting, deleteTitle } =
-    useLibraryTitles();
+  const {
+    titles,
+    clearing,
+    clearDetails,
+    deleting,
+    deleteFailed,
+    deleteTitle,
+  } = useLibraryTitles();
   const { notify } = useSnackbar();
   const [asked, setAsked] = useState<LibraryTitle | null>(null);
 
@@ -119,6 +125,7 @@ export function ManageLibrary() {
         <DeleteTitleDialog
           title={doomed}
           deleting={deleting}
+          failed={deleteFailed}
           onConfirm={() => void confirmDelete(doomed)}
           onClose={() => setDoomed(null)}
         />
