@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
 import { useFactoryReset } from './useFactoryReset';
@@ -7,6 +7,8 @@ import {
   conflictResponse,
   noContentResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 4 (issue #487): `resetting` is a **Busy phase**
@@ -15,44 +17,14 @@ import {
  * is out. A reset that lands reloads onto `/` after the same hold.
  */
 
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let answer: (response: Response) => void;
-
-beforeEach(() => {
-  answer = () => undefined;
-  const fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation(
-    () =>
-      new Promise<Response>((resolve) => {
-        answer = resolve;
-      })
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch();
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 const IMPORT_RUNNING =
   'An import is running. Stop it before erasing everything.';
-
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
-async function respond(response: Response) {
-  await act(async () => {
-    answer(response);
-  });
-}
 
 describe('useFactoryReset — on the Loader timing', () => {
   const location = stubLocation();
@@ -72,15 +44,15 @@ describe('useFactoryReset — on the Loader timing', () => {
     });
     expect(result.current.resetting).toBe('waiting');
 
-    await advance(299);
+    await advanceClock(299);
     expect(result.current.resetting).toBe('waiting');
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.resetting).toBe('shown');
 
     await respond(conflictResponse(IMPORT_RUNNING));
-    await advance(499);
+    await advanceClock(499);
     expect(result.current.resetting).toBe('shown');
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.resetting).toBe('idle');
     expect(result.current.refusal).toBe(IMPORT_RUNNING);
   });
@@ -92,12 +64,12 @@ describe('useFactoryReset — on the Loader timing', () => {
     act(() => {
       void result.current.reset();
     });
-    await advance(300);
+    await advanceClock(300);
     await respond(noContentResponse());
-    await advance(499);
+    await advanceClock(499);
     expect(location.assigned()).toEqual([]);
 
-    await advance(1);
+    await advanceClock(1);
     expect(location.assigned()).toEqual(['/']);
   });
 });

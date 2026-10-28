@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
@@ -7,6 +7,8 @@ import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { theme } from '@/styles/theme';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { useTmdbKey } from './useTmdbKey';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 4 (issue #486): `testing` is a **Busy phase**.
@@ -18,34 +20,14 @@ import { useTmdbKey } from './useTmdbKey';
 
 const KEY = '0123456789abcdef0123456789abcdef';
 
-let fetchMock: ReturnType<
-  typeof vi.fn<
-    (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-  >
->;
-
-/** The test in flight, answered when the test says so. */
-let settleTest: (response: Response) => void;
-
-beforeEach(() => {
-  settleTest = () => undefined;
-  fetchMock =
-    vi.fn<
-      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-    >();
-  fetchMock.mockImplementation((_input, init) =>
-    (init?.method ?? 'GET').toUpperCase() === 'GET'
-      ? Promise.resolve(okResponse({ key: null }))
-      : new Promise<Response>((resolve) => {
-          settleTest = resolve;
-        })
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { fetchMock, respond } = heldFetch((_url, init) =>
+  (init?.method ?? 'GET').toUpperCase() === 'GET'
+    ? okResponse({ key: null })
+    : undefined
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 function wrapper({ children }: { children: ReactNode }) {
@@ -54,12 +36,6 @@ function wrapper({ children }: { children: ReactNode }) {
       <SnackbarProvider>{children}</SnackbarProvider>
     </ThemeProvider>
   );
-}
-
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
 }
 
 describe('useTmdbKey — testing on the Loader timing', () => {
@@ -84,17 +60,15 @@ describe('useTmdbKey — testing on the Loader timing', () => {
     });
     expect(result.current.testing).toBe('waiting');
 
-    await advance(300);
+    await advanceClock(300);
     expect(result.current.testing).toBe('shown');
 
-    await act(async () => {
-      settleTest(okResponse({ key: KEY }));
-    });
-    await advance(499);
+    await respond(okResponse({ key: KEY }));
+    await advanceClock(499);
     expect(result.current.testing).toBe('shown');
     expect(settled).toBe(false);
 
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.testing).toBe('idle');
     expect(settled).toBe(true);
   });

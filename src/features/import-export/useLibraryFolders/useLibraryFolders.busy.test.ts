@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useLibraryFolders } from './useLibraryFolders';
@@ -7,6 +7,8 @@ import {
   createdResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 4 (issue #486): `adding` is a **Busy phase**.
@@ -16,13 +18,6 @@ import {
  * `add()`'s promise settles with it.
  */
 
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
-
 const KIDS: LibraryFolderView = {
   id: 'f-kids',
   path: 'D:\\Kids',
@@ -31,32 +26,13 @@ const KIDS: LibraryFolderView = {
   leftOut: 0,
 };
 
-/** The add in flight, answered when the test says so. */
-let settleAdd: (response: Response) => void;
-
-beforeEach(() => {
-  settleAdd = () => undefined;
-  fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation((_input, init) =>
-    (init?.method ?? 'GET') === 'POST'
-      ? new Promise<Response>((resolve) => {
-          settleAdd = resolve;
-        })
-      : Promise.resolve(okResponse([]))
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch((_url, init) =>
+  (init?.method ?? 'GET') === 'POST' ? undefined : okResponse([])
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
-
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
 
 describe('useLibraryFolders — adding on the Loader timing', () => {
   it('is idle before an add', async () => {
@@ -79,18 +55,16 @@ describe('useLibraryFolders — adding on the Loader timing', () => {
     });
     expect(result.current.adding).toBe('waiting');
 
-    await advance(300);
+    await advanceClock(300);
     expect(result.current.adding).toBe('shown');
 
-    await act(async () => {
-      settleAdd(createdResponse(KIDS));
-    });
-    await advance(499);
+    await respond(createdResponse(KIDS));
+    await advanceClock(499);
     expect(result.current.adding).toBe('shown');
     expect(result.current.folders).toEqual([]);
     expect(added).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.adding).toBe('idle');
     expect(result.current.folders).toEqual([KIDS]);
     expect(added).toBe(true);

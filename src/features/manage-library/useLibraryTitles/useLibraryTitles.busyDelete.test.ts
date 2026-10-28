@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 
 import { useLibraryTitles } from './useLibraryTitles';
@@ -9,6 +9,8 @@ import {
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { makeLibraryMovie } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 6 (issue #488): `deleting` is a **Busy phase**
@@ -19,51 +21,21 @@ import { makeLibraryMovie } from '@/test-support/makeLibraryTitle/makeLibraryTit
  * The list is read on real timers; the clock is faked from the press on.
  */
 
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
 const COCO = makeLibraryMovie({ id: 'm1', title: 'Coco' });
 const LISTED: LibraryTitles = { movies: [COCO], series: [] };
 
-/** The delete in flight, answered when the test says so. */
-let answer: (response: Response) => void;
-
-beforeEach(() => {
-  answer = () => undefined;
-  const fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation((input) =>
-    String(input) === '/api/library-titles'
-      ? Promise.resolve(okResponse(LISTED))
-      : new Promise<Response>((resolve) => {
-          answer = resolve;
-        })
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch((url) =>
+  url === '/api/library-titles' ? okResponse(LISTED) : undefined
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 async function loaded() {
   const hook = renderHook(() => useLibraryTitles());
   await waitFor(() => expect(hook.result.current.titles).not.toBeNull());
   return hook;
-}
-
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
-async function respond(response: Response) {
-  await act(async () => {
-    answer(response);
-  });
 }
 
 describe('useLibraryTitles — a delete on the Loader timing', () => {
@@ -83,17 +55,17 @@ describe('useLibraryTitles — a delete on the Loader timing', () => {
     });
     expect(result.current.deleting).toBe('waiting');
 
-    await advance(299);
+    await advanceClock(299);
     expect(result.current.deleting).toBe('waiting');
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.deleting).toBe('shown');
 
     await respond(noContentResponse());
-    await advance(499);
+    await advanceClock(499);
     expect(result.current.deleting).toBe('shown');
     expect(result.current.titles?.movies).toEqual([COCO]);
 
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.deleting).toBe('idle');
     expect(result.current.titles?.movies).toEqual([]);
     expect(result.current.deleteFailed).toBe(false);
@@ -106,12 +78,12 @@ describe('useLibraryTitles — a delete on the Loader timing', () => {
     act(() => {
       void result.current.deleteTitle(COCO);
     });
-    await advance(300);
+    await advanceClock(300);
     await respond(serverErrorResponse());
-    await advance(499);
+    await advanceClock(499);
     expect(result.current.deleteFailed).toBe(false);
 
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.deleting).toBe('idle');
     expect(result.current.deleteFailed).toBe(true);
     expect(result.current.titles).toEqual(LISTED);
@@ -125,7 +97,7 @@ describe('useLibraryTitles — a delete on the Loader timing', () => {
       void result.current.deleteTitle(COCO);
     });
     await respond(serverErrorResponse());
-    await advance(0);
+    await advanceClock(0);
     expect(result.current.deleteFailed).toBe(true);
 
     act(() => {
@@ -135,6 +107,6 @@ describe('useLibraryTitles — a delete on the Loader timing', () => {
     expect(result.current.deleting).toBe('waiting');
 
     await respond(noContentResponse());
-    await advance(0);
+    await advanceClock(0);
   });
 });

@@ -3,6 +3,7 @@ import { act, renderHook } from '@testing-library/react';
 
 import type { BusyPhase } from '@/types';
 import { MIN_SHOWN_MS, SHOW_AFTER_MS, useDelayedBusy } from './useDelayedBusy';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 
 /**
  * 53 — Loading states, Phase 2 (issue #484): the **Loader timing**.
@@ -56,13 +57,6 @@ function watch<T>(promise: Promise<T>) {
   return state;
 }
 
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 beforeEach(() => {
   vi.useFakeTimers();
 });
@@ -102,7 +96,7 @@ describe('useDelayedBusy', () => {
     act(() => {
       running = watch(result.current.run(() => work.promise));
     });
-    await advance(100);
+    await advanceClock(100);
     await act(async () => {
       work.resolve('done');
     });
@@ -112,7 +106,7 @@ describe('useDelayedBusy', () => {
     expect(result.current.phase).toBe('idle');
 
     // Nothing more happens once the clock passes the 300ms mark.
-    await advance(1000);
+    await advanceClock(1000);
     expect(phases).not.toContain('shown');
   });
 
@@ -124,16 +118,16 @@ describe('useDelayedBusy', () => {
       void result.current.run(() => work.promise);
     });
 
-    await advance(SHOW_AFTER_MS - 1);
+    await advanceClock(SHOW_AFTER_MS - 1);
     expect(result.current.phase).toBe('waiting');
 
-    await advance(1);
+    await advanceClock(1);
     expect(result.current.phase).toBe('shown');
 
     await act(async () => {
       work.resolve('done');
     });
-    await advance(MIN_SHOWN_MS);
+    await advanceClock(MIN_SHOWN_MS);
   });
 
   it('holds a resolve after shown until 500ms after shown, then is idle', async () => {
@@ -144,17 +138,17 @@ describe('useDelayedBusy', () => {
     act(() => {
       running = watch(result.current.run(() => work.promise));
     });
-    await advance(400);
+    await advanceClock(400);
     await act(async () => {
       work.resolve('saved');
     });
 
     // Shown at 300ms, so the hold runs to 800ms: 399ms more from here.
-    await advance(399);
+    await advanceClock(399);
     expect(running.settled).toBe(false);
     expect(result.current.phase).toBe('shown');
 
-    await advance(1);
+    await advanceClock(1);
     expect(running.settled).toBe(true);
     expect(running.value).toBe('saved');
     expect(result.current.phase).toBe('idle');
@@ -169,16 +163,16 @@ describe('useDelayedBusy', () => {
     act(() => {
       running = watch(result.current.run(() => work.promise));
     });
-    await advance(400);
+    await advanceClock(400);
     await act(async () => {
       work.reject(refusal);
     });
 
-    await advance(399);
+    await advanceClock(399);
     expect(running.settled).toBe(false);
     expect(result.current.phase).toBe('shown');
 
-    await advance(1);
+    await advanceClock(1);
     expect(running.settled).toBe(true);
     expect(running.error).toBe(refusal);
     expect(result.current.phase).toBe('idle');
@@ -192,7 +186,7 @@ describe('useDelayedBusy', () => {
     act(() => {
       running = watch(result.current.run(() => work.promise));
     });
-    await advance(2000);
+    await advanceClock(2000);
     expect(running.settled).toBe(false);
     expect(result.current.phase).toBe('shown');
 
@@ -214,7 +208,7 @@ describe('useDelayedBusy', () => {
     act(() => {
       running = watch(result.current.run(() => work.promise));
     });
-    await advance(50);
+    await advanceClock(50);
     await act(async () => {
       work.reject(refusal);
     });
