@@ -22,6 +22,10 @@ import {
  * organism: `POST /api/library-folders/scan` with the box, then a push to
  * `/import` on a `201` and on a `409` alike, and `scanning` let go on any
  * other failure. What it does is move the router, so that is what is read.
+ *
+ * 54: Scan new folders (issue #495): the press carries its **Scan scope**,
+ * `new` for _Scan new folders_ and `all` for _Scan all folders_, sent beside
+ * the box and the mode.
  */
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -35,15 +39,21 @@ afterEach(() => {
   fetchMock.mockReset();
 });
 
-/** A screen whose one control is the hook's press, the box ticked, Copy chosen (#343). */
+/**
+ * A screen whose controls are the hook's press in each scope, the box ticked,
+ * Copy chosen (#343).
+ */
 function Screen() {
   const { scanning, scan } = useFolderScan();
 
   return (
     <>
       <span data-testid="scanning">{String(scanning)}</span>
-      <button type="button" onClick={() => void scan(true, 'copy')}>
-        Scan folders
+      <button type="button" onClick={() => void scan(true, 'copy', 'new')}>
+        Scan new folders
+      </button>
+      <button type="button" onClick={() => void scan(true, 'copy', 'all')}>
+        Scan all folders
       </button>
     </>
   );
@@ -62,21 +72,28 @@ function renderAtFolders() {
 }
 
 describe('useFolderScan', () => {
-  it('posts the scan with the box and the mode, held while it is asked', async () => {
-    fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
-    renderAtFolders();
+  it.each([
+    ['Scan new folders', 'new'],
+    ['Scan all folders', 'all'],
+  ])(
+    '%s posts the scan with the box, the mode and scope %s, held while it is asked',
+    async (name, scope) => {
+      fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
+      renderAtFolders();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Scan folders' }));
+      fireEvent.click(screen.getByRole('button', { name }));
 
-    expect(screen.getByTestId('scanning').textContent).toBe('true');
-    const [input, init] = fetchMock.mock.calls[0];
-    expect(input).toBe('/api/library-folders/scan');
-    expect(init?.method).toBe('POST');
-    expect(JSON.parse(String(init?.body))).toEqual({
-      enrich: true,
-      mode: 'copy',
-    });
-  });
+      expect(screen.getByTestId('scanning').textContent).toBe('true');
+      const [input, init] = fetchMock.mock.calls[0];
+      expect(input).toBe('/api/library-folders/scan');
+      expect(init?.method).toBe('POST');
+      expect(JSON.parse(String(init?.body))).toEqual({
+        enrich: true,
+        mode: 'copy',
+        scope,
+      });
+    }
+  );
 
   it('pushes /import once the scan has started', async () => {
     fetchMock.mockResolvedValue(
@@ -84,7 +101,7 @@ describe('useFolderScan', () => {
     );
     renderAtFolders();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Scan folders' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Scan all folders' }));
 
     await waitFor(() => expect(pathname()).toBe('/import'));
     expect(navigationType()).toBe('PUSH');
@@ -96,7 +113,7 @@ describe('useFolderScan', () => {
     );
     renderAtFolders();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Scan folders' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Scan all folders' }));
 
     await waitFor(() => expect(pathname()).toBe('/import'));
     expect(navigationType()).toBe('PUSH');
@@ -106,7 +123,7 @@ describe('useFolderScan', () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
     renderAtFolders();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Scan folders' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Scan all folders' }));
 
     await waitFor(() =>
       expect(screen.getByTestId('scanning').textContent).toBe('false')

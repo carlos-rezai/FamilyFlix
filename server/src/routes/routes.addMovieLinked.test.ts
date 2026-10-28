@@ -513,7 +513,7 @@ async function scanOnce(baseUrl: string): Promise<ImportRun> {
   const scan = await fetch(`${baseUrl}/api/library-folders/scan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enrich: false, mode: 'link' }),
+    body: JSON.stringify({ enrich: false, mode: 'link', scope: 'all' }),
   });
   expect(scan.status).toBe(201);
   const deadline = Date.now() + 10_000;

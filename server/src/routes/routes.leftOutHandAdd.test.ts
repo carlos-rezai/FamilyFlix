@@ -139,7 +139,7 @@ async function scanToReview(api: Api, mode: ImportMode): Promise<ImportRun> {
   const started = await fetch(`${api.baseUrl}/api/library-folders/scan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enrich: false, mode }),
+    body: JSON.stringify({ enrich: false, mode, scope: 'all' }),
   });
   expect(started.status).toBe(201);
   const deadline = Date.now() + 10_000;

@@ -473,7 +473,7 @@ describe('POST /api/series — the Show folder', () => {
     const scan = await fetch(`${baseUrl}/api/library-folders/scan`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ enrich: false, mode: 'link' }),
+      body: JSON.stringify({ enrich: false, mode: 'link', scope: 'all' }),
     });
     expect(scan.status).toBe(201);
     const run = await untilReview(baseUrl);

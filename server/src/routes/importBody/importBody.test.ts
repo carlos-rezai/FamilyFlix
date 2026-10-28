@@ -11,8 +11,9 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { IMPORT_MODES, SHEET_FIELDS } from '@/types';
+import { IMPORT_MODES, SCAN_SCOPES, SHEET_FIELDS } from '@/types';
 import {
+  folderScanBody,
   importStartBody,
   pickFolderBody,
   problemIdsBody,
@@ -214,6 +215,60 @@ describe('problemIdsBody', () => {
     expect(problemIdsBody({ ids: [] })).toEqual({
       ok: false,
       error: 'Ids must be a list of problem ids.',
+    });
+  });
+});
+
+// 54: Scan new folders (issue #495): the **Scan scope**.
+//
+// `POST /api/library-folders/scan { enrich, mode, scope }` reads its three
+// fields through `folderScanBody`: `enrich` and `mode` as `importStartBody`
+// reads them, and `scope` one of **SCAN_SCOPES**, required: a missing or
+// unknown one refused with _Scope must be new or all._
+describe('folderScanBody: the Scan scope', () => {
+  it('names the two scopes, new first', () => {
+    expect(SCAN_SCOPES).toEqual(['new', 'all']);
+  });
+
+  it.each(['new', 'all'] as const)(
+    'reads scope %s with enrich and mode',
+    (scope) => {
+      expect(folderScanBody({ enrich: true, mode: 'copy', scope })).toEqual({
+        ok: true,
+        value: { enrich: true, mode: 'copy', scope },
+      });
+    }
+  );
+
+  it('reads enrich false when it is not true', () => {
+    expect(
+      folderScanBody({ enrich: 'true', mode: 'link', scope: 'new' })
+    ).toEqual({
+      ok: true,
+      value: { enrich: false, mode: 'link', scope: 'new' },
+    });
+  });
+
+  it.each([
+    ['no scope', { enrich: false, mode: 'link' }],
+    ['a null scope', { enrich: false, mode: 'link', scope: null }],
+    ['an unknown scope', { enrich: false, mode: 'link', scope: 'added' }],
+    ['a scope in capitals', { enrich: false, mode: 'link', scope: 'New' }],
+  ])('refuses %s with its sentence', (_name, body) => {
+    expect(folderScanBody(body)).toEqual({
+      ok: false,
+      error: 'Scope must be new or all.',
+    });
+  });
+
+  it.each([
+    ['no mode', { enrich: false, scope: 'all' }],
+    ['an unknown mode', { enrich: false, mode: 'move', scope: 'new' }],
+  ])('refuses %s as importStartBody refuses it', (_name, body) => {
+    expect(folderScanBody(body)).toEqual(importStartBody(body));
+    expect(folderScanBody(body)).toEqual({
+      ok: false,
+      error: 'Mode must be link or copy.',
     });
   });
 });

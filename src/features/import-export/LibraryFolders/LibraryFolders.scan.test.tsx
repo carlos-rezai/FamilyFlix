@@ -5,6 +5,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { LibraryFolders } from './LibraryFolders';
+import { Button, type ButtonProps } from '@/primitives';
 import type { LibraryFolder } from '@/types';
 import { theme } from '@/styles/theme';
 import {
@@ -18,6 +19,10 @@ import {
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
+import {
+  normCss,
+  resolvedStyle,
+} from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * 30 — Library folders, Phase 2: "the Folder scan" (issue #269).
@@ -34,6 +39,9 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
  *
  * The wire is a stubbed `fetch`: the list on GET, the scan's answer on its
  * POST.
+ *
+ * 54: Scan new folders (issue #495): _Scan folders_ is now **Scan all
+ * folders**, so the suites above press it; its own describe is at the foot.
  */
 
 type FetchFn = (
@@ -60,6 +68,15 @@ const MOVIES: LibraryFolder = {
   scannedAt: '2026-10-01T09:00:00.000Z',
 };
 
+/** A **New folder**: listed, never read by a run. */
+const CARTOONS: LibraryFolder = {
+  id: 'f-cartoons',
+  path: 'E:\\Cartoons',
+  titleCount: 0,
+  reachable: true,
+  scannedAt: null,
+};
+
 const method = (init?: RequestInit) => (init?.method ?? 'GET').toUpperCase();
 const path = (input: RequestInfo | URL) =>
   new URL(String(input), 'http://localhost').pathname;
@@ -74,7 +91,7 @@ const isScan = (input: RequestInfo | URL, init?: RequestInit) =>
  */
 function serve(
   listed: LibraryFolder[],
-  scan: 'created' | 'busy' = 'created',
+  scan: 'created' | 'busy' | 'pending' = 'created',
   key: string | null = 'stored-key'
 ) {
   fetchMock.mockImplementation((input, init) => {
@@ -82,6 +99,9 @@ function serve(
       return Promise.resolve(okResponse({ key }));
     }
     if (isScan(input, init)) {
+      if (scan === 'pending') {
+        return new Promise<Response>(() => undefined);
+      }
       return Promise.resolve(
         scan === 'created'
           ? createdResponse(makeImportRun({ source: 'folders' }))
@@ -110,13 +130,14 @@ function renderPage(
   );
 }
 
-const scanButton = () => screen.findByRole('button', { name: 'Scan folders' });
+const scanButton = () =>
+  screen.findByRole('button', { name: 'Scan all folders' });
 
 const scanCalls = () =>
   fetchMock.mock.calls.filter(([input, init]) => isScan(input, init));
 
 describe('LibraryFolders — the group Scan', () => {
-  it('draws Scan, What the scanner accepts, then Scan folders', async () => {
+  it('draws Scan, What the scanner accepts, then Scan all folders', async () => {
     serve([MOVIES]);
     renderPage();
 
@@ -130,7 +151,7 @@ describe('LibraryFolders — the group Scan', () => {
     ).toBeTruthy();
   });
 
-  it('disables Scan folders while no folder is listed', async () => {
+  it('disables Scan all folders while no folder is listed', async () => {
     serve([]);
     renderPage();
 
@@ -139,7 +160,7 @@ describe('LibraryFolders — the group Scan', () => {
     expect(scanCalls()).toHaveLength(0);
   });
 
-  it('enables Scan folders once a folder is listed', async () => {
+  it('enables Scan all folders once a folder is listed', async () => {
     serve([MOVIES]);
     renderPage();
 
@@ -148,7 +169,7 @@ describe('LibraryFolders — the group Scan', () => {
   });
 });
 
-describe('LibraryFolders — Scan folders', () => {
+describe('LibraryFolders — Scan all folders', () => {
   it('posts the scan with enrich false and pushes /import on 201', async () => {
     serve([MOVIES]);
     renderPage();
@@ -184,7 +205,7 @@ const enrichBox = () =>
   screen.findByRole('checkbox', { name: new RegExp(ENRICH_LABEL) });
 
 describe('LibraryFolders — Also fetch from TMDB', () => {
-  it('draws the box unticked, between What the scanner accepts and Scan folders', async () => {
+  it('draws the box unticked, between What the scanner accepts and Scan all folders', async () => {
     serve([MOVIES]);
     renderPage();
 
@@ -257,7 +278,7 @@ const modeRadio = (name: 'Link' | 'Copy') =>
   screen.findByRole('radio', { name: new RegExp(`^${name}`) });
 
 describe('LibraryFolders — the Import mode', () => {
-  it('draws the choice between What the scanner accepts and Scan folders', async () => {
+  it('draws the choice between What the scanner accepts and Scan all folders', async () => {
     serve([MOVIES]);
     renderPage();
 
@@ -294,6 +315,7 @@ describe('LibraryFolders — the Import mode', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       enrich: false,
       mode: 'link',
+      scope: 'all',
     });
   });
 
@@ -309,6 +331,7 @@ describe('LibraryFolders — the Import mode', () => {
     expect(JSON.parse(String(init?.body))).toEqual({
       enrich: false,
       mode: 'copy',
+      scope: 'all',
     });
   });
 
@@ -323,4 +346,147 @@ describe('LibraryFolders — the Import mode', () => {
 
     expect((await modeRadio('Link')).getAttribute('aria-checked')).toBe('true');
   });
+});
+
+/**
+ * 54: Scan new folders (issue #495).
+ *
+ * The group Scan ends in two `lg` presses side by side: **Scan new folders**
+ * (`primary`), disabled with no **New folder** listed, then **Scan all
+ * folders** (`secondary`), disabled with no folder listed. Each posts its
+ * **Scan scope** beside the Import mode and the box and pushes `/import`;
+ * both are held while either scan is asked. _Scan folders_ is gone.
+ */
+const scanNewButton = () =>
+  screen.findByRole('button', { name: 'Scan new folders' });
+
+/** What a `Button` of `variant` at `lg` draws, read off a reference one. */
+function faceOf(variant: NonNullable<ButtonProps['variant']>) {
+  const { getByRole, unmount } = render(
+    <ThemeProvider theme={theme}>
+      <Button label="Reference" variant={variant} size="lg" />
+    </ThemeProvider>
+  );
+  const face = drawnFace(getByRole('button', { name: 'Reference' }));
+  unmount();
+  return face;
+}
+
+function drawnFace(button: Element) {
+  const drawn = resolvedStyle(button);
+  return Object.fromEntries(
+    ['background', 'border', 'height', 'padding', 'font-size'].map(
+      (property) => [property, normCss(drawn[property] ?? '')]
+    )
+  );
+}
+
+describe('LibraryFolders: Scan new folders and Scan all folders', () => {
+  it('draws Scan new folders then Scan all folders, after the box', async () => {
+    serve([MOVIES, CARTOONS]);
+    renderPage();
+
+    const scanNew = await scanNewButton();
+    const scanAll = await scanButton();
+    const box = await enrichBox();
+    expect(
+      box.compareDocumentPosition(scanNew) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      scanNew.compareDocumentPosition(scanAll) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(scanNew.parentElement).toBe(scanAll.parentElement);
+  });
+
+  it('draws Scan new folders as a primary lg and Scan all folders as a secondary lg', async () => {
+    serve([MOVIES, CARTOONS]);
+    renderPage();
+
+    const scanNew = drawnFace(await scanNewButton());
+    const scanAll = drawnFace(await scanButton());
+    expect(scanNew).toEqual(faceOf('primary'));
+    expect(scanAll).toEqual(faceOf('secondary'));
+  });
+
+  it('draws no Scan folders', async () => {
+    serve([MOVIES, CARTOONS]);
+    renderPage();
+
+    await scanButton();
+    expect(screen.queryByRole('button', { name: 'Scan folders' })).toBeNull();
+    expect(screen.queryByText('Scan folders')).toBeNull();
+  });
+
+  it('disables both while no folder is listed', async () => {
+    serve([]);
+    renderPage();
+
+    expect(((await scanNewButton()) as HTMLButtonElement).disabled).toBe(true);
+    expect(((await scanButton()) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('disables only Scan new folders while every folder is scanned', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    expect(((await scanNewButton()) as HTMLButtonElement).disabled).toBe(true);
+    expect(((await scanButton()) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it('enables both once a New folder is listed', async () => {
+    serve([MOVIES, CARTOONS]);
+    renderPage();
+
+    expect(((await scanNewButton()) as HTMLButtonElement).disabled).toBe(false);
+    expect(((await scanButton()) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it.each([
+    ['Scan new folders', 'new'],
+    ['Scan all folders', 'all'],
+  ])(
+    '%s posts scope %s with the mode and the box, and pushes /import',
+    async (name, scope) => {
+      serve([MOVIES, CARTOONS]);
+      renderPage();
+
+      await userEvent.click(await enrichBox());
+      await userEvent.click(await modeRadio('Copy'));
+      await userEvent.click(await screen.findByRole('button', { name }));
+
+      await waitFor(() => expect(pathname()).toBe('/import'));
+      expect(navigationType()).toBe('PUSH');
+      expect(scanCalls()).toHaveLength(1);
+      const [, init] = scanCalls()[0] ?? [];
+      expect(JSON.parse(String(init?.body))).toEqual({
+        enrich: true,
+        mode: 'copy',
+        scope,
+      });
+    }
+  );
+
+  it.each(['Scan new folders', 'Scan all folders'])(
+    'holds both while %s is asked',
+    async (name) => {
+      serve([MOVIES, CARTOONS], 'pending');
+      renderPage();
+
+      await userEvent.click(await screen.findByRole('button', { name }));
+
+      await waitFor(() =>
+        expect(
+          (
+            screen.getByRole('button', {
+              name: 'Scan new folders',
+            }) as HTMLButtonElement
+          ).disabled
+        ).toBe(true)
+      );
+      expect(((await scanButton()) as HTMLButtonElement).disabled).toBe(true);
+      expect(scanCalls()).toHaveLength(1);
+      expect(pathname()).toBe('/settings/folders');
+    }
+  );
 });

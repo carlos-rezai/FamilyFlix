@@ -21,7 +21,7 @@ import {
  * path in the mono well, **What goes** (_Its details, poster and artwork_;
  * _Its watch history, rating and heart_; _FamilyFlix’s copy of its video and
  * subtitles_) beside **What stays** (_Your original in its library folder —
- * Scan folders would bring it back_ when there is an original, else
+ * Scan all folders would bring it back_ when there is an original, else
  * _Nothing_), then _Delete movie_ / _Delete series_ in `danger` —
  * busy on its label and **Locked** from the press, the **Dialog loader**
  * once **Shown** (53, issue #488), before _Cancel_. Focus
@@ -37,7 +37,7 @@ const GOES = [
   'FamilyFlix’s copy of its video and subtitles',
 ];
 const ORIGINAL_STAYS = [
-  'Your original in its library folder — Scan folders would bring it back',
+  'Your original in its library folder — Scan all folders would bring it back',
 ];
 
 const COCO = makeLibraryMovie({

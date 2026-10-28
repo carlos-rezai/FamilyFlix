@@ -108,7 +108,10 @@ async function listPath(api: Api, path: string): Promise<string> {
   return path;
 }
 
-const scan = (api: Api, body: unknown = { enrich: false, mode: 'link' }) =>
+const scan = (
+  api: Api,
+  body: unknown = { enrich: false, mode: 'link', scope: 'all' }
+) =>
   fetch(`${api.baseUrl}/api/library-folders/scan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -153,7 +156,11 @@ describe('POST /api/library-folders/scan', () => {
     const api = freshApi();
     await listFolder(api, 'Movies');
 
-    const response = await scan(api, { enrich: true, mode: 'link' });
+    const response = await scan(api, {
+      enrich: true,
+      mode: 'link',
+      scope: 'all',
+    });
 
     expect(response.status).toBe(201);
     expect(await response.json()).toMatchObject({ enrich: true });
@@ -178,7 +185,11 @@ describe('POST /api/library-folders/scan', () => {
     const { root } = libraryFixture(api.disk);
     await listPath(api, root);
     // Copy, so the run holds on the video's copy-in (#343).
-    const first = await scan(api, { enrich: false, mode: 'copy' });
+    const first = await scan(api, {
+      enrich: false,
+      mode: 'copy',
+      scope: 'all',
+    });
     expect(first.status).toBe(201);
     await hold.reached;
 
@@ -216,7 +227,7 @@ describe('POST /api/library-folders/scan — the Import mode', () => {
       const api = freshApi();
       await listFolder(api, 'Movies');
 
-      const response = await scan(api, { enrich: false, mode });
+      const response = await scan(api, { enrich: false, mode, scope: 'all' });
 
       const run: unknown = await response.json();
       await untilReview(api);
@@ -226,8 +237,8 @@ describe('POST /api/library-folders/scan — the Import mode', () => {
   );
 
   it.each([
-    ['a missing mode', { enrich: false }],
-    ['an unknown mode', { enrich: false, mode: 'move' }],
+    ['a missing mode', { enrich: false, scope: 'all' }],
+    ['an unknown mode', { enrich: false, mode: 'move', scope: 'all' }],
   ])(
     'answers 400 with a sentence for %s, starting nothing',
     async (_name, body) => {
@@ -239,6 +250,92 @@ describe('POST /api/library-folders/scan — the Import mode', () => {
       expect(response.status).toBe(400);
       expect(await response.json()).toMatchObject({
         error: expect.stringMatching(/^[A-Z][^\n]*\.$/),
+      });
+      expect((await fetch(`${api.baseUrl}/api/import/current`)).status).toBe(
+        404
+      );
+    }
+  );
+});
+
+// 54: Scan new folders (issue #495): the **Scan scope**.
+//
+// The body is `{ enrich, mode, scope }`. `scope: 'all'` walks every listed
+// folder, as the scan always has; `scope: 'new'` walks only the **New
+// folders**, one `Scanning   <path>` line each, and with none is a `400`
+// _No new folders to scan._ starting nothing. A missing or unknown scope is a
+// `400` _Scope must be new or all._, starting nothing.
+describe('POST /api/library-folders/scan: the Scan scope', () => {
+  /** The paths the run's log says it walked, in order. */
+  async function walked(api: Api): Promise<string[]> {
+    const run = (await (
+      await fetch(`${api.baseUrl}/api/import/current`)
+    ).json()) as ImportRun;
+    return run.log
+      .filter((line) => line.text.startsWith('Scanning'))
+      .map((line) => line.text.replace(/^Scanning\s+/, ''));
+  }
+
+  /** Two folders scanned by a run over every folder, then a third, new. */
+  async function twoScannedOneNew(api: Api) {
+    await listFolder(api, 'Films');
+    await listFolder(api, 'Shows');
+    expect((await scan(api)).status).toBe(201);
+    await untilReview(api);
+    return { cartoons: await listFolder(api, 'Cartoons') };
+  }
+
+  it('walks only the New folders for scope new', async () => {
+    const api = freshApi();
+    const { cartoons } = await twoScannedOneNew(api);
+
+    const response = await scan(api, {
+      enrich: false,
+      mode: 'link',
+      scope: 'new',
+    });
+
+    expect(response.status).toBe(201);
+    await untilReview(api);
+    expect(await walked(api)).toEqual([cartoons]);
+  });
+
+  it('answers 400 No new folders to scan. with none new, starting nothing', async () => {
+    const api = freshApi();
+    await listFolder(api, 'Films');
+    const first = (await (await scan(api)).json()) as ImportRun;
+    await untilReview(api);
+
+    const response = await scan(api, {
+      enrich: false,
+      mode: 'link',
+      scope: 'new',
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({
+      error: 'No new folders to scan.',
+    });
+    const current = (await (
+      await fetch(`${api.baseUrl}/api/import/current`)
+    ).json()) as ImportRun;
+    expect(current.id).toBe(first.id);
+  });
+
+  it.each([
+    ['a missing scope', { enrich: false, mode: 'link' }],
+    ['an unknown scope', { enrich: false, mode: 'link', scope: 'added' }],
+  ])(
+    'answers 400 Scope must be new or all. for %s, starting nothing',
+    async (_name, body) => {
+      const api = freshApi();
+      await listFolder(api, 'Movies');
+
+      const response = await scan(api, body);
+
+      expect(response.status).toBe(400);
+      expect(await response.json()).toEqual({
+        error: 'Scope must be new or all.',
       });
       expect((await fetch(`${api.baseUrl}/api/import/current`)).status).toBe(
         404

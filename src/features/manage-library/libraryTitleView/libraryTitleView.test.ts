@@ -153,7 +153,7 @@ describe('titleRowView — the unreachable line', () => {
  * - `goes` — _Its details, poster and artwork_; _Its watch history, rating
  *   and heart_; _FamilyFlix’s copy of its video and subtitles_;
  * - `stays` — with an original in a Library folder, _Your original in its
- *   library folder — Scan folders would bring it back_; without, _Nothing_;
+ *   library folder — Scan all folders would bring it back_; without, _Nothing_;
  * - `confirm` — _Delete movie_ / _Delete series_.
  */
 const COPIED_GOES = [
@@ -162,7 +162,7 @@ const COPIED_GOES = [
   'FamilyFlix’s copy of its video and subtitles',
 ];
 const ORIGINAL_STAYS = [
-  'Your original in its library folder — Scan folders would bring it back',
+  'Your original in its library folder — Scan all folders would bring it back',
 ];
 
 describe('deleteView — the heading and subtitle', () => {
