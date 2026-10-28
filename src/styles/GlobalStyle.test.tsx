@@ -92,16 +92,18 @@ describe('GlobalStyle — Reduced motion', () => {
     ]);
   });
 
-  it('is the one reduced-motion rule in the app, but for the Button shine’s fade', () => {
+  it('is the one reduced-motion rule in the app, but for the Button shine’s and the loader beat’s fades', () => {
     // The Snackbar slide, the modal pop-in, the menus and the spinner are all
     // held by the global rule; none may carry a branch of its own, and none
     // may out-rank the rule with an !important of its own.
     //
     // Amended by 53 — Loading states (issue #484): the one exception is
     // `Button`'s shine, whose reduced-motion fade out-ranks the `*` rule on
-    // purpose, so a shown busy label still says it is working.
+    // purpose, so a shown busy label still says it is working. Issue #487
+    // adds the second: `LogoLoader`'s beat, which fades rather than freezing.
     const allowed = [
       'src/primitives/Button/Button.styles.ts',
+      'src/primitives/LogoLoader/LogoLoader.styles.ts',
       'src/styles/GlobalStyle.ts',
     ];
     expect(

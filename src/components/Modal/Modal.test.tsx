@@ -589,3 +589,95 @@ describe('Modal — a caller that does not ask for bare', () => {
     expect(card.getAttribute('aria-label')).toBeNull();
   });
 });
+
+// --- 53 — Loading states, Phase 4 (issue #487) -------------------------------
+//
+// `locked`: the **Locked** modal. While a destructive action runs, Escape and
+// the scrim ask nothing and the ✕ is not drawn; the caller unlocks it when the
+// action settles, and every way out is back.
+
+function LockHost({
+  locked,
+  onClose,
+}: {
+  locked: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <ThemeProvider theme={theme}>
+      <Modal
+        open
+        locked={locked}
+        title="Export library"
+        subtitle="Save your whole collection as a spreadsheet."
+        onClose={onClose}
+      >
+        <p>Every movie, as one sheet.</p>
+      </Modal>
+    </ThemeProvider>
+  );
+}
+
+describe('Modal locked — no way out', () => {
+  it('draws no ✕', () => {
+    render(<LockHost locked onClose={() => undefined} />);
+
+    expect(
+      within(dialog()).queryByRole('button', { name: 'Close' })
+    ).toBeNull();
+    expect(within(dialog()).queryByText('✕')).toBeNull();
+  });
+
+  it('asks nothing on Escape', () => {
+    const onClose = vi.fn();
+    render(<LockHost locked onClose={onClose} />);
+
+    press('Escape');
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(dialog()).toBeDefined();
+  });
+
+  it('asks nothing for a press on the scrim', () => {
+    const onClose = vi.fn();
+    render(<LockHost locked onClose={onClose} />);
+
+    fireEvent.click(scrim());
+
+    expect(onClose).not.toHaveBeenCalled();
+  });
+
+  it('still draws its heading and body', () => {
+    render(<LockHost locked onClose={() => undefined} />);
+
+    expect(
+      within(dialog()).getByRole('heading', { name: 'Export library' })
+    ).toBeDefined();
+    expect(
+      within(dialog()).getByText('Every movie, as one sheet.')
+    ).toBeDefined();
+    expect(
+      within(dialog()).queryByRole('button', { name: 'Close' })
+    ).toBeNull();
+  });
+});
+
+describe('Modal locked — unlocked again', () => {
+  it('gives back the ✕, Escape and the scrim once unlocked', () => {
+    const onClose = vi.fn();
+    const { rerender } = render(<LockHost locked onClose={onClose} />);
+    press('Escape');
+    fireEvent.click(scrim());
+    expect(onClose).not.toHaveBeenCalled();
+    expect(
+      within(dialog()).queryByRole('button', { name: 'Close' })
+    ).toBeNull();
+
+    rerender(<LockHost locked={false} onClose={onClose} />);
+
+    fireEvent.click(within(dialog()).getByRole('button', { name: 'Close' }));
+    press('Escape');
+    fireEvent.click(scrim());
+    expect(onClose).toHaveBeenCalledTimes(3);
+  });
+});
