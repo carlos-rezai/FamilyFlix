@@ -4,7 +4,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import type {
+  BusyPhase,
   EpisodeFormRow,
   FormKind,
   ImportMode,
@@ -216,8 +218,8 @@ export interface UseMovieFormResult {
   removeEpisodeSubtitle: (rowKey: string, subtitleKey: string) => void;
   /** Whether Save can be pressed — the gate, not a validation message. */
   canSave: boolean;
-  /** Whether the write is in flight. */
-  saving: boolean;
+  /** The write's **Busy phase**, on the **Loader timing**. */
+  saving: BusyPhase;
   /**
    * Whether this screen is amending a title — a movie or a series — rather
    * than creating one: what the heading and the Save button are named from,
@@ -390,7 +392,7 @@ export function useMovieForm(): UseMovieFormResult {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const [values, setValues] = useState<MovieFormValues>(EMPTY);
-  const [saving, setSaving] = useState(false);
+  const { phase: saving, run } = useDelayedBusy();
   const [saveRefusal, setSaveRefusal] = useState<string | null>(null);
   const episodeList = useEpisodeList();
   const { episodes, episodesComplete, holdEpisodes } = episodeList;
@@ -679,14 +681,13 @@ export function useMovieForm(): UseMovieFormResult {
   const canSave =
     values.title.trim() !== '' &&
     (kind === 'series' ? episodesComplete : values.video !== null) &&
-    !saving;
+    saving === 'idle';
 
   const save = useCallback(() => {
     if (!canSave) {
       return;
     }
 
-    setSaving(true);
     setSaveRefusal(null);
 
     // The job as its reads left it: a record that turned out to be gone — a
@@ -701,15 +702,17 @@ export function useMovieForm(): UseMovieFormResult {
             ? ({ kind: 'seriesEdit', series: editingSeries } as const)
             : ({ kind: 'add' } as const);
 
-    const write = (): Promise<unknown> => {
+    // The write answers with its leaving, which waits on `run`: a save whose
+    // loader was drawn leaves only once the hold is out.
+    const write = (): Promise<() => void> => {
       switch (standing.kind) {
         case 'resolve': {
           const problemId = standing.problem;
           if (kind === 'series') {
             // The **Series Resolve**: the problem's own resolve route, every
             // row as its found path, then the step back onto the review.
-            return resolveSeriesProblem(problemId, values, episodes).then(() =>
-              goBack()
+            return resolveSeriesProblem(problemId, values, episodes).then(
+              () => goBack
             );
           }
           if (editing === null) {
@@ -720,7 +723,7 @@ export function useMovieForm(): UseMovieFormResult {
             // opened from, and the row it fixed is gone from the list anyway,
             // because the list is the **Current run**'s state rather than the
             // entry's.
-            return resolveProblem(problemId, values).then(() => goBack());
+            return resolveProblem(problemId, values).then(() => goBack);
           }
           // Over the **Edit job** it is the edit's own `PATCH` instead — the
           // film is in the library already, and a resolve would put it there
@@ -730,7 +733,7 @@ export function useMovieForm(): UseMovieFormResult {
           // which is the honest picture.
           return updateMovie(editing, values)
             .then(() => dismissProblem(problemId).catch(() => undefined))
-            .then(() => goBack());
+            .then(() => goBack);
         }
         case 'seriesEdit':
           // The series page is the entry the edit was opened from, so a step
@@ -740,7 +743,7 @@ export function useMovieForm(): UseMovieFormResult {
             values,
             episodes,
             seasonPosters
-          ).then(() => goBack());
+          ).then(() => goBack);
         case 'edit':
           // A correction is only visible on the film's page — which is the
           // entry the form was opened from, so a *step* is what lands there.
@@ -748,7 +751,7 @@ export function useMovieForm(): UseMovieFormResult {
           // and the next Back walked into the form the correction had just
           // been finished in. The **Landing** is the same URL, for the
           // deep-linked edit that has no such entry to step onto.
-          return updateMovie(standing.movie, values).then(() => goBack());
+          return updateMovie(standing.movie, values).then(() => goBack);
         case 'add': {
           // Where a finished add goes is `addLeaving`'s: the kind's **Fresh
           // home**, or with **Add and sync** the title's page in the form's
@@ -760,7 +763,7 @@ export function useMovieForm(): UseMovieFormResult {
                   movieAddValues(values, importMode, videoPath),
                   importMode
                 );
-          return created.then(({ id }) => {
+          return created.then(({ id }) => () => {
             const { replace, push } = addLeaving(
               kind,
               id,
@@ -779,18 +782,20 @@ export function useMovieForm(): UseMovieFormResult {
     // problem that is gone: there is nothing left to resolve, so the form
     // falls back to the plain add — and empty, because a found file is a path
     // under the run's root, which the plain add can never send.
-    write().catch((error: unknown) => {
-      setSaving(false);
-      if (error instanceof SaveRefusedError) {
-        setSaveRefusal(error.sentence);
-      }
-      if (error instanceof ProblemGoneError) {
-        setResolving(null);
-        setValues(EMPTY);
-      }
-    });
+    run(write)
+      .then((leave) => leave())
+      .catch((error: unknown) => {
+        if (error instanceof SaveRefusedError) {
+          setSaveRefusal(error.sentence);
+        }
+        if (error instanceof ProblemGoneError) {
+          setResolving(null);
+          setValues(EMPTY);
+        }
+      });
   }, [
     canSave,
+    run,
     kind,
     values,
     episodes,

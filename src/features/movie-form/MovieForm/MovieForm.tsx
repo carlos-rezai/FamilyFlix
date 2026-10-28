@@ -410,11 +410,13 @@ export function MovieForm() {
       )}
 
       <Actions>
-        {/* The label is the whole of the in-flight state: it says the work
-          started, and the disabled button is what stops an impatient second
-          press writing a second row. */}
+        {/* Busy on the **Loader timing**: locked from the first press, so an
+          impatient second press writes no second row, and reading its _-ing_
+          label only once the save has run 300ms. */}
         <Button
-          label={saving ? copy.saving : copy.save}
+          label={copy.save}
+          busyLabel={copy.saving}
+          busy={saving}
           variant="primary"
           size="md"
           disabled={!canSave}

@@ -1318,9 +1318,12 @@ describe('MovieForm — saving', () => {
     await pickVideo();
     fireEvent.click(save());
 
-    // The one place a large-file save will show its cost. The label says the
-    // work started, and the disabled button is what stops a second row being
-    // written by an impatient second press.
+    // The one place a large-file save will show its cost. The disabled button
+    // is what stops a second row being written by an impatient second press,
+    // and it locks at once; the label says the work started only once it has
+    // run 300ms, the **Loader timing** (issue #484).
+    expect(save().disabled).toBe(true);
+    expect(save().textContent).not.toContain('Adding…');
     await waitFor(() => expect(save().textContent).toContain('Adding…'));
     expect(save().disabled).toBe(true);
 
@@ -2117,11 +2120,15 @@ describe('MovieForm — the Edit context', () => {
 
       fireEvent.click(saveChanges());
 
-      // The mirror of the **Add context**'s "Adding…": the label is the whole of
-      // the in-flight state, and the disabled button is what stops an impatient
-      // second press writing the edit twice.
-      await waitFor(() => expect(saveChanges().disabled).toBe(true));
-      expect(saveChanges().textContent).toContain('Saving…');
+      // The mirror of the **Add context**'s "Adding…": the disabled button is
+      // what stops an impatient second press writing the edit twice, locked at
+      // once, and the label reads _Saving…_ only once the edit has run 300ms,
+      // the **Loader timing** (issue #484).
+      expect(saveChanges().disabled).toBe(true);
+      expect(saveChanges().textContent).not.toContain('Saving…');
+      await waitFor(() =>
+        expect(saveChanges().textContent).toContain('Saving…')
+      );
       expect(patchRequests()).toHaveLength(1);
 
       fireEvent.click(saveChanges());
@@ -3730,6 +3737,10 @@ describe('MovieForm — the Import context', () => {
 
         fireEvent.click(saveAndContinue());
 
+        // Locked at once; _Saving…_ only once the save has run 300ms, the
+        // **Loader timing** (issue #484).
+        expect(saveAndContinue().disabled).toBe(true);
+        expect(saveAndContinue().textContent).not.toContain('Saving…');
         await waitFor(() =>
           expect(saveAndContinue().textContent).toContain('Saving…')
         );
@@ -4644,6 +4655,10 @@ describe('MovieForm — a series saved with its episodes', () => {
 
       fireEvent.click(save());
 
+      // Locked at once; _Adding…_ only once the add has run 300ms, the
+      // **Loader timing** (issue #484).
+      expect(save().disabled).toBe(true);
+      expect(save().textContent).not.toContain('Adding…');
       await waitFor(() => expect(save().textContent).toContain('Adding…'));
       expect(save().disabled).toBe(true);
 

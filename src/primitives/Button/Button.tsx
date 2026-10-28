@@ -1,7 +1,14 @@
+import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 
+import type { BusyPhase } from '@/types/busy';
 import { PlayIcon } from '../Icon/PlayIcon';
-import { Root, type ButtonVariant, type ButtonSize } from './Button.styles';
+import {
+  BusyLabel,
+  Root,
+  type ButtonVariant,
+  type ButtonSize,
+} from './Button.styles';
 
 /** Everything both forms share — the whole of what the control looks like. */
 interface ButtonFace {
@@ -38,12 +45,21 @@ export type ButtonProps =
       to: string;
       disabled?: never;
       onClick?: never;
+      busy?: never;
+      busyLabel?: never;
     })
   | (ButtonFace & {
       to?: never;
       /** Muted fill, no hover, and out of the tab order. */
       disabled?: boolean;
       onClick?: () => void;
+      /**
+       * The **Busy phase** of the work this button started. `waiting` locks
+       * it on its idle label and face; `shown` reads `busyLabel` with a shine.
+       */
+      busy?: BusyPhase;
+      /** The _-ing_ form drawn once `shown`: _Saving…_, _Adding…_. */
+      busyLabel?: string;
     });
 
 /**
@@ -65,6 +81,17 @@ export function Button({
   className,
   ...form
 }: ButtonProps) {
+  const busy = form.busy ?? 'idle';
+  const rootRef = useRef<HTMLButtonElement>(null);
+  // The idle width, read off the idle button as `busy` leaves `idle` and held
+  // as `min-width` until it returns, so the _-ing_ label never resizes it.
+  const heldWidth = useRef<number | null>(null);
+  if (busy === 'idle') {
+    heldWidth.current = null;
+  } else if (heldWidth.current === null && rootRef.current !== null) {
+    heldWidth.current = rootRef.current.offsetWidth || null;
+  }
+
   const face = {
     className,
     $variant: variant,
@@ -89,14 +116,40 @@ export function Button({
     );
   }
 
+  if (busy === 'idle') {
+    return (
+      <Root
+        ref={rootRef}
+        type="button"
+        {...face}
+        $busy={false}
+        disabled={form.disabled ?? false}
+        onClick={form.onClick}
+      >
+        {content}
+      </Root>
+    );
+  }
+
+  // Busy: locked, so `onClick` cannot fire, but on the variant's own face.
   return (
     <Root
+      ref={rootRef}
       type="button"
       {...face}
-      disabled={form.disabled ?? false}
-      onClick={form.onClick}
+      $busy
+      disabled
+      aria-busy="true"
+      style={
+        heldWidth.current !== null
+          ? { minWidth: `${heldWidth.current}px` }
+          : undefined
+      }
     >
-      {content}
+      {icon === 'play' ? <PlayIcon /> : null}
+      <BusyLabel aria-live="polite" $shine={busy === 'shown'}>
+        {busy === 'shown' ? (form.busyLabel ?? label) : label}
+      </BusyLabel>
     </Root>
   );
 }

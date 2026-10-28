@@ -455,6 +455,10 @@ describe('MovieForm — Add show folder in the shell', () => {
 
       fireEvent.click(save());
 
+      // Locked at once; _Adding…_ only once the server has copied for 300ms,
+      // the **Loader timing** (issue #484).
+      expect(save().disabled).toBe(true);
+      expect(save().textContent).not.toContain('Adding…');
       await waitFor(() => expect(save().textContent).toContain('Adding…'));
       expect(save().disabled).toBe(true);
 

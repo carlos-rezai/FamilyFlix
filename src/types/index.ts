@@ -43,6 +43,7 @@ export {
   ENRICH_SCOPES,
 } from './enrichment';
 
+export type { BusyPhase } from './busy';
 export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
 export type {
   Series,

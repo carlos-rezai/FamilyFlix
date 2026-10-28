@@ -1,4 +1,4 @@
-import styled, { css } from 'styled-components';
+import styled, { css, keyframes } from 'styled-components';
 
 import { controlStates } from '@/styles/interactionStates/interactionStates';
 
@@ -120,6 +120,7 @@ export const Root = styled.button<{
   $variant: ButtonVariant;
   $size: ButtonSize;
   $fullWidth: boolean;
+  $busy?: boolean;
 }>`
   display: inline-flex;
   align-items: center;
@@ -137,11 +138,74 @@ export const Root = styled.button<{
   ${({ $size }) => sizes[$size]}
   ${({ $variant }) => variants[$variant]}
 
-  &:disabled {
-    background: ${({ theme }) => theme.colors.surface3};
-    color: ${({ theme }) => theme.colors.textFaint};
-    border: 1px solid ${({ theme }) => theme.colors.border};
-    cursor: default;
-    opacity: 0.8;
+  /* A busy button is locked too, but keeps its variant's face: it is working,
+     not unavailable. */
+  ${({ $busy }) =>
+    $busy === true
+      ? css`
+          cursor: progress;
+        `
+      : css`
+          &:disabled {
+            background: ${({ theme }) => theme.colors.surface3};
+            color: ${({ theme }) => theme.colors.textFaint};
+            border: 1px solid ${({ theme }) => theme.colors.border};
+            cursor: default;
+            opacity: 0.8;
+          }
+        `}
+`;
+
+/** The shine: a brighter band carried across the label, right to left. */
+const sweep = keyframes`
+  from {
+    mask-position: 100% 0;
   }
+  to {
+    mask-position: -100% 0;
+  }
+`;
+
+/** Under reduced motion the shine fades instead; nothing moves. */
+const fade = keyframes`
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+`;
+
+/**
+ * A busy button's label. Once `shown`, the shine is a moving `mask-image` over
+ * the label in the button's own ink, so one rule serves every variant (the
+ * handoff's `background-clip: text` gradient paints one fixed ink, wrong on
+ * the bordered `danger`).
+ *
+ * Its reduced-motion fade is the one rule allowed to out-rank `GlobalStyle`'s
+ * `*`: a shown label must still say it is working when nothing may move.
+ */
+export const BusyLabel = styled.span<{ $shine: boolean }>`
+  ${({ $shine }) =>
+    $shine &&
+    css`
+      mask-image: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.5) 0%,
+        rgba(0, 0, 0, 0.5) 30%,
+        #000 50%,
+        rgba(0, 0, 0, 0.5) 70%,
+        rgba(0, 0, 0, 0.5) 100%
+      );
+      mask-size: 200% 100%;
+      animation: ${sweep} 1.4s linear infinite;
+
+      @media (prefers-reduced-motion: reduce) {
+        &[aria-live] {
+          mask-image: none;
+          animation: ${fade} 1.4s ease-in-out infinite !important;
+        }
+      }
+    `}
 `;
