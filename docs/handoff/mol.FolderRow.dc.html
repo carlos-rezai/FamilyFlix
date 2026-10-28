@@ -114,16 +114,22 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":640,"height":100},"path":{"editor":"text","default":"E:\\Movies","tsType":"string"},"titleCount":{"editor":"number","default":214,"tsType":"number"},"reachable":{"editor":"boolean","default":true,"tsType":"boolean"},"leftOut":{"editor":"number","default":3,"tsType":"number"},"onBringBack":{"editor":null,"tsType":"() =&gt; void"},"onRemove":{"editor":null,"tsType":"() =&gt; void"}}'
+      data-props='{"$preview":{"width":640,"height":100},"path":{"editor":"text","default":"E:\\Movies","tsType":"string"},"titleCount":{"editor":"number","default":214,"tsType":"number"},"reachable":{"editor":"boolean","default":true,"tsType":"boolean"},"scanned":{"editor":"boolean","default":true,"tsType":"boolean"},"leftOut":{"editor":"number","default":3,"tsType":"number"},"onBringBack":{"editor":null,"tsType":"() =&gt; void"},"onRemove":{"editor":null,"tsType":"() =&gt; void"}}'
     >
       class Component extends DCLogic {
         renderVals(){
           const reachable=this.props.reachable!==false;
+          const scanned=this.props.scanned!==false;
+          const count=this.props.titleCount||0;
           const leftOut=this.props.leftOut||0;
           const path=this.props.path||'E:\\Movies';
           return {
             path,
-            line: reachable ? (this.props.titleCount||0)+' titles' : 'Can’t be reached right now',
+            // A New folder (no run has walked it to review) says so: alone with no titles,
+            // after the count with some. Unreachable wins, whatever the mark.
+            line: !reachable ? 'Can’t be reached right now'
+              : scanned ? count+' titles'
+              : count===0 ? 'Not scanned yet' : count+' titles · not scanned yet',
             lineStyle:{marginTop:'4px',fontFamily:'var(--font-sans)',fontSize:'13px',color:reachable?'var(--color-text-faint)':'var(--color-danger)'},
             hasLeftOut:leftOut>0,
             leftOutLine:leftOut+(leftOut===1?' video':' videos')+' left out',

@@ -300,7 +300,7 @@
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, fStray:0, fMode:'link', fLinkOff:false, fVideoLinkOff:false, fVideoPicks:0, subLangOpen:null,
           addContext:null, resolveId:null,
-          libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12,leftOut:3},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0}], folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
+          libraryFolders:[{id:'f1',path:'E:\\Movies',titleCount:214,reachable:true,linkedCount:12,leftOut:3,scannedAt:'2026-09-14T19:02:11.000Z'},{id:'f2',path:'F:\\Kids',titleCount:38,reachable:false,linkedCount:0,scannedAt:'2026-09-14T19:02:11.000Z'},{id:'f3',path:'G:\\New films',titleCount:0,reachable:true,linkedCount:0,scannedAt:null}], impScope:'all', impWalked:[], impStartedAt:null, enAdded:false, folderTyped:'', folderRefusal:null, folderRemoveRefusal:null, folderBridge:true, impSource:'sheet', impMode:'link',
           impStep:'setup', impSheet:'', impFoldersRefusal:null, impProgress:0, impMatched:0, impProblems:[], impKind:'all', impOpen:{},
           impPhase:'scan', impFound:0, impTotal:0, impDone:0, impCurrent:'', impLog:[], impStartTime:null,
           exportOpen:false, exportFormat:'csv', exportDone:false, resetOpen:false, resetting:false, resetRefusal:null,
@@ -382,7 +382,12 @@
                 const log=this.appendLog(s.impLog, {text, kind});
                 if(done>=s.impTotal){
                   const probs=this.seedProblems();
+                  // Reaching review marks every folder the run read; an unreachable one stays new.
+                  // A New folder takes three titles.
+                  const at=new Date().toISOString();
+                  const read=f=>s.impWalked.includes(f.id)&&f.reachable;
                   this.setState({impDone:s.impTotal, impStep:'review', impMatched:s.impTotal-probs.length, impProblems:probs,
+                    libraryFolders:s.libraryFolders.map(f=>!read(f)?f:{...f,scannedAt:at,titleCount:f.scannedAt===null?f.titleCount+3:f.titleCount}),
                     impLog:this.appendLog(log, {text:'✓ Import complete: '+(s.impTotal-probs.length).toLocaleString()+' imported, '+probs.length+' need attention.', kind:'success'})});
                 } else {
                   this.setState({impDone:done, impCurrent:item, impLog:log});
@@ -451,7 +456,7 @@
           if(!/^[A-Za-z]:\\/.test(typed)){ this.setState({folderRefusal:'Type the folder’s full path, starting with its drive.'}); return; }
           const clash=this.folderClash(typed);
           if(clash){ this.setState({folderRefusal:clash}); return; }
-          this.setState(s=>({libraryFolders:[...s.libraryFolders,{id:'f'+Date.now(),path:typed,titleCount:0,reachable:true}],folderTyped:'',folderRefusal:null}));
+          this.setState(s=>({libraryFolders:[...s.libraryFolders,{id:'f'+Date.now(),path:typed,titleCount:0,reachable:true,scannedAt:null}],folderTyped:'',folderRefusal:null}));
         }
         browseFolders(){ this.addFolder('D:\\Films'); }
         // The route's 409: a folder linked videos play from is not removed, and the sentence is drawn
@@ -461,8 +466,12 @@
           if(f.linkedCount>0){ const n=f.linkedCount; this.setState({folderRemoveRefusal:{id,text:n===1?'1 title plays from this folder. Delete it before removing it.':n+' titles play from this folder. Delete them before removing it.'}}); return; }
           this.setState(s=>({libraryFolders:s.libraryFolders.filter(x=>x.id!==id),folderRemoveRefusal:null})); }
         setImpMode(m){ this.setState({impMode:m}); }
-        // Scan folders: the Folder scan, the same run as Start import with no sheet.
-        scanFolders(){ if(this.state.libraryFolders.length===0) return; this.setState({screen:'import',impSource:'folders'}); this.startImport(); }
+        // The group Scan's two presses (log 54): the Folder scan, the same run as Start import with
+        // no sheet, over the New folders alone ('new') or every listed folder ('all').
+        scanFolders(scope){ const walked=this.state.libraryFolders.filter(f=>scope==='all'||f.scannedAt===null);
+          if(walked.length===0) return; this.setState({screen:'import',impSource:'folders',impScope:scope},()=>this.startImport()); }
+        // A New folder: a listed Library folder no run has walked to review. Unreachable wins, whatever the mark.
+        folderLine(f){ return !f.reachable?'Can\u2019t be reached right now':f.scannedAt!==null?f.titleCount+' titles':f.titleCount===0?'Not scanned yet':f.titleCount+' titles \u00b7 not scanned yet'; }
         uploadCodec(){ this.setState(s=>{ const id=Math.max(0,...s.codecs.map(c=>c.id))+1; const packs=[{name:'DTS Audio',exts:['.mkv','.dts'],size:'2.3 MB'},{name:'ProRes',exts:['.mov'],size:'9.4 MB'},{name:'FLAC Audio',exts:['.mkv','.flac'],size:'0.8 MB'},{name:'Theora',exts:['.ogv'],size:'1.6 MB'}]; const p=packs[s.codecs.filter(c=>c.kind==='installed').length % packs.length]; return {codecs:[...s.codecs,{id,name:p.name,exts:p.exts,kind:'installed',size:p.size}],codecJustAdded:id}; }); }
         removeCodec(id){ this.setState(s=>({codecs:s.codecs.filter(c=>c.id!==id),codecJustAdded:s.codecJustAdded===id?null:s.codecJustAdded})); }
         setSubLang(v){ this.setState({settingsSubLang:v,openDrop:null}); }
@@ -711,7 +720,7 @@
 
         // ---- tmdb enrichment ----
         enrichFieldDefs = ['Synopsis','Poster','Backdrop','Runtime','Year','Genres','Director','Cast','Original title','TMDB score'];
-        goEnrich(from){ this.setState(s=>({screen:'enrich', enReturn:from||'settings', enStep:'setup', enSingleTitle:null, gearOpen:false, openDrop:null})); }
+        goEnrich(from,added){ this.setState(s=>({screen:'enrich', enReturn:from||'settings', enStep:'setup', enSingleTitle:null, enAdded:!!added, gearOpen:false, openDrop:null})); }
         enrichOne(){ const m=this.cur(); if(!m) return; this.setState({screen:'enrich',enReturn:'detail',enStep:'setup',enSingleTitle:m.title,enSingleKind:'movie',enSeriesId:null,enScope:'single',editMenuOpen:false}); }
         backFromEnrich(){ const r=this.state.enReturn; this.setState({screen:r==='detail'?'detail':r==='series'?'series':r==='import'?'import':'settings', enStep:'setup', enSingleKind:'movie'}); }
         onTmdbKey(e){ const v=e.target.value; this.setState({tmdbKey:v, tmdbConnected:false}); }
@@ -723,7 +732,7 @@
         toggleEnrichSheet(){ this.setState(s=>({enWriteSheet:!s.enWriteSheet})); }
         toggleEnrichPosters(){ this.setState(s=>({enWritePosters:!s.enWritePosters})); }
         toggleImpEnrich(){ this.setState(s=>({impEnrich:!s.impEnrich})); }
-        enrichTarget(){ const s=this.state; return s.enScope==='single'?1:s.enScope==='all'?this.rawMovies.length:12; }
+        enrichTarget(){ const s=this.state; return s.enScope==='single'?1:s.enScope==='all'?this.rawMovies.length:s.enScope==='added'?3:12; }
         startEnrich(){ if(!this.state.tmdbConnected){ this.goSettings(); this.pushSnack({variant:'info',message:'Add your TMDB key here first.',duration:4500,dismissible:true}); return; }
           if(!this.state.online) return;
           const n=this.enrichTarget();
@@ -753,10 +762,11 @@
         // The sheet run reads every listed Library folder: a Scanning line per reachable folder, an
         // unreachable one skipped with the scan's warning line. With none listed Start is inert; the
         // route's refusal (a stale screen) is drawn under the group.
-        startImport(){ const folders=this.state.libraryFolders;
+        // A sheet run walks every folder; a Folder scan its scope's. The run's start bounds Just what was added.
+        startImport(){ const all=this.state.libraryFolders; const folders=this.state.impSource==='folders'&&this.state.impScope==='new'?all.filter(f=>f.scannedAt===null):all;
           if(folders.length===0){ this.setState({impFoldersRefusal:'Add a library folder first.'}); return; }
           const lines=folders.map(f=>f.reachable?{text:'Scanning   '+f.path,kind:'scan'}:{text:'\u26a0 Can\u2019t reach '+f.path+', skipped',kind:'warning'});
-          this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impFoldersRefusal:null,impLog:[...(this.state.impSource==='folders'?[]:[{text:'Reading '+(this.state.impSheet||'library.xlsx')+' …',kind:'info'}]),...lines],impStartTime:Date.now()}); }
+          this.setState({impStep:'running',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impFoldersRefusal:null,impWalked:folders.map(f=>f.id),impStartedAt:new Date().toISOString(),impLog:[...(this.state.impSource==='folders'?[]:[{text:'Reading '+(this.state.impSheet||'library.xlsx')+' …',kind:'info'}]),...lines],impStartTime:Date.now()}); }
         firstReachable(){ const f=this.state.libraryFolders.find(x=>x.reachable); return f?f.path:'E:\\Movies'; }
         cancelImport(){ this.setState({impStep:'setup',impPhase:'scan',impFound:0,impTotal:0,impDone:0,impCurrent:'',impLog:[]}); }
         _logPool = ['The Lantern Keeper','Salt and Cedar','Northwind','Paper Moons','The Glasshouse','Orbit of Small Things','Marigold Avenue','The Quiet Tide','Hollow Creek','Comet Season','Grandfather\u2019s Clock','The Paper Aviator','Dust and Diamonds','Tin Can Symphony','The Far Meridian','Almond Blossom','Riverkeep','Nightjar','The Cartographer','Saturday\u2019s Children','Velvet Hour','Harbor Lights','Ironwood','Sundial','Blue Hour','The Tin Forest','Winter Apples','Lighthouse Road','Cedar and Ash','The Long Field'];
@@ -1031,17 +1041,20 @@
               onBack:()=>this.goSettings(),
               landed:true,
               empty:s.libraryFolders.length===0,
-              folders:s.libraryFolders.map(f=>{ const r=s.folderRemoveRefusal&&s.folderRemoveRefusal.id===f.id; return {key:f.id,path:f.path,titleCount:f.titleCount,reachable:f.reachable,leftOut:f.leftOut||0,onBringBack:()=>this.bringBack(f.id),onRemove:()=>this.removeFolder(f.id),removeRefused:!!r,removeRefusal:r?s.folderRemoveRefusal.text:''}; }),
+              folders:s.libraryFolders.map(f=>{ const r=s.folderRemoveRefusal&&s.folderRemoveRefusal.id===f.id; return {key:f.id,path:f.path,titleCount:f.titleCount,reachable:f.reachable,scanned:f.scannedAt!==null,leftOut:f.leftOut||0,onBringBack:()=>this.bringBack(f.id),onRemove:()=>this.removeFolder(f.id),removeRefused:!!r,removeRefusal:r?s.folderRemoveRefusal.text:''}; }),
               typed:s.folderTyped, onTyped:(e)=>this.setState({folderTyped:e.target.value}),
               onAdd:()=>this.addFolder(s.folderTyped),
               browse:s.folderBridge, onBrowse:()=>this.browseFolders(),
               refusal:s.folderRefusal, refused:s.folderRefusal!==null,
-              // The group Scan: the shapes, the Import mode, the TMDB box, then Scan folders.
+              // The group Scan: the shapes, the Import mode, the TMDB box, then Scan new folders and Scan all folders.
               modes:modeChoices(),
               // The graduated mol.EnrichCheckCard: the keyed hint is ours, the key-less one the card's.
               enrich:s.impEnrich, onToggleEnrich:()=>this.toggleImpEnrich(), keySet:s.tmdbConnected,
               keyedHint:'Runs straight after the scan, over everything it brings in. Needs the internet.',
-              scanVariant:s.libraryFolders.length>0?'primary':'secondary', onScan:()=>this.scanFolders(),
+              noNew:!s.libraryFolders.some(f=>f.scannedAt===null),
+              onScanNew:()=>this.scanFolders('new'), onScanAll:()=>this.scanFolders('all'),
+              // The page's mono note stands in for the push to /import; here the push is real, so it's never drawn.
+              scanned:false, scanNote:'',
             },
             codecModel:{
               landed:true, hasComponent:false, component:null, onBack:()=>this.goSettings(),
@@ -1181,7 +1194,7 @@
               // The group Library folders: the list as the folders page holds it, no ✕; Manage folders and
               // Add library folders both push /settings/folders. Start is inert with none listed.
               foldersLanded:true, hasFolders:s.libraryFolders.length>0, noFolders:s.libraryFolders.length===0,
-              folders:s.libraryFolders.map((f,i)=>({path:f.path, line:f.reachable?f.titleCount+' titles':'Can’t be reached right now',
+              folders:s.libraryFolders.map((f,i)=>({path:f.path, line:this.folderLine(f),
                 rowStyle:{display:'flex',alignItems:'center',gap:'12px',padding:'13px 14px',borderTop:i===0?'none':'1px solid var(--color-border-soft)'},
                 lineStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'13px',color:f.reachable?'var(--color-text-faint)':'var(--color-danger)'}})),
               onManageFolders:()=>this.goFolders(),
@@ -1189,7 +1202,7 @@
               startVariant:s.libraryFolders.length>0?'primary':'secondary',
               startWrapStyle:{marginTop:'8px',opacity:s.libraryFolders.length>0?1:0.55,pointerEvents:s.libraryFolders.length>0?'auto':'none'},
               onBack:()=>this.goSettings(), finishLabel: s.impEnrich ? 'Continue to TMDB sync' : 'Finish and go to library',
-              onFinish:()=>{ if(s.impEnrich){ this.setState({enScope:'all'}); this.goEnrich('browse'); } else { this.goBrowse(); } }, onCancel:()=>this.cancelImport(),
+              onFinish:()=>{ if(s.impEnrich){ this.setState({enScope:'added'}); this.goEnrich('browse',true); } else { this.goBrowse(); } }, onCancel:()=>this.cancelImport(),
               scanning:s.impPhase==='scan', importing:s.impPhase==='import', indeterminate:s.impPhase==='scan', percent:pct,
               stepScanActive:s.impPhase==='scan', stepScanDone:s.impPhase==='import', stepImportActive:s.impPhase==='import',
               importStepDotStyle:{display:'grid',placeItems:'center',width:'24px',height:'24px',borderRadius:'50%',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'700',background:s.impPhase==='import'?'var(--color-accent)':'var(--color-surface-3)',color:s.impPhase==='import'?'#14110d':'var(--color-text-faint)'},
@@ -1274,7 +1287,9 @@
               const missing = 12;
               const scopeDefs = s.enSingleTitle
                 ? [['single',s.enSingleKind==='series'?'Just this series':'Just this movie',s.enSingleTitle]]
-                : [['missing','Only what\u2019s missing',missing+' titles have no synopsis or artwork'],['all','Everything',this.rawMovies.length+' titles \u2014 re-checks ones already filled in']];
+                : [['missing','Only what\u2019s missing',missing+' titles have no synopsis or artwork'],['all','Everything',this.rawMovies.length+' titles \u2014 re-checks ones already filled in'],
+                 // Log 54: Finish on a run carrying enrich arrives with ?added=<run.startedAt>, this card chosen.
+                 ...(s.enAdded?[['added','Just what was added','3 titles this run brought in']]:[])];
               const scopeCard=sel=>({flex:'1 1 260px',textAlign:'left',padding:'16px 18px',background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border-soft)'),borderRadius:'var(--radius-md)',cursor:'pointer'});
               const scopeDot=sel=>({display:'block',width:'18px',height:'18px',flex:'0 0 auto',borderRadius:'99px',border:'2px solid '+(sel?accent:'var(--color-text-faint)'),background:sel?accent:'transparent',boxShadow:sel?'inset 0 0 0 3px var(--color-surface-2)':'none'});
               const ready = s.tmdbConnected && s.online;
