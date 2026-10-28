@@ -1,11 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  act,
-  fireEvent,
-  render,
-  screen,
-  waitFor,
-} from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -17,6 +11,8 @@ import {
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 4 (issue #486): Library folders' _Add_ as a busy
@@ -31,13 +27,6 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
  * Drawn under the Desktop shell, so _Browse…_ is there. The list is read on
  * real timers; the clock is faked from the press on.
  */
-
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
 
 const KIDS: LibraryFolder = {
   id: 'f-kids',
@@ -58,25 +47,12 @@ function refusedResponse(status: number, error: string): Response {
   } as unknown as Response;
 }
 
-/** The add in flight, answered when the test says so. */
-let settleAdd: (response: Response) => void;
-
-beforeEach(() => {
-  settleAdd = () => undefined;
-  fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation((_input, init) =>
-    (init?.method ?? 'GET') === 'POST'
-      ? new Promise<Response>((resolve) => {
-          settleAdd = resolve;
-        })
-      : Promise.resolve(okResponse([]))
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch((_url, init) =>
+  (init?.method ?? 'GET') === 'POST' ? undefined : okResponse([])
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 /** _Add_, under whichever label it wears. */
@@ -103,13 +79,6 @@ async function typedKids() {
   });
 }
 
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 /** Press _Add_ on a faked clock. */
 function pressAdd() {
   vi.useFakeTimers();
@@ -117,9 +86,7 @@ function pressAdd() {
 }
 
 async function answer(response: Response) {
-  await act(async () => {
-    settleAdd(response);
-  });
+  await respond(response);
 }
 
 describe('LibraryFolders — Add on the Loader timing', () => {
@@ -133,27 +100,27 @@ describe('LibraryFolders — Add on the Loader timing', () => {
     expect(addButton().getAttribute('aria-busy')).toBe('true');
     expect(addButton().textContent).toBe('Add');
 
-    await advance(299);
+    await advanceClock(299);
     expect(addButton().textContent).toBe('Add');
     expect(screen.queryByText('Adding…')).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(addButton().textContent).toBe('Adding…');
     expect(addButton().querySelector('[aria-live="polite"]')?.textContent).toBe(
       'Adding…'
     );
 
     await answer(createdResponse(KIDS));
-    await advance(500);
+    await advanceClock(500);
   });
 
   it('never reads Adding… for an add under 300ms, and draws the row at once', async () => {
     await typedKids();
     pressAdd();
 
-    await advance(100);
+    await advanceClock(100);
     await answer(createdResponse(KIDS));
-    await advance(0);
+    await advanceClock(0);
 
     expect(screen.queryByText('Adding…')).toBeNull();
     expect(screen.getByText(KIDS.path)).toBeDefined();
@@ -164,15 +131,15 @@ describe('LibraryFolders — Add on the Loader timing', () => {
     pressAdd();
 
     // Shown at 300ms; the add lands at 400ms; the hold runs to 800ms.
-    await advance(400);
+    await advanceClock(400);
     await answer(createdResponse(KIDS));
 
-    await advance(399);
+    await advanceClock(399);
     expect(addButton().textContent).toBe('Adding…');
     expect(screen.queryByText(KIDS.path)).toBeNull();
     expect(screen.getByText('No folders yet.')).toBeDefined();
 
-    await advance(1);
+    await advanceClock(1);
     expect(screen.getByText(KIDS.path)).toBeDefined();
     expect(screen.queryByText('No folders yet.')).toBeNull();
   });
@@ -181,14 +148,14 @@ describe('LibraryFolders — Add on the Loader timing', () => {
     await typedKids();
     pressAdd();
 
-    await advance(400);
+    await advanceClock(400);
     await answer(refusedResponse(409, INSIDE));
 
-    await advance(399);
+    await advanceClock(399);
     expect(addButton().textContent).toBe('Adding…');
     expect(screen.queryByText(INSIDE)).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(screen.getByText(INSIDE)).toBeDefined();
     expect(addButton().textContent).toBe('Add');
   });
@@ -200,13 +167,13 @@ describe('LibraryFolders — Add on the Loader timing', () => {
 
     expect(browseButton().disabled).toBe(true);
 
-    await advance(400);
+    await advanceClock(400);
     await answer(createdResponse(KIDS));
 
-    await advance(399);
+    await advanceClock(399);
     expect(browseButton().disabled).toBe(true);
 
-    await advance(1);
+    await advanceClock(1);
     expect(browseButton().disabled).toBe(false);
   });
 });

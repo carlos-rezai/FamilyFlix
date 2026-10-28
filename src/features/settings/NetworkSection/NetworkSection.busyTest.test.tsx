@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   act,
   fireEvent,
@@ -15,6 +15,8 @@ import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { theme } from '@/styles/theme';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 4 (issue #486): _Test connection_ as a busy
@@ -28,40 +30,19 @@ import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
  * The key read lands on real timers; the clock is faked from the press on.
  */
 
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
-
 const KEY_ROUTE = '/api/tmdb/key';
 const NEW_KEY = 'fedcba9876543210fedcba9876543210';
 const NOTICE = 'Connected to TMDB.';
 
-/** The test in flight, answered when the test says so. */
-let settleTest: (response: Response) => void;
-
 const isPost = (init?: RequestInit) =>
   (init?.method ?? 'GET').toUpperCase() === 'POST';
 
-beforeEach(() => {
-  settleTest = () => undefined;
-  fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation((input, init) => {
-    if (String(input) === KEY_ROUTE && isPost(init)) {
-      return new Promise<Response>((resolve) => {
-        settleTest = resolve;
-      });
-    }
-    return Promise.resolve(okResponse({ key: null }));
-  });
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { fetchMock, respond } = heldFetch((url, init) =>
+  url === KEY_ROUTE && isPost(init) ? undefined : okResponse({ key: null })
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 /** The section with the key read landed and a new key typed. */
@@ -92,13 +73,6 @@ const testButton = () =>
 
 const notice = () => within(snackbarStack()).queryByText(NOTICE);
 
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 /** Press _Test connection_ on a faked clock. */
 function pressTest() {
   vi.useFakeTimers();
@@ -107,9 +81,7 @@ function pressTest() {
 
 /** Answer the test as accepted. */
 async function accept() {
-  await act(async () => {
-    settleTest(okResponse({ key: NEW_KEY }));
-  });
+  await respond(okResponse({ key: NEW_KEY }));
 }
 
 describe('NetworkSection — Test connection on the Loader timing', () => {
@@ -121,27 +93,27 @@ describe('NetworkSection — Test connection on the Loader timing', () => {
     expect(testButton().getAttribute('aria-busy')).toBe('true');
     expect(testButton().textContent).toBe('Test connection');
 
-    await advance(299);
+    await advanceClock(299);
     expect(testButton().textContent).toBe('Test connection');
     expect(screen.queryByText('Testing…')).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(testButton().textContent).toBe('Testing…');
     expect(
       testButton().querySelector('[aria-live="polite"]')?.textContent
     ).toBe('Testing…');
 
     await accept();
-    await advance(500);
+    await advanceClock(500);
   });
 
   it('never reads Testing… for a test under 300ms, and answers at once', async () => {
     await typedNewKey();
     pressTest();
 
-    await advance(100);
+    await advanceClock(100);
     await accept();
-    await advance(0);
+    await advanceClock(0);
 
     expect(screen.queryByText('Testing…')).toBeNull();
     expect(testButton().textContent).toBe('Test again');
@@ -153,15 +125,15 @@ describe('NetworkSection — Test connection on the Loader timing', () => {
     pressTest();
 
     // Shown at 300ms; the test lands at 400ms; the hold runs to 800ms.
-    await advance(400);
+    await advanceClock(400);
     await accept();
 
-    await advance(399);
+    await advanceClock(399);
     expect(testButton().textContent).toBe('Testing…');
     expect(notice()).toBeNull();
     expect(screen.getByText('Not set up')).toBeDefined();
 
-    await advance(1);
+    await advanceClock(1);
     expect(testButton().textContent).toBe('Test again');
     expect(testButton().disabled).toBe(false);
     expect(notice()).not.toBeNull();

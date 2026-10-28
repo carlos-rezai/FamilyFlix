@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
@@ -9,6 +9,8 @@ import {
   createdResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 3 (issue #485): the Export dialog's busy button.
@@ -22,13 +24,6 @@ import {
  *
  * The summary lands on real timers; the clock is faked from the press on.
  */
-
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
 
 const NAME = 'familyflix-collection_08-10-2026';
 
@@ -57,25 +52,12 @@ function badRequest(error: string): Response {
   } as unknown as Response;
 }
 
-/** The export in flight, answered when the test says so. */
-let settleExport: (response: Response) => void;
-
-beforeEach(() => {
-  settleExport = () => undefined;
-  fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation((_, init) =>
-    init?.method === 'POST'
-      ? new Promise<Response>((resolve) => {
-          settleExport = resolve;
-        })
-      : Promise.resolve(okResponse(SUMMARY))
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch((_url, init) =>
+  init?.method === 'POST' ? undefined : okResponse(SUMMARY)
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 /** The dialog open, its summary landed. */
@@ -101,23 +83,10 @@ const exportButton = () =>
     name: /^(Export as CSV|Exporting…)$/,
   }) as HTMLButtonElement;
 
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 /** Press _Export as CSV_ on a faked clock. */
 function pressExport() {
   vi.useFakeTimers();
   fireEvent.click(exportButton());
-}
-
-async function answer(response: Response) {
-  await act(async () => {
-    settleExport(response);
-  });
 }
 
 describe('ExportModal — Export on the Loader timing', () => {
@@ -129,28 +98,28 @@ describe('ExportModal — Export on the Loader timing', () => {
     expect(exportButton().getAttribute('aria-busy')).toBe('true');
     expect(exportButton().textContent).toBe('Export as CSV');
 
-    await advance(299);
+    await advanceClock(299);
     expect(exportButton().textContent).toBe('Export as CSV');
     expect(screen.queryByText('Exporting…')).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(exportButton().textContent).toBe('Exporting…');
     expect(
       exportButton().querySelector('[aria-live="polite"]')?.textContent
     ).toBe('Exporting…');
 
-    await answer(createdResponse(WRITTEN));
-    await advance(500);
+    await respond(createdResponse(WRITTEN));
+    await advanceClock(500);
   });
 
   it('never reads Exporting… for an export under 300ms, and is ready at once', async () => {
     await renderDialog();
     pressExport();
 
-    await advance(100);
+    await advanceClock(100);
     expect(exportButton().textContent).toBe('Export as CSV');
-    await answer(createdResponse(WRITTEN));
-    await advance(0);
+    await respond(createdResponse(WRITTEN));
+    await advanceClock(0);
 
     expect(readyDialog()).not.toBeNull();
     expect(screen.queryByText('Exporting…')).toBeNull();
@@ -161,15 +130,15 @@ describe('ExportModal — Export on the Loader timing', () => {
     pressExport();
 
     // Shown at 300ms; the export lands at 400ms; the hold runs to 800ms.
-    await advance(400);
-    await answer(createdResponse(WRITTEN));
+    await advanceClock(400);
+    await respond(createdResponse(WRITTEN));
 
-    await advance(399);
+    await advanceClock(399);
     expect(idleDialog()).not.toBeNull();
     expect(readyDialog()).toBeNull();
     expect(exportButton().textContent).toBe('Exporting…');
 
-    await advance(1);
+    await advanceClock(1);
     expect(readyDialog()).not.toBeNull();
   });
 
@@ -177,14 +146,14 @@ describe('ExportModal — Export on the Loader timing', () => {
     await renderDialog();
     pressExport();
 
-    await advance(400);
-    await answer(badRequest(REFUSAL));
+    await advanceClock(400);
+    await respond(badRequest(REFUSAL));
 
-    await advance(399);
+    await advanceClock(399);
     expect(screen.queryByText(REFUSAL)).toBeNull();
     expect(exportButton().textContent).toBe('Exporting…');
 
-    await advance(1);
+    await advanceClock(1);
     expect(screen.getByText(REFUSAL)).toBeDefined();
     expect(exportButton().textContent).toBe('Export as CSV');
   });
@@ -203,14 +172,14 @@ describe('ExportModal — Export on the Loader timing', () => {
     const onClose = vi.fn();
     await renderDialog(onClose);
     pressExport();
-    await advance(300);
+    await advanceClock(300);
     expect(exportButton().getAttribute('aria-busy')).toBe('true');
     expect(exportButton().textContent).toBe('Exporting…');
 
     dismiss();
 
     expect(onClose).toHaveBeenCalledTimes(1);
-    await answer(createdResponse(WRITTEN));
-    await advance(500);
+    await respond(createdResponse(WRITTEN));
+    await advanceClock(500);
   });
 });

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from 'styled-components';
@@ -21,6 +21,8 @@ import {
   notFoundResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 2 (issue #484): a save that waits.
@@ -34,12 +36,6 @@ import {
  * The form is filled on real timers (a pick goes through `user-event`), and
  * the clock is faked from the press on.
  */
-
-let fetchMock: ReturnType<
-  typeof vi.fn<
-    (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-  >
->;
 
 const POOL: Genre[] = ['Action', 'Comedy', 'Drama'].map((name, index) => ({
   id: `g${index + 1}`,
@@ -73,39 +69,24 @@ const writes = () =>
     ([, init]) => init?.method === 'POST' || init?.method === 'PATCH'
   );
 
-/** The save in flight, answered when the test says so. */
-let settleSave: (response: Response) => void;
-
-beforeEach(() => {
-  settleSave = () => undefined;
-  fetchMock =
-    vi.fn<
-      (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
-    >();
-  fetchMock.mockImplementation((input, init) => {
-    const url = String(input);
-    if (init?.method === 'POST' || init?.method === 'PATCH') {
-      return new Promise<Response>((resolve) => {
-        settleSave = resolve;
-      });
-    }
-    if (url.includes('/api/genres/pool')) {
-      return Promise.resolve(okResponse({ genres: POOL }));
-    }
-    if (url.includes('/api/series/')) {
-      return Promise.resolve(okResponse(DETAIL));
-    }
-    if (url.includes('/api/movies/')) {
-      return Promise.resolve(okResponse(MOVIE));
-    }
-    return Promise.resolve(notFoundResponse('Not here'));
-  });
-  vi.stubGlobal('fetch', fetchMock);
+const { fetchMock, respond } = heldFetch((url, init) => {
+  if (init?.method === 'POST' || init?.method === 'PATCH') {
+    return undefined;
+  }
+  if (url.includes('/api/genres/pool')) {
+    return okResponse({ genres: POOL });
+  }
+  if (url.includes('/api/series/')) {
+    return okResponse(DETAIL);
+  }
+  if (url.includes('/api/movies/')) {
+    return okResponse(MOVIE);
+  }
+  return notFoundResponse('Not here');
 });
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 /** The form at the end of `entries`, every read on mount settled. */
@@ -131,13 +112,6 @@ const saveButton = () =>
 
 const titleField = () =>
   screen.getByRole('textbox', { name: 'Title' }) as HTMLInputElement;
-
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
 
 /** Press Save on a faked clock. */
 function pressSave() {
@@ -235,32 +209,28 @@ describe.each(JOBS)(
       expect(saveButton().getAttribute('aria-busy')).toBe('true');
       expect(saveButton().textContent).toBe(idleLabel);
 
-      await advance(299);
+      await advanceClock(299);
       expect(saveButton().textContent).toBe(idleLabel);
       expect(screen.queryByText(busyLabel)).toBeNull();
 
-      await advance(1);
+      await advanceClock(1);
       expect(saveButton().textContent).toBe(busyLabel);
       expect(
         saveButton().querySelector('[aria-live="polite"]')?.textContent
       ).toBe(busyLabel);
 
-      await act(async () => {
-        settleSave(answer());
-      });
-      await advance(500);
+      await respond(answer());
+      await advanceClock(500);
     });
 
     it('never draws its busy label for a save under 300ms, and leaves at once', async () => {
       await open();
       pressSave();
 
-      await advance(100);
+      await advanceClock(100);
       expect(saveButton().textContent).toBe(idleLabel);
-      await act(async () => {
-        settleSave(answer());
-      });
-      await advance(0);
+      await respond(answer());
+      await advanceClock(0);
 
       expect(pathname()).toBe(landing);
       expect(screen.queryByText(busyLabel)).toBeNull();
@@ -271,16 +241,14 @@ describe.each(JOBS)(
       pressSave();
 
       // Shown at 300ms; the save lands at 400ms; the hold runs to 800ms.
-      await advance(400);
-      await act(async () => {
-        settleSave(answer());
-      });
+      await advanceClock(400);
+      await respond(answer());
 
-      await advance(399);
+      await advanceClock(399);
       expect(pathname()).toBe(at);
       expect(saveButton().textContent).toBe(busyLabel);
 
-      await advance(1);
+      await advanceClock(1);
       expect(pathname()).toBe(landing);
     });
 
@@ -296,10 +264,8 @@ describe.each(JOBS)(
       expect(button.getAttribute('aria-busy')).toBe('true');
       expect(writes()).toHaveLength(1);
 
-      await act(async () => {
-        settleSave(answer());
-      });
-      await advance(500);
+      await respond(answer());
+      await advanceClock(500);
     });
   }
 );

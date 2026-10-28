@@ -7,6 +7,7 @@ import { theme } from '@/styles/theme';
 import { fakeUpdateBridge } from '@/test-support/fakeUpdateBridge/fakeUpdateBridge';
 import type { UpdateCheck } from '@/types/update';
 import { SoftwareUpdateRow } from './SoftwareUpdateRow';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 
 /**
  * 53 — Loading states, Phase 4 (issue #486): _Check for updates_ is not a
@@ -23,12 +24,6 @@ afterEach(() => {
 
 const button = (name: string) =>
   screen.queryByRole('button', { name }) as HTMLButtonElement | null;
-
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
 
 describe('SoftwareUpdateRow — Check for updates, off the Loader timing', () => {
   const bridge = fakeUpdateBridge();
@@ -53,18 +48,18 @@ describe('SoftwareUpdateRow — Check for updates, off the Loader timing', () =>
 
     vi.useFakeTimers();
     fireEvent.click(idle);
-    await advance(0);
+    await advanceClock(0);
 
     const checking = button('Checking…');
     expect(checking).not.toBeNull();
     expect(checking?.disabled).toBe(true);
     expect(checking?.getAttribute('aria-busy')).toBeNull();
 
-    await advance(400);
+    await advanceClock(400);
     await act(async () => {
       answer('none');
     });
-    await advance(0);
+    await advanceClock(0);
 
     expect(button('Checking…')).toBeNull();
     expect(button('Check for updates')?.disabled).toBe(false);
