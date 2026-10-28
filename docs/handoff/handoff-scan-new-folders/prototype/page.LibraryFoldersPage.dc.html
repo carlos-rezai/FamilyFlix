@@ -1,0 +1,510 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <!--
+        /settings/folders — the Library folders page. The states it is drawn in:
+        the empty card (No folders yet.), two folders with one unreachable, a
+        refusal line under the field with the typed path kept (the overlap
+        refusals first, then the Media directory refusal for a folder that is,
+        lies inside or holds C:\FamilyFlix\Media: That folder overlaps where
+        FamilyFlix keeps its own copies. Choose another one.), the add row
+        with and without Browse… (drawn only when the shell's folder bridge exists),
+        a Folder row's removal refused under it (linked titles play from it), a
+        Folder row with Left-out videos (3 videos left out, and Bring back, whose
+        press takes the line away; a folder with none draws no line), and
+        the Scan group with Link chosen.
+
+        Scan new folders (log 54): a New folder, one no run has walked to review,
+        reads "Not scanned yet" ("38 titles · not scanned yet" when it holds some).
+        The group Scan ends in two buttons: Scan new folders (primary, disabled
+        with no New folder) and Scan all folders (secondary, disabled with no
+        folder). Either press marks every reachable folder it walked as scanned;
+        an unreachable one stays new. Self-contained: the mock model below.
+      -->
+      <div
+        data-screen-label="Library folders"
+        style="height: 100%; overflow-y: auto; background: var(--color-bg-2)"
+      >
+        <div
+          style="
+            max-width: 780px;
+            margin: 0 auto;
+            padding: var(--space-6) var(--space-6) var(--space-8);
+          "
+        >
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 16px;
+              margin-bottom: 8px;
+            "
+          >
+            <dc-import
+              name="prim.IconButton"
+              icon="back"
+              variant="outline"
+              size="42"
+              title="Back"
+              on-click="{{ lf.onBack }}"
+              hint-size="42px,42px"
+            ></dc-import>
+            <h1
+              style="
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 30px;
+                color: var(--color-text);
+                margin: 0;
+              "
+            >
+              Library folders
+            </h1>
+          </div>
+          <p
+            style="
+              font-family: var(--font-sans);
+              font-size: 15px;
+              color: var(--color-text-faint);
+              margin: 0 0 28px 58px;
+            "
+          >
+            The folders your movies and series are kept in. FamilyFlix looks in
+            each one for new titles.
+          </p>
+
+          <!-- Blank under the header until the list lands -->
+          <sc-if value="{{ lf.landed }}" hint-placeholder-val="{{ true }}">
+            <div
+              style="
+                font-family: var(--font-sans);
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.9px;
+                text-transform: uppercase;
+                color: var(--color-text-faint);
+                margin: 0 0 12px 2px;
+              "
+            >
+              Folders
+            </div>
+            <div
+              style="
+                background: var(--color-surface);
+                border: 1px solid var(--color-border-soft);
+                border-radius: var(--radius-md);
+                padding: 20px;
+                margin-bottom: 32px;
+              "
+            >
+              <sc-if value="{{ lf.empty }}" hint-placeholder-val="{{ false }}">
+                <p
+                  style="
+                    margin: 0;
+                    font-family: var(--font-sans);
+                    font-size: 14px;
+                    color: var(--color-text-faint);
+                  "
+                >
+                  No folders yet.
+                </p>
+              </sc-if>
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <sc-for
+                  list="{{ lf.folders }}"
+                  as="f"
+                  hint-placeholder-count="2"
+                >
+                  <div>
+                    <dc-import
+                      name="mol.FolderRow"
+                      path="{{ f.path }}"
+                      title-count="{{ f.titleCount }}"
+                      reachable="{{ f.reachable }}"
+                      scanned="{{ f.scanned }}"
+                      left-out="{{ f.leftOut }}"
+                      on-bring-back="{{ f.onBringBack }}"
+                      on-remove="{{ f.onRemove }}"
+                      hint-size="100%,68px"
+                    ></dc-import>
+                    <!-- The route's 409 for a folder linked titles play from, under the row it is
+                         about: "12 titles play from this folder. Delete them before removing it."
+                         ("1 title plays …" for one). The row stays; its titles stay. -->
+                    <sc-if
+                      value="{{ f.removeRefused }}"
+                      hint-placeholder-val="{{ false }}"
+                    >
+                      <p
+                        style="
+                          margin: 8px 0 0;
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          color: var(--color-danger);
+                        "
+                      >
+                        {{ f.removeRefusal }}
+                      </p>
+                    </sc-if>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div
+                style="
+                  height: 1px;
+                  margin: 22px 0;
+                  background: var(--color-border-soft);
+                "
+              ></div>
+
+              <div style="display: flex; align-items: center; gap: 10px">
+                <div
+                  style="
+                    flex: 1;
+                    min-width: 0;
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    height: 46px;
+                    padding: 0 14px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border);
+                    border-radius: 10px;
+                  "
+                  style-focus-within="border-color:var(--color-accent-line)"
+                >
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+                      stroke="var(--color-text-faint)"
+                      stroke-width="1.6"
+                    />
+                  </svg>
+                  <input
+                    value="{{ lf.typed }}"
+                    onInput="{{ lf.onTyped }}"
+                    aria-label="Folder path"
+                    placeholder="E:\Movies"
+                    style="
+                      flex: 1;
+                      min-width: 0;
+                      background: transparent;
+                      border: none;
+                      outline: none;
+                      color: var(--color-text);
+                      font-family: var(--font-mono);
+                      font-size: 14px;
+                    "
+                  />
+                </div>
+                <sc-if
+                  value="{{ lf.browse }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <dc-import
+                    name="prim.Button"
+                    label="Browse…"
+                    variant="ghost"
+                    size="sm"
+                    icon="none"
+                    on-click="{{ lf.onBrowse }}"
+                    hint-size="100px,40px"
+                  ></dc-import>
+                </sc-if>
+                <dc-import
+                  name="prim.Button"
+                  label="Add"
+                  variant="secondary"
+                  size="sm"
+                  icon="none"
+                  on-click="{{ lf.onAdd }}"
+                  hint-size="72px,40px"
+                ></dc-import>
+              </div>
+              <sc-if
+                value="{{ lf.refused }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <p
+                  style="
+                    margin: 8px 0 0;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-danger);
+                  "
+                >
+                  {{ lf.refusal }}
+                </p>
+              </sc-if>
+            </div>
+
+            <!-- The group Scan: the Folder scan, no sheet. The shapes, the Import mode, the
+                 TMDB box (Import setup's three, in setup's order), then the two presses:
+                 Scan new folders over the New folders alone, Scan all folders over every one. -->
+            <div
+              style="
+                font-family: var(--font-sans);
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.9px;
+                text-transform: uppercase;
+                color: var(--color-text-faint);
+                margin: 0 0 12px 2px;
+              "
+            >
+              Scan
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 16px">
+              <div
+                style="
+                  display: flex;
+                  gap: 14px;
+                  padding: 14px 16px;
+                  background: var(--color-bg-2);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: 10px;
+                "
+              >
+                <span
+                  style="
+                    flex: 0 0 auto;
+                    color: var(--color-text-faint);
+                    margin-top: 1px;
+                  "
+                  ><svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v6M12 7.5v.5"
+                      stroke="currentColor"
+                      stroke-width="1.7"
+                      stroke-linecap="round"
+                    /></svg
+                ></span>
+                <span style="flex: 1; min-width: 0">
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      font-weight: 600;
+                      color: var(--color-text-dim);
+                      margin-bottom: 6px;
+                    "
+                    >What the scanner accepts</span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-mono);
+                      font-size: 12px;
+                      color: var(--color-text-faint);
+                      line-height: 1.8;
+                    "
+                    >Movie Title (2019)\ movie.mkv · subs.en.srt<br />Show Name\
+                    Season 01\ S01E03.mkv<br />Show Name\ S01E03.mkv
+                    <span style="font-family: var(--font-sans)"
+                      >(loose episodes at the show root are fine)</span
+                    ></span
+                  >
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 8px;
+                      line-height: 1.5;
+                      text-wrap: pretty;
+                    "
+                    >Season and episode numbers come from the folder first, then
+                    the filename (<span style="font-family: var(--font-mono)"
+                      >S01E03</span
+                    >, <span style="font-family: var(--font-mono)">1x03</span>).
+                    Anything it can’t place lands in the review list.</span
+                  >
+                </span>
+              </div>
+              <!-- The Import mode, ImportModeChoice: the caption Files over two ChoiceCards in a
+                   radiogroup — FormatCard's pixels, renamed for its second caller. Link chosen on
+                   every visit, never remembered; posted as `mode` with Scan folders. The caption is
+                   the Group heading, Folders' and Scan's own: Link or copy labels a section. -->
+              <div>
+                <span
+                  id="lf-mode-caption"
+                  style="
+                    display: block;
+                    font-family: var(--font-sans);
+                    font-size: 12px;
+                    font-weight: 700;
+                    letter-spacing: 0.9px;
+                    text-transform: uppercase;
+                    color: var(--color-text-faint);
+                    margin: 0 0 12px 2px;
+                  "
+                  >Link or copy</span
+                >
+                <div
+                  role="radiogroup"
+                  aria-labelledby="lf-mode-caption"
+                  style="display: flex; gap: 10px"
+                >
+                  <sc-for
+                    list="{{ lf.modes }}"
+                    as="m"
+                    hint-placeholder-count="2"
+                  >
+                    <button
+                      role="radio"
+                      aria-checked="{{ m.checked }}"
+                      onClick="{{ m.onSelect }}"
+                      style="{{ m.cardStyle }}"
+                    >
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          justify-content: space-between;
+                        "
+                      >
+                        <span
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: var(--color-text);
+                          "
+                          >{{ m.label }}</span
+                        ><span style="{{ m.dotStyle }}"></span>
+                      </div>
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 12.5px;
+                          color: var(--color-text-faint);
+                          margin-top: 4px;
+                          text-align: left;
+                        "
+                      >
+                        {{ m.line }}
+                      </div>
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+              <dc-import
+                name="mol.EnrichCheckCard"
+                checked="{{ lf.enrich }}"
+                key-set="{{ lf.keySet }}"
+                keyed-hint="{{ lf.keyedHint }}"
+                on-toggle="{{ lf.onToggleEnrich }}"
+                hint-size="100%,74px"
+              ></dc-import>
+              <div style="display: flex; flex-wrap: wrap; gap: 12px">
+                <dc-import
+                  name="prim.Button"
+                  label="Scan new folders"
+                  variant="primary"
+                  size="lg"
+                  icon="none"
+                  disabled="{{ lf.noNew }}"
+                  on-click="{{ lf.onScanNew }}"
+                  hint-size="210px,54px"
+                ></dc-import>
+                <dc-import
+                  name="prim.Button"
+                  label="Scan all folders"
+                  variant="secondary"
+                  size="lg"
+                  icon="none"
+                  disabled="{{ lf.empty }}"
+                  on-click="{{ lf.onScanAll }}"
+                  hint-size="200px,54px"
+                ></dc-import>
+              </div>
+              <sc-if
+                value="{{ lf.scanned }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <!-- Prototype only: the app pushes /import here, the run's Scanning lines naming
+                     exactly the folders walked. -->
+                <p
+                  style="
+                    margin: 0;
+                    font-family: var(--font-mono);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                  "
+                >
+                  {{ lf.scanNote }}
+                </p>
+              </sc-if>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":900,"height":900},"lf":{"editor":null,"tsType":"LibraryFoldersModel"}}'
+    >
+      class Component extends DCLogic {
+        // Mock data: one scanned folder with left-out videos, one unreachable, one New folder.
+        state = {
+          folders: [
+            { id:'f1', path:'E:\\Movies', titleCount:214, reachable:true, scanned:true, leftOut:3 },
+            { id:'f2', path:'F:\\Kids', titleCount:38, reachable:false, scanned:true, leftOut:0 },
+            { id:'f3', path:'G:\\New films', titleCount:0, reachable:true, scanned:false, leftOut:0 },
+          ],
+          typed:'', refusal:null, mode:'link', enrich:true, note:null,
+        };
+        add(path){
+          const typed=(path||'').trim();
+          if(!typed) return;
+          if(this.state.folders.some(f=>f.path.toLowerCase()===typed.toLowerCase())){ this.setState({refusal:'That folder is already in your library folders.'}); return; }
+          this.setState(s=>({ folders:[...s.folders,{ id:'f'+Date.now(), path:typed, titleCount:0, reachable:true, scanned:false, leftOut:0 }], typed:'', refusal:null }));
+        }
+        // Either scope walks its folders and marks every reachable one scanned; an unreachable
+        // one is skipped with its warning line and stays new. A New folder takes three titles.
+        scan(scope){
+          const walked=this.state.folders.filter(f=>scope==='all'||!f.scanned);
+          if(walked.length===0) return;
+          this.setState(s=>({
+            folders:s.folders.map(f=>walked.includes(f)&&f.reachable?{ ...f, scanned:true, titleCount:f.scanned?f.titleCount:f.titleCount+3 }:f),
+            note:'→ /import · '+walked.map(f=>'Scanning   '+f.path).join('  ·  '),
+          }));
+        }
+        renderVals(){
+          const s=this.state;
+          const accent='var(--color-accent)';
+          const card=sel=>({flex:1,textAlign:'left',padding:'14px 16px',background:sel?'var(--color-accent-soft)':'var(--color-surface)',border:'1px solid '+(sel?'var(--color-accent-line)':'var(--color-border)'),borderRadius:'12px',cursor:'pointer'});
+          const dot=sel=>({display:'block',width:'18px',height:'18px',borderRadius:'99px',border:'2px solid '+(sel?accent:'var(--color-text-faint)'),background:sel?accent:'transparent',boxShadow:sel?'inset 0 0 0 3px var(--color-surface-2)':'none'});
+          return { lf: {
+            onBack:()=>{}, landed:true, empty:s.folders.length===0,
+            folders:s.folders.map(f=>({ key:f.id, path:f.path, titleCount:f.titleCount, reachable:f.reachable, scanned:f.scanned, leftOut:f.leftOut,
+              onBringBack:()=>this.setState(st=>({ folders:st.folders.map(x=>x.id===f.id?{ ...x, leftOut:0 }:x) })),
+              onRemove:()=>this.setState(st=>({ folders:st.folders.filter(x=>x.id!==f.id) })),
+              removeRefused:false, removeRefusal:'' })),
+            typed:s.typed, onTyped:(e)=>this.setState({ typed:e.target.value }),
+            onAdd:()=>this.add(s.typed), browse:true, onBrowse:()=>this.add('H:\\Series'),
+            refusal:s.refusal, refused:s.refusal!==null,
+            modes:[['link','Link','Play videos where they are. Nothing is copied.'],['copy','Copy','Keep FamilyFlix’s own copy, playable with the drive unplugged.']].map(([v,label,line])=>({ key:v, label, line, checked:s.mode===v, onSelect:()=>this.setState({ mode:v }), cardStyle:card(s.mode===v), dotStyle:dot(s.mode===v) })),
+            enrich:s.enrich, onToggleEnrich:()=>this.setState(st=>({ enrich:!st.enrich })), keySet:true,
+            keyedHint:'Runs straight after the scan, over everything it brings in. Needs the internet.',
+            noNew:!s.folders.some(f=>!f.scanned),
+            onScanNew:()=>this.scan('new'), onScanAll:()=>this.scan('all'),
+            scanned:s.note!==null, scanNote:s.note||'',
+          } };
+        }
+      }
+    </script>
+  </body>
+</html>
