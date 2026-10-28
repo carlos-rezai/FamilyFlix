@@ -37,6 +37,7 @@ import { serverHandle, type ServerChild } from './serverHandle/serverHandle';
 import { serverLaunch, type ServerLaunch } from './serverLaunch/serverLaunch';
 import { shellMode } from './shellMode/shellMode';
 import { shellPaths } from './shellPaths/shellPaths';
+import { splashPage } from './splashPage/splashPage';
 import {
   startServer,
   stoppedUnexpectedly,
@@ -51,9 +52,10 @@ import {
 
 /**
  * The **Desktop shell**'s main process: a composition root with no logic of
- * its own. It forks the **Server process**, waits for the **Shell
- * handshake**'s `ready`, and opens the one window over it. See
- * `docs/PRDs/24-electron-shell.md`.
+ * its own. It opens the one window over the **Start-up splash**, forks the
+ * **Server process**, and loads the app over the splash when the **Shell
+ * handshake**'s `ready` lands. See `docs/PRDs/24-electron-shell.md` and
+ * `docs/PRDs/53-loading-states.md`.
  */
 
 /** The window's background, the app's own, so nothing flashes white. */
@@ -178,7 +180,11 @@ function applyWindowPolicy(target: BrowserWindow, appUrl: string): void {
   });
 }
 
-function openWindow(port: number, preload: string): void {
+/**
+ * Open the one window over the **Start-up splash** and show it as soon as the
+ * splash is painted, before the server's `ready`.
+ */
+function openWindow(preload: string): void {
   window = new BrowserWindow({
     title: 'FamilyFlix',
     icon: paths.icon,
@@ -218,6 +224,13 @@ function openWindow(port: number, preload: string): void {
     window.webContents.openDevTools();
   }
 
+  // A splash load the app's own load supersedes is aborted, not a failure.
+  window.loadURL(splashPage()).catch(() => undefined);
+}
+
+/** Load the app over the splash, in the same window, once the server is up. */
+function openApp(port: number): void {
+  if (window === null || window.isDestroyed()) return;
   const url = rendererUrl(mode, port);
   applyWindowPolicy(window, url);
   loadRenderer(window, url);
@@ -253,6 +266,8 @@ if (!app.requestSingleInstanceLock()) {
         quit: () => app.quit(),
       })
     );
+
+    openWindow(join(__dirname, 'preload.js'));
 
     log.main('Starting the server.');
     const started = await startServer(server, dialogWorld);
@@ -323,7 +338,7 @@ if (!app.requestSingleInstanceLock()) {
       openMediaFolder(paths.mediaRoot, mediaFolderWorld)
     );
 
-    openWindow(started.port, join(__dirname, 'preload.js'));
+    openApp(started.port);
     void updates.start();
   });
 }
