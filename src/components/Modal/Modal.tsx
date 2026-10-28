@@ -43,6 +43,12 @@ export interface ModalProps {
    * back out.
    */
   bare?: boolean;
+  /**
+   * The **Locked** modal: while a destructive action runs, Escape and the
+   * scrim ask nothing and the ✕ is not drawn. The caller unlocks it when the
+   * action settles, and every way out is back.
+   */
+  locked?: boolean;
   /** The card's body, below the header — or, `bare`, the whole card. */
   children: ReactNode;
 }
@@ -86,6 +92,7 @@ export function Modal({
   icon,
   onClose,
   bare = false,
+  locked = false,
   children,
 }: ModalProps) {
   const titleId = useId();
@@ -119,7 +126,9 @@ export function Modal({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
-        onClose();
+        if (!locked) {
+          onClose();
+        }
         return;
       }
 
@@ -155,7 +164,7 @@ export function Modal({
     return () => {
       document.removeEventListener('keydown', onKeyDown);
     };
-  }, [open, onClose]);
+  }, [open, locked, onClose]);
 
   if (!open) {
     return null;
@@ -164,7 +173,7 @@ export function Modal({
   // The third way out: a press that lands on the scrim itself. A press inside
   // the card bubbles up to here too, and its target says where it started.
   const onScrimClick = (event: ReactMouseEvent<HTMLDivElement>) => {
-    if (event.target === event.currentTarget) {
+    if (!locked && event.target === event.currentTarget) {
       onClose();
     }
   };
@@ -194,9 +203,15 @@ export function Modal({
                     <Subtitle>{subtitle}</Subtitle>
                   )}
                 </Heading>
-                <CloseButton type="button" aria-label="Close" onClick={onClose}>
-                  ✕
-                </CloseButton>
+                {locked ? null : (
+                  <CloseButton
+                    type="button"
+                    aria-label="Close"
+                    onClick={onClose}
+                  >
+                    ✕
+                  </CloseButton>
+                )}
               </HeaderRow>
             </Header>
             <Body>{children}</Body>

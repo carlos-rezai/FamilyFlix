@@ -13,12 +13,13 @@ import {
  * 37 — Factory reset, the surface (issue #299).
  *
  * `useFactoryReset()` → `{ resetting, refusal, reset }`, the hook behind the
- * **Reset dialog**'s _Erase everything_. `resetting` is true while the request
- * is in flight. A `reset` outcome reloads onto `/` with `location.assign` —
+ * **Reset dialog**'s _Erase everything_. `resetting` is not `idle` while the
+ * request is in flight (amended by 53, Loading states, issue #487: a **Busy
+ * phase** now, not a boolean). A `reset` outcome reloads onto `/` with `location.assign` —
  * the third **Fresh home**: not `replace`, not a router `navigate`, because
  * every read in the app is stale once the library is gone. A refusal is held
  * until the next press is answered, the Export's rule. A rejection leaves the
- * state as it was with `resetting` false again, the Delete dialog's rule —
+ * state as it was with `resetting` `idle` again, the Delete dialog's rule —
  * `reset` itself never rejects.
  */
 
@@ -63,7 +64,7 @@ describe('useFactoryReset — before a press', () => {
   it('is neither resetting nor refused, and sends nothing', () => {
     const { result } = renderHook(() => useFactoryReset());
 
-    expect(result.current.resetting).toBe(false);
+    expect(result.current.resetting).toBe('idle');
     expect(result.current.refusal).toBeNull();
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -81,7 +82,7 @@ describe('useFactoryReset — a reset', () => {
       void result.current.reset();
     });
 
-    expect(result.current.resetting).toBe(true);
+    expect(result.current.resetting).toBe('waiting');
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(String(fetchMock.mock.calls[0][0])).toBe('/api/reset');
 
@@ -126,7 +127,7 @@ describe('useFactoryReset — a refusal', () => {
     });
 
     expect(result.current.refusal).toBe(IMPORT_RUNNING);
-    expect(result.current.resetting).toBe(false);
+    expect(result.current.resetting).toBe('idle');
     expect(location.assigned()).toEqual([]);
   });
 
@@ -142,7 +143,7 @@ describe('useFactoryReset — a refusal', () => {
       void result.current.reset();
     });
 
-    expect(result.current.resetting).toBe(true);
+    expect(result.current.resetting).toBe('waiting');
     expect(result.current.refusal).toBe(IMPORT_RUNNING);
   });
 
@@ -173,7 +174,7 @@ describe('useFactoryReset — a rejection', () => {
       await expect(result.current.reset()).resolves.toBeUndefined();
     });
 
-    expect(result.current.resetting).toBe(false);
+    expect(result.current.resetting).toBe('idle');
     expect(result.current.refusal).toBeNull();
     expect(location.assigned()).toEqual([]);
   });
@@ -190,7 +191,7 @@ describe('useFactoryReset — a rejection', () => {
       await result.current.reset();
     });
 
-    await waitFor(() => expect(result.current.resetting).toBe(false));
+    await waitFor(() => expect(result.current.resetting).toBe('idle'));
     expect(result.current.refusal).toBe(IMPORT_RUNNING);
   });
 });

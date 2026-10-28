@@ -26,8 +26,10 @@ import {
  * The **Reset dialog**, from `page.SettingsPage.dc.html`, drawn on `Modal`:
  * _Erase everything?_ over _This can’t be undone._ with the warning triangle;
  * the **What goes** and **What stays** lists in the PRD's copy; a refusal in
- * danger ink above the buttons; _Erase everything_ (`danger`, _Erasing…_ and
- * disabled in flight) before _Cancel_. The Modal's own contract is tested with
+ * danger ink above the buttons; _Erase everything_ (`danger`, busy and
+ * disabled in flight) before _Cancel_. Amended by 53, Loading states (issue
+ * #487): once the reset has run 300ms the dialog becomes the **Dialog
+ * loader** reading _Erasing everything_, rather than the button _Erasing…_. The Modal's own contract is tested with
  * the Modal; what is left here is what makes this dialog _this_ dialog. Focus
  * lands on the card — no initial-focus prop, no type-to-confirm — so Enter
  * alone erases nothing.
@@ -163,19 +165,23 @@ describe('ResetDialog — the buttons', () => {
 describe('ResetDialog — an erase', () => {
   const location = stubLocation();
 
-  it('reads Erasing… and is disabled while the request runs', async () => {
+  it('is disabled while the request runs, then reads Erasing everything once shown', async () => {
     const request = held();
     fetchMock.mockReturnValue(request.pending);
     renderDialog();
 
     await userEvent.click(erase());
 
-    expect(erase().textContent).toBe('Erasing…');
     expect((erase() as HTMLButtonElement).disabled).toBe(true);
+    expect(
+      await screen.findByRole('status', { name: 'Erasing everything' })
+    ).toBeDefined();
     await act(async () => {
       request.settle(noContentResponse());
       await request.pending;
     });
+    // The reload waits out the loader's hold; let it land inside this test.
+    await waitFor(() => expect(location.assigned()).toEqual(['/']));
   });
 
   it('posts the reset and reloads onto /', async () => {

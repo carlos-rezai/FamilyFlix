@@ -34,6 +34,10 @@ export {
 } from './EpisodeFileRow/EpisodeFileRow';
 export { SubtitleRow, type SubtitleRowProps } from './SubtitleRow/SubtitleRow';
 export { Modal, type ModalProps } from './Modal/Modal';
+export {
+  DialogLoader,
+  type DialogLoaderProps,
+} from './DialogLoader/DialogLoader';
 export { LogConsole, type LogConsoleProps } from './LogConsole/LogConsole';
 export {
   Snackbar,

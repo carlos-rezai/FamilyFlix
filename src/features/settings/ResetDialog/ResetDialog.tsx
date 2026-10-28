@@ -1,4 +1,4 @@
-import { Modal } from '@/components';
+import { DialogLoader, Modal } from '@/components';
 import { BangTriangleIcon, Button } from '@/primitives';
 
 import { useFactoryReset } from '../useFactoryReset/useFactoryReset';
@@ -35,13 +35,23 @@ export interface ResetDialogProps {
  * Focus lands on the card, the Modal's own rule — there is no initial-focus
  * prop and no type-to-confirm — so Enter alone erases nothing. A refusal is
  * drawn above the buttons until the next press is answered.
+ *
+ * From the confirm press the dialog is **Locked** and _Cancel_ disabled, in
+ * `waiting` too, until the reset settles; once **Shown** it becomes the
+ * **Dialog loader** reading _Erasing everything_.
  */
 export function ResetDialog({ open, onClose }: ResetDialogProps) {
   const { resetting, refusal, reset } = useFactoryReset();
+  const busy = resetting !== 'idle';
+
+  if (open && resetting === 'shown') {
+    return <DialogLoader label="Erasing everything" />;
+  }
 
   return (
     <Modal
       open={open}
+      locked={busy}
       title="Erase everything?"
       subtitle="This can’t be undone."
       icon={<BangTriangleIcon size={22} />}
@@ -66,12 +76,17 @@ export function ResetDialog({ open, onClose }: ResetDialogProps) {
       {refusal === null ? null : <Refusal>{refusal}</Refusal>}
       <Actions>
         <Button
-          label={resetting ? 'Erasing…' : 'Erase everything'}
+          label="Erase everything"
           variant="danger"
-          disabled={resetting}
+          busy={resetting}
           onClick={() => void reset()}
         />
-        <Button label="Cancel" variant="secondary" onClick={onClose} />
+        <Button
+          label="Cancel"
+          variant="secondary"
+          disabled={busy}
+          onClick={onClose}
+        />
       </Actions>
     </Modal>
   );
