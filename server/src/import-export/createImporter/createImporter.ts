@@ -1486,13 +1486,15 @@ export function createImporter({
    * show, imported against the folder it was found under, and the completion
    * line — `✓ Import complete` for a sheet, `✓ Scan complete` for a **Folder
    * scan**. A sheet's films are named by its rows; a scan's by their folders.
-   * A cancel stops it where it is, and the run never reaches review.
+   * A cancel stops it where it is, and the run never reaches review. Reaching
+   * review marks every folder the walk `read` as scanned, in the same step.
    */
   const importPlaced = async (
     current: ImportRun,
     films: Placed<Match>[],
     shows: Placed<ShowMatch>[],
     foundAgain: Placed<FoundAgain>[],
+    read: StoredLibraryFolder[],
     verb: 'Import' | 'Scan',
     signal: AbortSignal,
     genres: GenreReader = genreReader()
@@ -1568,6 +1570,10 @@ export function createImporter({
       `✓ ${verb} complete: ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
       'success'
     );
+    storage.markScanned(
+      read.map((folder) => folder.id),
+      new Date().toISOString()
+    );
     current.phase = 'review';
   };
 
@@ -1577,19 +1583,25 @@ export function createImporter({
    * cannot be reached skipped with a **Warning line**, the run going on over
    * the others — and the found line. Each folder answers its films, Collection
    * folders split, and its shows, so every title is placed against the folder
-   * it was found under. `null` once the run was cancelled mid-walk.
+   * it was found under. Beside them, the folders it `read`: neither skipped
+   * as unreachable nor failed mid-read. `null` once the run was cancelled
+   * mid-walk.
    */
   const walkListed = async (
     current: ImportRun,
     folders: StoredLibraryFolder[],
     signal: AbortSignal
-  ): Promise<WalkedFolder[] | null> => {
+  ): Promise<{
+    walked: WalkedFolder[];
+    read: StoredLibraryFolder[];
+  } | null> => {
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
     }
     wholeFolders.clear();
 
     const walked: WalkedFolder[] = [];
+    const read: StoredLibraryFolder[] = [];
     let found = 0;
     let leftOut = 0;
     // Every folder the walk went through, by the found line's rule, before
@@ -1613,6 +1625,7 @@ export function createImporter({
             log(current, `⚠ Could not read ${dir}, skipped`, 'warning');
           }
         );
+        read.push(folder);
       } catch {
         // A folder that stopped being readable mid-walk: what was found is
         // what there is, and the run still reaches review.
@@ -1649,7 +1662,7 @@ export function createImporter({
         'info'
       );
     }
-    return walked;
+    return { walked, read };
   };
 
   /**
@@ -1846,10 +1859,11 @@ export function createImporter({
     const seriesByKey = heldSeriesByKey(held);
     const genres = genreReader();
 
-    const walked = await walkListed(current, folders, signal);
-    if (walked === null) {
+    const walk = await walkListed(current, folders, signal);
+    if (walk === null) {
       return;
     }
+    const { walked, read } = walk;
     for (const rowNumber of blankTitleRows) {
       log(current, `⚠ Row ${rowNumber} has no title, skipped`, 'warning');
     }
@@ -2008,6 +2022,7 @@ export function createImporter({
       matched,
       matchedShows,
       foundAgain,
+      read,
       'Import',
       signal,
       genres
@@ -2030,10 +2045,11 @@ export function createImporter({
     const held = heldSeriesList();
     const seriesByKey = heldSeriesByKey(held);
 
-    const walked = await walkListed(current, folders, signal);
-    if (walked === null) {
+    const walk = await walkListed(current, folders, signal);
+    if (walk === null) {
       return;
     }
+    const { walked, read } = walk;
 
     const films: Placed<Match>[] = [];
     const shows: Placed<ShowMatch>[] = [];
@@ -2078,7 +2094,7 @@ export function createImporter({
       }
     }
 
-    await importPlaced(current, films, shows, foundAgain, 'Scan', signal);
+    await importPlaced(current, films, shows, foundAgain, read, 'Scan', signal);
   };
 
   /** A run's first state, from its source and the flag it carries. */
