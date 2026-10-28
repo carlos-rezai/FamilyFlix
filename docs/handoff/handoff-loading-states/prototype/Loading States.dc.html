@@ -1,0 +1,931 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+        <style>
+          html,
+          body {
+            margin: 0;
+            background: #1b1611;
+          }
+          a {
+            color: var(--color-accent);
+          }
+          a:hover {
+            color: var(--color-accent-hover);
+          }
+          @keyframes ffFade {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+          @keyframes ffTextShimmer {
+            from {
+              background-position: 100% 0;
+            }
+            to {
+              background-position: -100% 0;
+            }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            @keyframes ffTextShimmer {
+              0%,
+              100% {
+                opacity: 0.6;
+              }
+              50% {
+                opacity: 1;
+              }
+            }
+          }
+        </style>
+      </helmet>
+      <div
+        style="
+          min-height: 100vh;
+          background: var(--color-bg-2);
+          color: var(--color-text);
+          font-family: var(--font-sans);
+        "
+      >
+        <div
+          style="
+            max-width: 1080px;
+            margin: 0 auto;
+            padding: 48px 32px 72px;
+            display: flex;
+            flex-direction: column;
+            gap: 48px;
+          "
+        >
+          <header style="display: flex; flex-direction: column; gap: 8px">
+            <div
+              style="
+                font-size: 12px;
+                font-weight: 700;
+                letter-spacing: 0.9px;
+                text-transform: uppercase;
+                color: var(--color-accent);
+              "
+            >
+              Loading · prim.LogoLoader
+            </div>
+            <h1
+              style="
+                margin: 0;
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 38px;
+              "
+            >
+              The FF mark, waiting with you
+            </h1>
+            <p
+              style="
+                margin: 0;
+                max-width: 640px;
+                font-size: 16px;
+                line-height: 1.55;
+                color: var(--color-text-dim);
+                text-wrap: pretty;
+              "
+            >
+              The two Fs of the logo take turns rising while the app works. When
+              the work can be counted, like copying files, the mark fills from
+              left to right instead.
+            </p>
+          </header>
+
+          <section
+            data-screen-label="Mark"
+            style="display: flex; flex-direction: column; gap: 16px"
+          >
+            <h2
+              style="
+                margin: 0;
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 24px;
+              "
+            >
+              Sizes and modes
+            </h2>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+                gap: 12px;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 14px;
+                  padding: 20px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div style="height: 150px; display: grid; place-items: center">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 8px;
+                      height: 44px;
+                      padding: 0 20px;
+                      background: var(--color-accent);
+                      border-radius: 10px;
+                      color: #1a1109;
+                      font-size: 15px;
+                      font-weight: 700;
+                    "
+                  >
+                    {{ shimmerStatic }}
+                  </div>
+                </div>
+                <div>
+                  <div style="font-size: 15px; font-weight: 600">
+                    Inline · button text
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                    "
+                  >
+                    No mark. A shine sweeps across the button's “-ing” label.
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 14px;
+                  padding: 20px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div style="height: 150px; display: grid; place-items: center">
+                  <dc-import
+                    name="prim.LogoLoader"
+                    size="56"
+                    label="Saving folder"
+                    hint-size="120px,80px"
+                  ></dc-import>
+                </div>
+                <div>
+                  <div style="font-size: 15px; font-weight: 600">
+                    Block · 56px
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                    "
+                  >
+                    Fills a panel or dialog while that area is busy.
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 14px;
+                  padding: 20px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div style="height: 150px; display: grid; place-items: center">
+                  <dc-import
+                    name="prim.LogoLoader"
+                    size="56"
+                    progress="{{ staticProgress }}"
+                    label="Copying files"
+                    detail="31 of 50"
+                    hint-size="120px,80px"
+                  ></dc-import>
+                </div>
+                <div>
+                  <div style="font-size: 15px; font-weight: 600">
+                    Determinate · 56px
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                    "
+                  >
+                    Fills as the work is done. Always show the count.
+                  </div>
+                </div>
+              </div>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 14px;
+                  padding: 20px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div style="height: 150px; display: grid; place-items: center">
+                  <dc-import
+                    name="prim.LogoLoader"
+                    size="96"
+                    tile="{{ true }}"
+                    hint-size="96px,96px"
+                  ></dc-import>
+                </div>
+                <div>
+                  <div style="font-size: 15px; font-weight: 600">
+                    Splash · 96px with tile
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                    "
+                  >
+                    Only while the app itself is starting.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            data-screen-label="In context"
+            style="display: flex; flex-direction: column; gap: 16px"
+          >
+            <h2
+              style="
+                margin: 0;
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 24px;
+              "
+            >
+              In context. Try them.
+            </h2>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 12px;
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 16px;
+                  padding: 22px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div>
+                  <div style="font-size: 15px; font-weight: 600">
+                    1 · Saving a movie
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      line-height: 1.5;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                      text-wrap: pretty;
+                    "
+                  >
+                    A fast save never shows the loader. A slow one shows it
+                    after 300ms and keeps it for at least 500ms.
+                  </div>
+                </div>
+                <div
+                  style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    gap: 12px;
+                    padding: 20px;
+                    background: var(--color-bg-2);
+                    border: 1px solid var(--color-border-soft);
+                    border-radius: var(--radius-md);
+                  "
+                >
+                  <div
+                    style="display: flex; justify-content: flex-end; gap: 10px"
+                  >
+                    <button
+                      disabled="{{ save.busy }}"
+                      style="
+                        height: 44px;
+                        padding: 0 20px;
+                        background: var(--color-surface-3);
+                        border: 1px solid var(--color-border);
+                        border-radius: 10px;
+                        color: var(--color-text);
+                        font-family: var(--font-sans);
+                        font-size: 15px;
+                        font-weight: 600;
+                        cursor: pointer;
+                      "
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick="{{ save.onClick }}"
+                      aria-busy="{{ save.busy }}"
+                      style="{{ save.btnStyle }}"
+                    >
+                      <sc-if
+                        value="{{ save.showCheck }}"
+                        hint-placeholder-val="{{ false }}"
+                        ><svg
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                        >
+                          <path
+                            d="M5 12.5l4.5 4.5L19 7.5"
+                            stroke="currentColor"
+                            stroke-width="2.6"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                          ></path></svg
+                      ></sc-if>
+                      {{ save.labelEl }}
+                    </button>
+                  </div>
+                </div>
+                <div
+                  style="
+                    display: flex;
+                    gap: 4px;
+                    padding: 4px;
+                    background: var(--color-bg-2);
+                    border: 1px solid var(--color-border-soft);
+                    border-radius: var(--radius-pill);
+                    align-self: flex-start;
+                  "
+                >
+                  <sc-for
+                    list="{{ speeds }}"
+                    as="sp"
+                    hint-placeholder-count="2"
+                  >
+                    <button onClick="{{ sp.onClick }}" style="{{ sp.style }}">
+                      {{ sp.label }}
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 16px;
+                  padding: 22px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div>
+                  <div style="font-size: 15px; font-weight: 600">
+                    2 · Deleting a folder
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      line-height: 1.5;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                      text-wrap: pretty;
+                    "
+                  >
+                    The confirmation dialog becomes the progress view. There's
+                    no Cancel, because a half-finished delete is worse than
+                    waiting. The dialog can't be dismissed until it's done.
+                  </div>
+                </div>
+                <div
+                  style="
+                    position: relative;
+                    flex: 1;
+                    min-height: 250px;
+                    display: flex;
+                    flex-direction: column;
+                    background: var(--color-surface-2);
+                    border: 1px solid var(--color-border);
+                    border-radius: var(--radius-lg);
+                    overflow: hidden;
+                  "
+                >
+                  <sc-if
+                    value="{{ del.idle }}"
+                    hint-placeholder-val="{{ true }}"
+                  >
+                    <div
+                      style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 14px;
+                        padding: 18px 20px 20px;
+                      "
+                    >
+                      <div
+                        style="
+                          font-family: var(--font-serif);
+                          font-weight: 600;
+                          font-size: 20px;
+                        "
+                      >
+                        Delete “Coco”?
+                      </div>
+                      <div
+                        style="
+                          padding: 10px 12px;
+                          background: var(--color-bg-2);
+                          border: 1px solid var(--color-border-soft);
+                          border-radius: 9px;
+                          font-family: var(--font-mono);
+                          font-size: 13px;
+                          color: var(--color-text-dim);
+                          overflow-wrap: anywhere;
+                        "
+                      >
+                        E:\Movies\Coco (2017)
+                      </div>
+                      <div style="flex: 1"></div>
+                      <div
+                        style="
+                          display: flex;
+                          justify-content: flex-end;
+                          gap: 10px;
+                        "
+                      >
+                        <button
+                          style="
+                            height: 44px;
+                            padding: 0 20px;
+                            background: var(--color-surface-3);
+                            border: 1px solid var(--color-border);
+                            border-radius: 10px;
+                            color: var(--color-text);
+                            font-family: var(--font-sans);
+                            font-size: 15px;
+                            font-weight: 600;
+                            cursor: pointer;
+                          "
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          onClick="{{ del.onStart }}"
+                          style="
+                            height: 44px;
+                            padding: 0 20px;
+                            background: var(--color-danger);
+                            border: none;
+                            border-radius: 10px;
+                            color: #1a1109;
+                            font-family: var(--font-sans);
+                            font-size: 15px;
+                            font-weight: 700;
+                            cursor: pointer;
+                          "
+                        >
+                          Delete folder
+                        </button>
+                      </div>
+                    </div>
+                  </sc-if>
+                  <sc-if
+                    value="{{ del.running }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    <div
+                      aria-busy="true"
+                      style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 16px;
+                        padding: 20px;
+                        animation: ffFade 0.18s ease;
+                      "
+                    >
+                      <dc-import
+                        name="prim.LogoLoader"
+                        size="64"
+                        label="Deleting “Coco”"
+                        detail="{{ del.detail }}"
+                        hint-size="140px,90px"
+                      ></dc-import>
+                    </div>
+                  </sc-if>
+                  <sc-if
+                    value="{{ del.done }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    <div
+                      style="
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 10px;
+                        padding: 20px;
+                        animation: ffFade 0.18s ease;
+                      "
+                    >
+                      <div
+                        style="
+                          font-size: 14px;
+                          line-height: 1.5;
+                          color: var(--color-text-dim);
+                          text-align: center;
+                          text-wrap: pretty;
+                        "
+                      >
+                        The dialog closes, the row is removed, and a snackbar
+                        says:
+                      </div>
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 10px;
+                          padding: 12px 14px;
+                          background: var(--color-surface-3);
+                          border: 1px solid var(--color-border);
+                          border-radius: var(--radius-md);
+                          font-size: 14px;
+                        "
+                      >
+                        <span
+                          style="
+                            width: 8px;
+                            height: 8px;
+                            border-radius: 50%;
+                            background: var(--color-danger);
+                          "
+                        ></span
+                        >“Coco” and its folder were deleted.
+                      </div>
+                      <button
+                        onClick="{{ del.onReset }}"
+                        style="
+                          margin-top: 6px;
+                          height: 36px;
+                          padding: 0 16px;
+                          background: var(--color-surface-3);
+                          border: 1px solid var(--color-border);
+                          border-radius: 8px;
+                          color: var(--color-text);
+                          font-family: var(--font-sans);
+                          font-size: 14px;
+                          font-weight: 600;
+                          cursor: pointer;
+                        "
+                      >
+                        Run again
+                      </button>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 16px;
+                  padding: 22px;
+                  background: var(--color-surface);
+                  border: 1px solid var(--color-border-soft);
+                  border-radius: var(--radius-md);
+                "
+              >
+                <div>
+                  <div style="font-size: 15px; font-weight: 600">
+                    3 · Starting the app
+                  </div>
+                  <div
+                    style="
+                      font-size: 13px;
+                      line-height: 1.5;
+                      color: var(--color-text-faint);
+                      margin-top: 2px;
+                      text-wrap: pretty;
+                    "
+                  >
+                    The only full-screen loader. It hands over to the browse
+                    skeleton as soon as the server answers.
+                  </div>
+                </div>
+                <div
+                  style="
+                    position: relative;
+                    flex: 1;
+                    min-height: 230px;
+                    background: var(--color-bg);
+                    border: 1px solid var(--color-border);
+                    border-radius: var(--radius-lg);
+                    overflow: hidden;
+                  "
+                >
+                  <sc-if
+                    value="{{ boot.splash }}"
+                    hint-placeholder-val="{{ true }}"
+                  >
+                    <div
+                      style="
+                        position: absolute;
+                        inset: 0;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 4px;
+                        animation: ffFade 0.2s ease;
+                      "
+                    >
+                      <dc-import
+                        name="prim.LogoLoader"
+                        size="88"
+                        tile="{{ true }}"
+                        label="Opening your library"
+                        hint-size="160px,130px"
+                      ></dc-import>
+                    </div>
+                  </sc-if>
+                  <sc-if
+                    value="{{ boot.ready }}"
+                    hint-placeholder-val="{{ false }}"
+                  >
+                    <div
+                      style="
+                        position: absolute;
+                        inset: 0;
+                        padding: 16px;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                        animation: ffFade 0.22s ease;
+                      "
+                    >
+                      <div
+                        style="
+                          display: flex;
+                          align-items: baseline;
+                          gap: 1px;
+                          font-family: var(--font-serif);
+                          font-weight: 700;
+                          font-size: 16px;
+                        "
+                      >
+                        <span>Family</span
+                        ><span style="color: var(--color-accent)">Flix</span>
+                      </div>
+                      <div
+                        style="
+                          width: 40%;
+                          height: 12px;
+                          border-radius: 6px;
+                          background: var(--color-surface-2);
+                        "
+                      ></div>
+                      <div
+                        style="
+                          flex: 1 1 auto;
+                          min-height: 0;
+                          overflow: hidden;
+                          display: grid;
+                          grid-template-columns: repeat(5, minmax(0, 1fr));
+                          align-content: start;
+                          gap: 8px;
+                        "
+                      >
+                        <div
+                          style="
+                            aspect-ratio: 2/3;
+                            border-radius: 8px;
+                            background: var(--color-surface-2);
+                          "
+                        ></div>
+                        <div
+                          style="
+                            aspect-ratio: 2/3;
+                            border-radius: 8px;
+                            background: var(--color-surface-2);
+                          "
+                        ></div>
+                        <div
+                          style="
+                            aspect-ratio: 2/3;
+                            border-radius: 8px;
+                            background: var(--color-surface-2);
+                          "
+                        ></div>
+                        <div
+                          style="
+                            aspect-ratio: 2/3;
+                            border-radius: 8px;
+                            background: var(--color-surface-2);
+                          "
+                        ></div>
+                        <div
+                          style="
+                            aspect-ratio: 2/3;
+                            border-radius: 8px;
+                            background: var(--color-surface-2);
+                          "
+                        ></div>
+                      </div>
+                      <button
+                        onClick="{{ boot.onReplay }}"
+                        style="
+                          flex: 0 0 auto;
+                          align-self: flex-start;
+                          margin-top: auto;
+                          height: 32px;
+                          padding: 0 14px;
+                          background: var(--color-surface-3);
+                          border: 1px solid var(--color-border);
+                          border-radius: 8px;
+                          color: var(--color-text);
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          font-weight: 600;
+                          cursor: pointer;
+                        "
+                      >
+                        Replay
+                      </button>
+                    </div>
+                  </sc-if>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            data-screen-label="Rules"
+            style="display: flex; flex-direction: column; gap: 16px"
+          >
+            <h2
+              style="
+                margin: 0;
+                font-family: var(--font-serif);
+                font-weight: 600;
+                font-size: 24px;
+              "
+            >
+              Rules
+            </h2>
+            <div
+              style="
+                display: grid;
+                grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                gap: 1px;
+                background: var(--color-border-soft);
+                border: 1px solid var(--color-border-soft);
+                border-radius: var(--radius-md);
+                overflow: hidden;
+              "
+            >
+              <sc-for list="{{ rules }}" as="r" hint-placeholder-count="6">
+                <div
+                  style="
+                    display: flex;
+                    flex-direction: column;
+                    gap: 6px;
+                    padding: 18px 20px;
+                    background: var(--color-surface);
+                  "
+                >
+                  <div style="font-size: 15px; font-weight: 600">{{ r.t }}</div>
+                  <div
+                    style="
+                      font-size: 14px;
+                      line-height: 1.55;
+                      color: var(--color-text-dim);
+                      text-wrap: pretty;
+                    "
+                  >
+                    {{ r.d }}
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </section>
+        </div>
+      </div>
+    </x-dc>
+    <script type="text/x-dc" data-dc-script>
+      class Component extends DCLogic {
+        state = { speed: 'slow', save: 'idle', imp: 'idle', impN: 0, boot: 'splash' };
+        timers = [];
+        later(fn, ms) { const t = setTimeout(fn, ms); this.timers.push(t); return t; }
+        componentDidMount() { this.startBoot(); }
+        componentWillUnmount() { this.timers.forEach(clearTimeout); clearInterval(this.iv); }
+
+        // Delay 300ms before showing, keep ≥500ms once shown.
+        runSave() {
+          if (this.state.save !== 'idle') return;
+          const work = this.state.speed === 'fast' ? 180 : 1800;
+          const start = Date.now(); let shownAt = null;
+          this.setState({ save: 'pending' });
+          const showT = this.later(() => { shownAt = Date.now(); this.setState({ save: 'loading' }); }, 300);
+          this.later(() => {
+            clearTimeout(showT);
+            const wait = shownAt ? Math.max(0, 500 - (Date.now() - shownAt)) : 0;
+            this.later(() => { this.setState({ save: 'saved' }); this.later(() => this.setState({ save: 'idle' }), 1400); }, wait);
+          }, work);
+        }
+        startDelete() {
+          this.setState({ del: 'running', delStep: 0 });
+          this.later(() => this.setState({ delStep: 1 }), 1100);
+          this.later(() => this.setState({ del: 'done' }), 2400);
+        }
+        startBoot() { this.setState({ boot: 'splash' }); this.later(() => this.setState({ boot: 'ready' }), 2200); }
+
+        renderVals() {
+          const s = this.state;
+          const busy = s.save === 'pending' || s.save === 'loading';
+          const label = s.save === 'loading' ? 'Saving…' : s.save === 'saved' ? 'Saved' : 'Save movie';
+          const total = 40;
+          const speeds = [['fast', 'Fast save (180ms)'], ['slow', 'Slow save (1.8s)']].map(([v, l]) => ({
+            label: l, onClick: () => this.setState({ speed: v }),
+            style: { height: '30px', padding: '0 14px', border: 'none', borderRadius: 'var(--radius-pill)', cursor: 'pointer', fontFamily: 'var(--font-sans)', fontSize: '13px', fontWeight: s.speed === v ? 700 : 500, background: s.speed === v ? 'var(--color-accent)' : 'transparent', color: s.speed === v ? '#1a1109' : 'var(--color-text-faint)' }
+          }));
+          const shimmer = (text, key) => React.createElement('span', { key, 'aria-live': 'polite', style: {
+            backgroundImage: 'linear-gradient(90deg, rgba(26,17,9,.5) 0%, rgba(26,17,9,.5) 30%, #1a1109 50%, rgba(26,17,9,.5) 70%, rgba(26,17,9,.5) 100%)',
+            backgroundSize: '200% 100%', WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent',
+            animation: 'ffTextShimmer 1.4s linear infinite' } }, text);
+          const shimmerStatic = React.createElement('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '136px', height: '44px', padding: '0 20px', background: 'var(--color-accent)', borderRadius: '10px', fontSize: '15px', fontWeight: 700, cursor: 'progress' } }, shimmer('Saving…', 'st'));
+          return {
+            staticProgress: 0.62, shimmerStatic,
+            speeds,
+            save: {
+              busy, label, labelEl: s.save === 'loading' ? shimmer(label, 'ld') : React.createElement('span', { key: 'lb' }, label), showCheck: s.save === 'saved',
+              cancelOpacity: busy ? .5 : 1,
+              onClick: () => this.runSave(),
+              btnStyle: { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px', minWidth: '136px', height: '44px', padding: '0 20px', background: s.save === 'saved' ? 'var(--color-success)' : 'var(--color-accent)', border: 'none', borderRadius: '10px', color: '#1a1109', fontFamily: 'var(--font-sans)', fontSize: '15px', fontWeight: 700, cursor: busy ? 'progress' : 'pointer', transition: 'background 180ms var(--ease-out)' }
+            },
+            del: {
+              idle: (s.del || 'idle') === 'idle', running: s.del === 'running', done: s.del === 'done',
+              detail: s.delStep ? 'Removing details and artwork' : 'Removing files from disk',
+              onStart: () => this.startDelete(), onReset: () => this.setState({ del: 'idle', delStep: 0 })
+            },
+            boot: { splash: s.boot === 'splash', ready: s.boot === 'ready', onReplay: () => this.startBoot() },
+            rules: [
+              { t: 'Wait 300ms, then hold for 500ms', d: 'Most saves finish before 300ms. Don’t flash a loader for those. Once the loader appears, keep it for at least 500ms so it never flickers.' },
+              { t: 'Show it where the action happened', d: 'A save shows in its own button. A delete shows in its own dialog. Only app start-up covers the whole screen.' },
+              { t: 'Say what’s happening, and count when you can', d: 'Name the current step, like “Removing files from disk”. If the server reports a total, use the filling mark. Import and enrichment already have live logs, so don’t add a second indicator there.' },
+              { t: 'Destructive work can’t be cancelled halfway', d: 'Once a delete starts, it finishes. Hide Cancel, block Escape and clicks on the backdrop, and close the dialog only when the delete is done or has failed. If it fails, keep the dialog open and show the error inside it.' },
+              { t: 'Lock the control, not the layout', d: 'Disable the button that started the action and keep its width so the label swap doesn’t shift anything. Inputs around it stay readable.' },
+              { t: 'Page content uses skeletons', d: 'Loading a page or detail view keeps the existing skeletons (LoadingDetail, LoadingSeries). The mark is for actions the user started.' },
+              { t: 'Accessible and calm', d: 'The loader uses role="status" and aria-live="polite", with a spoken label like “Saving folder”. The busy area gets aria-busy="true". With reduced motion on, the Fs only fade.' }
+            ]
+          };
+        }
+      }
+    </script>
+  </body>
+</html>
