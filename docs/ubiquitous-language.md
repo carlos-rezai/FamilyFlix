@@ -867,11 +867,11 @@ copied title only FamilyFlix's own copy. The **Recycle choice** and the
 | **Original** (new)                | A file FamilyFlix did not write: anything outside the **Managed media directory**, such as a **Linked video**, a copied title's source in its **Library folder**, or a file a **Write target** left beside it. Never deleted by FamilyFlix; every `Media` removal is contained in the Managed media directory (log 52).           | source file (say **Source file** only of an episode's), user file, real file |
 | **Media directory refusal** (new) | The Library folder add's fourth rule (`admitFolder`'s `media` **FolderRefusal**, `409`): a path that is, lies inside or holds the **Managed media directory** is refused with _That folder overlaps where FamilyFlix keeps its own copies. Choose another one._, so no **Factory reset** or **Delete** can reach an **Original**. | media overlap, root clash                                                    |
 
-## Loading states (new)
+## Loading states
 
 Design log 53: step 36, initiative `loading-states`. The FF mark as a sign of
 work, for actions the household or the maintainer starts and for the app's
-start-up; page and detail loads keep their **Skeletons**. Planned (🔜).
+start-up; page and detail loads keep their **Skeletons**.
 
 | Term                      | Definition                                                                                                                                                                                                                                                                                                       | Aliases to avoid                            |
 | ------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |

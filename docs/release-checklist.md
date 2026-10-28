@@ -99,6 +99,15 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 - [ ] A linked series add: Settings → Add a series, _Add a show folder_ from
       the real folder dialog on a show inside a Library folder, add it under
       **Link**: its episodes play from where they lie.
+- [ ] Loading states, over the sandbox Library folder: quit and open
+      FamilyFlix again: the window opens at once on _Opening your library_,
+      and the library loads over it. Add a large film by hand under **Copy**:
+      the button reads _Adding…_ after a moment, and the form leaves once the
+      copy is done. Delete a long linked series from Manage library: the
+      dialog locks, shows _Deleting “<title>”_, and closes with its snackbar.
+      With Windows animations off (_Settings → Accessibility → Visual
+      effects_), add the large film again and quit and open once more: the
+      button's shine and the splash's mark fade, not freeze.
 
 ## 6. The slot over the default
 
@@ -129,6 +138,9 @@ Quit the app. Open a Command Prompt in the install directory,
 - [ ] `%APPDATA%\FamilyFlix\` is still there.
 - [ ] Run the Installer again: the library is still there, films and all, and
       they play.
+- [ ] Loading states, the reset, last because it erases the library: Settings
+      → _Factory reset_, then _Erase everything_: the dialog locks, shows
+      _Erasing everything_, and the app reloads on an empty library.
 
 ## 9. Back on the dev machine
 

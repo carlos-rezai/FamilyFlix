@@ -65,7 +65,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Subtitle picker — choose a track in the player      | ✅ Done    |
 | Library audit: every Library flow, tested live      | ✅ Done    |
 | Keep originals: a Delete never touches your files   | ✅ Done    |
-| Loading states — spinners and an FF loading overlay | 🔜 Planned |
+| Loading states: the FF mark while an action runs    | ✅ Done    |
 | Scan new folders — and sync only what a run added   | 🔜 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
@@ -279,3 +279,13 @@ a Recycle Bin, which purged them. It is done (design log 52):
     lies, out of every scan until _Bring back_. The Delete dialog is the same
     in the app and in a browser. FamilyFlix's own media folder can't be added
     as a Library folder, so nothing it clears can reach your files.
+
+Step 36 came out of a slow save that sat on a grey button, a Delete that
+could be walked away from while it ran, and a cold start that showed
+nothing. It is done (design log 53):
+
+36. ✅ **Loading states**: a quick action shows nothing, and a slow one its
+    _-ing_ label after a moment, held long enough to read. A Delete or a
+    Factory reset can't be dismissed once confirmed, and shows the FF mark
+    while it runs; a failed Delete says so. FamilyFlix opens its window at
+    once on _Opening your library_, and the library loads over it.

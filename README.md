@@ -147,7 +147,7 @@ familyflix/
 ├── electron/           # The Desktop shell's main process: main.ts, wiring only, over one unit per decision
 │   ├── shellMode/ shellPaths/ # dev / start / installed, read once; every path the shell and the server need, for that mode
 │   ├── serverLaunch/ serverHandle/ awaitExitOrKill/ # the entry and environment off ShellPaths, fork the bundled server, wait for ready, shut it down or kill it
-│   ├── quitAfterShutdown/ reloadOnce/ loadRenderer/ # the quit gate, one reload after a crash, loading until Vite answers
+│   ├── quitAfterShutdown/ reloadOnce/ loadRenderer/ splashPage/ # the quit gate, one reload after a crash, loading until Vite answers, the Start-up splash the window opens over
 │   ├── rendererUrl/ windowPolicy/ downloadPath/     # where the window points, what it may open, where a download lands
 │   ├── pickFolders/        # the native folder dialog's answer → the paths to add, behind the preload's folders bridge and its Path bridge (a picked file's absolute path)
 │   ├── shellDialogs/ shellLog/ appIdentity/         # the two failure dialogs, the Shell log, the taskbar identity
@@ -189,8 +189,8 @@ familyflix/
 │   ├── assets/         # Static images, fonts, icons
 │   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/: controlStates(press), cardLift, cardFocus, and the structural guard in its test
 │   ├── tokens/         # Colors, spacing, typography, breakpoints, motion, layout (the Content measure)
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, the Icon glyphs: the Snackbar's four, the FAB's two and enrichment's five among them), each with .tsx, .test.tsx, .styles.ts
-│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice), same three-file shape
+│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, LogoLoader (the FF mark as a loader), the Icon glyphs: the Snackbar's four, the FAB's two and enrichment's five among them), each with .tsx, .test.tsx, .styles.ts
+│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice, DialogLoader (a Locked dialog's face once its loader shows)), same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
 │   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational, as the stack above owns the timing
@@ -216,10 +216,10 @@ familyflix/
 │   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
 │   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage, CodecsPage and LibraryFoldersPage among them)
 │   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey)
-│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, useEnrichmentSummary, useLibraryTab, the Library tab the URL names, and useImageFallback, the one failed-url rule for a poster or a still)
-│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; appVersion.d.ts)
+│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, useEnrichmentSummary, useLibraryTab, the Library tab the URL names, useImageFallback, the one failed-url rule for a poster or a still, and useDelayedBusy, the Loader timing every action loader keeps)
+│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; busy.ts, the Busy phase; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks, accentScale, isLibraryTab, libraryTabOptions and inTrackOrder among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
+│   └── test-support/     # Shared test doubles (fakeResponse, heldFetch and advanceClock, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
 ├── release/            # gitignored: the Installer, and win-unpacked/, the Packaged layout
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
