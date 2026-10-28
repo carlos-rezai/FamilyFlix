@@ -2375,9 +2375,14 @@ export function createApiRouter(
 
   // The setup's and the Settings row's read: the **EnrichmentSummary**. An
   // empty library answers zeros; offline means the server's own probe of
-  // TMDB went unanswered.
-  router.get('/enrichment', async (_req: Request, res: Response) => {
-    res.json(await enrichment.summary());
+  // TMDB went unanswered. `?since=<ISO>` asks for the added window too.
+  router.get('/enrichment', async (req: Request, res: Response) => {
+    const { since } = req.query;
+    res.json(
+      await enrichment.summary(
+        typeof since === 'string' && since.length > 0 ? since : undefined
+      )
+    );
   });
 
   // A **Sync**: `201` with the **Current enrichment run** it started, which

@@ -15,7 +15,7 @@ export type BodyRead<T> = { ok: true; value: T } | { ok: false; error: string };
 /**
  * `POST /api/enrichment`'s body → the **Sync**'s options: a known scope, a
  * movie or series id — exactly one — for `single` and only for `single`,
- * known fields, and the two
+ * a `since` for `added` and only for `added`, known fields, and the two
  * **Write target** booleans. The refusals are checked in that order, so a body
  * wrong in two ways earns the first sentence. Whether the library holds the
  * movie is the domain's to say.
@@ -24,7 +24,7 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
   if (typeof body !== 'object' || body === null) {
     return { ok: false, error: 'Body must be an object' };
   }
-  const { scope, movieId, seriesId, fields, writeSheet, writePosters } =
+  const { scope, movieId, seriesId, since, fields, writeSheet, writePosters } =
     body as Record<string, unknown>;
   if (!ENRICH_SCOPES.includes(scope as EnrichScope)) {
     return { ok: false, error: 'Unknown scope' };
@@ -46,6 +46,12 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
   if (scope !== 'single' && seriesId !== undefined) {
     return { ok: false, error: 'Only a single-title Sync names a series' };
   }
+  if (scope === 'added' && !names(since)) {
+    return { ok: false, error: 'An added Sync names its since' };
+  }
+  if (scope !== 'added' && since !== undefined) {
+    return { ok: false, error: 'Only an added Sync names a since' };
+  }
   if (
     !Array.isArray(fields) ||
     !fields.every((field) => ENRICH_FIELDS.includes(field as EnrichField))
@@ -61,6 +67,7 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
       scope: scope as EnrichScope,
       ...(typeof movieId === 'string' ? { movieId } : {}),
       ...(typeof seriesId === 'string' ? { seriesId } : {}),
+      ...(typeof since === 'string' ? { since } : {}),
       fields: fields as EnrichField[],
       writeSheet,
       writePosters,

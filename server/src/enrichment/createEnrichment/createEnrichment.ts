@@ -146,9 +146,10 @@ export interface Enrichment {
   /**
    * The setup's read: the library's titles and those with **Full details**,
    * when a Sync last reached review, whether a key is stored, whether TMDB
-   * answered the server's own probe, and the **Library folders**.
+   * answered the server's own probe, and the **Library folders**; with a
+   * `since`, also how many titles _Just what was added_ would sync.
    */
-  summary(): Promise<EnrichmentSummary>;
+  summary(since?: string): Promise<EnrichmentSummary>;
   /**
    * Search TMDB for `query` as typed and put the answer on Decision `id`:
    * candidates in the picker, or the box kept with the line that says so.
@@ -1159,10 +1160,10 @@ export function createEnrichment({
     if (options.scope !== 'single') {
       return [
         ...storage
-          .moviesInScope(options.scope)
+          .moviesInScope(options.scope, options.since)
           .map((movie): Title => ({ kind: 'movie', movie })),
         ...storage
-          .seriesInScope(options.scope)
+          .seriesInScope(options.scope, options.since)
           .map((series): Title => ({ kind: 'series', series })),
       ];
     }
@@ -1440,10 +1441,17 @@ export function createEnrichment({
     return path === null ? null : `${path}${sep}`;
   }
 
-  async function summary(): Promise<EnrichmentSummary> {
+  async function summary(since?: string): Promise<EnrichmentSummary> {
     const online = await client.reachable();
     const { total, complete, gaps } = storage.enrichmentCounts();
     return {
+      ...(since === undefined
+        ? {}
+        : {
+            added:
+              storage.moviesInScope('added', since).length +
+              storage.seriesInScope('added', since).length,
+          }),
       total,
       complete,
       gaps,

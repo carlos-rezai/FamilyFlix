@@ -85,9 +85,13 @@ export interface SeriesEnrich {
   /**
    * The series a library-wide Sync snapshots, with their current values:
    * `missing` is every series with a **Sync gap** (`syncGap`), `all` every
-   * series.
+   * series, `added` every series created at or after `since` or holding an
+   * **Episode** created at or after it.
    */
-  seriesInScope(scope: Exclude<EnrichScope, 'single'>): Series[];
+  seriesInScope(
+    scope: Exclude<EnrichScope, 'single'>,
+    since?: string
+  ): Series[];
   /**
    * Store one season's **Season poster**, a Stored path: an upsert over
    * `(seriesId, season)`. Refuses a series the library does not hold.
@@ -143,13 +147,25 @@ export function createSeriesEnrich(
     ).run(params);
   }
 
-  function seriesInScope(scope: Exclude<EnrichScope, 'single'>): Series[] {
-    const where = scope === 'missing' ? `WHERE ${syncGap('', 'series')}` : '';
+  function seriesInScope(
+    scope: Exclude<EnrichScope, 'single'>,
+    since?: string
+  ): Series[] {
+    const added = scope === 'added';
+    const where =
+      scope === 'missing'
+        ? `WHERE ${syncGap('', 'series')}`
+        : added
+          ? `WHERE created_at >= @since OR EXISTS (
+               SELECT 1 FROM episodes e
+               WHERE e.series_id = series.id AND e.created_at >= @since)`
+          : '';
+    const params = added ? [{ since: since ?? '' }] : [];
     const rows = db
       .prepare(
         `SELECT * FROM series ${where} ORDER BY title COLLATE NOCASE, id`
       )
-      .all() as SeriesRow[];
+      .all(...params) as SeriesRow[];
     return seriesReader.assembleMany(rows);
   }
 

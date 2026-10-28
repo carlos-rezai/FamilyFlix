@@ -42,8 +42,11 @@ export const ENRICH_FIELD_LABELS: Readonly<Record<EnrichField, string>> = {
   tmdbScore: 'TMDB score',
 };
 
-/** The **Enrichment scopes**: the library's gaps, all of it, or one film. */
-export const ENRICH_SCOPES = ['missing', 'all', 'single'] as const;
+/**
+ * The **Enrichment scopes**: the library's gaps, all of it, one film, or just
+ * what was added since a moment.
+ */
+export const ENRICH_SCOPES = ['missing', 'all', 'single', 'added'] as const;
 
 /** One of the scopes in {@link ENRICH_SCOPES}. */
 export type EnrichScope = (typeof ENRICH_SCOPES)[number];
@@ -63,6 +66,11 @@ export interface EnrichmentSummary {
   online: boolean;
   /** The reachable **Library folders**' paths, in the order added. */
   libraryFolders: string[];
+  /**
+   * The titles created at or after the summary's `since`: what _Just what was
+   * added_ will sync. Absent when no `since` was asked.
+   */
+  added?: number;
 }
 
 /** One TMDB answer an `ambiguous` **Decision** offers. */
@@ -185,6 +193,8 @@ export interface StartEnrichment {
   movieId?: string;
   /** A `single` Sync names exactly one of `movieId` and `seriesId`. */
   seriesId?: string;
+  /** An `added` Sync names the moment its window opens, and only it does. */
+  since?: string;
   fields: EnrichField[];
   writeSheet: boolean;
   writePosters: boolean;

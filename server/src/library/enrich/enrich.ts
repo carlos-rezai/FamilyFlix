@@ -99,9 +99,9 @@ export interface Enrich {
   /**
    * The titles a library-wide Sync snapshots, with their current values:
    * `missing` is every film with a **Sync gap** (`syncGap`), `all` every
-   * film.
+   * film, `added` every film created at or after `since`.
    */
-  moviesInScope(scope: Exclude<EnrichScope, 'single'>): Movie[];
+  moviesInScope(scope: Exclude<EnrichScope, 'single'>, since?: string): Movie[];
   /**
    * Every **Movie** and **Series** in the library, and those of them with
    * **Full details** — a synopsis and a poster both — and those with a
@@ -237,14 +237,24 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     }
   });
 
-  function moviesInScope(scope: Exclude<EnrichScope, 'single'>): Movie[] {
-    const where = scope === 'missing' ? `WHERE ${syncGap('m')}` : '';
+  function moviesInScope(
+    scope: Exclude<EnrichScope, 'single'>,
+    since?: string
+  ): Movie[] {
+    const added = scope === 'added';
+    const where =
+      scope === 'missing'
+        ? `WHERE ${syncGap('m')}`
+        : added
+          ? 'WHERE m.created_at >= ?'
+          : '';
+    const params = added ? [since ?? ''] : [];
     const rows = db
       .prepare(
         `SELECT m.* FROM movies m ${where} ORDER BY m.title COLLATE NOCASE, m.id`
       )
-      .all() as MovieRow[];
-    return reader.assembleMany(rows, where, []);
+      .all(...params) as MovieRow[];
+    return reader.assembleMany(rows, where, params);
   }
 
   const countTitles = db.prepare(

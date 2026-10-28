@@ -133,14 +133,15 @@ export interface LibraryStorage {
   stillSourcesOf(seriesId: string): ReadonlyMap<string, StillSource>;
   /**
    * {@link moviesInScope} over the series: those without a synopsis or a
-   * poster, or all of them.
+   * poster, all of them, or those created or given a new episode since.
    */
-  seriesInScope(scope: 'missing' | 'all'): Series[];
+  seriesInScope(scope: 'missing' | 'all' | 'added', since?: string): Series[];
   /**
    * The titles a library-wide **Sync** snapshots, with their current values:
-   * `missing` — every film without a synopsis or without a poster — or `all`.
+   * `missing` — every film without a synopsis or without a poster — `all`, or
+   * `added`, every film created at or after `since`.
    */
-  moviesInScope(scope: 'missing' | 'all'): Movie[];
+  moviesInScope(scope: 'missing' | 'all' | 'added', since?: string): Movie[];
   /**
    * Every **Movie** and **Series** in the library, and those of them with
    * **Full details** — a synopsis and a poster both — and those with a
