@@ -683,7 +683,7 @@ describe('ManageLibrary — Clear details', () => {
     expect(String(writes()[0]?.[0])).toBe('/api/series/s1/clear-details');
   });
 
-  it('reads Clearing… and is inert while the clear runs', async () => {
+  it('locks at once and takes no second press while the clear runs', async () => {
     const clear = heldClear();
     serveWith(() => clear.pending);
     renderPage();
@@ -692,11 +692,15 @@ describe('ManageLibrary — Clear details', () => {
 
     confirmClear();
 
-    const button = await within(clearDialog() as HTMLElement).findByRole(
-      'button',
-      { name: 'Clearing…' }
-    );
+    // Locked at once. Its _Clearing…_ on the **Loader timing** is
+    // `ManageLibrary.busyClear`'s, on fake timers.
+    const button = within(clearDialog() as HTMLElement).getByRole('button', {
+      name: 'Clear details',
+    });
+    expect(button.getAttribute('aria-busy')).toBe('true');
     expect((button as HTMLButtonElement).disabled).toBe(true);
+    confirmClear();
+    expect(writes()).toHaveLength(1);
     clear.settle(okResponse(CLEARED_COCO));
     await waitFor(() => expect(clearDialog()).toBeNull());
   });

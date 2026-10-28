@@ -1306,7 +1306,7 @@ describe('MovieForm — saving', () => {
     expect((savedFields() as FormData).getAll('genre')).toEqual([]);
   });
 
-  it('reads "Adding…" and is disabled while the request is in flight', async () => {
+  it('locks at once and takes no second press while the add is in flight', async () => {
     let settle: (response: Response) => void = () => undefined;
     answerSave = () =>
       new Promise<Response>((resolve) => {
@@ -1320,12 +1320,11 @@ describe('MovieForm — saving', () => {
 
     // The one place a large-file save will show its cost. The disabled button
     // is what stops a second row being written by an impatient second press,
-    // and it locks at once; the label says the work started only once it has
-    // run 300ms, the **Loader timing** (issue #484).
+    // and it locks at once. Its _Adding…_ on the **Loader timing** is
+    // `MovieForm.busySave`'s, on fake timers.
     expect(save().disabled).toBe(true);
-    expect(save().textContent).not.toContain('Adding…');
-    await waitFor(() => expect(save().textContent).toContain('Adding…'));
-    expect(save().disabled).toBe(true);
+    fireEvent.click(save());
+    expect(saveRequests()).toHaveLength(1);
 
     settle(createdResponse(CREATED));
     await waitFor(() => expect(pathname()).toBe('/'));
@@ -2110,7 +2109,7 @@ describe('MovieForm — the Edit context', () => {
       await waitFor(() => expect(pathname()).toBe('/movie/a1'));
     });
 
-    it('says Saving… and takes no second press while the edit is in flight', async () => {
+    it('locks at once and takes no second press while the edit is in flight', async () => {
       let settle: (response: Response) => void = () => undefined;
       answerSave = () =>
         new Promise<Response>((resolve) => {
@@ -2120,15 +2119,11 @@ describe('MovieForm — the Edit context', () => {
 
       fireEvent.click(saveChanges());
 
-      // The mirror of the **Add context**'s "Adding…": the disabled button is
-      // what stops an impatient second press writing the edit twice, locked at
-      // once, and the label reads _Saving…_ only once the edit has run 300ms,
-      // the **Loader timing** (issue #484).
+      // The mirror of the **Add context**'s lock: the disabled button is what
+      // stops an impatient second press writing the edit twice, locked at
+      // once. Its _Saving…_ on the **Loader timing** is `MovieForm.busySave`'s,
+      // on fake timers.
       expect(saveChanges().disabled).toBe(true);
-      expect(saveChanges().textContent).not.toContain('Saving…');
-      await waitFor(() =>
-        expect(saveChanges().textContent).toContain('Saving…')
-      );
       expect(patchRequests()).toHaveLength(1);
 
       fireEvent.click(saveChanges());
@@ -3727,7 +3722,7 @@ describe('MovieForm — the Import context', () => {
         expect(navigationType()).toBe('POP');
       });
 
-      it('says Saving… and takes no second press while the edit is in flight', async () => {
+      it('locks at once and takes no second press while the resolve is in flight', async () => {
         let settle: (response: Response) => void = () => undefined;
         answerSave = () =>
           new Promise<Response>((resolve) => {
@@ -3737,13 +3732,8 @@ describe('MovieForm — the Import context', () => {
 
         fireEvent.click(saveAndContinue());
 
-        // Locked at once; _Saving…_ only once the save has run 300ms, the
-        // **Loader timing** (issue #484).
-        expect(saveAndContinue().disabled).toBe(true);
-        expect(saveAndContinue().textContent).not.toContain('Saving…');
-        await waitFor(() =>
-          expect(saveAndContinue().textContent).toContain('Saving…')
-        );
+        // Locked at once. Its _Saving…_ on the **Loader timing** is
+        // `MovieForm.busySave`'s, on fake timers.
         expect(saveAndContinue().disabled).toBe(true);
         fireEvent.click(saveAndContinue());
         expect(patchRequests()).toHaveLength(1);
@@ -4644,7 +4634,7 @@ describe('MovieForm — a series saved with its episodes', () => {
       ).toBe(false);
     });
 
-    it('reads Adding… and is disabled while the request is in flight', async () => {
+    it('locks at once and takes no second press while the add is in flight', async () => {
       let settle: (response: Response) => void = () => undefined;
       answerSave = () =>
         new Promise<Response>((resolve) => {
@@ -4655,12 +4645,11 @@ describe('MovieForm — a series saved with its episodes', () => {
 
       fireEvent.click(save());
 
-      // Locked at once; _Adding…_ only once the add has run 300ms, the
-      // **Loader timing** (issue #484).
+      // Locked at once. Its _Adding…_ on the **Loader timing** is
+      // `MovieForm.busySave`'s, on fake timers.
       expect(save().disabled).toBe(true);
-      expect(save().textContent).not.toContain('Adding…');
-      await waitFor(() => expect(save().textContent).toContain('Adding…'));
-      expect(save().disabled).toBe(true);
+      fireEvent.click(save());
+      expect(seriesSaves()).toHaveLength(1);
 
       settle(createdResponse(SERIES_CREATED));
       await waitFor(() => expect(pathname()).toBe('/'));

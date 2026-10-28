@@ -172,8 +172,6 @@ const folderName = () =>
   }) as HTMLInputElement;
 const exportButton = (format: 'CSV' | 'Excel' = 'CSV') =>
   within(dialog()).getByRole('button', { name: `Export as ${format}` });
-const exportingButton = () =>
-  within(dialog()).getByRole('button', { name: 'Exporting…' });
 const countLabel = () => within(dialog()).queryByText(/^\d+ titles?$/);
 const squashed = () => (dialog().textContent ?? '').replace(/\s+/g, '');
 
@@ -351,16 +349,20 @@ describe('ExportModal — exporting', () => {
     });
   });
 
-  it('locks at once in flight, and reads Exporting… once shown', async () => {
+  it('locks at once and takes no second press while the export is in flight', async () => {
     const request = held();
     serve({ post: request.answer });
     renderDialog();
 
     fireEvent.click(exportButton());
 
+    // Locked at once. Its _Exporting…_ on the **Loader timing** is
+    // `ExportModal.busyExport`'s, on fake timers.
     expect((exportButton() as HTMLButtonElement).disabled).toBe(true);
-    await within(dialog()).findByRole('button', { name: 'Exporting…' });
-    expect((exportingButton() as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(exportButton());
+    expect(
+      fetchMock.mock.calls.filter(([, init]) => isPost(init))
+    ).toHaveLength(1);
 
     request.settle(createdResponse(WRITTEN));
     await within(screen.getByRole('dialog')).findByText('Export ready');

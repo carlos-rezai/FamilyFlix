@@ -443,7 +443,7 @@ describe('MovieForm — Add show folder in the shell', () => {
       ).toEqual(['Harbor.and.Vine.S03E01.Bonus.mkv']);
     });
 
-    it('reads Adding… while the server copies', async () => {
+    it('locks at once and takes no second press while the server copies', async () => {
       let settle: (response: Response) => void = () => undefined;
       answerSave = () =>
         new Promise<Response>((resolve) => {
@@ -455,12 +455,11 @@ describe('MovieForm — Add show folder in the shell', () => {
 
       fireEvent.click(save());
 
-      // Locked at once; _Adding…_ only once the server has copied for 300ms,
-      // the **Loader timing** (issue #484).
+      // Locked at once. Its _Adding…_ on the **Loader timing** is
+      // `MovieForm.busySave`'s, on fake timers.
       expect(save().disabled).toBe(true);
-      expect(save().textContent).not.toContain('Adding…');
-      await waitFor(() => expect(save().textContent).toContain('Adding…'));
-      expect(save().disabled).toBe(true);
+      fireEvent.click(save());
+      expect(seriesSaves()).toHaveLength(1);
 
       await act(async () => {
         settle(
