@@ -101,55 +101,42 @@ export function Button({
 
   // The glyph is decorative — the label already says "Play", so `IconBase`
   // marks it aria-hidden and the accessible name stays the label alone.
-  const content = (
-    <>
-      {icon === 'play' ? <PlayIcon /> : null}
-      {label}
-    </>
-  );
+  const glyph = icon === 'play' ? <PlayIcon /> : null;
 
   if (form.to !== undefined) {
     return (
       <Root as={Link} to={form.to} {...face}>
-        {content}
-      </Root>
-    );
-  }
-
-  if (busy === 'idle') {
-    return (
-      <Root
-        ref={rootRef}
-        type="button"
-        {...face}
-        $busy={false}
-        disabled={form.disabled ?? false}
-        onClick={form.onClick}
-      >
-        {content}
+        {glyph}
+        {label}
       </Root>
     );
   }
 
   // Busy: locked, so `onClick` cannot fire, but on the variant's own face.
+  const isBusy = busy !== 'idle';
   return (
     <Root
       ref={rootRef}
       type="button"
       {...face}
-      $busy
-      disabled
-      aria-busy="true"
+      $busy={isBusy}
+      disabled={isBusy || (form.disabled ?? false)}
+      aria-busy={isBusy ? 'true' : undefined}
+      onClick={isBusy ? undefined : form.onClick}
       style={
-        heldWidth.current !== null
+        isBusy && heldWidth.current !== null
           ? { minWidth: `${heldWidth.current}px` }
           : undefined
       }
     >
-      {icon === 'play' ? <PlayIcon /> : null}
-      <BusyLabel aria-live="polite" $shine={busy === 'shown'}>
-        {busy === 'shown' ? (form.busyLabel ?? label) : label}
-      </BusyLabel>
+      {glyph}
+      {isBusy ? (
+        <BusyLabel aria-live="polite" $shine={busy === 'shown'}>
+          {busy === 'shown' ? (form.busyLabel ?? label) : label}
+        </BusyLabel>
+      ) : (
+        label
+      )}
     </Root>
   );
 }
