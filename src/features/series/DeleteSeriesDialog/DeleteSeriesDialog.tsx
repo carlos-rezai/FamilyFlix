@@ -1,6 +1,7 @@
 import { DialogLoader, Modal } from '@/components';
 import { DeleteTitleBody } from '@/features/manage-library/DeleteTitleBody/DeleteTitleBody';
-import type { DeleteFacts } from '@/types';
+import { deleteView } from '@/features/manage-library/libraryTitleView/libraryTitleView';
+import type { DeleteFacts, DeleteSubject } from '@/types';
 import { useDeleteSeries } from '../useDeleteSeries/useDeleteSeries';
 
 export interface DeleteSeriesDialogProps {
@@ -32,8 +33,10 @@ export function DeleteSeriesDialog({
 }: DeleteSeriesDialogProps) {
   const { deleting, failed, deleteSeries } = useDeleteSeries(seriesId);
 
+  const subject: DeleteSubject = { kind: 'series', title, ...deleteFacts };
+
   if (open && deleting === 'shown') {
-    return <DialogLoader label={`Deleting “${title}”`} />;
+    return <DialogLoader label={deleteView(subject).loader} />;
   }
 
   return (
@@ -46,7 +49,7 @@ export function DeleteSeriesDialog({
       onClose={onClose}
     >
       <DeleteTitleBody
-        title={{ kind: 'series', title, ...deleteFacts }}
+        title={subject}
         deleting={deleting}
         failed={failed}
         onConfirm={() => {

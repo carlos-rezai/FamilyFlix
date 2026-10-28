@@ -1,6 +1,7 @@
 import { DialogLoader, Modal } from '@/components';
 import { DeleteTitleBody } from '@/features/manage-library/DeleteTitleBody/DeleteTitleBody';
-import type { DeleteFacts } from '@/types';
+import { deleteView } from '@/features/manage-library/libraryTitleView/libraryTitleView';
+import type { DeleteFacts, DeleteSubject } from '@/types';
 import { useDeleteMovie } from '../useDeleteMovie/useDeleteMovie';
 
 export interface DeleteMovieDialogProps {
@@ -34,8 +35,10 @@ export function DeleteMovieDialog({
 }: DeleteMovieDialogProps) {
   const { deleting, failed, deleteMovie } = useDeleteMovie(movieId);
 
+  const subject: DeleteSubject = { kind: 'movie', title, ...deleteFacts };
+
   if (open && deleting === 'shown') {
-    return <DialogLoader label={`Deleting “${title}”`} />;
+    return <DialogLoader label={deleteView(subject).loader} />;
   }
 
   return (
@@ -48,7 +51,7 @@ export function DeleteMovieDialog({
       onClose={onClose}
     >
       <DeleteTitleBody
-        title={{ kind: 'movie', title, ...deleteFacts }}
+        title={subject}
         deleting={deleting}
         failed={failed}
         onConfirm={() => {
