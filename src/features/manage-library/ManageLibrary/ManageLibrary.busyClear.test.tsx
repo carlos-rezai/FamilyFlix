@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -19,6 +18,8 @@ import {
   makeLibraryMovie,
   makeLibrarySeries,
 } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 3 (issue #485): the Clear dialog's busy button.
@@ -31,13 +32,6 @@ import {
  *
  * The list is read on real timers; the clock is faked from the press on.
  */
-
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
 
 const LIBRARY: LibraryTitles = {
   movies: [makeLibraryMovie({ id: 'm1', title: 'Coco', details: 'synced' })],
@@ -53,25 +47,12 @@ const CLEARED_COCO = makeLibraryMovie({
 
 const NOTICE = 'Details cleared for “Coco”.';
 
-/** The clear in flight, answered when the test says so. */
-let settleClear: (response: Response) => void;
-
-beforeEach(() => {
-  settleClear = () => undefined;
-  fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation((input) =>
-    String(input) === '/api/library-titles'
-      ? Promise.resolve(okResponse(LIBRARY))
-      : new Promise<Response>((resolve) => {
-          settleClear = resolve;
-        })
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch((url) =>
+  url === '/api/library-titles' ? okResponse(LIBRARY) : undefined
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 /** The page with the list landed and the Clear dialog open over Coco. */
@@ -106,13 +87,6 @@ const confirm = () =>
     name: /^(Clear details|Clearing…)$/,
   }) as HTMLButtonElement;
 
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 /** Press _Clear details_ on a faked clock. */
 function pressClear() {
   vi.useFakeTimers();
@@ -121,10 +95,8 @@ function pressClear() {
 
 /** Answer the clear with the echo, and let the hold run out. */
 async function finish() {
-  await act(async () => {
-    settleClear(okResponse(CLEARED_COCO));
-  });
-  await advance(500);
+  await respond(okResponse(CLEARED_COCO));
+  await advanceClock(500);
 }
 
 describe('ManageLibrary — Clear on the Loader timing', () => {
@@ -136,11 +108,11 @@ describe('ManageLibrary — Clear on the Loader timing', () => {
     expect(confirm().getAttribute('aria-busy')).toBe('true');
     expect(confirm().textContent).toBe('Clear details');
 
-    await advance(299);
+    await advanceClock(299);
     expect(confirm().textContent).toBe('Clear details');
     expect(screen.queryByText('Clearing…')).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(confirm().textContent).toBe('Clearing…');
     expect(confirm().querySelector('[aria-live="polite"]')?.textContent).toBe(
       'Clearing…'
@@ -153,12 +125,10 @@ describe('ManageLibrary — Clear on the Loader timing', () => {
     await openClearOnCoco();
     pressClear();
 
-    await advance(100);
+    await advanceClock(100);
     expect(confirm().textContent).toBe('Clear details');
-    await act(async () => {
-      settleClear(okResponse(CLEARED_COCO));
-    });
-    await advance(0);
+    await respond(okResponse(CLEARED_COCO));
+    await advanceClock(0);
 
     expect(clearDialog()).toBeNull();
     expect(screen.queryByText('Clearing…')).toBeNull();
@@ -170,17 +140,15 @@ describe('ManageLibrary — Clear on the Loader timing', () => {
     pressClear();
 
     // Shown at 300ms; the clear lands at 400ms; the hold runs to 800ms.
-    await advance(400);
-    await act(async () => {
-      settleClear(okResponse(CLEARED_COCO));
-    });
+    await advanceClock(400);
+    await respond(okResponse(CLEARED_COCO));
 
-    await advance(399);
+    await advanceClock(399);
     expect(clearDialog()).not.toBeNull();
     expect(confirm().textContent).toBe('Clearing…');
     expect(screen.queryByText(NOTICE)).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(clearDialog()).toBeNull();
     expect(screen.getByText(NOTICE)).toBeDefined();
   });
@@ -209,7 +177,7 @@ describe('ManageLibrary — Clear on the Loader timing', () => {
   ])('is still dismissed by %s while busy', async (_, dismiss) => {
     await openClearOnCoco();
     pressClear();
-    await advance(300);
+    await advanceClock(300);
     expect(confirm().getAttribute('aria-busy')).toBe('true');
     expect(confirm().textContent).toBe('Clearing…');
 

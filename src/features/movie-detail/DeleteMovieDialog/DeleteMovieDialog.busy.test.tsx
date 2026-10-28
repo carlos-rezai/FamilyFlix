@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
@@ -11,6 +11,8 @@ import {
   noContentResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 6 (issue #488): the movie page's **Delete
@@ -26,29 +28,10 @@ import {
  * The clock is faked from the press on.
  */
 
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-/** The delete in flight, answered when the test says so. */
-let answer: (response: Response) => void;
-
-beforeEach(() => {
-  answer = () => undefined;
-  const fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation(
-    () =>
-      new Promise<Response>((resolve) => {
-        answer = resolve;
-      })
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch();
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 const TITLE = 'Northwind';
@@ -104,28 +87,16 @@ const cancel = () =>
   }) as HTMLButtonElement;
 const loader = () => screen.queryByRole('status', { name: DELETING });
 
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 function pressDelete() {
   vi.useFakeTimers();
   fireEvent.click(confirm());
 }
 
-async function respond(response: Response) {
-  await act(async () => {
-    answer(response);
-  });
-}
-
 async function failOnce() {
   pressDelete();
-  await advance(300);
+  await advanceClock(300);
   await respond(serverErrorResponse());
-  await advance(500);
+  await advanceClock(500);
 }
 
 describe('DeleteMovieDialog — locked from the confirm press', () => {
@@ -150,7 +121,7 @@ describe('DeleteMovieDialog — locked from the confirm press', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 
   it('becomes the dialog loader reading Deleting “Northwind” at 300ms, still locked', async () => {
@@ -158,11 +129,11 @@ describe('DeleteMovieDialog — locked from the confirm press', () => {
     renderDialog({ onClose });
     pressDelete();
 
-    await advance(299);
+    await advanceClock(299);
     expect(loader()).toBeNull();
     expect(dialog()).not.toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     const status = loader();
     expect(status).not.toBeNull();
     expect(status?.closest('[aria-busy="true"]')).not.toBeNull();
@@ -177,7 +148,7 @@ describe('DeleteMovieDialog — locked from the confirm press', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 
   it.each<[string, LinkedFiles | null]>([
@@ -186,7 +157,7 @@ describe('DeleteMovieDialog — locked from the confirm press', () => {
   ])('says nothing about files for %s', async (_, linkedFiles) => {
     renderDialog({ linkedFiles });
     pressDelete();
-    await advance(300);
+    await advanceClock(300);
 
     expect(loader()).not.toBeNull();
     expect(
@@ -196,7 +167,7 @@ describe('DeleteMovieDialog — locked from the confirm press', () => {
     ).toBeNull();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 });
 
@@ -204,14 +175,14 @@ describe('DeleteMovieDialog — a delete that lands', () => {
   it('goes back one step only once the loader’s hold is out', async () => {
     renderDialog();
     pressDelete();
-    await advance(300);
+    await advanceClock(300);
 
     await respond(noContentResponse());
-    await advance(499);
+    await advanceClock(499);
     expect(url()).toBe('/movie/m1');
     expect(loader()).not.toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(url()).toBe('/genre/Drama');
   });
 });
@@ -221,14 +192,14 @@ describe('DeleteMovieDialog — a failed delete', () => {
     const onClose = vi.fn();
     renderDialog({ onClose });
     pressDelete();
-    await advance(300);
+    await advanceClock(300);
 
     await respond(serverErrorResponse());
-    await advance(499);
+    await advanceClock(499);
     expect(loader()).not.toBeNull();
     expect(screen.queryByText(FAILED)).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(loader()).toBeNull();
     expect(within(liveDialog()).getByText(FAILED)).toBeDefined();
     expect(confirm().disabled).toBe(false);
@@ -267,6 +238,6 @@ describe('DeleteMovieDialog — a failed delete', () => {
     expect(confirm().getAttribute('aria-busy')).toBe('true');
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 });

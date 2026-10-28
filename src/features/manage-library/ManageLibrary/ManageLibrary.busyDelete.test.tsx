@@ -1,6 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
-  act,
   fireEvent,
   render,
   screen,
@@ -20,6 +19,8 @@ import {
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { makeLibraryMovie } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 6 (issue #488): Manage library's **Delete
@@ -35,13 +36,6 @@ import { makeLibraryMovie } from '@/test-support/makeLibraryTitle/makeLibraryTit
  * The list is read on real timers; the clock is faked from the press on.
  */
 
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
-
 const LIBRARY: LibraryTitles = {
   movies: [
     makeLibraryMovie({ id: 'm1', title: 'Coco' }),
@@ -55,25 +49,12 @@ const LIBRARY: LibraryTitles = {
   series: [],
 };
 
-/** The delete in flight, answered when the test says so. */
-let answer: (response: Response) => void;
-
-beforeEach(() => {
-  answer = () => undefined;
-  fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation((input) =>
-    String(input) === '/api/library-titles'
-      ? Promise.resolve(okResponse(LIBRARY))
-      : new Promise<Response>((resolve) => {
-          answer = resolve;
-        })
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch((url) =>
+  url === '/api/library-titles' ? okResponse(LIBRARY) : undefined
+);
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 const NOTICE = '“Coco” was deleted.';
@@ -118,32 +99,18 @@ const cancel = (title = 'Coco') =>
 const loader = (title = 'Coco') =>
   screen.queryByRole('status', { name: `Deleting “${title}”` });
 
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 /** Press the confirm on a faked clock. */
 function pressDelete(title = 'Coco') {
   vi.useFakeTimers();
   fireEvent.click(confirm(title));
 }
 
-/** Answer the delete, and let what it frees settle. */
-async function respond(response: Response) {
-  await act(async () => {
-    answer(response);
-  });
-}
-
 /** A delete pressed, shown, failed, and its hold run out. */
 async function failOnce() {
   pressDelete();
-  await advance(300);
+  await advanceClock(300);
   await respond(serverErrorResponse());
-  await advance(500);
+  await advanceClock(500);
 }
 
 describe('ManageLibrary — the Delete dialog, locked from the confirm press', () => {
@@ -167,18 +134,18 @@ describe('ManageLibrary — the Delete dialog, locked from the confirm press', (
     expect(dialog()).not.toBeNull();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 
   it('becomes the dialog loader reading Deleting “Coco” at 300ms, still locked', async () => {
     await openDeleteOn();
     pressDelete();
 
-    await advance(299);
+    await advanceClock(299);
     expect(loader()).toBeNull();
     expect(dialog()).not.toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     const status = loader();
     expect(status).not.toBeNull();
     expect(status?.closest('[aria-busy="true"]')).not.toBeNull();
@@ -193,7 +160,7 @@ describe('ManageLibrary — the Delete dialog, locked from the confirm press', (
     expect(loader()).not.toBeNull();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 
   it.each([
@@ -202,7 +169,7 @@ describe('ManageLibrary — the Delete dialog, locked from the confirm press', (
   ])('says nothing about files for %s', async (_, title) => {
     await openDeleteOn(title);
     pressDelete(title);
-    await advance(300);
+    await advanceClock(300);
 
     const card = screen.getByRole('dialog');
     expect(loader(title)).not.toBeNull();
@@ -211,7 +178,7 @@ describe('ManageLibrary — the Delete dialog, locked from the confirm press', (
     ).toBeNull();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 });
 
@@ -219,15 +186,15 @@ describe('ManageLibrary — a delete that lands', () => {
   it('closes, the row gone, with its notice, only once the hold is out', async () => {
     await openDeleteOn();
     pressDelete();
-    await advance(300);
+    await advanceClock(300);
 
     await respond(noContentResponse());
-    await advance(499);
+    await advanceClock(499);
     expect(loader()).not.toBeNull();
     expect(screen.queryByText(NOTICE)).toBeNull();
     expect(screen.getAllByText('Coco').length).toBeGreaterThan(0);
 
-    await advance(1);
+    await advanceClock(1);
     expect(loader()).toBeNull();
     expect(dialog()).toBeNull();
     expect(screen.getByText(NOTICE)).toBeDefined();
@@ -239,14 +206,14 @@ describe('ManageLibrary — a failed delete', () => {
   it('returns, after the hold, to the live idle face with the failure line, the row kept', async () => {
     await openDeleteOn();
     pressDelete();
-    await advance(300);
+    await advanceClock(300);
 
     await respond(serverErrorResponse());
-    await advance(499);
+    await advanceClock(499);
     expect(loader()).not.toBeNull();
     expect(screen.queryByText(FAILED)).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(loader()).toBeNull();
     expect(within(liveDialog()).getByText(FAILED)).toBeDefined();
     expect(confirm().disabled).toBe(false);
@@ -285,6 +252,6 @@ describe('ManageLibrary — a failed delete', () => {
     expect(confirm().getAttribute('aria-busy')).toBe('true');
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 });

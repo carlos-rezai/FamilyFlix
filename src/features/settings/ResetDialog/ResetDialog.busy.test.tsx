@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { ResetDialog } from './ResetDialog';
@@ -9,6 +9,8 @@ import {
   conflictResponse,
   noContentResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { advanceClock } from '@/test-support/advanceClock/advanceClock';
+import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
  * 53 — Loading states, Phase 4 (issue #487): the Reset dialog on the
@@ -24,31 +26,10 @@ import {
  * The clock is faked from the press on.
  */
 
-type FetchFn = (
-  input: RequestInfo | URL,
-  init?: RequestInit
-) => Promise<Response>;
-
-let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
-
-/** The reset in flight, answered when the test says so. */
-let answer: (response: Response) => void;
-
-beforeEach(() => {
-  answer = () => undefined;
-  fetchMock = vi.fn<FetchFn>();
-  fetchMock.mockImplementation(
-    () =>
-      new Promise<Response>((resolve) => {
-        answer = resolve;
-      })
-  );
-  vi.stubGlobal('fetch', fetchMock);
-});
+const { respond } = heldFetch();
 
 afterEach(() => {
   vi.useRealTimers();
-  vi.unstubAllGlobals();
 });
 
 const TITLE = 'Erase everything?';
@@ -76,24 +57,10 @@ const cancel = () =>
   }) as HTMLButtonElement;
 const loader = () => screen.queryByRole('status', { name: ERASING });
 
-/** Move the clock on, and let every promise it frees settle. */
-async function advance(ms: number) {
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(ms);
-  });
-}
-
 /** Press _Erase everything_ on a faked clock. */
 function pressErase() {
   vi.useFakeTimers();
   fireEvent.click(erase());
-}
-
-/** Answer the reset, and let what it frees settle. */
-async function respond(response: Response) {
-  await act(async () => {
-    answer(response);
-  });
 }
 
 describe('ResetDialog — locked from the confirm press', () => {
@@ -120,7 +87,7 @@ describe('ResetDialog — locked from the confirm press', () => {
     expect(onClose).not.toHaveBeenCalled();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 
   it('becomes the dialog loader reading Erasing everything at 300ms, still locked', async () => {
@@ -128,11 +95,11 @@ describe('ResetDialog — locked from the confirm press', () => {
     renderDialog(onClose);
     pressErase();
 
-    await advance(299);
+    await advanceClock(299);
     expect(loader()).toBeNull();
     expect(dialog()).not.toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     const status = loader();
     expect(status).not.toBeNull();
     expect(status?.closest('[aria-busy="true"]')).not.toBeNull();
@@ -150,7 +117,7 @@ describe('ResetDialog — locked from the confirm press', () => {
     expect(loader()).not.toBeNull();
 
     await respond(noContentResponse());
-    await advance(500);
+    await advanceClock(500);
   });
 });
 
@@ -160,16 +127,16 @@ describe('ResetDialog — a reset that lands', () => {
   it('reloads onto / only once the loader’s hold is out', async () => {
     renderDialog();
     pressErase();
-    await advance(300);
+    await advanceClock(300);
 
     await respond(noContentResponse());
     expect(location.assigned()).toEqual([]);
 
-    await advance(499);
+    await advanceClock(499);
     expect(location.assigned()).toEqual([]);
     expect(loader()).not.toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(location.assigned()).toEqual(['/']);
   });
 });
@@ -181,14 +148,14 @@ describe('ResetDialog — a refused reset', () => {
     const onClose = vi.fn();
     renderDialog(onClose);
     pressErase();
-    await advance(300);
+    await advanceClock(300);
 
     await respond(conflictResponse(IMPORT_RUNNING));
-    await advance(499);
+    await advanceClock(499);
     expect(loader()).not.toBeNull();
     expect(screen.queryByText(IMPORT_RUNNING)).toBeNull();
 
-    await advance(1);
+    await advanceClock(1);
     expect(loader()).toBeNull();
     expect(dialog()).not.toBeNull();
     expect(within(liveDialog()).getByText(IMPORT_RUNNING)).toBeDefined();
