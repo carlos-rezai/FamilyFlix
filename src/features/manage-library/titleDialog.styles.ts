@@ -3,8 +3,9 @@ import styled from 'styled-components';
 /**
  * The furniture the **Clear dialog** and the **Delete dialog** share — one
  * handoff card for both — flat as `movie-form/filesCard.styles.ts` is: the
- * title's path in the mono well, a failure's line and the two buttons. **What goes** beside
- * **What stays** is `GoesAndStays`'. Neither dialog owns it; both import it.
+ * title's path in the mono well, a failure's line and the two buttons.
+ * **What goes** beside **What stays** is `GoesAndStays`'. Neither dialog owns
+ * it; both import it.
  */
 
 /** The title's path in the mono well, `page.ManageLibraryPage.dc.html`. */

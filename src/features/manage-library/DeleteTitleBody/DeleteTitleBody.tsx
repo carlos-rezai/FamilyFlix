@@ -25,8 +25,8 @@ export interface DeleteTitleBodyProps {
 /**
  * The **Delete dialog**'s body, below its heading, for Manage library, the
  * movie page and the series page: **What goes** beside **What stays**, then
- * a failed delete's line, then the confirm in `danger` before _Cancel_. One dialog in the shell and in a
- * browser alike. Its words are `deleteView`'s.
+ * a failed delete's line, then the confirm in `danger` before _Cancel_. One
+ * dialog in the shell and in a browser alike. Its words are `deleteView`'s.
  */
 export function DeleteTitleBody({
   title,

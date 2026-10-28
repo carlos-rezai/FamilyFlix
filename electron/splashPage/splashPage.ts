@@ -6,9 +6,10 @@
  * nothing: no network, no server, no font file.
  *
  * The shell imports only types from `src/`, so the token values and the F
- * paths are copies: of `src/tokens/` and `docs/handoff/brand/familyflix-mark.svg`
- * (the beat of `src/primitives/LogoLoader/LogoLoader.styles.ts`). They change
- * only if those do.
+ * paths are copies: of `src/tokens/` and
+ * `docs/handoff/brand/familyflix-mark.svg` (the beat of
+ * `src/primitives/LogoLoader/LogoLoader.styles.ts`). They change only if
+ * those do.
  */
 
 /** `bg`, `text` and `accent` from `src/tokens/colors.ts`. */

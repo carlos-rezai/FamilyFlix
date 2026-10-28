@@ -9,7 +9,10 @@ import { PathWell } from '../titleDialog.styles';
 export interface DeleteTitleDialogProps {
   /** The title the delete is asked of. */
   title: LibraryTitle;
-  /** The delete's **Busy phase**: **Locked** from the press, the loader once `shown`. */
+  /**
+   * The delete's **Busy phase**: **Locked** from the press, the loader once
+   * `shown`.
+   */
   deleting: BusyPhase;
   /** Whether the last delete failed, its line drawn above the buttons. */
   failed: boolean;
