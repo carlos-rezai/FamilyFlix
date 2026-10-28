@@ -12,7 +12,7 @@
 // A real in-memory SQLite library through the public `LibraryStorage`
 // interface, the series storage suites' precedent.
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
@@ -416,5 +416,79 @@ describe('library: enrichmentCounts — the Sync gap beside Full details', () =>
         storage.seriesInScope('missing').length
     );
     expect(storage.enrichmentCounts().gaps).toBe(4);
+  });
+});
+
+// 54 — Scan new folders, Phase 5 (issue #496): _Just what was added_
+// (`added`) is every film created at or after `since`, the moment the run
+// that brought them in started. No upper bound: a film added since is in the
+// window too. A held film **Found again** (its video replaced) was created
+// before, so it is not.
+
+const SINCE = '2026-10-01T12:00:00.000Z';
+
+/** Run `add` with the clock at `iso`, so the rows it writes carry it. */
+function at<T>(iso: string, add: () => T): T {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(iso));
+  try {
+    return add();
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
+/** A film held from before the run, one at its start, one during, one after. */
+function filmsAroundARun() {
+  const storage = freshStorage();
+  at('2026-09-30T08:00:00.000Z', () =>
+    storage.addMovie(newMovie({ title: 'Held Before' }))
+  );
+  at(SINCE, () => storage.addMovie(newMovie({ title: 'At The Start' })));
+  at('2026-10-01T12:05:00.000Z', () =>
+    storage.addMovie(newMovie({ title: 'During The Run' }))
+  );
+  at('2026-10-03T09:00:00.000Z', () =>
+    storage.addMovie(newMovie({ title: 'Days Later' }))
+  );
+  return storage;
+}
+
+const addedTitles = (storage: ReturnType<typeof freshStorage>) =>
+  storage
+    .moviesInScope('added', SINCE)
+    .map((movie) => movie.title)
+    .sort();
+
+describe('library: moviesInScope — Just what was added', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('answers every film created at or after since', () => {
+    expect(addedTitles(filmsAroundARun())).toEqual([
+      'At The Start',
+      'Days Later',
+      'During The Run',
+    ]);
+  });
+
+  it('leaves out a film created before since', () => {
+    expect(addedTitles(filmsAroundARun())).not.toContain('Held Before');
+  });
+
+  it('leaves out a held film Found again, its video replaced during the run', () => {
+    const storage = freshStorage();
+    const held = at('2026-09-30T08:00:00.000Z', () =>
+      storage.addMovie(newMovie({ title: 'Found Again' }))
+    );
+
+    at('2026-10-01T12:05:00.000Z', () =>
+      storage.updateMovie(held.id, {
+        videoPath: 'Found Again (2019)/found-again.mkv',
+      })
+    );
+
+    expect(addedTitles(storage)).toEqual([]);
   });
 });

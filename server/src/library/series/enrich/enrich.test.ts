@@ -13,7 +13,7 @@
 // A real in-memory SQLite library through the public `LibraryStorage`
 // interface, the series storage suites' precedent.
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { freshStorage } from '../../../test-support/freshStorage/freshStorage';
 
@@ -504,5 +504,104 @@ describe('library: stillSourcesOf — each episode’s Still source', () => {
     const other = storage.addSeries({ title: 'Another Show', year: 2020 });
 
     expect(storage.stillSourcesOf(other.id).size).toBe(0);
+  });
+});
+
+// 54 — Scan new folders, Phase 5 (issue #496): `seriesInScope('added',
+// since)` is every series created at or after `since`, and every held series
+// that took an **Episode** created at or after it: a held show a run brought
+// new episodes into is in the window. No upper bound.
+
+const SINCE = '2026-10-01T12:00:00.000Z';
+const BEFORE = '2026-09-30T08:00:00.000Z';
+const DURING = '2026-10-01T12:05:00.000Z';
+
+/** Run `add` with the clock at `iso`, so the rows it writes carry it. */
+function at<T>(iso: string, add: () => T): T {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(iso));
+  try {
+    return add();
+  } finally {
+    vi.useRealTimers();
+  }
+}
+
+/** A held show with one episode on disk from before the run. */
+function heldShow(storage: ReturnType<typeof freshStorage>, title: string) {
+  return at(BEFORE, () => {
+    const series = storage.addSeries({ title, year: 2019 });
+    storage.addEpisode(series.id, {
+      season: 1,
+      number: 1,
+      videoPath: `${title}/season-01/S01E01.mkv`,
+    });
+    return series;
+  });
+}
+
+const addedSeries = (storage: ReturnType<typeof freshStorage>) =>
+  storage
+    .seriesInScope('added', SINCE)
+    .map((series) => series.title)
+    .sort();
+
+describe('library: seriesInScope — Just what was added', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('answers a series created at or after since', () => {
+    const storage = freshStorage();
+    heldShow(storage, 'Untouched');
+    at(SINCE, () => storage.addSeries({ title: 'At The Start' }));
+    at(DURING, () => storage.addSeries({ title: 'During The Run' }));
+
+    expect(addedSeries(storage)).toEqual(['At The Start', 'During The Run']);
+  });
+
+  it('answers a held series that took a new episode', () => {
+    const storage = freshStorage();
+    heldShow(storage, 'Untouched');
+    const held = heldShow(storage, 'Harbor & Vine');
+
+    at(DURING, () =>
+      storage.addEpisode(held.id, {
+        season: 1,
+        number: 2,
+        videoPath: 'Harbor & Vine/season-01/S01E02.mkv',
+      })
+    );
+
+    expect(addedSeries(storage)).toEqual(['Harbor & Vine']);
+  });
+
+  it('leaves out a held series with no new episode', () => {
+    const storage = freshStorage();
+    heldShow(storage, 'The Hollow Coast');
+    at(DURING, () => storage.addSeries({ title: 'Brand New' }));
+
+    expect(addedSeries(storage)).toEqual(['Brand New']);
+  });
+
+  it('answers a series once, however many new episodes it took', () => {
+    const storage = freshStorage();
+    heldShow(storage, 'Untouched');
+    const held = heldShow(storage, 'Harbor & Vine');
+
+    at(DURING, () => {
+      storage.addEpisode(held.id, {
+        season: 1,
+        number: 2,
+        videoPath: 'Harbor & Vine/season-01/S01E02.mkv',
+      });
+      storage.addEpisode(held.id, {
+        season: 1,
+        number: 3,
+        videoPath: 'Harbor & Vine/season-01/S01E03.mkv',
+      });
+    });
+
+    expect(addedSeries(storage)).toEqual(['Harbor & Vine']);
   });
 });

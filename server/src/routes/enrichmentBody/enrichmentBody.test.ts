@@ -135,6 +135,49 @@ describe('startEnrichmentBody: each refusal keeps its sentence', () => {
   });
 });
 
+// 54 — Scan new folders, Phase 5 (issue #496): _Just what was added_ names
+// its `since`, the moment the run that brought the titles in started; no
+// other scope names one. The `movieId` rule's shape.
+describe('startEnrichmentBody: an added Sync and its since', () => {
+  const SINCE = '2026-10-01T12:00:00.000Z';
+
+  it('reads an added Sync with its since', () => {
+    const body = { ...LIBRARY, scope: 'added', since: SINCE };
+
+    expect(startEnrichmentBody(body)).toEqual({ ok: true, value: body });
+  });
+
+  it.each([
+    [
+      'an added Sync with no since',
+      { ...LIBRARY, scope: 'added' },
+      'An added Sync names its since',
+    ],
+    [
+      'an added Sync with an empty since',
+      { ...LIBRARY, scope: 'added', since: '' },
+      'An added Sync names its since',
+    ],
+    [
+      'an Everything Sync naming a since',
+      { ...LIBRARY, scope: 'all', since: SINCE },
+      'Only an added Sync names a since',
+    ],
+    [
+      'an Only what’s missing Sync naming a since',
+      { ...LIBRARY, scope: 'missing', since: SINCE },
+      'Only an added Sync names a since',
+    ],
+    [
+      'a single-title Sync naming a since',
+      { ...LIBRARY, scope: 'single', movieId: 'm1', since: SINCE },
+      'Only an added Sync names a since',
+    ],
+  ])('refuses %s', (_name, body, error) => {
+    expect(startEnrichmentBody(body)).toEqual({ ok: false, error });
+  });
+});
+
 describe('conflictChoicesBody', () => {
   it('reads a map of field to side', () => {
     const choices = { synopsis: 'tmdb', year: 'mine' };

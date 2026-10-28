@@ -145,3 +145,41 @@ describe('GET /api/enrichment — the summary', () => {
     expect((await readSummary(baseUrl)).online).toBe(false);
   });
 });
+
+// 54 — Scan new folders, Phase 5 (issue #496): `?since=<ISO>` asks for the
+// added window too, the count _Just what was added_ shows: three films a run
+// brought in, not the film held from before it.
+describe('GET /api/enrichment?since= — the added window', () => {
+  const SINCE = '2026-10-01T12:00:00.000Z';
+
+  /** Run `add` with the clock at `iso`, so the rows it writes carry it. */
+  function at(iso: string, add: () => void) {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(iso));
+    try {
+      add();
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+
+  it('counts the three films a run brought in as added', async () => {
+    const { storage, baseUrl } = await freshApi();
+    at('2026-09-30T08:00:00.000Z', () =>
+      storage.addMovie(newMovie({ title: 'Held Before' }))
+    );
+    at('2026-10-01T12:05:00.000Z', () => {
+      storage.addMovie(newMovie({ title: 'First' }));
+      storage.addMovie(newMovie({ title: 'Second' }));
+      storage.addMovie(newMovie({ title: 'Third' }));
+    });
+
+    const response = await fetch(
+      `${baseUrl}/api/enrichment?since=${encodeURIComponent(SINCE)}`
+    );
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ total: 4, added: 3 });
+    expect(await readSummary(baseUrl)).not.toHaveProperty('added');
+  });
+});
