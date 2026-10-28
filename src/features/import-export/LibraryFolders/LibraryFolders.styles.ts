@@ -8,7 +8,7 @@ export { GroupHeading } from '../../settings/section.styles';
 
 /**
  * The group Scan's stack — the accepted shapes, the Import mode, the TMDB box
- * and _Scan folders_ — the prototype's 16px apart.
+ * and the two scan presses, the prototype's 16px apart.
  */
 export const ScanStack = styled.div`
   display: flex;
@@ -16,7 +16,12 @@ export const ScanStack = styled.div`
   gap: 16px;
 `;
 
-/** _Scan folders_' own row, so the button keeps its width in the column. */
+/**
+ * _Scan new folders_ and _Scan all folders_' own row, 12px apart and wrapping
+ * on a narrow window, so each keeps its width in the column.
+ */
 export const ScanActions = styled.div`
   display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
 `;

@@ -173,7 +173,7 @@ function filesStaying(title: DeleteSubject): string[] {
     default:
       return title.originalPath !== null
         ? [
-            'Your original in its library folder — Scan folders would bring it back',
+            'Your original in its library folder — Scan all folders would bring it back',
           ]
         : ['Nothing'];
   }

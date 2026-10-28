@@ -42,6 +42,7 @@ import {
   type FilmSource,
 } from '../import-export/placeFilmFolder/placeFilmFolder';
 import { listedFolderOf } from '../import-export/listedFolderOf/listedFolderOf';
+import { foldersToScan } from '../import-export/foldersToScan/foldersToScan';
 import { leftOutEntries } from '../import-export/leftOutEntries/leftOutEntries';
 import { placeFoundVideos } from '../import-export/placeFoundVideo/placeFoundVideo';
 import { placeShowFolder } from '../import-export/placeShowFolder/placeShowFolder';
@@ -88,6 +89,7 @@ import {
   startEnrichmentBody,
 } from './enrichmentBody/enrichmentBody';
 import {
+  folderScanBody,
   importModeOf,
   importStartBody,
   pickFolderBody,
@@ -2317,20 +2319,26 @@ export function createApiRouter(
     }
   );
 
-  // A **Folder scan** over every listed folder: `201` with the run's first
-  // snapshot, `400` with none listed, `409` while a **Current run** is
-  // scanning or importing — one in review is let go, as _Finish_ would have.
+  // A **Folder scan** over the folders its **Scan scope** picks: `201` with
+  // the run's first snapshot, `400` with none listed or, for `new`, none new,
+  // `409` while a **Current run** is scanning or importing — one in review is
+  // let go, as _Finish_ would have.
   router.post('/library-folders/scan', async (req: Request, res: Response) => {
-    const read = importStartBody(req.body);
+    const read = folderScanBody(req.body);
     if (!read.ok) {
       res.status(400).json({ error: read.error });
       return;
     }
     // `enrich` is only carried on the run, as a sheet import's is.
-    const { enrich, mode } = read.value;
-    const folders = storage.libraryFolders();
-    if (folders.length === 0) {
+    const { enrich, mode, scope } = read.value;
+    const listed = storage.libraryFolders();
+    if (listed.length === 0) {
       res.status(400).json({ error: 'Add a library folder to scan first.' });
+      return;
+    }
+    const folders = foldersToScan(listed, scope);
+    if (folders.length === 0) {
+      res.status(400).json({ error: 'No new folders to scan.' });
       return;
     }
     try {

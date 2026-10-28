@@ -1,7 +1,9 @@
 import {
   IMPORT_MODES,
+  SCAN_SCOPES,
   SHEET_FIELDS,
   type ImportMode,
+  type ScanScope,
   type SheetChoices,
   type SheetField,
 } from '@/types';
@@ -79,6 +81,27 @@ export function importStartBody(
     return read;
   }
   return { ok: true, value: { enrich: enrich === true, mode: read.value } };
+}
+
+/**
+ * The **Folder scan**'s body → `{ enrich, mode, scope }`: `enrich` and `mode`
+ * as {@link importStartBody} reads them, and `scope` one of **SCAN_SCOPES**,
+ * required, a missing or unknown one refused in a sentence.
+ */
+export function folderScanBody(
+  body: unknown
+): BodyRead<{ enrich: boolean; mode: ImportMode; scope: ScanScope }> {
+  const start = importStartBody(body);
+  if (!start.ok) {
+    return start;
+  }
+  const { scope } = (typeof body === 'object' && body !== null ? body : {}) as {
+    scope?: unknown;
+  };
+  if (!SCAN_SCOPES.includes(scope as ScanScope)) {
+    return { ok: false, error: 'Scope must be new or all.' };
+  }
+  return { ok: true, value: { ...start.value, scope: scope as ScanScope } };
 }
 
 /**

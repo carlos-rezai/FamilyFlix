@@ -22,9 +22,11 @@ const ENRICH_HINT =
  * _Browse…_ in the desktop app. Then
  * the group **Scan**: _What the scanner accepts_, the **Import mode** (Link on
  * every mount), the `EnrichCheckCard` with the scan's own keyed hint, and
- * **Scan folders** — sending the box and the mode —
- * disabled with no folder listed, which posts the **Folder scan** and pushes
- * `/import` — on a `409` too, so the run already in flight is the one shown.
+ * two presses side by side: **Scan new folders** (`primary`, disabled with no
+ * **New folder** listed) and **Scan all folders** (`secondary`, disabled with
+ * no folder listed). Each posts the **Folder scan** with its **Scan scope**,
+ * the box and the mode, and pushes `/import` (on a `409` too, so the run
+ * already in flight is the one shown); both are held while either is asked.
  *
  * **Blank until it lands**: nothing under the header is drawn while the list
  * is `null`. Back is the one **Back rule** with Settings as the **Landing**.
@@ -63,11 +65,24 @@ export function LibraryFolders() {
             />
             <ScanActions>
               <Button
-                label="Scan folders"
+                label="Scan new folders"
+                variant="primary"
+                size="lg"
+                disabled={
+                  scanning ||
+                  !folders.some((folder) => folder.scannedAt === null)
+                }
+                onClick={() => {
+                  void scan(enrich, mode, 'new');
+                }}
+              />
+              <Button
+                label="Scan all folders"
+                variant="secondary"
                 size="lg"
                 disabled={scanning || folders.length === 0}
                 onClick={() => {
-                  void scan(enrich, mode);
+                  void scan(enrich, mode, 'all');
                 }}
               />
             </ScanActions>

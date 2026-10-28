@@ -6,6 +6,7 @@ import {
   type ExportSummary,
   type ImportField,
   type ImportMode,
+  type ScanScope,
   type ImportProblem,
   type ImportRun,
   type LibraryFolder,
@@ -401,19 +402,21 @@ export async function bringBackLeftOut(id: string): Promise<void> {
 const SCAN_ENDPOINT = '/api/library-folders/scan';
 
 /**
- * Start a **Folder scan** over every listed **Library folder**, and resolve the
- * snapshot the route answered its `201` with. `enrich` is always sent, and
- * only carried on the run; `mode` is the run's **Import mode**. A `409` rejects with {@link ImportBusyError} — a
+ * Start a **Folder scan** over the **Library folders** its **Scan scope**
+ * picks, and resolve the snapshot the route answered its `201` with. `enrich`
+ * is always sent, and only carried on the run; `mode` is the run's **Import
+ * mode**. A `409` rejects with {@link ImportBusyError} — a
  * run exists already — and every other failure with a plain `Error`.
  */
 export async function startFolderScan(
   enrich: boolean,
-  mode: ImportMode
+  mode: ImportMode,
+  scope: ScanScope
 ): Promise<ImportRun> {
   const response = await fetch(SCAN_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ enrich, mode }),
+    body: JSON.stringify({ enrich, mode, scope }),
   });
 
   if (response.status === 409) {

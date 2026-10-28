@@ -27,6 +27,7 @@ export {
   IMPORT_FIELDS,
   IMPORT_MODES,
   PROBLEM_KINDS,
+  SCAN_SCOPES,
   SHEET_FIELDS,
 } from './import';
 export {
@@ -108,6 +109,7 @@ export type {
   CandidateFolder,
   ImportRun,
   ImportMode,
+  ScanScope,
   ImportProblemDetail,
   SheetField,
   SheetDifference,

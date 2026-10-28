@@ -66,6 +66,14 @@ export const IMPORT_MODES = ['link', 'copy'] as const;
 export type ImportMode = (typeof IMPORT_MODES)[number];
 
 /**
+ * The **Scan scope**: `new` walks only the **New folders**, `all` every
+ * listed folder. New first.
+ */
+export const SCAN_SCOPES = ['new', 'all'] as const;
+
+export type ScanScope = (typeof SCAN_SCOPES)[number];
+
+/**
  * Where a run is: walking the Library folders, copying matches in, or waiting
  * on review.
  */

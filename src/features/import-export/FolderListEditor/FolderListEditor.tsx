@@ -30,7 +30,7 @@ export type FolderListEditorProps = Omit<LibraryFoldersState, 'folders'> & {
  * on the **Loader timing**; _Browse…_ is disabled until the add settles.
  *
  * The list is the caller's `useLibraryFolders()`, handed in, because the
- * caller decides what a listed folder enables — **Scan folders** on the
+ * caller decides what a listed folder enables — **Scan all folders** on the
  * Library folders page, _Start import_ in Import setup.
  */
 export function FolderListEditor({
