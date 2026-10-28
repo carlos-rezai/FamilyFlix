@@ -1,0 +1,137 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+        <style>
+          @keyframes ffLogoBeat {
+            0%,
+            64%,
+            100% {
+              opacity: 0.28;
+              transform: translateY(0);
+            }
+            22% {
+              opacity: 1;
+              transform: translateY(-7%);
+            }
+          }
+          @keyframes ffLogoIn {
+            from {
+              opacity: 0;
+              transform: scale(0.96);
+            }
+            to {
+              opacity: 1;
+              transform: none;
+            }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            @keyframes ffLogoBeat {
+              0%,
+              100% {
+                opacity: 0.4;
+              }
+              50% {
+                opacity: 1;
+              }
+            }
+          }
+        </style>
+      </helmet>
+      <div
+        role="status"
+        aria-live="polite"
+        aria-label="{{ a11yLabel }}"
+        style="{{ rootStyle }}"
+      >
+        <div aria-hidden="true" style="{{ markBox }}">{{ mark }}</div>
+        <sc-if value="{{ hasLabel }}" hint-placeholder-val="{{ false }}">
+          <div
+            aria-hidden="true"
+            style="
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+              gap: 2px;
+              text-align: center;
+            "
+          >
+            <span
+              style="
+                font-family: var(--font-sans);
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--color-text);
+              "
+              >{{ label }}</span
+            >
+            <sc-if value="{{ hasDetail }}" hint-placeholder-val="{{ false }}">
+              <span
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 13px;
+                  color: var(--color-text-faint);
+                  font-variant-numeric: tabular-nums;
+                "
+                >{{ detail }}</span
+              >
+            </sc-if>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":320,"height":220},"size":{"editor":"range","default":48,"min":14,"max":160,"step":1,"unit":"px","tsType":"number"},"progress":{"editor":"float","default":null,"min":0,"max":1,"step":0.01,"tsType":"number | undefined"},"tile":{"editor":"boolean","default":false,"tsType":"boolean"},"tone":{"editor":"enum","options":["brand","current"],"default":"brand","tsType":"&apos;brand&apos; | &apos;current&apos;"},"label":{"editor":"text","default":"","tsType":"string"},"detail":{"editor":"text","default":"","tsType":"string"},"inline":{"editor":"boolean","default":false,"tsType":"boolean"}}'
+    >
+      const F1 = "M380.23 704.39L174.08 704.39L174.08 666.32L220.93 663.98Q220.93 654.61 220.93 645.82L220.93 377.59Q220.93 368.81 220.93 360.02L174.08 357.10L174.08 319.61L489.16 319.61L493.84 420.93L446.41 420.93L432.35 357.10L324.59 357.10Q324.59 367.64 324.59 377.59Q324.01 407.46 324.01 436.74L324.01 488.87L388.43 488.87L396.04 444.94L434.69 444.94L434.69 574.37L396.04 574.37L388.43 527.52L324.01 527.52L324.01 586.08Q324.01 615.95 324.59 645.24Q324.59 654.61 324.59 663.39L380.23 666.32";
+      const F2 = "M736.30 704.39L530.16 704.39L530.16 666.32L577.01 663.98Q577.01 654.61 577.01 645.82L577.01 377.59Q577.01 368.81 577.01 360.02L530.16 357.10L530.16 319.61L845.23 319.61L849.92 420.93L802.48 420.93L788.43 357.10L680.67 357.10Q680.67 367.64 680.67 377.59Q680.08 407.46 680.08 436.74L680.08 488.87L744.50 488.87L752.12 444.94L790.77 444.94L790.77 574.37L752.12 574.37L744.50 527.52L680.08 527.52L680.08 586.08Q680.08 615.95 680.67 645.24Q680.67 654.61 680.67 663.39L736.30 666.32";
+
+      class Component extends DCLogic {
+        uid = 'ffl' + Math.random().toString(36).slice(2, 8);
+        renderVals() {
+          const p = this.props;
+          const size = p.size ?? 48;
+          const tile = p.tile ?? false;
+          const tone = p.tone ?? 'brand';
+          const prog = typeof p.progress === 'number' ? Math.max(0, Math.min(1, p.progress)) : null;
+          const c1 = tone === 'current' ? 'currentColor' : 'var(--color-text)';
+          const c2 = tone === 'current' ? 'currentColor' : 'var(--color-accent)';
+          const h = React.createElement;
+          const vb = tile ? '0 0 1024 1024' : '160 300 704 424';
+          const kids = [];
+          if (tile) kids.push(h('rect', { key: 't', width: 1024, height: 1024, rx: 225.28, fill: 'var(--color-bg)' }));
+          if (prog === null) {
+            [[F1, c1], [F2, c2]].forEach(([d, c], i) => kids.push(h('path', { key: 'f' + i, d, fill: c,
+              style: { animation: 'ffLogoBeat 1.3s cubic-bezier(.45,0,.25,1) infinite', animationDelay: (i * 0.22) + 's', transformBox: 'fill-box', transformOrigin: '50% 100%' } })));
+          } else {
+            const cid = this.uid + 'c';
+            kids.push(h('defs', { key: 'd' }, h('clipPath', { id: cid },
+              h('rect', { x: 174, y: 300, width: 676, height: 424, style: { transform: 'scaleX(' + prog + ')', transformOrigin: '174px 0', transformBox: 'view-box', transition: 'transform 280ms cubic-bezier(.2,.7,.3,1)' } }))));
+            kids.push(h('path', { key: 'b1', d: F1, fill: c1, opacity: .2 }), h('path', { key: 'b2', d: F2, fill: c2, opacity: .2 }));
+            kids.push(h('g', { key: 'g', clipPath: 'url(#' + cid + ')' }, h('path', { d: F1, fill: c1 }), h('path', { d: F2, fill: c2 })));
+          }
+          const w = size, ht = tile ? size : Math.round(size * 424 / 704);
+          const mark = h('svg', { viewBox: vb, width: w, height: ht, style: { display: 'block', overflow: 'visible' } }, kids);
+          const pct = prog === null ? '' : Math.round(prog * 100) + '%';
+          const label = p.label ?? '';
+          const detail = p.detail ?? pct;
+          return {
+            mark, label, detail, hasLabel: !!label, hasDetail: !!detail,
+            a11yLabel: [label || 'Loading', detail].filter(Boolean).join(', '),
+            rootStyle: { display: 'inline-flex', flexDirection: p.inline ? 'row' : 'column', alignItems: 'center', gap: p.inline ? '8px' : '14px', animation: 'ffLogoIn 180ms cubic-bezier(.2,.7,.3,1)' },
+            markBox: { width: w + 'px', height: ht + 'px', flex: '0 0 auto' }
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -131,11 +131,26 @@ SettingsPage (Update/Check), ImportFlow (Start/Cancel/Finish), ExportModal (Expo
 | `icon` | `'none' \| 'play'` | none | optional leading glyph |
 | `fullWidth` | boolean | false | stretch to container |
 | `disabled` | boolean | false | muted fill, no hover/click |
+| `busy` | `'idle' \| 'waiting' \| 'shown'` | idle | the **Busy phase** (log 53); button form only, never on the link. `waiting`: disabled, `aria-busy`, the idle label, the variant's face kept (not the muted disabled fill), `cursor: progress`. `shown`: `busyLabel` in a span with `aria-live="polite"` and the shine. The idle width is held as `min-width` while busy. `onClick` never fires while busy |
+| `busyLabel` | string | `label` | the _-ing_ form: _Saving…_, _Adding…_, _Clearing…_, _Deleting…_, _Erasing…_, _Testing…_, _Exporting…_ |
 | `onClick` | () => void | — | |
 
 States: hover (background lightens per variant), press (darkens + `scale(.98)`),
 focus-visible (accent ring), disabled (muted fill, no state changes). **No hover lift or
 shadow** — see §2a. Primary hover/press come from `--color-accent-hover` / `-press`.
+
+**Busy** (log 53, from `handoff-loading-states/`): the button never draws the FF mark. The
+shine is a moving `mask-image` over the label in the button's own ink, so one rule serves
+every variant; the handoff's `background-clip: text` gradient in one fixed ink is not used
+(wrong on the bordered `danger`). Under reduced motion it fades, with its own keyframes that
+`GlobalStyle`'s `*` rule does not collapse. Shown only under **Loader timing**
+(`useDelayedBusy`: nothing for 300ms, then held 500ms). No _Saved ✓_ face. The callers:
+the Movie form's save (_Add to library → Adding…_, _Save changes → Saving…_), the Clear
+dialog (_Clear details → Clearing…_), _Test connection → Testing…_, Library folders'
+_Add → Adding…_ (with _Browse…_ disabled beside it), the Export dialog (_Export as CSV →
+Exporting…_), the Delete dialogs (_Delete movie / Delete series → Deleting…_) and the
+Reset dialog (_Erase everything → Erasing…_). Not _Check for updates_. The handoff's
+_Save movie_, _Clear metadata_ and _Delete folder_ are not the app's words.
 
 ### IconButton — `prim.IconButton.dc.html`
 
@@ -206,6 +221,32 @@ Target: `primitives/Toggle/` · a switch atom. Props: `checked` (boolean),
 `onToggle` (callback). `role="switch"` + `aria-checked`; knob slides, track fills accent
 when on. Used in Settings → Subtitles ("Turn on automatically"); reuse for any on/off
 setting.
+
+### LogoLoader: `prim.LogoLoader.dc.html`
+
+Target: `primitives/LogoLoader/`, in the `primitives` barrel (no per-unit `index.ts`, the
+handoff's suggestion notwithstanding). The **Logo loader** (log 53): the two F paths of
+`brand/familyflix-mark.svg`, F1 in `text` and F2 in `accent`.
+| Prop | Type | Default | Notes |
+| --- | --- | --- | --- |
+| `size` | number | 48 | width px; height `size × 424/704`, or `size` with `tile` |
+| `progress` | number? | none | 0–1: the mark fills left to right (determinate, both Fs at 20% under a full copy clipped by `scaleX(progress)`, 280ms). Left out, the Fs take turns rising (indeterminate, `ffLogoBeat` 1.3s, F2 0.22s behind) |
+| `tone` | `'brand' \| 'current'` | brand | `current`: both Fs in `currentColor` |
+| `tile` | boolean | false | the app-icon tile behind the mark (`bg`, radius 22%) |
+| `label` | string? | none | 15/600 `text`, under the mark |
+| `detail` | string? | `NN%` with `progress` | 13 `textFaint`, tabular numbers |
+| `inline` | boolean | false | mark and text in a row (gap 8), not a column (gap 14) |
+
+`role="status"`, `aria-live="polite"`, `aria-label` the label plus the detail (_Loading_
+when neither); the visible mark and text `aria-hidden`. The clip path's id comes from
+`useId`, stripped of characters a `url(#…)` reference can't carry, so two loaders on a page
+never share one. Mounts with a 180ms pop-in that collapses under reduced motion like every
+other animation; the beat instead fades (opacity only, no movement), with its own keyframes
+that `GlobalStyle`'s `*` rule does not collapse, so it never freezes at its dimmest frame.
+**Never drawn inside a button** (a **Busy button** shines its label instead). Callers: the
+**Dialog loader** (64px). The **Start-up splash** draws the same mark at 88px with `tile`,
+but as static HTML in the shell (`electron/splashPage/`), not this atom. The determinate
+mode ships with no caller: nothing reports a count yet.
 
 ---
 
@@ -375,6 +416,23 @@ Target: `components/FilterDropdown/`
 Target: `components/Modal/` · scrim + centered card + title/subtitle/icon/close. In the
 prototype the Export dialog uses this shell directly (see ExportModal). Props:
 `open`, `title`, `subtitle`, `icon`, `onClose`, and a body slot (`children`).
+
+`locked` (boolean, false; log 53): the **Locked** modal. Escape and the scrim ask nothing
+and the ✕ is not drawn. Only the Delete dialogs and the Reset dialog set it, from the
+confirm press (in `waiting` too, with _Cancel_ disabled) until the action settles. The
+Clear and Export dialogs stay live while they work.
+
+### DialogLoader: from `handoff-loading-states/` (log 53)
+
+Target: `components/DialogLoader/` · the **Dialog loader**: `{ label: string }`, a 64px
+`LogoLoader` with its label, `aria-busy`, drawn inside a **Bare** `Modal` that is `locked`.
+Once **Shown**, the three Delete dialogs (through `DeleteTitleBody`) render it as
+_Deleting “Coco”_ and the Reset dialog as _Erasing everything_. No step detail (the handoff's
+_Removing files from disk_ is not drawn: a Delete is one request and keeps every original)
+and no determinate mode. No Cancel and no Close: a failed Delete returns the dialog to its
+idle face with _Couldn’t delete “Coco”. Try again._ above the buttons, in the Reset dialog's
+refusal style; a refused Reset keeps its own refusal sentence. A Delete or Reset that lands
+ends as it did before (its snackbar, leaving or reload), after the hold.
 
 ### Fab — `mol.Fab.dc.html`
 
