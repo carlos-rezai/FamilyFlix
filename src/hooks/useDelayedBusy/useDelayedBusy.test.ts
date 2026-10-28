@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 
-import type { BusyPhase } from '@/types/busy';
+import type { BusyPhase } from '@/types';
 import { MIN_SHOWN_MS, SHOW_AFTER_MS, useDelayedBusy } from './useDelayedBusy';
 
 /**

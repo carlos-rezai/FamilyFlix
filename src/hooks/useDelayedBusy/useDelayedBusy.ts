@@ -1,6 +1,6 @@
 import { useCallback, useState } from 'react';
 
-import type { BusyPhase } from '@/types/busy';
+import type { BusyPhase } from '@/types';
 
 /** How long work runs before its loader is drawn. */
 export const SHOW_AFTER_MS = 300;

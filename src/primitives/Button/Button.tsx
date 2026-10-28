@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Link } from 'react-router-dom';
 
-import type { BusyPhase } from '@/types/busy';
+import type { BusyPhase } from '@/types';
 import { PlayIcon } from '../Icon/PlayIcon';
 import {
   BusyLabel,

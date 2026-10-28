@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { deleteMovie } from '@/api/deleteMovie/deleteMovie';
-import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { deleteSeries } from '@/api/deleteSeries/deleteSeries';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import type { BusyPhase, LibraryTitle, LibraryTitles } from '@/types';
 import {
   clearMovieDetails,
