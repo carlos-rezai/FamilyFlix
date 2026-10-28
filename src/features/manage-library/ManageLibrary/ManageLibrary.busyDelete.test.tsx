@@ -23,7 +23,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 6 (issue #488): Manage library's **Delete
+ * 53, Loading states, Phase 6 (issue #488): Manage library's **Delete
  * dialog** in the **Reset dialog**'s shape.
  *
  * From the confirm press the dialog is **Locked** and _Cancel_ disabled, in
@@ -113,7 +113,7 @@ async function failOnce() {
   await advanceClock(500);
 }
 
-describe('ManageLibrary — the Delete dialog, locked from the confirm press', () => {
+describe('ManageLibrary: the Delete dialog, locked from the confirm press', () => {
   it('locks at once, while waiting: no ✕, Cancel disabled, the confirm busy on its idle label', async () => {
     await openDeleteOn();
     pressDelete();
@@ -182,7 +182,7 @@ describe('ManageLibrary — the Delete dialog, locked from the confirm press', (
   });
 });
 
-describe('ManageLibrary — a delete that lands', () => {
+describe('ManageLibrary: a delete that lands', () => {
   it('closes, the row gone, with its notice, only once the hold is out', async () => {
     await openDeleteOn();
     pressDelete();
@@ -202,7 +202,7 @@ describe('ManageLibrary — a delete that lands', () => {
   });
 });
 
-describe('ManageLibrary — a failed delete', () => {
+describe('ManageLibrary: a failed delete', () => {
   it('returns, after the hold, to the live idle face with the failure line, the row kept', async () => {
     await openDeleteOn();
     pressDelete();

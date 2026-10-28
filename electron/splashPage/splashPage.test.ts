@@ -1,11 +1,11 @@
 // @vitest-environment node
 //
-// Issue #489, the **Start-up splash**. `splashPage` answers the `data:` URL
-// the shell's window opens over at `whenReady`, before the server's `ready`:
-// static HTML on `bg` with the 88px tile and the FF mark beating, a
-// reduced-motion fade in place of the beat, and _Opening your library_. It is
-// the window's first paint, so it can load nothing from the network or the
-// server that isn't up yet.
+// 53, Loading states, Phase 7 (issue #489): the **Start-up splash**.
+// `splashPage` answers the `data:` URL the shell's window opens over at
+// `whenReady`, before the server's `ready`: static HTML on `bg` with the 88px
+// tile and the FF mark beating, a reduced-motion fade in place of the beat,
+// and _Opening your library_. It is the window's first paint, so it can load
+// nothing from the network or the server that isn't up yet.
 
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';

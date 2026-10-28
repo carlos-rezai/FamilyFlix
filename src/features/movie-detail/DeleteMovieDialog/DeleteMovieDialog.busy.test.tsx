@@ -15,7 +15,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 6 (issue #488): the movie page's **Delete
+ * 53, Loading states, Phase 6 (issue #488): the movie page's **Delete
  * dialog** in the **Reset dialog**'s shape.
  *
  * From the confirm press the dialog is **Locked** and _Cancel_ disabled, in
@@ -99,7 +99,7 @@ async function failOnce() {
   await advanceClock(500);
 }
 
-describe('DeleteMovieDialog — locked from the confirm press', () => {
+describe('DeleteMovieDialog: locked from the confirm press', () => {
   it('locks at once, while waiting: no ✕, Cancel disabled, the confirm busy on its idle label', async () => {
     const onClose = vi.fn();
     renderDialog({ onClose });
@@ -171,7 +171,7 @@ describe('DeleteMovieDialog — locked from the confirm press', () => {
   });
 });
 
-describe('DeleteMovieDialog — a delete that lands', () => {
+describe('DeleteMovieDialog: a delete that lands', () => {
   it('goes back one step only once the loader’s hold is out', async () => {
     renderDialog();
     pressDelete();
@@ -187,7 +187,7 @@ describe('DeleteMovieDialog — a delete that lands', () => {
   });
 });
 
-describe('DeleteMovieDialog — a failed delete', () => {
+describe('DeleteMovieDialog: a failed delete', () => {
   it('returns, after the hold, to the live idle face with the failure line, staying put', async () => {
     const onClose = vi.fn();
     renderDialog({ onClose });

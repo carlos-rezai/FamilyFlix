@@ -13,7 +13,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 3 (issue #485): the Export dialog's busy button.
+ * 53, Loading states, Phase 3 (issue #485): the Export dialog's busy button.
  *
  * `exporting` runs on the **Loader timing**: _Export as CSV_ locks at once on
  * its idle label, reads _Exporting…_ only once the export has run 300ms, and
@@ -89,7 +89,7 @@ function pressExport() {
   fireEvent.click(exportButton());
 }
 
-describe('ExportModal — Export on the Loader timing', () => {
+describe('ExportModal: Export on the Loader timing', () => {
   it('locks at once on Export as CSV, and reads Exporting… only after 300ms', async () => {
     await renderDialog();
     pressExport();

@@ -6,7 +6,7 @@ import { DialogLoader } from '@/components';
 import { theme } from '@/styles/theme';
 
 /**
- * 53 — Loading states, Phase 4 (issue #487): the **Dialog loader**.
+ * 53, Loading states, Phase 5 (issue #487): the **Dialog loader**.
  *
  * `{ label }`: a 64px `LogoLoader` with its label, `aria-busy`, drawn inside a
  * **Bare** `Modal` that is locked. What a Delete or Reset dialog becomes once

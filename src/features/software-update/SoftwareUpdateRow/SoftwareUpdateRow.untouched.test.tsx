@@ -10,7 +10,7 @@ import { SoftwareUpdateRow } from './SoftwareUpdateRow';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 
 /**
- * 53 — Loading states, Phase 4 (issue #486): _Check for updates_ is not a
+ * 53, Loading states, Phase 4 (issue #486): _Check for updates_ is not a
  * busy button.
  *
  * Its _Checking…_ keeps reporting the shell's update status: drawn the
@@ -25,7 +25,7 @@ afterEach(() => {
 const button = (name: string) =>
   screen.queryByRole('button', { name }) as HTMLButtonElement | null;
 
-describe('SoftwareUpdateRow — Check for updates, off the Loader timing', () => {
+describe('SoftwareUpdateRow: Check for updates, off the Loader timing', () => {
   const bridge = fakeUpdateBridge();
 
   it('reads Checking… at once, and Check for updates the moment it answers', async () => {

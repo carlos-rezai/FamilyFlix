@@ -11,7 +11,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 4 (issue #486): `testing` is a **Busy phase**.
+ * 53, Loading states, Phase 4 (issue #486): `testing` is a **Busy phase**.
  *
  * It is `waiting` from the press, `shown` once the test has run 300ms, and
  * `idle` again only after the 500ms hold, `test()`'s promise settling with
@@ -38,7 +38,7 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-describe('useTmdbKey — testing on the Loader timing', () => {
+describe('useTmdbKey: testing on the Loader timing', () => {
   it('is idle before a test', async () => {
     const { result } = renderHook(() => useTmdbKey(), { wrapper });
     await waitFor(() => expect(fetchMock).toHaveBeenCalled());

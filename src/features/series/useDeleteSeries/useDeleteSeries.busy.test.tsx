@@ -12,7 +12,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 6 (issue #488): `deleting` is a **Busy phase**
+ * 53, Loading states, Phase 6 (issue #488): `deleting` is a **Busy phase**
  * on the **Loader timing**, `waiting` from the press and `shown` once the
  * delete has run 300ms, and back to `idle` only after the 500ms hold. A
  * failed delete raises `failed`, which the next confirm clears.
@@ -32,7 +32,7 @@ function wrapper({ children }: { children: ReactNode }) {
   );
 }
 
-describe('useDeleteSeries — on the Loader timing', () => {
+describe('useDeleteSeries: on the Loader timing', () => {
   it('is idle and unfailed before a press', () => {
     const { result } = renderHook(() => useDeleteSeries('harbor'), { wrapper });
 

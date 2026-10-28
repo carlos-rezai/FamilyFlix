@@ -11,7 +11,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 4 (issue #486): `adding` is a **Busy phase**.
+ * 53, Loading states, Phase 4 (issue #486): `adding` is a **Busy phase**.
  *
  * It is `waiting` from the post, `shown` once the add has run 300ms, and
  * `idle` again only after the 500ms hold; the new row lands with it, and
@@ -34,7 +34,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe('useLibraryFolders — adding on the Loader timing', () => {
+describe('useLibraryFolders: adding on the Loader timing', () => {
   it('is idle before an add', async () => {
     const { result } = renderHook(() => useLibraryFolders());
     await waitFor(() => expect(result.current.folders).toEqual([]));

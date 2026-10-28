@@ -21,7 +21,7 @@ import {
  * well, **What goes** (_Year, synopsis, credits and genres_; _Poster, backdrop
  * and artwork_; _Its TMDB match and score_), **What stays** (_Its title and
  * files_; _Watch history, rating and heart_), then _Clear details_ —
- * locked from the press, _Clearing…_ once shown — before _Cancel_. Focus lands
+ * locked from the press, _Clearing…_ once shown, before _Cancel_. Focus lands
  * on the card, so Enter alone clears nothing.
  *
  * Presentational over its props: the organism owns the request, so a confirm

@@ -6,7 +6,7 @@ import { MIN_SHOWN_MS, SHOW_AFTER_MS, useDelayedBusy } from './useDelayedBusy';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 
 /**
- * 53 — Loading states, Phase 2 (issue #484): the **Loader timing**.
+ * 53, Loading states, Phase 2 (issue #484): the **Loader timing**.
  *
  * Every action the household starts runs through `run`: the control locks at
  * once (`waiting`), the loader is drawn only after 300ms of work (`shown`),

@@ -590,7 +590,7 @@ describe('Modal — a caller that does not ask for bare', () => {
   });
 });
 
-// --- 53 — Loading states, Phase 4 (issue #487) -------------------------------
+// --- 53, Loading states, Phase 5 (issue #487) --------------------------------
 //
 // `locked`: the **Locked** modal. While a destructive action runs, Escape and
 // the scrim ask nothing and the ✕ is not drawn; the caller unlocks it when the
@@ -618,7 +618,7 @@ function LockHost({
   );
 }
 
-describe('Modal locked — no way out', () => {
+describe('Modal locked: no way out', () => {
   it('draws no ✕', () => {
     render(<LockHost locked onClose={() => undefined} />);
 
@@ -662,7 +662,7 @@ describe('Modal locked — no way out', () => {
   });
 });
 
-describe('Modal locked — unlocked again', () => {
+describe('Modal locked: unlocked again', () => {
   it('gives back the ✕, Escape and the scrim once unlocked', () => {
     const onClose = vi.fn();
     const { rerender } = render(<LockHost locked onClose={onClose} />);

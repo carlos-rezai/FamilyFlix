@@ -19,7 +19,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 4 (issue #486): _Test connection_ as a busy
+ * 53, Loading states, Phase 4 (issue #486): _Test connection_ as a busy
  * button.
  *
  * `useTmdbKey`'s `testing` runs on the **Loader timing**: _Test connection_
@@ -84,7 +84,7 @@ async function accept() {
   await respond(okResponse({ key: NEW_KEY }));
 }
 
-describe('NetworkSection — Test connection on the Loader timing', () => {
+describe('NetworkSection: Test connection on the Loader timing', () => {
   it('locks at once on Test connection, and reads Testing… only after 300ms', async () => {
     await typedNewKey();
     pressTest();

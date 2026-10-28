@@ -15,12 +15,12 @@ import {
  * `useFactoryReset()` → `{ resetting, refusal, reset }`, the hook behind the
  * **Reset dialog**'s _Erase everything_. `resetting` is not `idle` while the
  * request is in flight (amended by 53, Loading states, issue #487: a **Busy
- * phase** now, not a boolean). A `reset` outcome reloads onto `/` with `location.assign` —
- * the third **Fresh home**: not `replace`, not a router `navigate`, because
- * every read in the app is stale once the library is gone. A refusal is held
- * until the next press is answered, the Export's rule. A rejection leaves the
- * state as it was with `resetting` `idle` again, the Delete dialog's rule —
- * `reset` itself never rejects.
+ * phase** now, not a boolean). A `reset` outcome reloads onto `/` with
+ * `location.assign` — the third **Fresh home**: not `replace`, not a router
+ * `navigate`, because every read in the app is stale once the library is
+ * gone. A refusal is held until the next press is answered, the Export's
+ * rule. A rejection leaves the state as it was with `resetting` `idle` again,
+ * the Delete dialog's rule — `reset` itself never rejects.
  */
 
 let fetchMock: ReturnType<

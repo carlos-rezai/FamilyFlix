@@ -13,7 +13,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 4 (issue #487): the Reset dialog on the
+ * 53, Loading states, Phase 5 (issue #487): the Reset dialog on the
  * **Loader timing**.
  *
  * From the confirm press the dialog is **Locked**: no ✕, Escape and the scrim
@@ -63,7 +63,7 @@ function pressErase() {
   fireEvent.click(erase());
 }
 
-describe('ResetDialog — locked from the confirm press', () => {
+describe('ResetDialog: locked from the confirm press', () => {
   stubLocation();
 
   it('locks at once, while waiting: no ✕, Cancel disabled, the confirm busy on its idle label', async () => {
@@ -121,7 +121,7 @@ describe('ResetDialog — locked from the confirm press', () => {
   });
 });
 
-describe('ResetDialog — a reset that lands', () => {
+describe('ResetDialog: a reset that lands', () => {
   const location = stubLocation();
 
   it('reloads onto / only once the loader’s hold is out', async () => {
@@ -141,7 +141,7 @@ describe('ResetDialog — a reset that lands', () => {
   });
 });
 
-describe('ResetDialog — a refused reset', () => {
+describe('ResetDialog: a refused reset', () => {
   const location = stubLocation();
 
   it('returns, after the hold, to the live idle face with its refusal sentence', async () => {

@@ -15,7 +15,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 4 (issue #486): Library folders' _Add_ as a busy
+ * 53, Loading states, Phase 4 (issue #486): Library folders' _Add_ as a busy
  * button.
  *
  * `useLibraryFolders`' `adding` runs on the **Loader timing**: _Add_ locks at
@@ -89,7 +89,7 @@ async function answer(response: Response) {
   await respond(response);
 }
 
-describe('LibraryFolders — Add on the Loader timing', () => {
+describe('LibraryFolders: Add on the Loader timing', () => {
   fakeFolderBridge();
 
   it('locks at once on Add, and reads Adding… only after 300ms', async () => {

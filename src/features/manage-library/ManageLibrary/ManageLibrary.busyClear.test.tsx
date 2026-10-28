@@ -22,7 +22,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 3 (issue #485): the Clear dialog's busy button.
+ * 53, Loading states, Phase 3 (issue #485): the Clear dialog's busy button.
  *
  * `clearing` runs on the **Loader timing**: _Clear details_ locks at once on
  * its idle label, reads _Clearing…_ only once the clear has run 300ms, and
@@ -99,7 +99,7 @@ async function finish() {
   await advanceClock(500);
 }
 
-describe('ManageLibrary — Clear on the Loader timing', () => {
+describe('ManageLibrary: Clear on the Loader timing', () => {
   it('locks at once on Clear details, and reads Clearing… only after 300ms', async () => {
     await openClearOnCoco();
     pressClear();

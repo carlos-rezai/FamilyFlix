@@ -33,7 +33,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 2 (issue #484): a save that waits.
+ * 53, Loading states, Phase 2 (issue #484): a save that waits.
  *
  * The **Movie form**'s save runs on the **Loader timing**, for every job and
  * both kinds: the button locks at once on its idle label, reads _Adding…_ on
@@ -281,7 +281,7 @@ const JOBS: Job[] = [
 ];
 
 describe.each(JOBS)(
-  'MovieForm — $name saves on the Loader timing',
+  'MovieForm: $name saves on the Loader timing',
   ({ open, idleLabel, busyLabel, answer, at, landing, shellPick }) => {
     if (shellPick !== undefined) {
       const bridge = fakeFolderBridge();

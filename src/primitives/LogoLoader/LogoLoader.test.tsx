@@ -10,7 +10,7 @@ import { theme } from '@/styles/theme';
 import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
- * 53 — Loading states, Phase 4 (issue #487): the **Logo loader**.
+ * 53, Loading states, Phase 5 (issue #487): the **Logo loader**.
  *
  * `prim.LogoLoader.dc.html`: the two Fs of the mark take turns rising, or,
  * given a `progress`, fill left to right with the detail reading `NN%`. A
@@ -42,7 +42,7 @@ function drawnValue(element: Element, property: string): string | undefined {
   return resolvedStyle(element as HTMLElement)[property];
 }
 
-describe('LogoLoader — a status', () => {
+describe('LogoLoader: a status', () => {
   it('is a polite status named by its label, the label drawn under the mark', () => {
     renderLoader({ label: 'Erasing everything' });
 
@@ -69,7 +69,7 @@ describe('LogoLoader — a status', () => {
   });
 });
 
-describe('LogoLoader — progress', () => {
+describe('LogoLoader: progress', () => {
   it('draws its progress as NN%, and speaks it after the label', () => {
     renderLoader({ label: 'Copying', progress: 0.42 });
 
@@ -91,7 +91,7 @@ describe('LogoLoader — progress', () => {
   });
 });
 
-describe('LogoLoader — what its props draw', () => {
+describe('LogoLoader: what its props draw', () => {
   it('is 48px wide by default, its height the mark’s own ratio', () => {
     renderLoader();
 
@@ -149,7 +149,7 @@ describe('LogoLoader — what its props draw', () => {
   });
 });
 
-describe('LogoLoader — its clip id', () => {
+describe('LogoLoader: its clip id', () => {
   it('gives two loaders on a page distinct ids a url(#…) can carry', () => {
     draw(
       <>
@@ -175,7 +175,7 @@ describe('LogoLoader — its clip id', () => {
   });
 });
 
-describe('LogoLoader — reduced motion', () => {
+describe('LogoLoader: reduced motion', () => {
   /** Every style tag's text, as styled-components injected it. */
   function injectedCss(): string {
     return Array.from(document.querySelectorAll('style'))

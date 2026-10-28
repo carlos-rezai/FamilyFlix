@@ -11,7 +11,7 @@ import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
 /**
- * 53 — Loading states, Phase 4 (issue #487): `resetting` is a **Busy phase**
+ * 53, Loading states, Phase 5 (issue #487): `resetting` is a **Busy phase**
  * on the **Loader timing**: `waiting` from the press, `shown` once the reset
  * has run 300ms, and back to `idle` after a refusal only once the 500ms hold
  * is out. A reset that lands reloads onto `/` after the same hold.
@@ -26,7 +26,7 @@ afterEach(() => {
 const IMPORT_RUNNING =
   'An import is running. Stop it before erasing everything.';
 
-describe('useFactoryReset — on the Loader timing', () => {
+describe('useFactoryReset: on the Loader timing', () => {
   const location = stubLocation();
 
   it('is idle before a press', () => {

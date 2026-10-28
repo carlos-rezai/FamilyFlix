@@ -97,10 +97,10 @@ describe('GlobalStyle — Reduced motion', () => {
     // held by the global rule; none may carry a branch of its own, and none
     // may out-rank the rule with an !important of its own.
     //
-    // Amended by 53 — Loading states (issue #484): the one exception is
-    // `Button`'s shine, whose reduced-motion fade out-ranks the `*` rule on
-    // purpose, so a shown busy label still says it is working. Issue #487
-    // adds the second: `LogoLoader`'s beat, which fades rather than freezing.
+    // Two may, on purpose: `Button`'s shine and `LogoLoader`'s beat each fade
+    // under reduced motion, out-ranking the `*` rule, because a shown busy
+    // label and a beating mark must still say they are working when nothing
+    // may move. A fade, never a freeze.
     const allowed = [
       'src/primitives/Button/Button.styles.ts',
       'src/primitives/LogoLoader/LogoLoader.styles.ts',

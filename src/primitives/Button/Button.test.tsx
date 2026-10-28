@@ -358,14 +358,14 @@ describe('Button — hover, press and keyboard focus', () => {
 });
 
 /**
- * 53 — Loading states, Phase 2 (issue #484): **Button**'s busy props.
+ * 53, Loading states, Phase 2 (issue #484): **Button**'s busy props.
  *
  * `busy` is a **Busy phase**. `waiting` locks the button at once with its idle
  * label, its variant's face and its idle width kept; `shown` reads its
  * `busyLabel` politely with a shine in its own ink sweeping across it, a fade
  * under reduced motion.
  */
-describe('Button — busy', () => {
+describe('Button: busy', () => {
   function renderBusy(props: Partial<ButtonProps> = {}) {
     return render(
       <ThemeProvider theme={theme}>
