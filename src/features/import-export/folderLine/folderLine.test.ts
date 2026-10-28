@@ -10,6 +10,10 @@ import type { LibraryFolder } from '@/types';
  * Library folders page and Import setup's listed folders both draw: its title
  * count while the disk reaches it, and the prototype's sentence when it does
  * not.
+ *
+ * 54, Scan new folders, issue #493: a reachable **New folder** (`scannedAt`
+ * null) says so, _Not scanned yet_ with no titles and _N titles · not scanned
+ * yet_ with some; an Unreachable folder's sentence wins over any mark.
  */
 
 const FOLDER: LibraryFolder = {
@@ -17,16 +21,35 @@ const FOLDER: LibraryFolder = {
   path: 'D:/Films',
   titleCount: 42,
   reachable: true,
+  scannedAt: '2026-10-28T09:30:00.000Z',
 };
 
+const NEW_FOLDER: LibraryFolder = { ...FOLDER, scannedAt: null };
+
 describe('folderLine', () => {
-  it('counts the titles of a folder the disk reaches', () => {
+  it('counts the titles of a scanned folder the disk reaches', () => {
     expect(folderLine(FOLDER)).toBe('42 titles');
   });
 
-  it('says a folder that cannot be reached cannot be, whatever it counted', () => {
-    expect(folderLine({ ...FOLDER, reachable: false })).toBe(
-      'Can’t be reached right now'
+  it('says a reachable new folder holding nothing is not scanned yet', () => {
+    expect(folderLine({ ...NEW_FOLDER, titleCount: 0 })).toBe(
+      'Not scanned yet'
     );
   });
+
+  it('counts a reachable new folder’s titles and says it is not scanned yet', () => {
+    expect(folderLine(NEW_FOLDER)).toBe('42 titles · not scanned yet');
+  });
+
+  it.each([
+    ['scanned', FOLDER],
+    ['new', NEW_FOLDER],
+  ])(
+    'says a %s folder that cannot be reached cannot be, whatever it counted',
+    (_mark, folder) => {
+      expect(folderLine({ ...folder, reachable: false })).toBe(
+        'Can’t be reached right now'
+      );
+    }
+  );
 });

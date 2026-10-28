@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to — migration #14, an episode's
-// **Still source** (issue #382). Every "at the latest version" assertion reads
+// The version a fresh database migrates to: migration 16, a folder's
+// `scanned_at` (issue #493). Every "at the latest version" assertion reads
 // it, so the next migration moves one number rather than ten.
-const LATEST_VERSION = 15;
+const LATEST_VERSION = 16;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.

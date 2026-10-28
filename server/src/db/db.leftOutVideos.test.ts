@@ -43,10 +43,12 @@ function atVersion14(dbPath: string): void {
 }
 
 describe('db: migration 15, the left-out videos', () => {
-  it('lands a fresh database at version 15 with the table', () => {
+  it('lands a fresh database at version 15 or later with the table', () => {
     const db = track(openDatabase(':memory:'));
 
-    expect(Number(db.pragma('user_version', { simple: true }))).toBe(15);
+    expect(
+      Number(db.pragma('user_version', { simple: true }))
+    ).toBeGreaterThanOrEqual(15);
     expect(tableNames(db)).toContain('left_out_videos');
   });
 
@@ -96,6 +98,8 @@ describe('db: migration 15, the left-out videos', () => {
     expect([...storage.leftOut('films')]).toEqual(['Heat (1995)/Heat.mkv']);
     closeTracked();
     const db = track(openDatabase(dbPath));
-    expect(Number(db.pragma('user_version', { simple: true }))).toBe(15);
+    expect(
+      Number(db.pragma('user_version', { simple: true }))
+    ).toBeGreaterThanOrEqual(15);
   });
 });

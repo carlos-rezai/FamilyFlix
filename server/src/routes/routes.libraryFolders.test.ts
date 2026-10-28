@@ -15,6 +15,10 @@
 // 52, Keep originals, issue #479: the **Media directory refusal**. A folder
 // that is, lies inside or holds the server's **Managed media directory** is
 // answered `409` in one sentence, after every rule before it.
+//
+// 54, Scan new folders, issue #493: "a folder knows it's new". Every listed
+// folder carries `scannedAt`, null for a **New folder** and the stamp once a
+// run has read it; a folder just added is new.
 
 import express from 'express';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
@@ -52,6 +56,8 @@ interface Api {
   disk: string;
   /** The server's **Managed media directory**. */
   media: string;
+  /** The library behind the API, for the mark no route sets yet. */
+  storage: LibraryStorage;
 }
 
 /** A fresh library behind a listening API, composed the way `main.ts` is. */
@@ -88,7 +94,7 @@ function freshApi(): Api {
   const server = app.listen(0);
   servers.push(server);
   const { port } = server.address() as AddressInfo;
-  return { baseUrl: `http://127.0.0.1:${port}`, disk, media };
+  return { baseUrl: `http://127.0.0.1:${port}`, disk, media, storage };
 }
 
 /** A directory under the sandbox's disk, made. */
@@ -146,6 +152,7 @@ describe('GET /api/library-folders', () => {
         path: movies,
         titleCount: 0,
         reachable: true,
+        scannedAt: null,
         leftOut: 0,
       },
       {
@@ -153,8 +160,26 @@ describe('GET /api/library-folders', () => {
         path: kids,
         titleCount: 0,
         reachable: true,
+        scannedAt: null,
         leftOut: 0,
       },
+    ]);
+  });
+
+  it('answers scannedAt on every folder: null for a new one, the stamp for one read', async () => {
+    const api = freshApi();
+    const movies = folder(api, 'Movies');
+    const kids = folder(api, 'Kids');
+    const read = await addFolder(api, movies);
+    await addFolder(api, kids);
+    api.storage.markScanned([read.id], '2026-10-28T09:30:00.000Z');
+
+    expect(await list(api)).toEqual([
+      expect.objectContaining({
+        path: movies,
+        scannedAt: '2026-10-28T09:30:00.000Z',
+      }),
+      expect.objectContaining({ path: kids, scannedAt: null }),
     ]);
   });
 
@@ -186,6 +211,7 @@ describe('POST /api/library-folders', () => {
       path: movies,
       titleCount: 0,
       reachable: true,
+      scannedAt: null,
     });
     expect((await list(api)).map((listed) => listed.id)).toEqual([added.id]);
   });
