@@ -34,7 +34,7 @@ function renderEditor(props: Partial<FolderListEditorProps> = {}) {
         add={add}
         remove={remove}
         bringBack={vi.fn((_id: string) => Promise.resolve())}
-        adding={false}
+        adding="idle"
         refusal={null}
         removeRefusal={null}
         {...props}

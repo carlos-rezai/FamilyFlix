@@ -17,14 +17,6 @@ import {
   TitleRow,
 } from './NetworkSection.styles';
 
-/** What the button says: asking, connected, or not yet. */
-function testLabel(testing: boolean, connected: boolean): string {
-  if (testing) {
-    return 'Testing…';
-  }
-  return connected ? 'Test again' : 'Test connection';
-}
-
 /**
  * The Settings hub's Network **Settings group**, from
  * `page.SettingsPage.dc.html`: the one place FamilyFlix goes online. _The
@@ -33,7 +25,9 @@ function testLabel(testing: boolean, connected: boolean): string {
  *
  * The section owns `useTmdbKey`: the stored key comes back masked in the
  * field, the pill reads _Connected_ while it is there and _Not set up_ the
- * moment it is edited, and _Test connection_ tests and saves in one.
+ * moment it is edited, and _Test connection_ tests and saves in one: it
+ * locks from the press and reads _Testing…_ once the test has run 300ms, on
+ * the **Loader timing**.
  *
  * Under a divider, _Sync metadata & posters_, a `NavigationRow`, pushes
  * `/enrich`; its line is `syncLine` over the `EnrichmentSummary`, blank until
@@ -68,7 +62,9 @@ export function NetworkSection() {
             onChange={(event) => onKey(event.target.value)}
           />
           <Button
-            label={testLabel(testing, connected)}
+            label={connected ? 'Test again' : 'Test connection'}
+            busyLabel="Testing…"
+            busy={testing}
             variant="secondary"
             size="md"
             onClick={() => void test()}

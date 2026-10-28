@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import type { BusyPhase } from '@/types';
 import { useSnackbar } from '@/App/useSnackbar/useSnackbar';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { fetchTmdbKey } from '@/api/fetchTmdbKey/fetchTmdbKey';
 import { saveTmdbKey } from '../api/api';
 
@@ -9,8 +11,11 @@ export interface TmdbKeyState {
   key: string;
   /** Whether the stored key is what the field holds. */
   connected: boolean;
-  /** Whether a test is on the wire. */
-  testing: boolean;
+  /**
+   * The test's **Busy phase**, on the **Loader timing**. Its result, the
+   * notice and the stored key, lands only once the loader's hold is out.
+   */
+  testing: BusyPhase;
   /** The field's edit. */
   onKey(key: string): void;
   /** _Test connection_: the test and the save in one, raising its notice. */
@@ -27,7 +32,7 @@ export function useTmdbKey(): TmdbKeyState {
   const { notify } = useSnackbar();
   const [stored, setStored] = useState<string | null>(null);
   const [key, setKey] = useState('');
-  const [testing, setTesting] = useState(false);
+  const { phase: testing, run } = useDelayedBusy();
   // A key typed before the read lands is not overwritten by it.
   const edited = useRef(false);
 
@@ -63,9 +68,7 @@ export function useTmdbKey(): TmdbKeyState {
       return;
     }
 
-    setTesting(true);
-    const outcome = await saveTmdbKey(key);
-    setTesting(false);
+    const outcome = await run(() => saveTmdbKey(key));
 
     if (outcome.kind === 'saved') {
       setStored(outcome.key);
@@ -76,7 +79,7 @@ export function useTmdbKey(): TmdbKeyState {
     } else {
       notify({ variant: 'error', message: "Couldn't reach TMDB." });
     }
-  }, [key, notify]);
+  }, [run, key, notify]);
 
   return {
     key,

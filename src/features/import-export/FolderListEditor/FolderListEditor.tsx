@@ -26,6 +26,8 @@ export type FolderListEditorProps = Omit<LibraryFoldersState, 'folders'> & {
  * _Browse…_, the system folder dialog, each picked folder posted in order as
  * if it had been typed. A refused add is one 13px `danger` line under the
  * field, the typed path kept; a refused remove the same line under its row.
+ * _Add_ locks from the press and reads _Adding…_ once the add has run 300ms,
+ * on the **Loader timing**; _Browse…_ is disabled until the add settles.
  *
  * The list is the caller's `useLibraryFolders()`, handed in, because the
  * caller decides what a listed folder enables — **Scan folders** on the
@@ -96,7 +98,9 @@ export function FolderListEditor({
           label="Add"
           variant="secondary"
           size="sm"
-          disabled={adding || typed.trim() === ''}
+          busyLabel="Adding…"
+          busy={adding}
+          disabled={typed.trim() === ''}
           onClick={() => {
             void submit();
           }}
@@ -106,7 +110,7 @@ export function FolderListEditor({
             label="Browse…"
             variant="secondary"
             size="sm"
-            disabled={adding}
+            disabled={adding !== 'idle'}
             onClick={() => {
               void browse();
             }}

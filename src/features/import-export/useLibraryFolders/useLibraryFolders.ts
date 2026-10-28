@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import type { LibraryFolderView } from '@/types';
+import type { BusyPhase, LibraryFolderView } from '@/types';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import {
   addLibraryFolder,
   bringBackLeftOut,
@@ -26,8 +27,11 @@ export interface LibraryFoldersState {
    * route agrees; never rejects.
    */
   bringBack: (id: string) => Promise<void>;
-  /** Whether an add is out. */
-  adding: boolean;
+  /**
+   * The add's **Busy phase**, on the **Loader timing**. Its outcome, the new
+   * row or the refusal, lands only once the loader's hold is out.
+   */
+  adding: BusyPhase;
   /**
    * The route's own sentence for the last refused add, `null` once one lands.
    */
@@ -47,7 +51,7 @@ export interface LibraryFoldersState {
  */
 export function useLibraryFolders(): LibraryFoldersState {
   const [folders, setFolders] = useState<LibraryFolderView[] | null>(null);
-  const [adding, setAdding] = useState(false);
+  const { phase: adding, run } = useDelayedBusy();
   const [refusal, setRefusal] = useState<string | null>(null);
   const [removeRefusal, setRemoveRefusal] = useState<{
     id: string;
@@ -68,28 +72,28 @@ export function useLibraryFolders(): LibraryFoldersState {
     };
   }, []);
 
-  const add = useCallback(async (path: string) => {
-    setAdding(true);
-    try {
-      const outcome = await addLibraryFolder(path);
-      if (outcome.kind === 'refused') {
-        setRefusal(outcome.sentence);
+  const add = useCallback(
+    async (path: string) => {
+      try {
+        const outcome = await run(() => addLibraryFolder(path));
+        if (outcome.kind === 'refused') {
+          setRefusal(outcome.sentence);
+          return false;
+        }
+        setRefusal(null);
+        // A folder just listed has nothing left out yet.
+        setFolders((listed) => [
+          ...(listed ?? []),
+          { ...outcome.folder, leftOut: 0 },
+        ]);
+        return true;
+      } catch {
+        // A failure the route did not word leaves the list as it was.
         return false;
       }
-      setRefusal(null);
-      // A folder just listed has nothing left out yet.
-      setFolders((listed) => [
-        ...(listed ?? []),
-        { ...outcome.folder, leftOut: 0 },
-      ]);
-      return true;
-    } catch {
-      // A failure the route did not word leaves the list as it was.
-      return false;
-    } finally {
-      setAdding(false);
-    }
-  }, []);
+    },
+    [run]
+  );
 
   const remove = useCallback(async (id: string) => {
     try {

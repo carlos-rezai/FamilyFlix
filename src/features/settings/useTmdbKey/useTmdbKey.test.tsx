@@ -151,12 +151,12 @@ describe('useTmdbKey — Test connection', () => {
       testing = result.current.test();
     });
 
-    expect(result.current.testing).toBe(true);
+    expect(result.current.testing).toBe('waiting');
     await act(async () => {
       answer(okResponse({ key: STORED }));
       await testing;
     });
-    expect(result.current.testing).toBe(false);
+    expect(result.current.testing).toBe('idle');
   });
 
   it('raises Connected to TMDB. and holds the echo as stored', async () => {

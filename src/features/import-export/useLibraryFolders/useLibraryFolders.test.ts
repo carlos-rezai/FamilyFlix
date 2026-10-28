@@ -103,7 +103,7 @@ describe('useLibraryFolders — the read', () => {
 
     expect(result.current.folders).toBeNull();
     expect(result.current.refusal).toBeNull();
-    expect(result.current.adding).toBe(false);
+    expect(result.current.adding).toBe('idle');
   });
 
   it('hands over the list once it lands', async () => {
@@ -209,14 +209,14 @@ describe('useLibraryFolders — add', () => {
     act(() => {
       pending = result.current.add('D:\\Kids');
     });
-    await waitFor(() => expect(result.current.adding).toBe(true));
+    await waitFor(() => expect(result.current.adding).toBe('waiting'));
 
     await act(async () => {
       answer(createdResponse(KIDS));
       await pending;
     });
 
-    expect(result.current.adding).toBe(false);
+    expect(result.current.adding).toBe('idle');
   });
 });
 
