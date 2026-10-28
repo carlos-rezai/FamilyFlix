@@ -11,6 +11,114 @@ Newest entry first.
 
 ---
 
+## 2026-10-28: Loading states, the refactor (issue 490)
+
+Thirteen commits against
+`docs/refactor-plans/53-loading-states-refactor.md`, one per plan commit, the
+initiative's closing round. **11112 tests pass across 697 files**, against
+11093 across 695 at the end of the build (`cc601da5`): two new suites (the
+helpers', eight cases), three `deleteView` cases, and eight `busySave` cases
+from its two new rows. `tsc -b --force` is clean. `eslint src server
+electron` reports one error and 133 warnings, the count the build ended on.
+
+### What shipped
+
+Log 53's step 36: the prototype lift (483) and the build slices 484 to 489.
+One hook, `useDelayedBusy`, owns the **Loader timing**, and every in-flight
+state is a **Busy phase**. `Button` takes `busy` and `busyLabel` on its
+button form; `Modal` takes `locked`. `LogoLoader` is an atom and
+`DialogLoader` a molecule; the three Delete dialogs and the Reset dialog lock
+from the press and turn into the **Dialog loader** once **Shown**, and a
+failed Delete says so. The shell opens its window over `splashPage` before
+the server's `ready`.
+
+### What each group changed
+
+- **Group 1, one import and one button form** (`3d9ea18e`, `2e4249ba`,
+  `aa1c500d`). `BusyPhase` comes from `@/types` everywhere. `Button` draws
+  its button form once, its props chosen by the phase, and holds its idle
+  width as state read in a layout effect: the render body reads no ref.
+- **Group 2, the Delete dialog's words in `deleteView`** (`2edb2301`,
+  `1050c621`). `DeleteView` gains `loader` and `failure`; `DeleteTitleBody`,
+  `DeleteTitleDialog` and the two page dialogs read them. The page dialogs
+  keep their own heading and subtitle.
+- **Group 3, comments rewrapped** (`e599f1d7`). Four docblocks edited
+  mid-line, and `LogoLoader` names the brand mark's full path.
+- **Group 4, suites on one clock** (`2b931517`, `912b9e08`, `9a50ce1e`,
+  `76f44915`, `73aebe85`). `advanceClock` and `heldFetch` in
+  `src/test-support/`, each with its test; the seventeen copies of `advance`
+  and the held `fetch` go. The seven older cases that waited real time for an
+  _-ing_ label keep the lock (disabled at once, no second request) and leave
+  the label to the busy suites; `busySave` gains a resolve row and a show
+  folder row so every save's label is pinned. The headers read `53, Loading
+states, Phase N`, issue 487's corrected to Phase 5 and the splash suite's
+  in the same form; `describe` titles take a colon; `GlobalStyle.test`'s
+  guard says why its two exceptions exist.
+- **Group 5, the docs** (`f0704bb9` and this commit). The checklist ticks
+  step 36; the README tree, the release checklist and the glossary know the
+  loader.
+
+### Where this round left the plan
+
+- **`heldFetch`'s `pass` takes the request's `init` as well as its URL.**
+  The plan wrote `pass(url)`, but four suites (`useLibraryFolders.busy`,
+  `LibraryFolders.busyAdd`, `useTmdbKey.busy`, `NetworkSection.busyTest`) tell
+  their read from their write by method alone, on the same route.
+- **`heldFetch` restores the `fetch` it found and nothing else**, by its
+  property descriptor as `stubLocation` does, rather than
+  `vi.unstubAllGlobals()`, which would also undo another stub a suite set.
+- **Commit 4 changed two expectations** besides the new cases:
+  `libraryTitleView.test`'s linked-title cases compare the whole view with
+  `toEqual`, so `COCO_WORDS` and the Bluey case gain the two new words.
+- **Commit 10's resolve row is the soft resolve** (the Edit job's `PATCH`,
+  then the dismiss), the shape of the older case it carries; `busySave`'s
+  `pass` answers the problem read and the dismiss.
+- **Commit 11 rewrapped `useFactoryReset.test`'s docblock**, which issue 487
+  edited mid-line and the plan missed; its older dashes stay.
+  `GlobalStyle.test`'s title had already lost its dash in the build.
+- **The release smoke's reset sits apart**: the Factory reset check is last
+  in section 8, since the reinstall check before it needs the library.
+- The full suite ran after every commit, green each time; `tsc -b --force`
+  and `eslint` at the end of each group.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the Reset dialog's idle face between
+the hold and the reload, `useDeleteMovie` and `useDeleteSeries` as twins, a
+danger-line primitive, the splash's copies of the tokens and the F paths,
+`LogoLoader`'s literal sizes, CLAUDE.md's barrel list, server-reported
+progress and everything log 53 put out of scope, the `.busy` suite names, and
+the frozen `handoff-loading-states/`.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **The Reset dialog's idle face before the reload**, as a `fix:`: a reset
+  that lands sets the **Busy phase** back to `idle` before
+  `location.assign('/')`, so the live _Erase everything?_ face is drawn,
+  unlocked, while the page reloads.
+- **A danger-line primitive**, for the Delete dialog's `Failure`, the Reset
+  dialog's `Refusal` and the dozen `styles.ts` files that draw one.
+- **CLAUDE.md's barrel list** names four barrels; `src/types/index.ts` is a
+  fifth.
+- **`heldFetch` beyond the busy suites**: the older suites (`MovieForm.test`,
+  `ManageLibrary.test`, `ExportModal.test`) still build their own held
+  responses.
+- **From earlier entries**: `useDeleteMovie` and `useDeleteSeries` as one
+  hook, the Delete routes as a domain step, a shared error-reason helper and
+  a plural helper, a text-button primitive, the `routes.enrichment` 409 case
+  under load and the sandbox teardown flake, a shared player-harness test
+  helper, the repo-wide em dash pass, the lint error in
+  `EnrichmentReview.test.tsx`, and `libraryTitleView.test`'s _no callout_
+  key-list absence.
+
+### The initiative
+
+**Loading states is done**: the prototype lift (483), the slices (484 to 489) and this round (490). Issue 482 is closed with it.
+
+---
+
 ## 2026-10-27: Keep originals, the refactor (issue 481)
 
 Fourteen commits against
