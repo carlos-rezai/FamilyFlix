@@ -198,24 +198,35 @@ describe('useLibraryTitles — clearDetails', () => {
     expect(result.current.titles?.movies).toEqual(LISTED.movies);
   });
 
-  it('holds clearing true for the life of the request, false after', async () => {
+  it('runs clearing waiting, then shown after 300ms, then idle after the hold', async () => {
     let answer: (response: Response) => void = () => undefined;
     const { result } = await loadedHook(
       () => new Promise<Response>((resolve) => (answer = resolve))
     );
-    expect(result.current.clearing).toBe(false);
+    expect(result.current.clearing).toBe('idle');
 
-    let pending: Promise<boolean> | undefined;
-    act(() => {
-      pending = result.current.clearDetails(LISTED.movies[1]!);
-    });
-    expect(result.current.clearing).toBe(true);
+    vi.useFakeTimers();
+    try {
+      let pending: Promise<boolean> | undefined;
+      act(() => {
+        pending = result.current.clearDetails(LISTED.movies[1]!);
+      });
+      expect(result.current.clearing).toBe('waiting');
 
-    await act(async () => {
-      answer(okResponse(CLEARED_MOVIE));
-      await pending;
-    });
-    expect(result.current.clearing).toBe(false);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300);
+      });
+      expect(result.current.clearing).toBe('shown');
+
+      await act(async () => {
+        answer(okResponse(CLEARED_MOVIE));
+        await vi.advanceTimersByTimeAsync(500);
+        await pending;
+      });
+      expect(result.current.clearing).toBe('idle');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('resolves true once the row is redrawn', async () => {

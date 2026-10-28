@@ -95,7 +95,8 @@ const folderNameOf = (path: string): string =>
  * The dialog owns `useExport`. The count is `null` until the summary lands
  * and absent on screen while so — it never blocks the export, and a done face
  * reached without one leaves the clause out rather than a hole in. The button
- * reads _Exporting…_ and is disabled for the life of the request. A refusal
+ * locks from the press and reads _Exporting…_ once the export has run 300ms,
+ * on the **Loader timing**; the dialog stays dismissable. A refusal
  * keeps the idle face and what was typed, its sentence under the field it
  * names; any other failure leaves the idle face exactly as it was.
  */
@@ -259,14 +260,15 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
       </div>
 
       <Actions>
-        {/* The label is the whole of the in-flight state — the Delete
-          dialog's "Deleting…" precedent: it says the work started, and the
-          disabled button is what stops an impatient second press sending a
-          second request. The cards and Cancel stay live. */}
+        {/* Busy on the **Loader timing**: locked from the first press, so an
+          impatient second press sends no second request, and reading
+          _Exporting…_ only once the export has run 300ms. The cards and
+          Cancel stay live. */}
         <Button
-          label={exporting ? 'Exporting…' : FORMAT_COPY[format].button}
+          label={FORMAT_COPY[format].button}
+          busyLabel="Exporting…"
+          busy={exporting}
           variant="primary"
-          disabled={exporting}
           onClick={() => {
             void exportLibrary();
           }}

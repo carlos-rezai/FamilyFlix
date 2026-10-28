@@ -351,14 +351,15 @@ describe('ExportModal — exporting', () => {
     });
   });
 
-  it('reads Exporting… and is disabled in flight', async () => {
+  it('locks at once in flight, and reads Exporting… once shown', async () => {
     const request = held();
     serve({ post: request.answer });
     renderDialog();
 
     fireEvent.click(exportButton());
 
-    expect(exportingButton()).toBeDefined();
+    expect((exportButton() as HTMLButtonElement).disabled).toBe(true);
+    await within(dialog()).findByRole('button', { name: 'Exporting…' });
     expect((exportingButton() as HTMLButtonElement).disabled).toBe(true);
 
     request.settle(createdResponse(WRITTEN));

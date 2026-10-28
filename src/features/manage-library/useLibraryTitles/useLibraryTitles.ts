@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
 import { deleteMovie } from '@/api/deleteMovie/deleteMovie';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { deleteSeries } from '@/api/deleteSeries/deleteSeries';
-import type { LibraryTitle, LibraryTitles } from '@/types';
+import type { BusyPhase, LibraryTitle, LibraryTitles } from '@/types';
 import {
   clearMovieDetails,
   clearSeriesDetails,
@@ -12,11 +13,12 @@ import {
 export interface LibraryTitlesState {
   /** Both lists, `null` until the read lands and still if it never does. */
   titles: LibraryTitles | null;
-  /** True for the life of a clear's request, false before and after. */
-  clearing: boolean;
+  /** A clear's **Busy phase**, on the **Loader timing**. */
+  clearing: BusyPhase;
   /**
    * **Clear details** on a title: `true` once its row is replaced in place by
-   * the echo, `false` on any failure, the list as it was. Never rejects.
+   * the echo, `false` on any failure, the list as it was. Settles only once
+   * the loader's hold is out. Never rejects.
    */
   clearDetails: (title: LibraryTitle) => Promise<boolean>;
   /** True for the life of a delete's request, false before and after. */
@@ -41,7 +43,7 @@ const listOf = (title: LibraryTitle) =>
  */
 export function useLibraryTitles(): LibraryTitlesState {
   const [titles, setTitles] = useState<LibraryTitles | null>(null);
-  const [clearing, setClearing] = useState(false);
+  const { phase: clearing, run: runClear } = useDelayedBusy();
   const [deleting, setDeleting] = useState(false);
 
   /** `echo` in place of the row it redraws, on the list its kind sits on. */
@@ -76,22 +78,19 @@ export function useLibraryTitles(): LibraryTitlesState {
 
   const clearDetails = useCallback(
     async (title: LibraryTitle): Promise<boolean> => {
-      setClearing(true);
       try {
-        replaced(
-          listOf(title),
+        const echo = await runClear<LibraryTitle>(() =>
           title.kind === 'movie'
-            ? await clearMovieDetails(title.id)
-            : await clearSeriesDetails(title.id)
+            ? clearMovieDetails(title.id)
+            : clearSeriesDetails(title.id)
         );
+        replaced(listOf(title), echo);
         return true;
       } catch {
         return false;
-      } finally {
-        setClearing(false);
       }
     },
-    [replaced]
+    [replaced, runClear]
   );
 
   const deleteTitle = useCallback(

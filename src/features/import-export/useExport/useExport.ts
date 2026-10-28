@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import type {
+  BusyPhase,
   ExportField,
   ExportFormat,
   ExportResult,
@@ -8,6 +9,7 @@ import type {
 } from '@/types';
 import { fetchExportSummary, startExport } from '../api/api';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 
 /** A `400`'s sentence and the field it is drawn under. */
 export interface ExportFieldRefusal {
@@ -31,8 +33,11 @@ export interface ExportState {
    * something is typed, and posted exactly as it stands.
    */
   name: string;
-  /** True for the life of the export request, false before and after. */
-  exporting: boolean;
+  /**
+   * The export's **Busy phase**, on the **Loader timing**. Its outcome, a
+   * `result` or a `refusal`, is drawn only once the loader's hold is out.
+   */
+  exporting: BusyPhase;
   /**
    * Whether images travel beside the sheet — the _Images_ toggle, on every
    * open.
@@ -94,7 +99,7 @@ export function useExport(open: boolean): ExportState {
   const [name, setNameField] = useState('');
   const [images, setImages] = useState(true);
   const [subtitles, setSubtitles] = useState(false);
-  const [exporting, setExporting] = useState(false);
+  const { phase: exporting, run } = useDelayedBusy();
   const [refusal, setRefusal] = useState<ExportFieldRefusal | null>(null);
   const [result, setResult] = useState<ExportResult | null>(null);
 
@@ -122,7 +127,6 @@ export function useExport(open: boolean): ExportState {
     setNameField('');
     setImages(true);
     setSubtitles(false);
-    setExporting(false);
     setRefusal(null);
     setResult(null);
 
@@ -176,15 +180,16 @@ export function useExport(open: boolean): ExportState {
 
   const exportLibrary = useCallback(async () => {
     const current = opening.current;
-    setExporting(true);
     try {
-      const outcome = await startExport({
-        format,
-        destination,
-        images,
-        subtitles,
-        name,
-      });
+      const outcome = await run(() =>
+        startExport({
+          format,
+          destination,
+          images,
+          subtitles,
+          name,
+        })
+      );
       if (opening.current !== current) {
         return;
       }
@@ -196,12 +201,8 @@ export function useExport(open: boolean): ExportState {
       }
     } catch {
       // Any other failure leaves the dialog as it was: the button comes back.
-    } finally {
-      if (opening.current === current) {
-        setExporting(false);
-      }
     }
-  }, [format, destination, images, subtitles, name]);
+  }, [run, format, destination, images, subtitles, name]);
 
   return {
     format,

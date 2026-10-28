@@ -136,7 +136,7 @@ describe('useExport — opening', () => {
     expect(result.current.destination).toBe('');
     expect(result.current.refusal).toBeNull();
     expect(result.current.result).toBeNull();
-    expect(result.current.exporting).toBe(false);
+    expect(result.current.exporting).toBe('idle');
   });
 
   it('reads the summary once on open, and nothing while closed', async () => {
@@ -244,21 +244,32 @@ describe('useExport — exporting', () => {
     ]);
   });
 
-  it('is exporting for the life of the request, and not before', async () => {
+  it('runs exporting waiting, then shown after 300ms, then idle after the hold', async () => {
     const request = held();
     serve({ post: request.answer });
     const { result } = renderExport();
-    expect(result.current.exporting).toBe(false);
+    expect(result.current.exporting).toBe('idle');
 
-    act(() => {
-      void result.current.exportLibrary();
-    });
-    await waitFor(() => expect(result.current.exporting).toBe(true));
+    vi.useFakeTimers();
+    try {
+      act(() => {
+        void result.current.exportLibrary();
+      });
+      expect(result.current.exporting).toBe('waiting');
 
-    await act(async () => {
-      request.settle(createdResponse(RESULT));
-    });
-    await waitFor(() => expect(result.current.exporting).toBe(false));
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(300);
+      });
+      expect(result.current.exporting).toBe('shown');
+
+      await act(async () => {
+        request.settle(createdResponse(RESULT));
+        await vi.advanceTimersByTimeAsync(500);
+      });
+      expect(result.current.exporting).toBe('idle');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('sets result on a 201 — Export ready', async () => {
@@ -290,7 +301,7 @@ describe('useExport — a refused destination (400)', () => {
       sentence: 'No folder at that path.',
     });
     expect(result.current.result).toBeNull();
-    expect(result.current.exporting).toBe(false);
+    expect(result.current.exporting).toBe('idle');
   });
 
   it('keeps the path that was refused in the field', async () => {
@@ -319,7 +330,7 @@ describe('useExport — any other failure', () => {
       await result.current.exportLibrary();
     });
 
-    expect(result.current.exporting).toBe(false);
+    expect(result.current.exporting).toBe('idle');
     expect(result.current.result).toBeNull();
     expect(result.current.refusal).toBeNull();
     expect(result.current.format).toBe('xlsx');
@@ -335,7 +346,7 @@ describe('useExport — any other failure', () => {
       await result.current.exportLibrary();
     });
 
-    expect(result.current.exporting).toBe(false);
+    expect(result.current.exporting).toBe('idle');
     expect(result.current.result).toBeNull();
     expect(result.current.refusal).toBeNull();
   });
@@ -361,7 +372,7 @@ describe('useExport — a close mid-request', () => {
     act(() => {
       void result.current.exportLibrary();
     });
-    await waitFor(() => expect(result.current.exporting).toBe(true));
+    await waitFor(() => expect(result.current.exporting).toBe('waiting'));
 
     rerender({ open: false });
     await act(async () => {
@@ -380,7 +391,7 @@ describe('useExport — a close mid-request', () => {
     act(() => {
       void result.current.exportLibrary();
     });
-    await waitFor(() => expect(result.current.exporting).toBe(true));
+    await waitFor(() => expect(result.current.exporting).toBe('waiting'));
 
     rerender({ open: false });
     await act(async () => {
@@ -418,7 +429,7 @@ describe('useExport — every open resets the state', () => {
     expect(result.current.destination).toBe('');
     expect(result.current.refusal).toBeNull();
     expect(result.current.result).toBeNull();
-    expect(result.current.exporting).toBe(false);
+    expect(result.current.exporting).toBe('idle');
     await waitFor(() => expect(summaryReads()).toBe(2));
   });
 

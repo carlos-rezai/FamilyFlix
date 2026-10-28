@@ -239,7 +239,7 @@ describe('useExport — a refusal carries its field', () => {
       sentence: 'Give the export folder a name.',
     });
     expect(result.current.result).toBeNull();
-    expect(result.current.exporting).toBe(false);
+    expect(result.current.exporting).toBe('idle');
   });
 
   it('holds a destination refusal as its field and sentence', async () => {

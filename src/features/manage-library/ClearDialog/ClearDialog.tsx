@@ -1,6 +1,6 @@
 import { Modal } from '@/components';
 import { BinIcon, Button } from '@/primitives';
-import type { LibraryTitle } from '@/types';
+import type { BusyPhase, LibraryTitle } from '@/types';
 import { clearView } from '../libraryTitleView/libraryTitleView';
 
 import { GoesAndStays } from '../GoesAndStays/GoesAndStays';
@@ -9,8 +9,11 @@ import { Actions, PathWell } from '../titleDialog.styles';
 export interface ClearDialogProps {
   /** The title the clear is asked of. */
   title: LibraryTitle;
-  /** Whether the clear is in flight: _Clearing…_, and inert. */
-  clearing: boolean;
+  /**
+   * The clear's **Busy phase**: locked from the press, _Clearing…_ once
+   * `shown`. The dialog itself stays dismissable.
+   */
+  clearing: BusyPhase;
   /** _Clear details_. */
   onConfirm: () => void;
   /** What Cancel, the ✕, Escape and the scrim ask for. */
@@ -44,9 +47,10 @@ export function ClearDialog({
       <GoesAndStays goes={view.goes} stays={view.stays} />
       <Actions>
         <Button
-          label={clearing ? 'Clearing…' : 'Clear details'}
+          label="Clear details"
+          busyLabel="Clearing…"
+          busy={clearing}
           variant="primary"
-          disabled={clearing}
           onClick={onConfirm}
         />
         <Button label="Cancel" variant="secondary" onClick={onClose} />

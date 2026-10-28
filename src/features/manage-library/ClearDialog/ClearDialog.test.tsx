@@ -3,7 +3,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { ClearDialog } from './ClearDialog';
-import type { LibraryTitle } from '@/types';
+import type { BusyPhase, LibraryTitle } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import {
@@ -21,7 +21,7 @@ import {
  * well, **What goes** (_Year, synopsis, credits and genres_; _Poster, backdrop
  * and artwork_; _Its TMDB match and score_), **What stays** (_Its title and
  * files_; _Watch history, rating and heart_), then _Clear details_ —
- * _Clearing…_ and inert while the request runs — before _Cancel_. Focus lands
+ * locked from the press, _Clearing…_ once shown — before _Cancel_. Focus lands
  * on the card, so Enter alone clears nothing.
  *
  * Presentational over its props: the organism owns the request, so a confirm
@@ -45,12 +45,12 @@ const COCO = makeLibraryMovie({
 
 function renderDialog({
   title = COCO,
-  clearing = false,
+  clearing = 'idle',
   onConfirm = () => undefined,
   onClose = () => undefined,
 }: {
   title?: LibraryTitle;
-  clearing?: boolean;
+  clearing?: BusyPhase;
   onConfirm?: () => void;
   onClose?: () => void;
 } = {}) {
@@ -189,9 +189,19 @@ describe('ClearDialog — the buttons', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
-  it('reads Clearing… and is inert while the request runs', () => {
+  it('is inert on its idle label while the clear is waiting', () => {
     const onConfirm = vi.fn();
-    renderDialog({ clearing: true, onConfirm });
+    renderDialog({ clearing: 'waiting', onConfirm });
+
+    expect(confirm().textContent).toBe('Clear details');
+    expect((confirm() as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(confirm());
+    expect(onConfirm).not.toHaveBeenCalled();
+  });
+
+  it('reads Clearing… and is inert once the loader is shown', () => {
+    const onConfirm = vi.fn();
+    renderDialog({ clearing: 'shown', onConfirm });
 
     expect(confirm().textContent).toBe('Clearing…');
     expect((confirm() as HTMLButtonElement).disabled).toBe(true);
