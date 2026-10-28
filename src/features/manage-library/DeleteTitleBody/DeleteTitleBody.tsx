@@ -41,9 +41,7 @@ export function DeleteTitleBody({
   return (
     <>
       <GoesAndStays goes={view.goes} stays={view.stays} />
-      {failed ? (
-        <Failure>{`Couldn’t delete “${title.title}”. Try again.`}</Failure>
-      ) : null}
+      {failed ? <Failure>{view.failure}</Failure> : null}
       <Actions>
         <Button
           label={view.confirm}

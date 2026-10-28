@@ -141,6 +141,10 @@ export interface DeleteView {
   stays: string[];
   /** _Delete movie_ / _Delete series_. */
   confirm: string;
+  /** The **Dialog loader**'s label once **Shown**: _Deleting “Coco”_. */
+  loader: string;
+  /** A failed delete's line: _Couldn’t delete “Coco”. Try again._ */
+  failure: string;
 }
 
 const SHARED_GOES = [
@@ -187,5 +191,7 @@ export function deleteView(title: DeleteSubject): DeleteView {
     goes: [...SHARED_GOES, ...filesGoing(title)],
     stays: filesStaying(title),
     confirm: `Delete ${noun}`,
+    loader: `Deleting “${title.title}”`,
+    failure: `Couldn’t delete “${title.title}”. Try again.`,
   };
 }

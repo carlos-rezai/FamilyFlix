@@ -255,6 +255,8 @@ const COCO_WORDS = {
   subtitle:
     'This takes the movie out of FamilyFlix. It can’t be undone from here.',
   confirm: 'Delete movie',
+  loader: 'Deleting “Coco”',
+  failure: 'Couldn’t delete “Coco”. Try again.',
 };
 
 describe('deleteView: a linked title keeps its files', () => {
@@ -326,6 +328,36 @@ describe('deleteView: a linked title keeps its files', () => {
       goes: SHARED_GOES,
       stays: ['Its folder, in your library folder'],
       confirm: 'Delete series',
+      loader: 'Deleting “Bluey”',
+      failure: 'Couldn’t delete “Bluey”. Try again.',
+    });
+  });
+});
+
+/**
+ * 53, Loading states (issue #490).
+ *
+ * `deleteView` words the two lines the **Busy phase** adds: the **Dialog
+ * loader**'s label once **Shown**, _Deleting “Coco”_, and a failed delete's
+ * line, _Couldn’t delete “Coco”. Try again._
+ */
+describe('deleteView: the loader and the failure', () => {
+  it('names the title in the loader', () => {
+    expect(deleteView(makeLibraryMovie({ title: 'Coco' })).loader).toBe(
+      'Deleting “Coco”'
+    );
+  });
+
+  it('names the title in the failure', () => {
+    expect(deleteView(makeLibraryMovie({ title: 'Coco' })).failure).toBe(
+      'Couldn’t delete “Coco”. Try again.'
+    );
+  });
+
+  it('words a show the same way', () => {
+    expect(deleteView(makeLibrarySeries({ title: 'Bluey' }))).toMatchObject({
+      loader: 'Deleting “Bluey”',
+      failure: 'Couldn’t delete “Bluey”. Try again.',
     });
   });
 });

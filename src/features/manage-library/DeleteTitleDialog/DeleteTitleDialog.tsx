@@ -38,7 +38,7 @@ export function DeleteTitleDialog({
   const view = deleteView(title);
 
   if (deleting === 'shown') {
-    return <DialogLoader label={`Deleting “${title.title}”`} />;
+    return <DialogLoader label={view.loader} />;
   }
 
   return (
