@@ -28,7 +28,8 @@ import {
  * `GET /api/tmdb/key`; the box travels on the run as `enrich` in
  * `POST /api/import`, and comes back on `ImportRun.enrich`, so a run
  * re-attached on arrival still knows it. _Finish_ on such a run **replaces**
- * `/import` with `/enrich?scope=all` — nothing starts unasked — and Back from
+ * `/import` with `/enrich?added=<startedAt>` (log 54, issue #497) — nothing
+ * starts unasked — and Back from
  * there steps to Settings. _Finish_ on a run without it is the push to `/` it
  * always was.
  *
@@ -171,7 +172,17 @@ async function startBody(): Promise<Record<string, unknown>> {
   return JSON.parse(String(init?.body)) as Record<string, unknown>;
 }
 
-const REVIEW = { found: 2, total: 2, done: 2, matched: 2 };
+/** The run's start, which Finish names as the added Sync's `since`. */
+const STARTED_AT = '2026-10-28T09:00:00.000Z';
+const REVIEW = {
+  found: 2,
+  total: 2,
+  done: 2,
+  matched: 2,
+  startedAt: STARTED_AT,
+};
+/** Where Finish on a run carrying `enrich` lands. */
+const ADDED_SEARCH = `?added=${encodeURIComponent(STARTED_AT)}`;
 /** Finish under either of its names: the run's `enrich` chooses. */
 const finish = () =>
   screen.findByRole(
@@ -246,7 +257,7 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
     expect((await finish()).textContent).toBe('Continue to TMDB sync');
   });
 
-  it('replaces /import with /enrich?scope=all', async () => {
+  it('replaces /import with /enrich?added=<startedAt>', async () => {
     serve({
       started: makeImportRun({ enrich: true }),
       then: [makeImportRun({ ...REVIEW, phase: 'review', enrich: true })],
@@ -259,7 +270,7 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
     fireEvent.click(await finish());
 
     expect(pathname()).toBe('/enrich');
-    expect(search()).toBe('?scope=all');
+    expect(search()).toBe(ADDED_SEARCH);
     expect(navigationType()).toBe('REPLACE');
     expect(screen.getByText('the enrichment setup')).toBeDefined();
     // Nothing starts unasked: no enrichment is posted on the way.
@@ -304,7 +315,7 @@ describe('ImportFlow — Finish on a run carrying enrich', () => {
     fireEvent.click(await finish());
 
     expect(pathname()).toBe('/enrich');
-    expect(search()).toBe('?scope=all');
+    expect(search()).toBe(ADDED_SEARCH);
     expect(navigationType()).toBe('REPLACE');
   });
 
@@ -360,7 +371,7 @@ describe('ImportFlow — Finish on a run without enrich', () => {
 describe('ImportFlow — Finish on a Folder scan', () => {
   const FROM_FOLDERS = ['/', '/settings', '/settings/folders', '/import'];
 
-  it('replaces /import with /enrich?scope=all when the scan was ticked', async () => {
+  it('replaces /import with /enrich?added=<startedAt> when the scan was ticked', async () => {
     serve({
       onArrival: true,
       then: [
@@ -377,7 +388,7 @@ describe('ImportFlow — Finish on a Folder scan', () => {
     fireEvent.click(await finish());
 
     expect(pathname()).toBe('/enrich');
-    expect(search()).toBe('?scope=all');
+    expect(search()).toBe(ADDED_SEARCH);
     expect(navigationType()).toBe('REPLACE');
   });
 

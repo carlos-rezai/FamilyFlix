@@ -8,8 +8,17 @@ describe('enrichPath', () => {
     expect(enrichPath({})).toBe('/enrich');
   });
 
-  it('opens on Everything for Import’s hand-off', () => {
-    expect(enrichPath({ scope: 'all' })).toBe('/enrich?scope=all');
+  // 54 — Scan new folders (issue #497): _Just what was added_.
+  it('names the run’s start for Import’s hand-off', () => {
+    expect(enrichPath({ added: '2026-10-28T09:00:00.000Z' })).toBe(
+      '/enrich?added=2026-10-28T09%3A00%3A00.000Z'
+    );
+  });
+
+  it('no longer writes a scope', () => {
+    const asked = { scope: 'all' } as unknown as EnrichQuery;
+
+    expect(enrichPath(asked)).toBe('/enrich');
   });
 
   it('names the one movie of a single-title Sync', () => {
@@ -60,7 +69,6 @@ describe('enrichPath with start', () => {
 
   it('reads every existing query back unchanged', () => {
     expect(enrichPath()).toBe('/enrich');
-    expect(enrichPath({ scope: 'all' })).toBe('/enrich?scope=all');
     expect(enrichPath({ movie: 'm1' })).toBe('/enrich?movie=m1');
     expect(enrichPath({ series: 's1' })).toBe('/enrich?series=s1');
   });
@@ -73,7 +81,7 @@ const readBack = (path: string): EnrichQuery =>
 describe('parseEnrichQuery', () => {
   it.each<EnrichQuery>([
     {},
-    { scope: 'all' },
+    { added: '2026-10-28T09:00:00.000Z' },
     { movie: 'm1' },
     { series: 's1' },
     { movie: 'a&b #c' },
@@ -88,8 +96,15 @@ describe('parseEnrichQuery', () => {
     expect(readBack('/enrich?movie=m1&tab=series')).toEqual({ movie: 'm1' });
   });
 
-  it('ignores a scope other than all', () => {
+  it('no longer reads a scope', () => {
+    expect(readBack('/enrich?scope=all')).toEqual({});
     expect(readBack('/enrich?scope=missing')).toEqual({});
+  });
+
+  it('reads an added stamp back whole', () => {
+    expect(readBack('/enrich?added=2026-10-28T09%3A00%3A00.000Z')).toEqual({
+      added: '2026-10-28T09:00:00.000Z',
+    });
   });
 
   it('ignores a start other than 1', () => {
