@@ -18,14 +18,15 @@ export interface EnrichmentSummaryState {
  * Enrichment setup and the Settings hub's _Sync metadata & posters_ row both
  * draw from it, so it sits on the global rung. A refused read is a summary
  * that never arrived; one that lands after the screen has gone redraws
- * nothing. A retry keeps what is drawn until the fresh read lands.
+ * nothing. A retry keeps what is drawn until the fresh read lands. With
+ * `since`, the read asks for the titles added at or after it too.
  */
-export function useEnrichmentSummary(): EnrichmentSummaryState {
+export function useEnrichmentSummary(since?: string): EnrichmentSummaryState {
   const [summary, setSummary] = useState<EnrichmentSummary | null>(null);
   const mounted = useRef(true);
 
   const read = useCallback(() => {
-    fetchEnrichmentSummary().then(
+    fetchEnrichmentSummary(since).then(
       (landed) => {
         if (mounted.current) {
           setSummary(landed);
@@ -33,7 +34,7 @@ export function useEnrichmentSummary(): EnrichmentSummaryState {
       },
       () => undefined
     );
-  }, []);
+  }, [since]);
 
   useEffect(() => {
     mounted.current = true;

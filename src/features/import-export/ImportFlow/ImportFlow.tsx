@@ -59,8 +59,8 @@ const WORDING = {
  * the start; its hint reads `GET /api/tmdb/key` once on arrival, a failed read
  * counting as no key. _Finish_ reads the box off the run, not off this screen —
  * so a run re-attached on arrival still knows it — and on a run carrying it
- * **replaces** `/import` with `/enrich?scope=all`: setup with _Everything_
- * selected, nothing started, and Back from there stepping to Settings.
+ * **replaces** `/import` with `/enrich?added=<startedAt>`: setup with _Just
+ * what was added_ chosen, nothing started, and Back from there stepping to Settings.
  */
 /** Finish on a run carrying `enrich`: it hands on to the Sync, not home. */
 const FINISH_TO_SYNC = 'Continue to TMDB sync';
@@ -136,10 +136,10 @@ export function ImportFlow() {
   // roll back, so the cancel only lets it go. Not awaited: the navigation is
   // not held on it, and a let-go that fails leaves the run where it was.
   const onFinish = useCallback(
-    (enrichNext: boolean) => {
+    (enrichNext: boolean, startedAt: string) => {
       onCancel();
       if (enrichNext) {
-        navigate(enrichPath({ scope: 'all' }), { replace: true });
+        navigate(enrichPath({ added: startedAt }), { replace: true });
       } else {
         navigate('/');
       }
@@ -238,7 +238,7 @@ export function ImportFlow() {
           onSkipMany={onSkipMany}
           onImportManyAsGuessed={onImportManyAsGuessed}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
-          onFinish={() => onFinish(run.enrich)}
+          onFinish={() => onFinish(run.enrich, run.startedAt)}
         />
       ) : (
         <ImportProgress run={run} onCancel={onCancel} />

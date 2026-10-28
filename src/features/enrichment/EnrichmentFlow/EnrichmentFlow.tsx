@@ -35,10 +35,12 @@ const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
  * missing_ (the default) and _Everything_, Start reads _Start sync_, and Back
  * lands on Settings. _Stop_ and _Sync again_ both drop the run and show setup.
  *
- * Opened with `?scope=all` — the Import flow's _Finish_ on a run carrying
- * `enrich` — setup has _Everything_ selected instead, and still waits for
- * _Start sync_; and review's _Done_ pushes `/`, the **Fresh home** the
- * import's own Finish would have been. Back still steps to Settings.
+ * Opened with `?added=<startedAt>` — the Import flow's _Finish_ on a run
+ * carrying `enrich` — setup reads the summary with `since`, draws _Just what
+ * was added_ beside the two, chosen, and still waits for _Start sync_, which
+ * posts `scope: 'added'` and `since`; and review's _Done_ pushes `/`, the
+ * **Fresh home** the import's own Finish would have been. Back still steps to
+ * Settings.
  *
  * Opened with `?movie=<id>` it is the `single` **Enrichment scope**: setup
  * names the film under _Just this movie_, Start reads _Fetch details_, and
@@ -103,23 +105,25 @@ export function EnrichmentFlow() {
     skipMany,
     chooseSeasonPoster,
   } = useEnrichmentRun(single);
-  const { summary, retry } = useEnrichmentSummary();
+  // `?added=` is set by the Import flow's Finish alone, and only a library
+  // Sync reads it.
+  const since = single === null ? query.added : undefined;
+  const fromImport = since !== undefined;
+  const { summary, retry } = useEnrichmentSummary(since);
   const navigate = useNavigate();
   const { notify } = useSnackbar();
 
   const [title, setTitle] = useState<string | null>(null);
   const [fields, setFields] = useState<EnrichField[]>(ALL_FIELDS);
-  // `?scope=all` is where the Import flow's _Finish_ lands: _Everything_
-  // selected, the prototype's `setState({ enScope: 'all' })`, nothing started.
+  // `?added=` is where the Import flow's _Finish_ lands: _Just what was
+  // added_ chosen, nothing started.
   const [libraryScope, setLibraryScope] = useState<EnrichScope>(() =>
-    query.scope === 'all' ? 'all' : 'missing'
+    fromImport ? 'added' : 'missing'
   );
   // Both on to begin with, the prototype's `enWriteSheet` / `enWritePosters`.
   const [writeSheet, setWriteSheet] = useState(true);
   const [writePosters, setWritePosters] = useState(true);
   const scope: EnrichScope = single === null ? libraryScope : 'single';
-  // `?scope=all` is set by the Import flow's Finish alone.
-  const fromImport = single === null && query.scope === 'all';
 
   useEffect(() => {
     if (single === null) {
@@ -242,6 +246,7 @@ export function EnrichmentFlow() {
         : single.kind === 'movie'
           ? { movieId: single.id }
           : { seriesId: single.id }),
+      ...(scope === 'added' && since !== undefined ? { since } : {}),
       fields,
       // With no Library folder there is nowhere to write either (log 23 Q37).
       writeSheet: summary.libraryFolders.length > 0 && writeSheet,
@@ -260,6 +265,7 @@ export function EnrichmentFlow() {
     start,
     scope,
     single,
+    since,
     fields,
     writeSheet,
     writePosters,

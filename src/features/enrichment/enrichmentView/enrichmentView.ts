@@ -62,6 +62,7 @@ const SECONDS_PER_TITLE = 0.4;
 /** How many titles a scope covers, off the summary. */
 function titlesIn(summary: EnrichmentSummary, scope: EnrichScope): number {
   if (scope === 'single') return 1;
+  if (scope === 'added') return summary.added ?? 0;
   return scope === 'all' ? summary.total : summary.gaps;
 }
 
@@ -83,12 +84,14 @@ export function enrichmentEstimate(
 /**
  * A library scope card's line — the prototype's `scopeDefs`: the titles
  * with a **Sync gap** for _Only what's missing_, every title for
- * _Everything_.
+ * _Everything_, and the run's own for _Just what was added_.
  */
 export function scopeDescription(
   summary: EnrichmentSummary,
   scope: Exclude<EnrichScope, 'single'>
 ): string {
+  if (scope === 'added')
+    return `${summary.added ?? 0} titles this run brought in`;
   return scope === 'missing'
     ? `${summary.gaps} titles have no synopsis or artwork`
     : `${summary.total} titles, re-checking ones already filled in`;

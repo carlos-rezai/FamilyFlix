@@ -1,7 +1,10 @@
 /** The **Enrichment flow**'s entry, as the query that names it. */
 export interface EnrichQuery {
-  /** Setup opened on _Everything_ — Import's _Finish_ handing off. */
-  scope?: 'all';
+  /**
+   * _Just what was added_ since this moment, the run's `startedAt`: Import's
+   * _Finish_ handing off.
+   */
+  added?: string;
   /** _Just this movie_: the single-title **Sync** from the ⋯ menu. */
   movie?: string;
   /** _Just this series_: the single-title **Sync** from the series' ⋯ menu. */
@@ -11,7 +14,7 @@ export interface EnrichQuery {
 }
 
 /**
- * The **Enrichment flow**, as a route — `/enrich`, `/enrich?scope=all`,
+ * The **Enrichment flow**, as a route — `/enrich`, `/enrich?added=<ISO>`,
  * `/enrich?movie=<id>` or `/enrich?series=<id>`, the last two with `&start=1`
  * when it is **Started on arrival**. Five callers name it: Settings' _Sync
  * metadata & posters_, Import's _Finish_, the movie and series pages' _⟳ Fetch
@@ -24,13 +27,13 @@ export interface EnrichQuery {
  * Pure, so the same query always yields the same route.
  */
 export function enrichPath({
-  scope,
+  added,
   movie,
   series,
   start,
 }: EnrichQuery = {}): string {
   const params = new URLSearchParams();
-  if (scope !== undefined) params.set('scope', scope);
+  if (added !== undefined) params.set('added', added);
   if (movie !== undefined) params.set('movie', movie);
   if (series !== undefined) params.set('series', series);
   if (start === true) params.set('start', '1');
@@ -40,8 +43,8 @@ export function enrichPath({
 
 /**
  * The **Enrichment flow**'s query read back — {@link enrichPath}'s mirror, in
- * its unit as `opensSeriesResolve` sits beside `movieFormPath`: `scope` only
- * when it is `all`, `movie` and `series` as given, `start` only when it is
+ * its unit as `opensSeriesResolve` sits beside `movieFormPath`: `added`,
+ * `movie` and `series` as given, `start` only when it is
  * `1`, and anything else ignored.
  *
  * An empty `?movie=` stays an id, as the flow has always read it: a cleared
@@ -49,7 +52,8 @@ export function enrichPath({
  */
 export function parseEnrichQuery(params: URLSearchParams): EnrichQuery {
   const query: EnrichQuery = {};
-  if (params.get('scope') === 'all') query.scope = 'all';
+  const added = params.get('added');
+  if (added !== null) query.added = added;
   const movie = params.get('movie');
   if (movie !== null) query.movie = movie;
   const series = params.get('series');

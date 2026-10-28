@@ -50,6 +50,12 @@ const LIBRARY_SCOPES: ReadonlyArray<{
   { scope: 'all', label: 'Everything' },
 ];
 
+/** The third card, drawn only when the summary was read with `since`. */
+const ADDED_SCOPE = {
+  scope: 'added',
+  label: 'Just what was added',
+} as const;
+
 export interface EnrichmentSetupProps {
   /** The scope chosen — `single` draws _Just this movie_ alone. */
   scope: EnrichScope;
@@ -87,8 +93,9 @@ export interface EnrichmentSetupProps {
  * The **Setup step**, from `feat.EnrichmentFlow.dc.html`: the offline banner
  * and the key banner when either applies, the scope cards — _Only what's
  * missing_ and _Everything_ for the library, or _Just this movie_ (or _Just
- * this series_) in their place for one title — the field chips with the
- * rating note, _Where it is saved_ with _Your library_ as Required, and Start:
+ * this series_) in their place for one title, and _Just what was added_
+ * beside the two when the summary counts what a run brought in — the field
+ * chips with the rating note, _Where it is saved_ with _Your library_ as Required, and Start:
  * _Start sync_, or _Fetch details_ with its estimate for one film.
  */
 export function EnrichmentSetup({
@@ -113,6 +120,10 @@ export function EnrichmentSetup({
   const folders = summary.libraryFolders;
   const root = folders.length === 1 ? folders[0] : null;
   const anyFolder = folders.length > 0;
+  const libraryScopes =
+    summary.added === undefined
+      ? LIBRARY_SCOPES
+      : [...LIBRARY_SCOPES, ADDED_SCOPE];
   return (
     <Stack>
       {summary.online ? null : (
@@ -144,7 +155,7 @@ export function EnrichmentSetup({
               selected
             />
           ) : (
-            LIBRARY_SCOPES.map((each) => (
+            libraryScopes.map((each) => (
               <ScopeCard
                 key={each.scope}
                 label={each.label}
