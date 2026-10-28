@@ -57,6 +57,7 @@ const MOVIES: LibraryFolder = {
   path: 'E:\\Movies',
   titleCount: 12,
   reachable: true,
+  scannedAt: '2026-10-01T09:00:00.000Z',
 };
 
 const KIDS: LibraryFolder = {
@@ -64,6 +65,7 @@ const KIDS: LibraryFolder = {
   path: 'D:\\Kids',
   titleCount: 3,
   reachable: true,
+  scannedAt: '2026-10-01T09:00:00.000Z',
 };
 
 const INSIDE =
@@ -107,6 +109,7 @@ function libraryWire(initial: LibraryFolder[]) {
         path,
         titleCount: 0,
         reachable: true,
+        scannedAt: null,
       };
       listed = [...listed, added];
       return Promise.resolve(createdResponse(added));
@@ -212,7 +215,7 @@ describe('LibraryFolders — a typed add', () => {
     await userEvent.click(addButton());
 
     await waitFor(() => expect(screen.getByText('E:\\Movies')).toBeDefined());
-    expect(screen.getByText('0 titles')).toBeDefined();
+    expect(screen.getByText('Not scanned yet')).toBeDefined();
     expect(screen.queryByText('No folders yet.')).toBeNull();
     const posts = fetchMock.mock.calls.filter(
       ([, init]) => init?.method === 'POST'

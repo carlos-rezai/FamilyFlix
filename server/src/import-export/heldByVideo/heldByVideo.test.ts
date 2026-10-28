@@ -20,6 +20,7 @@ const folder: StoredLibraryFolder = {
   id: 'films',
   path: join(root, 'Films'),
   titleCount: 0,
+  scannedAt: null,
 };
 
 /** A `titleHolding` that answers from `held`, by folder id and Linked video. */

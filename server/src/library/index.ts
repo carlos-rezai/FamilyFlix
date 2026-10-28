@@ -453,6 +453,8 @@ export interface LibraryStorage {
    * counted in the same transaction.
    */
   removeLibraryFolder(id: string): FolderRemoval;
+  /** Stamp exactly the folders named as read by a run at `at`, an ISO moment. */
+  markScanned(ids: readonly string[], at: string): void;
   /**
    * The **Manage library page**'s raw facts: every film and every series, each
    * list A–Z by title, with its **Details state**, its counts, its Library,
@@ -574,6 +576,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     libraryFolders: folders.libraryFolders,
     addLibraryFolder: folders.addLibraryFolder,
     removeLibraryFolder: folders.removeLibraryFolder,
+    markScanned: folders.markScanned,
     libraryTitles: titles.libraryTitles,
     clearMovieDetails: titles.clearMovieDetails,
     clearSeriesDetails: titles.clearSeriesDetails,

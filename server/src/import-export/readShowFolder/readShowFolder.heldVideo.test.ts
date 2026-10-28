@@ -39,7 +39,7 @@ function heldBy(
   asked: string[] = []
 ): ShowFolderContext {
   return {
-    folders: [{ id: 'shows', path, titleCount: 0 }],
+    folders: [{ id: 'shows', path, titleCount: 0, scannedAt: null }],
     heldSeriesAt: () => null,
     titleHolding: (folderId, videoPath) => {
       asked.push(videoPath);

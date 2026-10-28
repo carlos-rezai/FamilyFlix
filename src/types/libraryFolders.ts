@@ -11,6 +11,8 @@ export interface LibraryFolder {
   titleCount: number;
   /** Read afresh on every list: `false` for a folder the disk cannot reach. */
   reachable: boolean;
+  /** The ISO moment a run last read it; `null` for a **New folder**. */
+  scannedAt: string | null;
 }
 
 /**

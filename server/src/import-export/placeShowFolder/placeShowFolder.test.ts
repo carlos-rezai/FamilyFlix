@@ -22,6 +22,7 @@ const shows: StoredLibraryFolder = {
   id: 'shows',
   path: join(root, 'Shows'),
   titleCount: 0,
+  scannedAt: null,
 };
 
 describe('placeShowFolder', () => {

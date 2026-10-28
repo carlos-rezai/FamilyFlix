@@ -33,6 +33,7 @@ const KIDS: LibraryFolder = {
   path: 'D:\\Kids',
   titleCount: 0,
   reachable: true,
+  scannedAt: '2026-10-01T09:00:00.000Z',
 };
 
 const INSIDE =

@@ -4,13 +4,16 @@ import type { SqliteDatabase } from '../../db';
 
 /**
  * A **Library folder** as the library holds it: its id, its path as typed,
- * and how many movies and series are recorded against it. Whether it can be
- * reached is the disk's answer, not the database's, so it is not here.
+ * how many movies and series are recorded against it, and when a run last
+ * read it. Whether it can be reached is the disk's answer, not the
+ * database's, so it is not here.
  */
 export interface StoredLibraryFolder {
   id: string;
   path: string;
   titleCount: number;
+  /** The ISO moment a run last read it; `null` for a **New folder**. */
+  scannedAt: string | null;
 }
 
 /**
@@ -24,17 +27,21 @@ export type FolderRemoval =
   | { kind: 'not-found' }
   | { kind: 'in-use'; titles: number };
 
-/** The folders slice: the list, an add and a remove that keeps the titles. */
+/**
+ * The folders slice: the list, an add, a remove that keeps the titles, and
+ * the mark a run sets on the folders it read.
+ */
 export interface FoldersRepository {
   libraryFolders(): StoredLibraryFolder[];
   addLibraryFolder(path: string): StoredLibraryFolder;
   removeLibraryFolder(id: string): FolderRemoval;
+  markScanned(ids: readonly string[], at: string): void;
 }
 
 export function createFolders(db: SqliteDatabase): FoldersRepository {
   // `rowid` breaks a tie between two folders added in the same millisecond.
   const selectFolders = db.prepare(`
-    SELECT f.id, f.path,
+    SELECT f.id, f.path, f.scanned_at AS scannedAt,
       (SELECT COUNT(*) FROM movies m WHERE m.library_folder_id = f.id)
       + (SELECT COUNT(*) FROM series s WHERE s.library_folder_id = f.id)
         AS titleCount
@@ -51,6 +58,9 @@ export function createFolders(db: SqliteDatabase): FoldersRepository {
     'UPDATE series SET library_folder_id = NULL, source_folder = NULL WHERE library_folder_id = ?'
   );
   const deleteFolder = db.prepare('DELETE FROM library_folders WHERE id = ?');
+  const stampFolder = db.prepare(
+    'UPDATE library_folders SET scanned_at = ? WHERE id = ?'
+  );
   // A series is one title however many of its episodes play from the folder.
   const selectLinked = db.prepare(`
     SELECT
@@ -67,7 +77,7 @@ export function createFolders(db: SqliteDatabase): FoldersRepository {
   function addLibraryFolder(path: string): StoredLibraryFolder {
     const id = randomUUID();
     insertFolder.run(id, path, new Date().toISOString());
-    return { id, path, titleCount: 0 };
+    return { id, path, titleCount: 0, scannedAt: null };
   }
 
   // The count and the delete in one transaction, so nothing can link a video
@@ -84,9 +94,17 @@ export function createFolders(db: SqliteDatabase): FoldersRepository {
       : { kind: 'not-found' };
   });
 
+  /** Stamp exactly the folders named with `at`, in one transaction. */
+  const markScanned = db.transaction((ids: readonly string[], at: string) => {
+    for (const id of ids) {
+      stampFolder.run(at, id);
+    }
+  });
+
   return {
     libraryFolders,
     addLibraryFolder,
     removeLibraryFolder,
+    markScanned,
   };
 }

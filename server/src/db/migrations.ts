@@ -409,4 +409,18 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // A folder's `scanned_at`: the ISO moment a run last read it, `NULL` for
+    // a New folder. A folder already holding a movie or a series was read
+    // before the column existed, so it is backfilled with its `added_at`.
+    version: 16,
+    up(db) {
+      db.exec(`
+        ALTER TABLE library_folders ADD COLUMN scanned_at TEXT;
+        UPDATE library_folders SET scanned_at = added_at
+        WHERE EXISTS (SELECT 1 FROM movies m WHERE m.library_folder_id = library_folders.id)
+          OR EXISTS (SELECT 1 FROM series s WHERE s.library_folder_id = library_folders.id);
+      `);
+    },
+  },
 ];

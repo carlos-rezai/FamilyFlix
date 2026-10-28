@@ -30,7 +30,7 @@ function videoAt(root: string, relative: string): string {
 function films(root: string): StoredLibraryFolder {
   const path = join(root, 'Films');
   mkdirSync(path, { recursive: true });
-  return { id: 'films', path, titleCount: 0 };
+  return { id: 'films', path, titleCount: 0, scannedAt: null };
 }
 
 describe('placeFilmFolder', () => {

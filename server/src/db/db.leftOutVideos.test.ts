@@ -36,6 +36,8 @@ function atVersion14(dbPath: string): void {
       'INSERT INTO library_folders (id, path, added_at) VALUES (?, ?, ?)'
     ).run('films', 'E:\\Movies', '2026-10-24T12:00:00.000Z');
     db.prepare('DROP TABLE IF EXISTS left_out_videos').run();
+    // Migration 16's column too, so the wind-back reads as a version-14 one.
+    db.prepare('ALTER TABLE library_folders DROP COLUMN scanned_at').run();
     db.pragma('user_version = 14');
   } finally {
     db.close();

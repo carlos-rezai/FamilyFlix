@@ -22,6 +22,7 @@ const listed = (id: string, relative: string): StoredLibraryFolder => ({
   id,
   path: join(root, relative),
   titleCount: 0,
+  scannedAt: null,
 });
 
 describe('listedFolderOf', () => {

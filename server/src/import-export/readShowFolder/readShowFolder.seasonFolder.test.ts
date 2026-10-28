@@ -36,7 +36,7 @@ function onRecord(
   held: Record<string, string> = {}
 ): ShowFolderContext {
   return {
-    folders: [{ id: 'shows', path, titleCount: 0 }],
+    folders: [{ id: 'shows', path, titleCount: 0, scannedAt: null }],
     heldSeriesAt: (folderId, sourceFolder) =>
       folderId === 'shows' ? (held[sourceFolder] ?? null) : null,
     titleHolding: () => null,

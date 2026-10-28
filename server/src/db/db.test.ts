@@ -288,7 +288,22 @@ function dropMigration14(db: TestDb): void {
  * it exists, so every wind-back reads the same before #15 is written as after.
  */
 function dropMigration15(db: TestDb): void {
+  // Every wind-back to before #15 is also one to before #16.
+  dropMigration16(db);
   db.prepare('DROP TABLE IF EXISTS left_out_videos').run();
+}
+
+/**
+ * What migration #16 added, dropped: `library_folders.scanned_at`, only where
+ * it exists, so every wind-back reads the same before #16 is written as after.
+ */
+function dropMigration16(db: TestDb): void {
+  if (
+    tableNames(db).includes('library_folders') &&
+    columnNames(db, 'library_folders').includes('scanned_at')
+  ) {
+    db.prepare('ALTER TABLE library_folders DROP COLUMN scanned_at').run();
+  }
 }
 
 /**
@@ -1067,7 +1082,12 @@ describe('db: migration #6 — library folders', () => {
     expect(tableNames(db)).toContain('library_folders');
     const info = columnInfo(db, 'library_folders');
     const column = (name: string) => info.find((c) => c.name === name);
-    expect(info.map((c) => c.name)).toEqual(['id', 'path', 'added_at']);
+    // Migration #6's three come first; #16's `scanned_at` follows them.
+    expect(info.map((c) => c.name).slice(0, 3)).toEqual([
+      'id',
+      'path',
+      'added_at',
+    ]);
     expect(column('id')?.pk).toBe(1);
     expect(column('path')?.notnull).toBe(1);
     expect(column('added_at')?.notnull).toBe(1);

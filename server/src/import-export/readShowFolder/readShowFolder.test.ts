@@ -302,7 +302,12 @@ describe('readShowFolder — a held Show folder', () => {
     dir: string,
     heldShowFolders: { seriesId: string; path: string }[]
   ) {
-    const root = { id: 'root', path: join(dir, '..'), titleCount: 0 };
+    const root = {
+      id: 'root',
+      path: join(dir, '..'),
+      titleCount: 0,
+      scannedAt: null,
+    };
     return readOf(dir, {
       folders: [root],
       heldSeriesAt: (folderId, sourceFolder) =>
@@ -362,7 +367,7 @@ describe('readShowFolder — a held Show folder', () => {
 describe('readShowFolder — its Library folder', () => {
   /** The context with one Library folder listed at `path`, nothing held. */
   const listedAt = (path: string): ShowFolderContext => ({
-    folders: [{ id: 'shows', path, titleCount: 0 }],
+    folders: [{ id: 'shows', path, titleCount: 0, scannedAt: null }],
     heldSeriesAt: () => null,
     titleHolding: () => null,
   });

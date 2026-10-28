@@ -53,6 +53,7 @@ const MOVIES: LibraryFolder = {
   path: 'E:\\Movies',
   titleCount: 12,
   reachable: true,
+  scannedAt: '2026-10-01T09:00:00.000Z',
 };
 
 const ARCHIVE: LibraryFolder = {
@@ -60,6 +61,7 @@ const ARCHIVE: LibraryFolder = {
   path: 'F:\\Archive',
   titleCount: 4,
   reachable: false,
+  scannedAt: '2026-10-01T09:00:00.000Z',
 };
 
 const isFolders = (input: RequestInfo | URL, init?: RequestInit) =>
@@ -88,7 +90,13 @@ function libraryWire(initial: LibraryFolder[]): void {
     if (method === 'POST') {
       const { path } = JSON.parse(String(init?.body)) as { path: string };
       next += 1;
-      const folder = { id: `f-${next}`, path, titleCount: 0, reachable: true };
+      const folder = {
+        id: `f-${next}`,
+        path,
+        titleCount: 0,
+        reachable: true,
+        scannedAt: null,
+      };
       listed = [...listed, folder];
       return createdResponse(folder);
     }

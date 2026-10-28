@@ -47,6 +47,7 @@ describe('admitFolder — an add', () => {
         path,
         titleCount: 0,
         reachable: true,
+        scannedAt: null,
       },
     });
     expect(storage.libraryFolders().map((folder) => folder.path)).toEqual([

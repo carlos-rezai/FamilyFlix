@@ -34,7 +34,7 @@ function listed(
 ): StoredLibraryFolder {
   const path = join(root, relative);
   mkdirSync(path, { recursive: true });
-  return { id, path, titleCount: 0 };
+  return { id, path, titleCount: 0, scannedAt: null };
 }
 
 describe('leftOutEntries', () => {
