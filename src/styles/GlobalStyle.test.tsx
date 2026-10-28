@@ -92,16 +92,27 @@ describe('GlobalStyle — Reduced motion', () => {
     ]);
   });
 
-  it('is the one reduced-motion rule in the app — never per component', () => {
+  it('is the one reduced-motion rule in the app, but for the Button shine’s fade', () => {
     // The Snackbar slide, the modal pop-in, the menus and the spinner are all
     // held by the global rule; none may carry a branch of its own, and none
     // may out-rank the rule with an !important of its own.
-    expect(shippingSourcesMatching('src', /prefers-reduced-motion/)).toEqual([
+    //
+    // Amended by 53 — Loading states (issue #484): the one exception is
+    // `Button`'s shine, whose reduced-motion fade out-ranks the `*` rule on
+    // purpose, so a shown busy label still says it is working.
+    const allowed = [
+      'src/primitives/Button/Button.styles.ts',
       'src/styles/GlobalStyle.ts',
-    ]);
+    ];
     expect(
-      shippingSourcesMatching('src', /(animation|transition)[^;`]*!important/)
-    ).toEqual(['src/styles/GlobalStyle.ts']);
+      shippingSourcesMatching('src', /prefers-reduced-motion/).sort()
+    ).toEqual(allowed);
+    expect(
+      shippingSourcesMatching(
+        'src',
+        /(animation|transition)[^;`]*!important/
+      ).sort()
+    ).toEqual(allowed);
   });
 });
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen, fireEvent } from '@testing-library/react';
 import type { ReactElement } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
@@ -354,5 +354,237 @@ describe('Button — hover, press and keyboard focus', () => {
     expect(resolvedStyle(button, { focus: true })).toEqual(
       resolvedStyle(button)
     );
+  });
+});
+
+/**
+ * 53 — Loading states, Phase 2 (issue #484): **Button**'s busy props.
+ *
+ * `busy` is a **Busy phase**. `waiting` locks the button at once with its idle
+ * label, its variant's face and its idle width kept; `shown` reads its
+ * `busyLabel` politely with a shine in its own ink sweeping across it, a fade
+ * under reduced motion.
+ */
+describe('Button — busy', () => {
+  function renderBusy(props: Partial<ButtonProps> = {}) {
+    return render(
+      <ThemeProvider theme={theme}>
+        <Button label="Add to library" {...props} />
+      </ThemeProvider>
+    );
+  }
+
+  it('is idle by default: live, and not busy', () => {
+    renderBusy();
+
+    const button = screen.getByRole('button', { name: 'Add to library' });
+    expect((button as HTMLButtonElement).disabled).toBe(false);
+    expect(button.getAttribute('aria-busy')).not.toBe('true');
+  });
+
+  it('is disabled and aria-busy with its idle label while waiting', () => {
+    renderBusy({ busy: 'waiting', busyLabel: 'Adding…' });
+
+    const button = screen.getByRole('button', { name: 'Add to library' });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.textContent).not.toContain('Adding…');
+  });
+
+  it('draws its busyLabel in a polite live region once shown', () => {
+    renderBusy({ busy: 'shown', busyLabel: 'Adding…' });
+
+    const button = screen.getByRole('button', { name: 'Adding…' });
+    expect((button as HTMLButtonElement).disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    const live = button.querySelector('[aria-live="polite"]');
+    expect(live?.textContent).toBe('Adding…');
+  });
+
+  it('reads its label as the busyLabel when none is given', () => {
+    renderBusy({ busy: 'shown' });
+
+    const button = screen.getByRole('button', { name: 'Add to library' });
+    expect(button.querySelector('[aria-live="polite"]')?.textContent).toBe(
+      'Add to library'
+    );
+  });
+
+  it.each(['waiting', 'shown'] as const)(
+    'never raises onClick while %s',
+    (busy) => {
+      const onClick = vi.fn();
+      renderBusy({ busy, busyLabel: 'Adding…', onClick });
+
+      fireEvent.click(screen.getByRole('button'));
+
+      expect(onClick).not.toHaveBeenCalled();
+    }
+  );
+
+  describe('its face', () => {
+    /** One Button, rendered afresh, as the element its face is drawn on. */
+    function drawn(tree: ReactElement) {
+      cleanup();
+      render(<ThemeProvider theme={theme}>{tree}</ThemeProvider>);
+      return resolvedStyle(screen.getByRole('button'));
+    }
+
+    const chrome = ['background', 'color', 'border', 'opacity'] as const;
+
+    it.each(
+      (['primary', 'secondary', 'ghost', 'danger'] as const).flatMap(
+        (variant) =>
+          (['waiting', 'shown'] as const).map(
+            (busy) => [variant, busy] as const
+          )
+      )
+    )(
+      'keeps the %s face while %s, not the grey disabled face, under a progress cursor',
+      (variant, busy) => {
+        const idle = drawn(<Button label="Export" variant={variant} />);
+        const locked = drawn(
+          <Button label="Export" variant={variant} busy={busy} />
+        );
+
+        for (const property of chrome) {
+          expect(locked[property]).toBe(idle[property]);
+        }
+        expect(locked.cursor).toBe('progress');
+      }
+    );
+  });
+
+  describe('its width', () => {
+    const IDLE_WIDTH = 183;
+
+    beforeEach(() => {
+      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(
+        IDLE_WIDTH
+      );
+      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+        x: 0,
+        y: 0,
+        top: 0,
+        left: 0,
+        bottom: 50,
+        right: IDLE_WIDTH,
+        width: IDLE_WIDTH,
+        height: 50,
+        toJSON: () => ({}),
+      });
+    });
+
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    function tree(busy: ButtonProps['busy']) {
+      return (
+        <ThemeProvider theme={theme}>
+          <Button label="Save changes" busyLabel="Saving…" busy={busy} />
+        </ThemeProvider>
+      );
+    }
+
+    it('holds its idle width while busy, and lets it go when idle again', () => {
+      const { rerender } = render(tree('idle'));
+      const button = () => screen.getByRole('button');
+      expect(button().style.minWidth).toBe('');
+
+      rerender(tree('waiting'));
+      expect(button().style.minWidth).toBe(`${IDLE_WIDTH}px`);
+
+      rerender(tree('shown'));
+      expect(button().style.minWidth).toBe(`${IDLE_WIDTH}px`);
+
+      rerender(tree('idle'));
+      expect(button().style.minWidth).toBe('');
+    });
+  });
+
+  describe('its shine', () => {
+    /** Every style tag's text, as styled-components injected it. */
+    function injectedCss(): string {
+      return Array.from(document.querySelectorAll('style'))
+        .map((sheet) => sheet.textContent ?? '')
+        .join('\n')
+        .replace(/\/\*[\s\S]*?\*\//g, '');
+    }
+
+    /** The rules inside every `prefers-reduced-motion: reduce` block. */
+    function reducedMotionRules(css: string) {
+      const blocks = [
+        ...css.matchAll(
+          /@media\s*\(\s*prefers-reduced-motion\s*:\s*reduce\s*\)\s*\{((?:[^{}]*\{[^{}]*\})*)[^{}]*\}/g
+        ),
+      ].map(([, body]) => body);
+      return blocks.flatMap((body) =>
+        [...body.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+          ([, selector, declarations]) => ({
+            selector: selector.trim(),
+            declarations,
+          })
+        )
+      );
+    }
+
+    /** The properties a named `@keyframes` block animates. */
+    function keyframeProperties(css: string, name: string): string[] {
+      const block = new RegExp(
+        `@keyframes\\s+${name}\\s*\\{((?:[^{}]*\\{[^{}]*\\})*)[^{}]*\\}`
+      ).exec(css);
+      if (block === null) return [];
+      return [...block[1].matchAll(/([\w-]+)\s*:/g)].map(
+        ([, property]) => property
+      );
+    }
+
+    /** The shown button's live label, the element the shine is drawn on. */
+    function shownLabel(): HTMLElement {
+      renderBusy({ busy: 'shown', busyLabel: 'Adding…' });
+      return screen
+        .getByRole('button')
+        .querySelector('[aria-live="polite"]') as HTMLElement;
+    }
+
+    it('sweeps a mask over the shown label, in the label’s own ink', () => {
+      const label = resolvedStyle(shownLabel());
+
+      expect(label['mask-image'] ?? label['-webkit-mask-image']).toBeDefined();
+      expect(label.animation ?? label['animation-name']).toBeDefined();
+      // Its own ink: the shine never repaints the text one fixed colour.
+      expect(label.color).toBeUndefined();
+    });
+
+    it('fades under reduced motion, a rule GlobalStyle’s * does not collapse', () => {
+      const live = shownLabel();
+      const css = injectedCss();
+
+      const shine = reducedMotionRules(css).find(
+        ({ selector, declarations }) =>
+          /animation/.test(declarations) &&
+          selector
+            .split(',')
+            .some((one) => live.matches(one.replace(/::?[\w-]+$/, '').trim()))
+      );
+      expect(shine).toBeDefined();
+
+      // GlobalStyle's `*` collapses every animation with `!important`; only an
+      // `!important` of its own, on a selector that out-ranks `*`, survives it.
+      const declarations = shine?.declarations ?? '';
+      expect(declarations).toMatch(/animation[^;]*!important/);
+      expect(shine?.selector).toMatch(/[.#[]/);
+      expect(declarations).not.toMatch(/0?\.01ms/);
+
+      // A fade: the reduced-motion keyframes move nothing, only opacity.
+      const name =
+        /animation-name\s*:\s*([\w-]+)/.exec(declarations)?.[1] ??
+        /animation\s*:\s*([\w-]+)/.exec(declarations)?.[1] ??
+        '';
+      const properties = keyframeProperties(css, name);
+      expect(properties.length).toBeGreaterThan(0);
+      expect(new Set(properties)).toEqual(new Set(['opacity']));
+    });
   });
 });
