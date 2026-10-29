@@ -43,10 +43,10 @@ export const ENRICH_FIELD_LABELS: Readonly<Record<EnrichField, string>> = {
 };
 
 /**
- * The **Enrichment scopes**: the library's gaps, all of it, one film, or just
- * what was added since a moment.
+ * The **Enrichment scopes**: the library's gaps, all of it, just what was
+ * added since a moment, or one film.
  */
-export const ENRICH_SCOPES = ['missing', 'all', 'single', 'added'] as const;
+export const ENRICH_SCOPES = ['missing', 'all', 'added', 'single'] as const;
 
 /** One of the scopes in {@link ENRICH_SCOPES}. */
 export type EnrichScope = (typeof ENRICH_SCOPES)[number];
