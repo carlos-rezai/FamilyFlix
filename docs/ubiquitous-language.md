@@ -898,6 +898,24 @@ run added.
 | **Scan all folders** (new)    | The group Scan's `secondary` press: a **Folder scan** in the `all` **Scan scope**, disabled with no folder listed. Formerly _Scan folders_; how a new title dropped into a scanned folder, or a brought-back **Left-out video**, arrives.                                                                      | rescan, full scan, Scan folders (retired)      |
 | **Just what was added** (new) | The `added` **Enrichment scope**: every title created since `since` (an import run's `startedAt`), plus a held **Series** with an **Episode** created since. Plans fields as _Everything_ does. Its card is drawn only on `/enrich?added=`, where an import's _Finish_ lands.                                  | new titles, this run, recent                   |
 
+## Intro animation
+
+Design log 55: step 38, initiative `intro-animation`. A cold start plays the
+handoff's option 2a in the renderer, ending with the wordmark in the header.
+
+| Term                          | Definition                                                                                                                                                                                                                                                                                            | Aliases to avoid                                       |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| **Welcome splash** (new)      | The renderer's cold-start animation from `handoff-welcome-splash/` option 2a: the Fs drop in, _FamilyFlix_ rises letter by letter, a light sweeps both, and the wordmark glides into the header. `src/App/WelcomeSplash/`, driven by `WelcomeProvider`; a `role="status"` named _Opening FamilyFlix_. | splash (alone), intro, intro animation, boot animation |
+| **Cold start** (new)          | When the **Welcome splash** plays: the renderer's first entry is a **Launch entry** and the window's session has no `familyflix.welcomed` flag in `sessionStorage`. A reload, a crash reload or a **Factory reset**'s reload is not one; a deep link never is.                                        | first launch, app start, fresh start                   |
+| **Welcome phase** (new)       | Where the **Welcome splash** stands: `intro`, `holding`, `handoff`, `skipping` or `done`. `WelcomePhase` in `src/App/welcomeStep/`, stepped by the pure `welcomeStep`.                                                                                                                                | splash state, animation step                           |
+| **Welcome intro** (new)       | The `intro` **Welcome phase**: the first 1750ms (900ms under reduced motion), drop, letters and sweep, never cut short for a home that is ready early.                                                                                                                                                | intro, opening                                         |
+| **Welcome hold** (new)        | The `holding` **Welcome phase**: the intro's last frame kept, with a **Logo loader** at the mark's width beating in the mark's place, until the header wordmark is mounted.                                                                                                                           | waiting screen, splash loader                          |
+| **Wordmark handoff** (new)    | The `handoff` **Welcome phase**, 500ms (400ms reduced): the mark fades and shrinks, the splash wordmark glides onto the header's measured `LogoMark`, the splash fades out and the **Home layer** fades in. At its end the header wordmark is shown and focus moves to the logo.                      | handoff (alone), transition, morph                     |
+| **Home layer** (new)          | `WelcomeProvider`'s wrapper around the route table: transparent through the **Welcome intro** and **Welcome hold**, so the home lays out unseen; faded in by the **Wordmark handoff** or a skip; a plain wrapper once `done`.                                                                         | home overlay, underlay                                 |
+| **Launch entry** (updated)    | As before; the test is now `isLaunchEntry` in `src/utils/`, read by `useStartTabSettled` and by the **Cold start** rule.                                                                                                                                                                              | startup, boot, first load, home                        |
+| **Start-up splash** (updated) | The shell's page while the server starts, unchanged; the **Welcome splash** follows it in the renderer. Still the only loader drawn before the app exists.                                                                                                                                            | boot screen, loading screen, splash overlay            |
+| **Wordmark** (updated)        | As before; the header's is also the **Wordmark handoff**'s landing place, hidden while the **Welcome splash** is up. The splash's own letters copy its typography at splash size, since the primitive's two words can't rise letter by letter.                                                        | logo, brand name                                       |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1078,6 +1096,8 @@ run added.
 - A session draws at most one **Start-up splash**, in the shell only, and never a **Skeleton** and a **Logo loader** for the same wait.
 - A **Library folder** is a **New folder** until a run that walked it reaches review, by either start; a removed and re-added folder is new again. **Bring back** leaves its mark alone (log 54).
 - An import run's _Finish_, with the TMDB box ticked, opens one **Sync** in the **Just what was added** scope, bounded below by that run's `startedAt` and above by nothing (log 54).
+- A window session plays at most one **Welcome splash**, on its **Cold start**, after the **Start-up splash** and never instead of it (log 55).
+- A **Welcome splash** always runs its **Welcome intro** whole unless skipped; it reaches the **Wordmark handoff** only once the header **Wordmark** is mounted, through the **Welcome hold** if it isn't yet.
 
 ## Example dialogue
 
@@ -1801,8 +1821,20 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Dev:** "He ticked the TMDB box. Does _Continue to TMDB sync_ go over all 217 titles?"
 > **Domain expert:** "No, the setup opens on **Just what was added**: the three films created since the run started. _Everything_ is still a card away."
 
+> **Dev:** "Mum opens FamilyFlix. What does she see first?"
+> **Domain expert:** "The **Start-up splash** while the server starts, then, on this **Cold start**, the **Welcome splash**: the Fs drop, the letters rise, the light sweeps, and the **Wordmark handoff** lands _FamilyFlix_ in the header as the **Home layer** fades in."
+> **Dev:** "And if her Start tab read is slow?"
+> **Domain expert:** "The **Welcome intro** still runs whole, then the **Welcome hold** beats the loader in the mark's place until the header is mounted, and the handoff runs from there."
+> **Dev:** "Dad presses a key halfway through. Then the renderer crashes and reloads."
+> **Domain expert:** "The key skips straight to the home, and does nothing else. The reload is no **Cold start**: the session was already welcomed."
+
 ## Flagged ambiguities
 
+- **"Splash" alone names nothing (new):** the **Start-up splash** is the
+  shell's static page while the server starts; the **Welcome splash** is the
+  renderer's animation after it. Always say which. "Handoff" alone is the
+  prototype folder (`docs/handoff/`); the welcome's last stretch is the
+  **Wordmark handoff**.
 - **"Subtitle choice" is not the Subtitle track (new):** the choice is a
   language (or `null` for off) held by `PlayerScreen` across episodes; the
   **Subtitle track** is the one row showing in this player. A choice no row
