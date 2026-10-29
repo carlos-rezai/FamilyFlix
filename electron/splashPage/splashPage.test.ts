@@ -69,3 +69,20 @@ describe('splashPage', () => {
     expect(html).not.toMatch(/url\(\s*["']?(?!#)/i);
   });
 });
+
+// 55, Intro animation, Phase 1 (issue #503): the F paths now live in
+// `src/tokens/brand.ts`. The shell imports only types from `src/`, so the page
+// keeps its own copy, and its docblock names the token file as the source.
+describe('splashPage: its copy of the mark', () => {
+  it('names src/tokens/brand.ts as the source of its F paths', () => {
+    const source = readFileSync(
+      fileURLToPath(new URL('./splashPage.ts', import.meta.url)),
+      'utf8'
+    );
+    const docblocks = [...source.matchAll(/\/\*\*[\s\S]*?\*\//g)]
+      .map((match) => match[0])
+      .join('\n');
+
+    expect(docblocks).toMatch(/src\/tokens\/brand\.ts/);
+  });
+});

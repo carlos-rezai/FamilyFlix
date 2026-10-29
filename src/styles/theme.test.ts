@@ -21,6 +21,10 @@ const MOTION = {
   durBase: '180ms',
   durSlow: '280ms',
   easeOut: 'cubic-bezier(0.2, 0.7, 0.3, 1)',
+  // 55, Intro animation (issue #503): the **Welcome splash**'s three curves.
+  easeDrop: 'cubic-bezier(0.3, 0.6, 0.4, 1)',
+  easeSweep: 'cubic-bezier(0.4, 0, 0.2, 1)',
+  easeGlide: 'cubic-bezier(0.3, 0.7, 0.2, 1)',
 };
 
 describe('the Motion tokens', () => {
@@ -41,7 +45,7 @@ describe('createTheme — the stock accent', () => {
     expect(made.colors.focusRing).toBe('rgba(224, 146, 110, 0.55)');
   });
 
-  it("mounts the motion tokens' four values", () => {
+  it("mounts the motion tokens' seven values", () => {
     expect(createTheme().motion).toEqual(MOTION);
   });
 
