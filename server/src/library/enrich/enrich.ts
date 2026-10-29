@@ -81,11 +81,16 @@ export function assignmentsOf<K extends string>(
   return { assignments, params };
 }
 
-/** The summary's three counts over every Movie and Series. */
+/** The summary's counts over every Movie and Series. */
 export interface EnrichmentCounts {
   total: number;
   complete: number;
   gaps: number;
+  /**
+   * The titles _Just what was added_ would sync: present only when a `since`
+   * was asked.
+   */
+  added?: number;
 }
 
 export interface Enrich {
@@ -106,8 +111,9 @@ export interface Enrich {
    * Every **Movie** and **Series** in the library, and those of them with
    * **Full details** — a synopsis and a poster both — and those with a
    * **Sync gap**, what _Only what's missing_ will sync. Zeros when empty.
+   * Given a `since`, also those created at or after it (`addedSince`).
    */
-  enrichmentCounts(): EnrichmentCounts;
+  enrichmentCounts(since?: string): EnrichmentCounts;
   /**
    * Record where a **Movie** or **Series** came from, both columns in one
    * call: the **Library folder** it was found under and its Source folder
@@ -284,9 +290,17 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
          + (SELECT COUNT(*) FROM series WHERE ${syncGap('', 'series')}) AS gaps`
   );
 
-  function enrichmentCounts(): EnrichmentCounts {
+  const countAdded = db.prepare(
+    `SELECT
+       (SELECT COUNT(*) FROM movies WHERE ${addedSince()})
+         + (SELECT COUNT(*) FROM series WHERE ${addedSince('', 'series')}) AS added`
+  );
+
+  function enrichmentCounts(since?: string): EnrichmentCounts {
     const { total, complete, gaps } = countTitles.get() as EnrichmentCounts;
-    return { total, complete, gaps };
+    if (since === undefined) return { total, complete, gaps };
+    const { added } = countAdded.get({ since }) as { added: number };
+    return { total, complete, gaps, added };
   }
 
   const updateMovieSource = db.prepare(

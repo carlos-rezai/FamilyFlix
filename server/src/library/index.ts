@@ -146,8 +146,9 @@ export interface LibraryStorage {
    * Every **Movie** and **Series** in the library, and those of them with
    * **Full details** — a synopsis and a poster both — and those with a
    * **Sync gap**, what _Only what's missing_ will sync. Zeros when empty.
+   * Given a `since`, also those created at or after it.
    */
-  enrichmentCounts(): EnrichmentCounts;
+  enrichmentCounts(since?: string): EnrichmentCounts;
   /**
    * Delete a movie, cascading to its `movie_genres` and `subtitles` rows so no
    * orphans remain. A silent, idempotent no-op for an unknown id.

@@ -492,3 +492,60 @@ describe('library: moviesInScope — Just what was added', () => {
     expect(addedTitles(storage)).toEqual([]);
   });
 });
+
+// The window's count: `enrichmentCounts(since)` answers `added` beside the
+// three counts, every title the window answers, films and series alike, and
+// leaves the key off without a `since`.
+
+describe('library: enrichmentCounts: Just what was added', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('counts exactly the films the window answers', () => {
+    const storage = filmsAroundARun();
+
+    expect(storage.enrichmentCounts(SINCE).added).toBe(
+      storage.moviesInScope('added', SINCE).length
+    );
+    expect(storage.enrichmentCounts(SINCE).added).toBe(3);
+  });
+
+  it('counts a series created in the window, and a held one given a new episode, once each', () => {
+    const storage = filmsAroundARun();
+    at('2026-10-01T12:05:00.000Z', () =>
+      storage.addSeries({ title: 'Brand New' })
+    );
+    const held = at('2026-09-30T08:00:00.000Z', () => {
+      const series = storage.addSeries({ title: 'Harbor & Vine' });
+      storage.addEpisode(series.id, {
+        season: 1,
+        number: 1,
+        videoPath: 'Harbor & Vine/season-01/S01E01.mkv',
+      });
+      return series;
+    });
+    at('2026-10-01T12:05:00.000Z', () => {
+      storage.addEpisode(held.id, {
+        season: 1,
+        number: 2,
+        videoPath: 'Harbor & Vine/season-01/S01E02.mkv',
+      });
+      storage.addEpisode(held.id, {
+        season: 1,
+        number: 3,
+        videoPath: 'Harbor & Vine/season-01/S01E03.mkv',
+      });
+    });
+
+    expect(storage.enrichmentCounts(SINCE).added).toBe(
+      storage.moviesInScope('added', SINCE).length +
+        storage.seriesInScope('added', SINCE).length
+    );
+    expect(storage.enrichmentCounts(SINCE).added).toBe(5);
+  });
+
+  it('leaves the key off without a since', () => {
+    expect(filmsAroundARun().enrichmentCounts()).not.toHaveProperty('added');
+  });
+});

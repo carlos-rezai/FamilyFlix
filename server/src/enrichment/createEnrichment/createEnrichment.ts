@@ -1443,18 +1443,8 @@ export function createEnrichment({
 
   async function summary(since?: string): Promise<EnrichmentSummary> {
     const online = await client.reachable();
-    const { total, complete, gaps } = storage.enrichmentCounts();
     return {
-      ...(since === undefined
-        ? {}
-        : {
-            added:
-              storage.moviesInScope('added', since).length +
-              storage.seriesInScope('added', since).length,
-          }),
-      total,
-      complete,
-      gaps,
+      ...storage.enrichmentCounts(since),
       lastSyncedAt: storage.enrichmentLastSyncedAt(),
       keySet: storage.tmdbKey() !== null,
       online,
