@@ -15,7 +15,7 @@ export function makeLibraryFolder(
 ): LibraryFolder {
   return {
     id: 'folder-1',
-    path: 'D:\Movies',
+    path: 'D:\\Movies',
     titleCount: 0,
     reachable: true,
     scannedAt: '2026-10-01T12:00:00.000Z',

@@ -48,10 +48,14 @@ describe('makeLibraryFolder: overrides', () => {
 
   it('replaces several fields at once, leaving the rest at their defaults', () => {
     expect(
-      makeLibraryFolder({ path: 'E:\Series', titleCount: 12, reachable: false })
+      makeLibraryFolder({
+        path: 'E:\\Series',
+        titleCount: 12,
+        reachable: false,
+      })
     ).toEqual({
       ...makeLibraryFolder(),
-      path: 'E:\Series',
+      path: 'E:\\Series',
       titleCount: 12,
       reachable: false,
     });
