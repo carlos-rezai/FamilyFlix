@@ -1,7 +1,5 @@
 import styled, { css, keyframes } from 'styled-components';
 
-import { Wordmark } from '@/primitives';
-
 /** Where the splash wordmark lands: the header wordmark's top-left and size. */
 export interface WordmarkLanding {
   /** The header wordmark's `getBoundingClientRect()` left, in px. */
@@ -31,6 +29,59 @@ const markOut = keyframes`
   to {
     opacity: 0;
     transform: translate(-50%, -50%) scale(0.7);
+  }
+`;
+
+/** The Fs drop in and settle (`ffDrop`). */
+const drop = keyframes`
+  0% {
+    opacity: 0;
+    transform: translateY(-70%);
+  }
+  55% {
+    opacity: 1;
+    transform: translateY(5%);
+  }
+  75% {
+    transform: translateY(-3%);
+  }
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+`;
+
+/** A letter rises and unblurs (`ffLetter`). */
+const letterIn = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(60%);
+    filter: blur(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
+`;
+
+/** A band crosses the mark, in viewBox units (`ffSweep`). */
+const sweep = keyframes`
+  from {
+    transform: translateX(-260px);
+  }
+  to {
+    transform: translateX(760px);
+  }
+`;
+
+/** A band crosses a glyph (`ffTextSweep`). */
+const textSweep = keyframes`
+  from {
+    background-position: 160% 0;
+  }
+  to {
+    background-position: -60% 0;
   }
 `;
 
@@ -89,12 +140,25 @@ export const Mark = styled.svg<{ $scale: number; $handingOff: boolean }>`
     `}
 `;
 
-export const MarkF1 = styled.path`
+/** An F drops from `$delay` ms for 520ms, about its own bottom middle. */
+const MarkF = styled.path<{ $delay: number }>`
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: ${drop} 520ms ${({ $delay }) => $delay}ms both
+    ${({ theme }) => theme.motion.easeDrop};
+`;
+
+export const MarkF1 = styled(MarkF)`
   fill: ${({ theme }) => theme.colors.text};
 `;
 
-export const MarkF2 = styled.path`
+export const MarkF2 = styled(MarkF)`
   fill: ${({ theme }) => theme.colors.accent};
+`;
+
+/** A 220-unit band over an F, swept from 1000ms for 700ms. */
+export const SweepBand = styled.rect`
+  animation: ${sweep} 700ms 1000ms both ${({ theme }) => theme.motion.easeSweep};
 `;
 
 /**
@@ -122,10 +186,59 @@ export const WordmarkLayer = styled.div<{
 `;
 
 /**
- * The header's typography (`LogoMark`'s 2px gap and 0.3px tracking at 25px)
+ * The wordmark, _Family_ run into _Flix_ in the brand's serif at 700, with
+ * the header's typography (`LogoMark`'s 2px gap and 0.3px tracking at 25px)
  * carried to the splash's size, in `em` so it scales with the layer.
  */
-export const SplashWordmark = styled(Wordmark)`
+export const SplashWordmark = styled.span`
+  display: inline-flex;
+  align-items: baseline;
   gap: ${2 / 25}em;
   letter-spacing: ${0.3 / 25}em;
+  font-family: ${({ theme }) => theme.fonts.serif};
+  font-weight: 700;
+`;
+
+/** The wordmark again, laid exactly over it: the glyphs' sweep copies. */
+export const SweepLayer = styled(SplashWordmark)`
+  position: absolute;
+  inset: 0;
+`;
+
+/** One word of the wordmark: its letters in a row. */
+export const Word = styled.span`
+  display: inline-flex;
+`;
+
+/** Letter `$i`'s cell: it rises and unblurs from `520 + i�40` for 420ms. */
+export const LetterCell = styled.span<{ $i: number }>`
+  position: relative;
+  display: inline-block;
+  animation: ${letterIn} 420ms ${({ $i }) => 520 + $i * 40}ms both
+    ${({ theme }) => theme.motion.easeOut};
+`;
+
+/** A letter's glyph: _Family_ in `text`, _Flix_ in `accent`. */
+export const Letter = styled.span<{ $flix: boolean }>`
+  color: ${({ $flix, theme }) =>
+    $flix ? theme.colors.accent : theme.colors.text};
+`;
+
+/** The prototype's sweep band: `rgb` peaking at `peak` in the middle. */
+const band = (rgb: string, peak: number) =>
+  `linear-gradient(100deg, rgba(${rgb},0) 30%, rgba(${rgb},${peak}) 50%, rgba(${rgb},0) 70%)`;
+
+/**
+ * A glyph's transparent copy, over it in the `SweepLayer`, its background clipped to the text:
+ * a 100� band 300% wide, orange over _Family_ and white over _Flix_, swept
+ * from `1150 + i�45` for 380ms linear.
+ */
+export const LetterSweep = styled.span<{ $i: number; $flix: boolean }>`
+  color: transparent;
+  background-image: ${({ $flix }) =>
+    $flix ? band('255,255,255', 0.9) : band('255,150,90', 1)};
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: ${textSweep} 380ms ${({ $i }) => 1150 + $i * 45}ms both linear;
 `;
