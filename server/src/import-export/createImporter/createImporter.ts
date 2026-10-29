@@ -595,6 +595,14 @@ interface WalkedFolder {
   shows: ShowScan[];
 }
 
+/** What the walk both starts take answers: the folders walked, and read. */
+interface ListedWalk {
+  /** Each folder walked, with its films and its shows. */
+  walked: WalkedFolder[];
+  /** The folders read: neither skipped as unreachable nor failed mid-read. */
+  read: StoredLibraryFolder[];
+}
+
 /**
  * A series the library already holds, as a run needs it: the series, the
  * `(season, episode)` tags it has, the **Source files** its episodes came
@@ -1583,18 +1591,14 @@ export function createImporter({
    * cannot be reached skipped with a **Warning line**, the run going on over
    * the others — and the found line. Each folder answers its films, Collection
    * folders split, and its shows, so every title is placed against the folder
-   * it was found under. Beside them, the folders it `read`: neither skipped
-   * as unreachable nor failed mid-read. `null` once the run was cancelled
-   * mid-walk.
+   * it was found under. Beside them, the folders it `read`. `null` once the
+   * run was cancelled mid-walk.
    */
   const walkListed = async (
     current: ImportRun,
     folders: StoredLibraryFolder[],
     signal: AbortSignal
-  ): Promise<{
-    walked: WalkedFolder[];
-    read: StoredLibraryFolder[];
-  } | null> => {
+  ): Promise<ListedWalk | null> => {
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
     }
