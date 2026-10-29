@@ -30,12 +30,14 @@ export const Logo = styled.button`
 `;
 
 /**
- * The header's **Wordmark**: 25px, a hair of tracking, 2px between the words.
+ * The header's **Wordmark**: 25px, a hair of tracking, 2px between the words;
+ * `visibility: hidden` while `$hidden`, under a playing **Welcome splash**.
  */
-export const LogoMark = styled(Wordmark)`
+export const LogoMark = styled(Wordmark)<{ $hidden: boolean }>`
   gap: 2px;
   font-size: 25px;
   letter-spacing: 0.3px;
+  visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
 `;
 
 export { Spacer } from '../chrome.styles';

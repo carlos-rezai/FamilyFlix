@@ -19,6 +19,7 @@ import EnrichmentPage from '@/pages/EnrichmentPage/EnrichmentPage';
 import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/DisplayPreferenceProvider';
 import { ContentFrame } from '@/App/ContentFrame/ContentFrame';
+import { WelcomeProvider } from '@/App/WelcomeProvider/WelcomeProvider';
 import { SoftwareUpdateNotice } from '@/features/software-update/SoftwareUpdateNotice/SoftwareUpdateNotice';
 
 /**
@@ -28,7 +29,9 @@ import { SoftwareUpdateNotice } from '@/features/software-update/SoftwareUpdateN
  * entry URL. The **Snackbar stack** sits here too, above the route table, so a
  * notice raised on one screen is still in the corner on the next. The
  * headless `SoftwareUpdateNotice` is mounted inside it, once, for the offer and
- * the congratulation.
+ * the congratulation. The `WelcomeProvider` wraps the route table inside it:
+ * on a **Cold start** it draws the **Welcome splash** over the routes, already
+ * mounted beneath in the **Home layer**, and ends on the home's header.
  *
  * Every route a real screen: the browse home at `/`, the movie page at
  * `/movie/:id` and the genre page at `/genre/:name` (the home's two
@@ -56,31 +59,39 @@ export default function App() {
       <DisplayPreferenceProvider>
         <SnackbarProvider>
           <SoftwareUpdateNotice />
-          <Routes>
-            <Route path="/movie/:id/play" element={<PlayerPage />} />
-            <Route
-              path="/episode/:id/play"
-              element={<PlayerPage kind="episode" />}
-            />
-            <Route element={<ContentFrame />}>
-              <Route path="/" element={<LibraryPage />} />
-              <Route path="/movie/:id" element={<MoviePage />} />
-              <Route path="/series/:id" element={<SeriesPage />} />
-              <Route path="/series/:id/season/:n" element={<SeasonPage />} />
-              <Route path="/add" element={<AddMoviePage />} />
-              <Route path="/genre/:name" element={<GenrePage />} />
-              <Route path="/genre-less" element={<GenrePage mode="other" />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/settings/codecs" element={<CodecsPage />} />
+          <WelcomeProvider>
+            <Routes>
+              <Route path="/movie/:id/play" element={<PlayerPage />} />
               <Route
-                path="/settings/folders"
-                element={<LibraryFoldersPage />}
+                path="/episode/:id/play"
+                element={<PlayerPage kind="episode" />}
               />
-              <Route path="/settings/library" element={<ManageLibraryPage />} />
-              <Route path="/import" element={<ImportPage />} />
-              <Route path="/enrich" element={<EnrichmentPage />} />
-            </Route>
-          </Routes>
+              <Route element={<ContentFrame />}>
+                <Route path="/" element={<LibraryPage />} />
+                <Route path="/movie/:id" element={<MoviePage />} />
+                <Route path="/series/:id" element={<SeriesPage />} />
+                <Route path="/series/:id/season/:n" element={<SeasonPage />} />
+                <Route path="/add" element={<AddMoviePage />} />
+                <Route path="/genre/:name" element={<GenrePage />} />
+                <Route
+                  path="/genre-less"
+                  element={<GenrePage mode="other" />}
+                />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/settings/codecs" element={<CodecsPage />} />
+                <Route
+                  path="/settings/folders"
+                  element={<LibraryFoldersPage />}
+                />
+                <Route
+                  path="/settings/library"
+                  element={<ManageLibraryPage />}
+                />
+                <Route path="/import" element={<ImportPage />} />
+                <Route path="/enrich" element={<EnrichmentPage />} />
+              </Route>
+            </Routes>
+          </WelcomeProvider>
         </SnackbarProvider>
       </DisplayPreferenceProvider>
     </ThemeProvider>

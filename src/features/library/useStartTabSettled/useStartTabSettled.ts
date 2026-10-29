@@ -2,15 +2,7 @@ import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { fetchSettings } from '@/api/fetchSettings/fetchSettings';
-import { seriesTabPath } from '@/utils';
-
-/**
- * The key React Router gives the first entry of a session: the app was just
- * opened, or reloaded, rather than navigated to. `useGoBack` reads the same
- * fact as having no history behind it; here it is half of what makes the
- * **Launch entry**.
- */
-const FIRST_ENTRY = 'default';
+import { isLaunchEntry, seriesTabPath } from '@/utils';
 
 /**
  * Whether the **Launch entry** is settled: `true` once it has been read and,
@@ -27,6 +19,9 @@ const FIRST_ENTRY = 'default';
  * It reads the route rather than the provider's value because it must tell a
  * refusal from a value still on its way (log 49 Q13), as `useOpeningReads`
  * does.
+ *
+ * On a **Cold start** this settling is what the **Welcome splash** waits on:
+ * the home is **Ready** once the gate opens and the header wordmark mounts.
  */
 export function useStartTabSettled(): boolean {
   const location = useLocation();
@@ -34,12 +29,7 @@ export function useStartTabSettled(): boolean {
 
   // Decided once, from where the mount began: the replace onto the Series tab
   // moves the location, and that must not reopen the question.
-  const [onLaunchEntry] = useState(
-    () =>
-      location.pathname === '/' &&
-      location.search === '' &&
-      location.key === FIRST_ENTRY
-  );
+  const [onLaunchEntry] = useState(() => isLaunchEntry(location));
   const [settled, setSettled] = useState(!onLaunchEntry);
 
   useEffect(() => {

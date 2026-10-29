@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { BackToTop } from '@/components';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
+import { useWelcome } from '@/App/useWelcome/useWelcome';
 import { GearIcon, IconButton } from '@/primitives';
 import {
   Root,
@@ -45,6 +46,10 @@ export interface MainLayoutProps {
  * knows how far it has gone, so `BackToTop` rides the same ref the restoration
  * attached, rendered right after the body and over it. The layout holds no
  * state for it and gains no prop — the control reads the body itself.
+ *
+ * The header wordmark is where the **Welcome splash** lands: `useWelcome`'s
+ * ref receives it (its mounting is what makes the home **Ready**) and it stays
+ * hidden while the welcome plays. Outside a welcome it simply shows.
  */
 export function MainLayout({
   children,
@@ -53,12 +58,13 @@ export function MainLayout({
 }: MainLayoutProps) {
   const navigate = useNavigate();
   const body = useRestoredScroll<HTMLDivElement>();
+  const { wordmarkRef, wordmarkHidden } = useWelcome();
 
   return (
     <Root>
       <Header>
         <Logo type="button" onClick={() => navigate('/')}>
-          <LogoMark />
+          <LogoMark ref={wordmarkRef} $hidden={wordmarkHidden} />
         </Logo>
         {headerStart}
         <Spacer />
