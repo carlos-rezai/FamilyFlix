@@ -18,6 +18,7 @@ import {
   type WelcomeState,
 } from '@/App/welcomeStep/welcomeStep';
 import {
+  REDUCED_MOTION_QUERY,
   WelcomeSplash,
   type WordmarkLanding,
 } from '@/App/WelcomeSplash/WelcomeSplash';
@@ -29,19 +30,38 @@ const WELCOMED_KEY = 'familyflix.welcomed';
 /** The **Welcome intro** and the **Wordmark handoff**, in ms. */
 const INTRO_MS = 1750;
 const HANDOFF_MS = 500;
+/** The same under reduced motion: fades alone, 1300ms in all (log 55 Q15). */
+const STILL_INTRO_MS = 900;
+const STILL_HANDOFF_MS = 400;
 /** The skip's fade of the **Home layer**, in ms. */
 const SKIP_MS = 150;
 
 /** The input that skips the welcome, swallowed on `window` while it is up. */
 const SKIP_INPUTS = ['pointerdown', 'keydown'] as const;
 
+type Clock = Partial<Record<WelcomePhase, { ms: number; ends: WelcomeEvent }>>;
+
 /** The phases the clock ends on its own: how long each lasts, and its end. */
-const CLOCK: Partial<Record<WelcomePhase, { ms: number; ends: WelcomeEvent }>> =
-  {
-    intro: { ms: INTRO_MS, ends: 'introEnded' },
-    handoff: { ms: HANDOFF_MS, ends: 'handoffEnded' },
-    skipping: { ms: SKIP_MS, ends: 'skipEnded' },
-  };
+const CLOCK: Clock = {
+  intro: { ms: INTRO_MS, ends: 'introEnded' },
+  handoff: { ms: HANDOFF_MS, ends: 'handoffEnded' },
+  skipping: { ms: SKIP_MS, ends: 'skipEnded' },
+};
+
+/** The clock under reduced motion. */
+const STILL_CLOCK: Clock = {
+  intro: { ms: STILL_INTRO_MS, ends: 'introEnded' },
+  handoff: { ms: STILL_HANDOFF_MS, ends: 'handoffEnded' },
+  skipping: { ms: SKIP_MS, ends: 'skipEnded' },
+};
+
+/** Whether the system asks for reduced motion; no `matchMedia` is a no. */
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window.matchMedia === 'function' &&
+    window.matchMedia(REDUCED_MOTION_QUERY).matches
+  );
+}
 
 /** The design's frame the geometry scales from (log 55 Q13). */
 const FRAME_WIDTH = 480;
@@ -106,7 +126,9 @@ export interface WelcomeProviderProps {
  * a beating `LogoLoader` in the mark's place, until it is (the **Welcome
  * hold**). Any `pointerdown` or `keydown` while the welcome is up is
  * swallowed on `window` and skips: the splash goes and the Home layer fades
- * in over 150ms, once the home is ready. Anywhere else it draws nothing but
+ * in over 150ms, once the home is ready. Under reduced motion, read once
+ * at the start, nothing moves: 900ms of fade-in, a 400ms handoff of fades,
+ * the header wordmark shown from its start. Anywhere else it draws nothing but
  * its children.
  */
 export function WelcomeProvider({ children }: WelcomeProviderProps) {
@@ -120,6 +142,7 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
         )
       : 1
   );
+  const [reducedMotion] = useState(() => played && prefersReducedMotion());
   const [state, setState] = useState<WelcomeState>(() => ({
     phase: played ? 'intro' : 'done',
     ready: !played,
@@ -158,7 +181,7 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
 
   function startClock(at: WelcomePhase) {
     clearTimeout(timer.current);
-    const leg = CLOCK[at];
+    const leg = (reducedMotion ? STILL_CLOCK : CLOCK)[at];
     if (leg !== undefined) {
       timer.current = setTimeout(() => send(leg.ends), leg.ms);
     }
@@ -214,20 +237,26 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
   const api = useMemo<WelcomeApi>(
     () => ({
       wordmarkRef,
-      wordmarkHidden: phase !== 'done' && phase !== 'skipping',
+      wordmarkHidden:
+        phase !== 'done' &&
+        phase !== 'skipping' &&
+        !(reducedMotion && phase === 'handoff'),
     }),
-    [wordmarkRef, phase]
+    [wordmarkRef, phase, reducedMotion]
   );
 
   return (
     <WelcomeContext.Provider value={api}>
-      <HomeLayer $phase={phase}>{children}</HomeLayer>
+      <HomeLayer $phase={phase} $still={reducedMotion}>
+        {children}
+      </HomeLayer>
       {phase !== 'done' && phase !== 'skipping' && (
         <WelcomeSplash
           scale={scale}
           landing={landing}
           handingOff={phase === 'handoff'}
           held={held}
+          reducedMotion={reducedMotion}
         />
       )}
     </WelcomeContext.Provider>

@@ -21,6 +21,7 @@ import {
 } from './WelcomeSplash.styles';
 
 export type { WordmarkLanding } from './WelcomeSplash.styles';
+export { REDUCED_MOTION_QUERY } from './WelcomeSplash.styles';
 
 /** The sweep bands' colours, as `rgb()` channels. */
 const ORANGE = '255,150,90';
@@ -47,22 +48,25 @@ function BandGradient({
 
 /**
  * A word's letters, each rising in its own cell; `from` is the first's index
- * in the wordmark. With `sweep`, each is the glyph's transparent sweep copy.
+ * in the wordmark. With `sweep`, each is the glyph's transparent sweep copy;
+ * `still`, none rises.
  */
 function Letters({
   word,
   from,
   sweep = false,
+  still = false,
 }: {
   word: string;
   from: number;
   sweep?: boolean;
+  still?: boolean;
 }) {
   const flix = from > 0;
   return (
     <Word>
       {word.split('').map((ch, j) => (
-        <LetterCell key={j} $i={from + j}>
+        <LetterCell key={j} $i={from + j} $still={still}>
           {sweep ? (
             <LetterSweep $i={from + j} $flix={flix}>
               {ch}
@@ -91,6 +95,12 @@ export interface WelcomeSplashProps {
    * the mark's place, through the handoff that follows it.
    */
   held?: boolean;
+  /**
+   * Whether reduced motion was asked for: then nothing moves, no drop, rise,
+   * sweep or glide; the mark and wordmark fade in, and everything fades out
+   * in the handoff, over 300ms each (log 55 Q15).
+   */
+  reducedMotion?: boolean;
 }
 
 /**
@@ -109,6 +119,7 @@ export function WelcomeSplash({
   landing,
   handingOff,
   held = false,
+  reducedMotion = false,
 }: WelcomeSplashProps) {
   const id = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const clip = [`ffc${id}1`, `ffc${id}2`];
@@ -116,9 +127,18 @@ export function WelcomeSplash({
 
   return (
     <Root role="status" aria-label="Opening FamilyFlix">
-      <Background aria-hidden="true" $handingOff={handingOff} />
+      <Background
+        aria-hidden="true"
+        $handingOff={handingOff}
+        $still={reducedMotion}
+      />
       {held ? (
-        <HoldMark aria-hidden="true" $scale={scale} $handingOff={handingOff}>
+        <HoldMark
+          aria-hidden="true"
+          $scale={scale}
+          $handingOff={handingOff}
+          $still={reducedMotion}
+        >
           <LogoLoader size={132 * scale} />
         </HoldMark>
       ) : (
@@ -127,6 +147,7 @@ export function WelcomeSplash({
           viewBox={MARK_VIEWBOX}
           $scale={scale}
           $handingOff={handingOff}
+          $still={reducedMotion}
         >
           <defs>
             <clipPath id={clip[0]}>
@@ -138,34 +159,39 @@ export function WelcomeSplash({
             <BandGradient id={gradient[0]} rgb={ORANGE} peak={0.95} />
             <BandGradient id={gradient[1]} rgb={WHITE} peak={0.7} />
           </defs>
-          <MarkF1 d={MARK_F1} $delay={0} />
-          <MarkF2 d={MARK_F2} $delay={150} />
-          {[0, 1].map((f) => (
-            <g key={f} clipPath={`url(#${clip[f]})`}>
-              <SweepBand
-                x={160}
-                y={300}
-                width={220}
-                height={424}
-                fill={`url(#${gradient[f]})`}
-              />
-            </g>
-          ))}
+          <MarkF1 d={MARK_F1} $delay={0} $still={reducedMotion} />
+          <MarkF2 d={MARK_F2} $delay={150} $still={reducedMotion} />
+          {!reducedMotion &&
+            [0, 1].map((f) => (
+              <g key={f} clipPath={`url(#${clip[f]})`}>
+                <SweepBand
+                  x={160}
+                  y={300}
+                  width={220}
+                  height={424}
+                  fill={`url(#${gradient[f]})`}
+                />
+              </g>
+            ))}
         </Mark>
       )}
       <WordmarkLayer
         aria-hidden="true"
         $scale={scale}
-        $landing={handingOff ? landing : null}
+        $landing={handingOff && !reducedMotion ? landing : null}
+        $still={reducedMotion}
+        $handingOff={handingOff}
       >
         <SplashWordmark>
-          <Letters word="Family" from={0} />
-          <Letters word="Flix" from={6} />
+          <Letters word="Family" from={0} still={reducedMotion} />
+          <Letters word="Flix" from={6} still={reducedMotion} />
         </SplashWordmark>
-        <SweepLayer>
-          <Letters word="Family" from={0} sweep />
-          <Letters word="Flix" from={6} sweep />
-        </SweepLayer>
+        {!reducedMotion && (
+          <SweepLayer>
+            <Letters word="Family" from={0} sweep />
+            <Letters word="Flix" from={6} sweep />
+          </SweepLayer>
+        )}
       </WordmarkLayer>
     </Root>
   );

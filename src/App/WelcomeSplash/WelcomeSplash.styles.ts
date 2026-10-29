@@ -1,4 +1,12 @@
-import styled, { css, keyframes } from 'styled-components';
+import styled, {
+  css,
+  keyframes,
+  type DefaultTheme,
+  type Keyframes,
+} from 'styled-components';
+
+/** The media query the welcome reads, once at the start (log 55 Q15). */
+export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
 /** Where the splash wordmark lands: the header wordmark's top-left and size. */
 export interface WordmarkLanding {
@@ -17,6 +25,32 @@ const fadeOut = keyframes`
   }
   to {
     opacity: 0;
+  }
+`;
+
+/** Under reduced motion the mark and wordmark fade in, nothing moving. */
+const fadeIn = keyframes`
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+`;
+
+/**
+ * A reduced-motion fade: `frames` over 300ms from the start. Its own
+ * `prefers-reduced-motion` rule carries `!important` on a doubled class, so
+ * `GlobalStyle`'s `*` collapse never freezes it (log 55 Q15): a fade, never
+ * a cut.
+ */
+const stillFade = (frames: Keyframes, theme: DefaultTheme) => css`
+  animation: ${frames} 300ms 0ms both ${theme.motion.easeOut};
+
+  @media ${REDUCED_MOTION_QUERY} {
+    && {
+      animation: ${frames} 300ms 0ms both ${theme.motion.easeOut} !important;
+    }
   }
 `;
 
@@ -111,57 +145,84 @@ export const Root = styled.div`
  * The **Start-up splash**'s background: flat `bg`, so the two meet
  * seamlessly. In the handoff it fades out from 50ms for 400ms.
  */
-export const Background = styled.div<{ $handingOff: boolean }>`
+export const Background = styled.div<{
+  $handingOff: boolean;
+  $still: boolean;
+}>`
   position: absolute;
   inset: 0;
   background: ${({ theme }) => theme.colors.bg};
-  ${({ $handingOff, theme }) =>
+  ${({ $handingOff, $still, theme }) =>
     $handingOff &&
-    css`
-      animation: ${fadeOut} 400ms 50ms both ${theme.motion.easeOut};
-    `}
+    ($still
+      ? stillFade(fadeOut, theme)
+      : css`
+          animation: ${fadeOut} 400ms 50ms both ${theme.motion.easeOut};
+        `)}
 `;
 
 /**
  * The FF mark, `132·scale × 80·scale`, centred `26·scale` above the middle;
  * in the handoff it fades and shrinks over 300ms.
  */
-export const Mark = styled.svg<{ $scale: number; $handingOff: boolean }>`
+export const Mark = styled.svg<{
+  $scale: number;
+  $handingOff: boolean;
+  $still: boolean;
+}>`
   position: absolute;
   left: 50%;
   top: ${({ $scale }) => `calc(50% - ${26 * $scale}px)`};
   width: ${({ $scale }) => 132 * $scale}px;
   height: ${({ $scale }) => 80 * $scale}px;
   transform: translate(-50%, -50%);
-  ${({ $handingOff, theme }) =>
-    $handingOff &&
-    css`
-      animation: ${markOut} 300ms 0ms both ${theme.motion.easeOut};
-    `}
+  ${({ $handingOff, $still, theme }) => {
+    if ($still) {
+      return stillFade($handingOff ? fadeOut : fadeIn, theme);
+    }
+    return (
+      $handingOff &&
+      css`
+        animation: ${markOut} 300ms 0ms both ${theme.motion.easeOut};
+      `
+    );
+  }}
 `;
 
 /**
  * The **Welcome hold**'s `LogoLoader`, in the mark's place at its width; in
  * the handoff it fades and shrinks as the mark would.
  */
-export const HoldMark = styled.div<{ $scale: number; $handingOff: boolean }>`
+export const HoldMark = styled.div<{
+  $scale: number;
+  $handingOff: boolean;
+  $still: boolean;
+}>`
   position: absolute;
   left: 50%;
   top: ${({ $scale }) => `calc(50% - ${26 * $scale}px)`};
   transform: translate(-50%, -50%);
-  ${({ $handingOff, theme }) =>
+  ${({ $handingOff, $still, theme }) =>
     $handingOff &&
-    css`
-      animation: ${markOut} 300ms 0ms both ${theme.motion.easeOut};
-    `}
+    ($still
+      ? stillFade(fadeOut, theme)
+      : css`
+          animation: ${markOut} 300ms 0ms both ${theme.motion.easeOut};
+        `)}
 `;
 
-/** An F drops from `$delay` ms for 520ms, about its own bottom middle. */
-const MarkF = styled.path<{ $delay: number }>`
+/**
+ * An F drops from `$delay` ms for 520ms, about its own bottom middle; under
+ * reduced motion (`$still`) it stands where it lands.
+ */
+const MarkF = styled.path<{ $delay: number; $still: boolean }>`
   transform-box: fill-box;
   transform-origin: 50% 100%;
-  animation: ${drop} 520ms ${({ $delay }) => $delay}ms both
-    ${({ theme }) => theme.motion.easeDrop};
+  ${({ $delay, $still, theme }) =>
+    !$still &&
+    css`
+      animation: ${drop} 520ms ${$delay}ms both ${theme.motion.easeDrop};
+    `}
 `;
 
 export const MarkF1 = styled(MarkF)`
@@ -184,6 +245,8 @@ export const SweepBand = styled.rect`
 export const WordmarkLayer = styled.div<{
   $scale: number;
   $landing: WordmarkLanding | null;
+  $still: boolean;
+  $handingOff: boolean;
 }>`
   position: absolute;
   left: 50%;
@@ -193,12 +256,18 @@ export const WordmarkLayer = styled.div<{
   font-size: ${({ $scale }) => 30 * $scale}px;
   line-height: normal;
   white-space: nowrap;
-  ${({ $scale, $landing, theme }) =>
-    $landing !== null &&
-    css`
-      animation: ${toHeader($scale, $landing)} 500ms 0ms both
-        ${theme.motion.easeGlide};
-    `}
+  ${({ $scale, $landing, $still, $handingOff, theme }) => {
+    if ($still) {
+      return stillFade($handingOff ? fadeOut : fadeIn, theme);
+    }
+    return (
+      $landing !== null &&
+      css`
+        animation: ${toHeader($scale, $landing)} 500ms 0ms both
+          ${theme.motion.easeGlide};
+      `
+    );
+  }}
 `;
 
 /**
@@ -227,11 +296,15 @@ export const Word = styled.span`
 `;
 
 /** Letter `$i`'s cell: it rises and unblurs from `520 + i�40` for 420ms. */
-export const LetterCell = styled.span<{ $i: number }>`
+export const LetterCell = styled.span<{ $i: number; $still: boolean }>`
   position: relative;
   display: inline-block;
-  animation: ${letterIn} 420ms ${({ $i }) => 520 + $i * 40}ms both
-    ${({ theme }) => theme.motion.easeOut};
+  ${({ $i, $still, theme }) =>
+    !$still &&
+    css`
+      animation: ${letterIn} 420ms ${520 + $i * 40}ms both
+        ${theme.motion.easeOut};
+    `}
 `;
 
 /** A letter's glyph: _Family_ in `text`, _Flix_ in `accent`. */
