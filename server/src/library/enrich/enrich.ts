@@ -196,6 +196,24 @@ export function syncGap(
               AND gap_p.season_number = gap_e.season_number)))`;
 }
 
+/**
+ * The window _Just what was added_ syncs, as SQL over a `movies` or `series`
+ * row, under `alias` when the query names one: a row created at or after
+ * `@since`. For a `series` row, also an **Episode** created at or after it.
+ */
+export function addedSince(
+  alias = '',
+  kind: 'movies' | 'series' = 'movies'
+): string {
+  const at = alias === '' ? '' : `${alias}.`;
+  const own = `${at}created_at >= @since`;
+  if (kind === 'movies') return own;
+  const seriesId = alias === '' ? 'series.id' : `${alias}.id`;
+  return `${own}
+    OR EXISTS (SELECT 1 FROM episodes added_e
+      WHERE added_e.series_id = ${seriesId} AND added_e.created_at >= @since)`;
+}
+
 /** A pool genre's id by name; a name the pool does not hold is refused. */
 export function poolGenreIds(db: SqliteDatabase): (name: string) => string {
   const selectGenreIdByName = db.prepare(
@@ -246,9 +264,9 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
       scope === 'missing'
         ? `WHERE ${syncGap('m')}`
         : added
-          ? 'WHERE m.created_at >= ?'
+          ? `WHERE ${addedSince('m')}`
           : '';
-    const params = added ? [since ?? ''] : [];
+    const params = added ? [{ since: since ?? '' }] : [];
     const rows = db
       .prepare(
         `SELECT m.* FROM movies m ${where} ORDER BY m.title COLLATE NOCASE, m.id`

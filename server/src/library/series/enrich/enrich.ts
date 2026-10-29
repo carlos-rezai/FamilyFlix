@@ -1,6 +1,7 @@
 import type { SqliteDatabase } from '../../../db';
 import type { EnrichScope, Series } from '@/types';
 import {
+  addedSince,
   asJson,
   assignmentsOf,
   poolGenreIds,
@@ -156,9 +157,7 @@ export function createSeriesEnrich(
       scope === 'missing'
         ? `WHERE ${syncGap('', 'series')}`
         : added
-          ? `WHERE created_at >= @since OR EXISTS (
-               SELECT 1 FROM episodes e
-               WHERE e.series_id = series.id AND e.created_at >= @since)`
+          ? `WHERE ${addedSince('', 'series')}`
           : '';
     const params = added ? [{ since: since ?? '' }] : [];
     const rows = db
