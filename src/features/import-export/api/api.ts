@@ -405,8 +405,8 @@ const SCAN_ENDPOINT = '/api/library-folders/scan';
  * Start a **Folder scan** over the **Library folders** its **Scan scope**
  * picks, and resolve the snapshot the route answered its `201` with. `enrich`
  * is always sent, and only carried on the run; `mode` is the run's **Import
- * mode**. A `409` rejects with {@link ImportBusyError} — a
- * run exists already — and every other failure with a plain `Error`.
+ * mode**. A `409` rejects with {@link ImportBusyError} — a run exists
+ * already — and every other failure with a plain `Error`.
  */
 export async function startFolderScan(
   enrich: boolean,

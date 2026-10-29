@@ -44,8 +44,8 @@ export function enrichPath({
 /**
  * The **Enrichment flow**'s query read back — {@link enrichPath}'s mirror, in
  * its unit as `opensSeriesResolve` sits beside `movieFormPath`: `added`,
- * `movie` and `series` as given, `start` only when it is
- * `1`, and anything else ignored.
+ * `movie` and `series` as given, `start` only when it is `1`, and anything
+ * else ignored.
  *
  * An empty `?movie=` stays an id, as the flow has always read it: a cleared
  * search box is `parseLibraryQuery`'s case, not an id's.

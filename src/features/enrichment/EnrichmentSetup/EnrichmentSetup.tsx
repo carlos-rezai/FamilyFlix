@@ -94,9 +94,10 @@ export interface EnrichmentSetupProps {
  * and the key banner when either applies, the scope cards — _Only what's
  * missing_ and _Everything_ for the library, or _Just this movie_ (or _Just
  * this series_) in their place for one title, and _Just what was added_
- * beside the two when the summary counts what a run brought in — the field
- * chips with the rating note, _Where it is saved_ with _Your library_ as Required, and Start:
- * _Start sync_, or _Fetch details_ with its estimate for one film.
+ * beside the two when the summary counts what a run brought in, the field
+ * chips with the rating note, _Where it is saved_ with _Your library_ as
+ * Required, and Start: _Start sync_, or _Fetch details_ with its estimate for
+ * one film.
  */
 export function EnrichmentSetup({
   scope,

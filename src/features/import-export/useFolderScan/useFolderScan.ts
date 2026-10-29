@@ -13,10 +13,11 @@ export interface FolderScan {
 }
 
 /**
- * The _Scan new folders_ and _Scan all folders_ presses, `useImportRun`'s rule for the Library folders
- * page: a `201` pushes `/import`, where the run just started is shown; a
- * `409` pushes there too, so the run already in flight is the one shown; any
- * other failure lets go of `scanning`, to press again. Never rejects.
+ * The _Scan new folders_ and _Scan all folders_ presses, `useImportRun`'s rule
+ * for the Library folders page: a `201` pushes `/import`, where the run just
+ * started is shown; a `409` pushes there too, so the run already in flight is
+ * the one shown; any other failure lets go of `scanning`, to press again.
+ * Never rejects.
  */
 export function useFolderScan(): FolderScan {
   const navigate = useNavigate();

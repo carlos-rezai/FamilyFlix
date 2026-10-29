@@ -51,16 +51,16 @@ const WORDING = {
  * route into this screen. Finish is not: it pushes `/`, the **Fresh home**
  * where the films the run just added are on their shelves, at the top and
  * unfiltered, which is the one thing a step back could never be. In review,
- * _Skip_ goes through the hook,
- * which takes the row off the snapshot once the route has answered, and
- * _Resolve_ is the row's own link to the form.
+ * _Skip_ goes through the hook, which takes the row off the snapshot once the
+ * route has answered, and _Resolve_ is the row's own link to the form.
  *
  * _Also fetch metadata and posters from TMDB_ is held here too, and sent with
  * the start; its hint reads `GET /api/tmdb/key` once on arrival, a failed read
  * counting as no key. _Finish_ reads the box off the run, not off this screen —
  * so a run re-attached on arrival still knows it — and on a run carrying it
  * **replaces** `/import` with `/enrich?added=<startedAt>`: setup with _Just
- * what was added_ chosen, nothing started, and Back from there stepping to Settings.
+ * what was added_ chosen, nothing started, and Back from there stepping to
+ * Settings.
  */
 /** Finish on a run carrying `enrich`: it hands on to the Sync, not home. */
 const FINISH_TO_SYNC = 'Continue to TMDB sync';
