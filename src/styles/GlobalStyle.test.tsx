@@ -101,7 +101,11 @@ describe('GlobalStyle — Reduced motion', () => {
     // under reduced motion, out-ranking the `*` rule, because a shown busy
     // label and a beating mark must still say they are working when nothing
     // may move. A fade, never a freeze.
+    //
+    // A third does too: the **Welcome splash**'s fades (log 55 Q15), so a
+    // cold start under reduced motion still fades in and out, not a cut.
     const allowed = [
+      'src/App/WelcomeSplash/WelcomeSplash.styles.ts',
       'src/primitives/Button/Button.styles.ts',
       'src/primitives/LogoLoader/LogoLoader.styles.ts',
       'src/styles/GlobalStyle.ts',
