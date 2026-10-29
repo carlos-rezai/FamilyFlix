@@ -90,8 +90,9 @@ export function scopeDescription(
   summary: EnrichmentSummary,
   scope: Exclude<EnrichScope, 'single'>
 ): string {
-  if (scope === 'added')
+  if (scope === 'added') {
     return `${summary.added ?? 0} titles this run brought in`;
+  }
   return scope === 'missing'
     ? `${summary.gaps} titles have no synopsis or artwork`
     : `${summary.total} titles, re-checking ones already filled in`;
