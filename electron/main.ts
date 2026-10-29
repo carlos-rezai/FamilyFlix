@@ -233,7 +233,15 @@ function openApp(port: number): void {
   if (window === null || window.isDestroyed()) return;
   const url = rendererUrl(mode, port);
   applyWindowPolicy(window, url);
-  loadRenderer(window, url);
+  const target = window;
+  loadRenderer(
+    {
+      loadURL: (next) => target.loadURL(next),
+      clearHistory: () => target.webContents.navigationHistory.clear(),
+      isDestroyed: () => target.isDestroyed(),
+    },
+    url
+  );
 }
 
 if (!app.requestSingleInstanceLock()) {

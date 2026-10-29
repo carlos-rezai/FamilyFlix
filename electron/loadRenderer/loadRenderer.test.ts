@@ -4,6 +4,10 @@
 // window's `loadURL`, asks again every 500 ms while it rejects, and stops
 // asking once it resolves or the window is destroyed. On fake timers, over a
 // fake window; Electron is never launched.
+//
+// Issue #501: the app loads over the **Start-up splash** in the same window,
+// so once a load resolves the window's history is cleared; going back from
+// the app's first page must never land on the splash.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -26,6 +30,7 @@ function window(refusals: number) {
         ? Promise.reject(new Error('ERR_CONNECTION_REFUSED'))
         : Promise.resolve();
     }),
+    clearHistory: vi.fn(),
     isDestroyed: () => destroyed,
     destroy: () => {
       destroyed = true;
@@ -100,5 +105,48 @@ describe('loadRenderer', () => {
     await vi.advanceTimersByTimeAsync(RENDERER_RETRY_MS * 4);
 
     expect(target.loadURL).not.toHaveBeenCalled();
+  });
+});
+
+describe('loadRenderer: the splash left behind', () => {
+  it('clears the history once the load resolves', async () => {
+    const target = window(0);
+
+    loadRenderer(target, VITE_URL);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(target.clearHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears nothing while the load rejects', async () => {
+    const target = window(Infinity);
+
+    loadRenderer(target, VITE_URL);
+    await vi.advanceTimersByTimeAsync(RENDERER_RETRY_MS * 4);
+
+    expect(target.clearHistory).not.toHaveBeenCalled();
+  });
+
+  it('clears once, after the load that resolves', async () => {
+    const target = window(2);
+
+    loadRenderer(target, VITE_URL);
+    await vi.advanceTimersByTimeAsync(RENDERER_RETRY_MS * 10);
+
+    expect(target.loadURL).toHaveBeenCalledTimes(3);
+    expect(target.clearHistory).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears nothing on a window destroyed before its load resolves', async () => {
+    const target = window(0);
+    target.loadURL.mockImplementationOnce(() => {
+      target.destroy();
+      return Promise.resolve();
+    });
+
+    loadRenderer(target, VITE_URL);
+    await vi.advanceTimersByTimeAsync(0);
+
+    expect(target.clearHistory).not.toHaveBeenCalled();
   });
 });
