@@ -6,6 +6,7 @@ import type {
   GenreListPayload,
   GenrePayload,
   GenreQuery,
+  EnrichScope,
   Episode,
   EpisodeRead,
   HomePayload,
@@ -135,13 +136,16 @@ export interface LibraryStorage {
    * {@link moviesInScope} over the series: those without a synopsis or a
    * poster, all of them, or those created or given a new episode since.
    */
-  seriesInScope(scope: 'missing' | 'all' | 'added', since?: string): Series[];
+  seriesInScope(
+    scope: Exclude<EnrichScope, 'single'>,
+    since?: string
+  ): Series[];
   /**
    * The titles a library-wide **Sync** snapshots, with their current values:
    * `missing` — every film without a synopsis or without a poster — `all`, or
    * `added`, every film created at or after `since`.
    */
-  moviesInScope(scope: 'missing' | 'all' | 'added', since?: string): Movie[];
+  moviesInScope(scope: Exclude<EnrichScope, 'single'>, since?: string): Movie[];
   /**
    * Every **Movie** and **Series** in the library, and those of them with
    * **Full details** — a synopsis and a poster both — and those with a
