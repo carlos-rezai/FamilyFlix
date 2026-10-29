@@ -288,3 +288,18 @@ describe('MainLayout — the back-to-top FAB over its body', () => {
     expect(windowScrollTo).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * 55, Intro animation, Phase 2 (issue #504): the header wordmark hides only
+ * under a playing welcome. Outside a `WelcomeProvider`, `useWelcome` answers
+ * `wordmarkHidden: false`, so the chrome mounted alone shows its wordmark.
+ */
+describe('MainLayout: the wordmark outside a welcome', () => {
+  it('shows its wordmark when mounted alone', () => {
+    renderLayout(<p>the library goes here</p>);
+
+    const wordmark = logo().firstElementChild;
+    expect(wordmark).not.toBeNull();
+    expect(getComputedStyle(wordmark as Element).visibility).not.toBe('hidden');
+  });
+});
