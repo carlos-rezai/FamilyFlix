@@ -1,0 +1,681 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <meta name="design_doc_mode" content="canvas" />
+        <link rel="stylesheet" href="tokens.css" />
+        <style>
+          html,
+          body {
+            margin: 0;
+            background: #1b1611;
+          }
+          a {
+            color: var(--color-accent);
+          }
+          a:hover {
+            color: var(--color-accent-hover);
+          }
+          @keyframes ffIn {
+            from {
+              opacity: 0;
+            }
+            to {
+              opacity: 1;
+            }
+          }
+          @keyframes ffOut {
+            from {
+              opacity: 1;
+            }
+            to {
+              opacity: 0;
+            }
+          }
+          @keyframes ffUp {
+            from {
+              opacity: 0;
+              transform: translateY(22%);
+            }
+            to {
+              opacity: 1;
+              transform: none;
+            }
+          }
+          @keyframes ffWordIn {
+            from {
+              opacity: 0;
+              transform: translateY(8px);
+            }
+            to {
+              opacity: 1;
+              transform: none;
+            }
+          }
+          @keyframes ffSettle {
+            from {
+              opacity: 0;
+              transform: scale(1.06);
+            }
+            to {
+              opacity: 1;
+              transform: none;
+            }
+          }
+          @keyframes ffSweep {
+            from {
+              transform: translateX(-260px);
+            }
+            to {
+              transform: translateX(760px);
+            }
+          }
+          @keyframes ffTrack {
+            from {
+              opacity: 0;
+              letter-spacing: 0.4em;
+            }
+            to {
+              opacity: 1;
+              letter-spacing: -0.01em;
+            }
+          }
+          @keyframes ffDrop {
+            0% {
+              opacity: 0;
+              transform: translateY(-70%);
+            }
+            55% {
+              opacity: 1;
+              transform: translateY(5%);
+            }
+            75% {
+              transform: translateY(-3%);
+            }
+            100% {
+              opacity: 1;
+              transform: none;
+            }
+          }
+          @keyframes ffPop {
+            0% {
+              opacity: 0;
+              transform: scale(0.7);
+            }
+            65% {
+              opacity: 1;
+              transform: scale(1.06);
+            }
+            100% {
+              opacity: 1;
+              transform: none;
+            }
+          }
+          @keyframes ffDraw {
+            from {
+              stroke-dashoffset: 1;
+            }
+            to {
+              stroke-dashoffset: 0;
+            }
+          }
+          @keyframes ffFill {
+            from {
+              fill-opacity: 0;
+            }
+            to {
+              fill-opacity: 1;
+            }
+          }
+          @keyframes ffDot {
+            0% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.3);
+            }
+            50% {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+            }
+            100% {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(1.6);
+            }
+          }
+          @keyframes ffIris {
+            from {
+              clip-path: circle(0% at 50% 45%);
+            }
+            to {
+              clip-path: circle(80% at 50% 45%);
+            }
+          }
+          @keyframes ffMarkOut {
+            from {
+              opacity: 1;
+              transform: translate(-50%, -50%) scale(1);
+            }
+            to {
+              opacity: 0;
+              transform: translate(-50%, -50%) scale(0.7);
+            }
+          }
+          @keyframes ffToHeader {
+            from {
+              left: 50%;
+              top: calc(50% + 42px);
+              transform: translate(-50%, -50%) scale(1);
+            }
+            to {
+              left: 16px;
+              top: 16px;
+              transform: translate(0, 0) scale(0.5333);
+            }
+          }
+          @keyframes ffLetter {
+            from {
+              opacity: 0;
+              transform: translateY(60%);
+              filter: blur(4px);
+            }
+            to {
+              opacity: 1;
+              transform: none;
+              filter: none;
+            }
+          }
+          @keyframes ffTextSweep {
+            from {
+              background-position: 160% 0;
+            }
+            to {
+              background-position: -60% 0;
+            }
+          }
+        </style>
+      </helmet>
+      <section
+        data-screen-label="Turn 2"
+        style="
+          background: var(--color-bg-2);
+          color: var(--color-text);
+          font-family: var(--font-sans);
+          padding: 48px 40px 8px;
+          display: flex;
+          flex-direction: column;
+          gap: 24px;
+        "
+      >
+        <header
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 720px;
+          "
+        >
+          <div
+            style="
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.9px;
+              text-transform: uppercase;
+              color: var(--color-accent);
+            "
+          >
+            Turn 2 · combined
+          </div>
+          <h2
+            style="
+              margin: 0;
+              font-family: var(--font-serif);
+              font-weight: 600;
+              font-size: 30px;
+            "
+          >
+            Bounce, sweep, handoff
+          </h2>
+          <p
+            style="
+              margin: 0;
+              font-size: 16px;
+              line-height: 1.55;
+              color: var(--color-text-dim);
+              text-wrap: pretty;
+            "
+          >
+            The Fs bounce in as in <a href="#1c">1c</a>. A light sweeps across
+            the wordmark as it appears, as in <a href="#1b">1b</a>. Then the
+            wordmark moves into the home header, as in <a href="#1f">1f</a>.
+          </p>
+        </header>
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: flex-start;
+          "
+        >
+          <sc-for list="{{ options2 }}" as="o" hint-placeholder-count="1">
+            <div
+              id="{{ o.id }}"
+              style="
+                width: 512px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                padding: 16px;
+                background: var(--color-surface);
+                border: 1px solid var(--color-accent-line);
+                border-radius: var(--radius-md);
+              "
+            >
+              {{ o.stage }}
+              <div style="display: flex; align-items: flex-start; gap: 12px">
+                <span
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    min-width: 34px;
+                    height: 24px;
+                    padding: 0 8px;
+                    border-radius: var(--radius-pill);
+                    background: var(--color-accent-soft);
+                    border: 1px solid var(--color-accent-line);
+                    color: var(--color-accent);
+                    font-size: 12px;
+                    font-weight: 700;
+                  "
+                  >{{ o.id }}</span
+                >
+                <div
+                  style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    min-width: 0;
+                  "
+                >
+                  <div
+                    style="
+                      display: flex;
+                      align-items: baseline;
+                      gap: 10px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <span
+                      style="
+                        font-family: var(--font-serif);
+                        font-weight: 600;
+                        font-size: 19px;
+                      "
+                      >{{ o.name }}</span
+                    >
+                    <span
+                      style="
+                        font-family: var(--font-mono);
+                        font-size: 12px;
+                        color: var(--color-text-faint);
+                      "
+                      >{{ o.dur }}</span
+                    >
+                  </div>
+                  <div
+                    style="
+                      font-size: 14px;
+                      line-height: 1.5;
+                      color: var(--color-text-dim);
+                      text-wrap: pretty;
+                    "
+                  >
+                    {{ o.desc }}
+                  </div>
+                </div>
+                <button
+                  onClick="{{ o.onReplay }}"
+                  style="
+                    flex: 0 0 auto;
+                    height: 32px;
+                    padding: 0 14px;
+                    background: var(--color-surface-3);
+                    border: 1px solid var(--color-border);
+                    border-radius: 8px;
+                    color: var(--color-text);
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                  "
+                  style-hover="border-color:var(--color-accent-line)"
+                >
+                  Replay
+                </button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+      <section
+        data-screen-label="Welcome splash"
+        style="
+          min-height: 100vh;
+          background: var(--color-bg-2);
+          color: var(--color-text);
+          font-family: var(--font-sans);
+          padding: 48px 40px 72px;
+          display: flex;
+          flex-direction: column;
+          gap: 32px;
+        "
+      >
+        <header
+          style="
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-width: 720px;
+          "
+        >
+          <div
+            style="
+              font-size: 12px;
+              font-weight: 700;
+              letter-spacing: 0.9px;
+              text-transform: uppercase;
+              color: var(--color-accent);
+            "
+          >
+            Welcome splash · first open only
+          </div>
+          <h1
+            style="
+              margin: 0;
+              font-family: var(--font-serif);
+              font-weight: 600;
+              font-size: 38px;
+            "
+          >
+            Six ways to say hello
+          </h1>
+          <p
+            style="
+              margin: 0;
+              font-size: 16px;
+              line-height: 1.55;
+              color: var(--color-text-dim);
+              text-wrap: pretty;
+            "
+          >
+            Each one plays once when the app first opens, then shows home. Click
+            a frame to skip it, the same as a tap, click or remote key would.
+            Use Tweaks to change the speed or preview reduced motion.
+          </p>
+        </header>
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            align-items: flex-start;
+          "
+        >
+          <sc-for list="{{ options }}" as="o" hint-placeholder-count="6">
+            <div
+              id="{{ o.id }}"
+              style="
+                width: 512px;
+                display: flex;
+                flex-direction: column;
+                gap: 14px;
+                padding: 16px;
+                background: var(--color-surface);
+                border: 1px solid var(--color-border-soft);
+                border-radius: var(--radius-md);
+              "
+            >
+              {{ o.stage }}
+              <div style="display: flex; align-items: flex-start; gap: 12px">
+                <span
+                  style="
+                    flex: 0 0 auto;
+                    display: grid;
+                    place-items: center;
+                    min-width: 34px;
+                    height: 24px;
+                    padding: 0 8px;
+                    border-radius: var(--radius-pill);
+                    background: var(--color-accent-soft);
+                    border: 1px solid var(--color-accent-line);
+                    color: var(--color-accent);
+                    font-size: 12px;
+                    font-weight: 700;
+                  "
+                  >{{ o.id }}</span
+                >
+                <div
+                  style="
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 4px;
+                    min-width: 0;
+                  "
+                >
+                  <div
+                    style="
+                      display: flex;
+                      align-items: baseline;
+                      gap: 10px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <span
+                      style="
+                        font-family: var(--font-serif);
+                        font-weight: 600;
+                        font-size: 19px;
+                      "
+                      >{{ o.name }}</span
+                    >
+                    <span
+                      style="
+                        font-family: var(--font-mono);
+                        font-size: 12px;
+                        color: var(--color-text-faint);
+                      "
+                      >{{ o.dur }}</span
+                    >
+                    <sc-if
+                      value="{{ o.rec }}"
+                      hint-placeholder-val="{{ false }}"
+                      ><span
+                        style="
+                          font-size: 11px;
+                          font-weight: 700;
+                          letter-spacing: 0.6px;
+                          text-transform: uppercase;
+                          color: var(--color-watched);
+                        "
+                        >Recommended</span
+                      ></sc-if
+                    >
+                  </div>
+                  <div
+                    style="
+                      font-size: 14px;
+                      line-height: 1.5;
+                      color: var(--color-text-dim);
+                      text-wrap: pretty;
+                    "
+                  >
+                    {{ o.desc }}
+                  </div>
+                </div>
+                <button
+                  onClick="{{ o.onReplay }}"
+                  style="
+                    flex: 0 0 auto;
+                    height: 32px;
+                    padding: 0 14px;
+                    background: var(--color-surface-3);
+                    border: 1px solid var(--color-border);
+                    border-radius: 8px;
+                    color: var(--color-text);
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    font-weight: 600;
+                    cursor: pointer;
+                  "
+                  style-hover="border-color:var(--color-accent-line)"
+                >
+                  Replay
+                </button>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+      </section>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"autoLoop":{"editor":"boolean","default":true,"tsType":"boolean"},"speed":{"editor":"range","default":1,"min":0.25,"max":2,"step":0.25,"unit":"×","tsType":"number"},"reducedMotion":{"editor":"boolean","default":false,"tsType":"boolean"}}'
+    >
+      const F1 = "M380.23 704.39L174.08 704.39L174.08 666.32L220.93 663.98Q220.93 654.61 220.93 645.82L220.93 377.59Q220.93 368.81 220.93 360.02L174.08 357.10L174.08 319.61L489.16 319.61L493.84 420.93L446.41 420.93L432.35 357.10L324.59 357.10Q324.59 367.640 324.59 377.59Q324.01 407.46 324.01 436.74L324.01 488.87L388.43 488.87L396.04 444.94L434.69 444.94L434.69 574.37L396.04 574.37L388.43 527.52L324.01 527.52L324.01 586.08Q324.01 615.95 324.59 645.24Q324.59 654.61 324.59 663.39L380.23 666.32";
+      const F2 = "M736.30 704.39L530.16 704.39L530.16 666.32L577.01 663.98Q577.01 654.61 577.01 645.82L577.01 377.59Q577.01 368.81 577.01 360.02L530.16 357.10L530.16 319.61L845.23 319.61L849.92 420.93L802.48 420.93L788.43 357.10L680.67 357.10Q680.67 367.64 680.67 377.59Q680.08 407.46 680.08 436.74L680.08 488.87L744.50 488.87L752.12 444.94L790.77 444.94L790.77 574.37L752.12 574.37L744.50 527.52L680.08 527.52L680.08 586.08Q680.08 615.95 680.67 645.24Q680.67 654.61 680.67 663.39L736.30 666.32";
+      const EO = 'cubic-bezier(.2,.7,.3,1)';
+      const OPTS = [
+        { id: '2a', turn: 2, name: 'Bounce, sweep, handoff', dur: '2.3s', end: 2250, desc: 'The Fs bounce in and the letters of FamilyFlix rise one by one. A light sweeps across the mark and the wordmark, then the wordmark moves to the top left as home fades in.' },
+        { id: '1a', name: 'Rise & reveal', dur: '1.2s', end: 1400, desc: 'The two Fs rise one after the other, then the wordmark slides up. Same motion as the loader, so it feels familiar.' },
+        { id: '1b', name: 'Light sweep', dur: '2.0s', end: 2100, desc: 'The mark settles in from slightly large, a soft light sweeps across it, and the wordmark letters close up. Like a studio intro.' },
+        { id: '1c', name: 'Bounce in', dur: '1.4s', end: 1550, desc: 'The Fs drop in one after the other with a small bounce, then the wordmark pops in. The most playful, suits a family app.' },
+        { id: '1d', name: 'Trace & fill', dur: '1.8s', end: 1900, desc: 'The outlines of the Fs draw themselves, then fill with color. Handmade feel, a little slower.' },
+        { id: '1e', name: 'Projector iris', dur: '1.6s', end: 1700, desc: 'A small point of warm light opens into a circle that reveals the logo, like a projector lens opening.' },
+        { id: '1f', name: 'Handoff to header', dur: '1.4s', end: 1400, rec: true, desc: 'Rises like 1a, then the wordmark slides into its spot in the home header while home fades in. No hard cut into the app.' }
+      ];
+
+      class Component extends DCLogic {
+        state = { keys: {}, skip: {} };
+        t = {};
+        componentDidMount() { OPTS.forEach(o => this.sched(o.id)); }
+        componentWillUnmount() { Object.values(this.t).forEach(clearTimeout); }
+        componentDidUpdate(pp) {
+          const p = this.props;
+          if (pp.autoLoop !== p.autoLoop || pp.speed !== p.speed || pp.reducedMotion !== p.reducedMotion) OPTS.forEach(o => this.replay(o.id));
+        }
+        k() { return 1 / (this.props.speed ?? 1); }
+        rm() { return this.props.reducedMotion ?? false; }
+        sched(id) {
+          clearTimeout(this.t[id]);
+          if (!(this.props.autoLoop ?? true)) return;
+          const o = OPTS.find(x => x.id === id);
+          this.t[id] = setTimeout(() => this.replay(id), (this.rm() ? 1300 : o.end) * this.k() + 2200);
+        }
+        replay(id) {
+          this.setState(s => ({ keys: { ...s.keys, [id]: (s.keys[id] || 0) + 1 }, skip: { ...s.skip, [id]: false } }));
+          this.sched(id);
+        }
+        renderVals() {
+          const h = React.createElement, k = this.k();
+          const a = (n, st, d, e = EO) => `${n} ${Math.round(d * k)}ms ${e} ${Math.round(st * k)}ms both`;
+          const abs = { position: 'absolute', inset: 0 };
+          const center = { ...abs, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '18px' };
+          const word = (size, style) => h('div', { style: { display: 'flex', fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: size + 'px', lineHeight: 1.25, letterSpacing: '-.01em', color: 'var(--color-text)', whiteSpace: 'nowrap', ...style } },
+            h('span', null, 'Family'), h('span', { style: { color: 'var(--color-accent)' } }, 'Flix'));
+          const mark = (pathProps, extra) => h('svg', { viewBox: '160 300 704 424', width: 132, height: 80, style: { display: 'block', overflow: 'visible' } },
+            extra && extra.defs, [F1, F2].map((d, i) => h('path', { key: i, d, fill: i ? 'var(--color-accent)' : 'var(--color-text)', ...(pathProps ? pathProps(i) : {}) })), extra && extra.over);
+          const pathAnim = (fn) => (i) => ({ style: { animation: fn(i), transformBox: 'fill-box', transformOrigin: '50% 100%' } });
+          const home = (anim, withWord = true) => h('div', { key: 'home', style: { ...abs, background: 'var(--color-bg)', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'hidden', animation: anim } },
+            h('div', { style: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '20px' } }, withWord ? word(16) : h('span'), h('div', { style: { width: '22px', height: '22px', borderRadius: '50%', background: 'var(--color-surface-3)' } })),
+            h('div', { style: { height: '92px', borderRadius: '10px', background: 'var(--color-surface-2)' } }),
+            h('div', { style: { width: '30%', height: '8px', borderRadius: '4px', background: 'var(--color-surface-2)' } }),
+            h('div', { style: { display: 'grid', gridTemplateColumns: 'repeat(6,minmax(0,1fr))', gap: '8px' } }, [0, 1, 2, 3, 4, 5].map(i => h('div', { key: i, style: { aspectRatio: '2/3', borderRadius: '6px', background: 'var(--color-surface-2)' } }))));
+
+          const build = (id) => {
+            if (this.state.skip[id]) return [home('ffIn 150ms ease-out both')];
+            if (this.rm()) return [home(a('ffIn', 1000, 300)),
+              h('div', { key: 's', style: { ...abs, background: 'var(--color-bg)', animation: a('ffOut', 900, 300) } },
+                h('div', { style: { ...center, animation: a('ffIn', 0, 300) } }, mark(), word(30)))];
+            if (id === '1a') return [home(a('ffIn', 1100, 300)),
+              h('div', { key: 's', style: { ...center, background: 'var(--color-bg)', animation: a('ffOut', 1000, 250) } },
+                mark(pathAnim(i => a('ffUp', i * 120, 350))), word(30, { animation: a('ffWordIn', 450, 350) }))];
+            if (id === '1b') {
+              const g = 'ffg' + id, c = 'ffc' + id;
+              return [home(a('ffIn', 1800, 300)),
+                h('div', { key: 's', style: { ...center, background: 'radial-gradient(60% 70% at 50% 45%, rgba(217,122,78,.12), var(--color-bg) 70%)', animation: a('ffOut', 1700, 300) } },
+                  h('div', { style: { animation: a('ffSettle', 0, 700) } }, mark(null, {
+                    defs: h('defs', { key: 'd' },
+                      h('clipPath', { id: c }, h('path', { d: F1 }), h('path', { d: F2 })),
+                      h('linearGradient', { id: g, x1: 0, x2: 1, y1: 0, y2: 0 }, h('stop', { offset: 0, stopColor: '#fff', stopOpacity: 0 }), h('stop', { offset: .5, stopColor: '#fff', stopOpacity: .6 }), h('stop', { offset: 1, stopColor: '#fff', stopOpacity: 0 }))),
+                    over: h('g', { key: 'o', clipPath: `url(#${c})` }, h('rect', { x: 160, y: 300, width: 220, height: 424, fill: `url(#${g})`, style: { animation: a('ffSweep', 500, 900) } }))
+                  })),
+                  word(30, { animation: a('ffTrack', 700, 700) }))];
+            }
+            if (id === '1c') return [home(a('ffIn', 1250, 300)),
+              h('div', { key: 's', style: { ...center, background: 'var(--color-bg)', animation: a('ffOut', 1150, 250) } },
+                mark(pathAnim(i => a('ffDrop', i * 150, 520, 'cubic-bezier(.3,.6,.4,1)'))), word(30, { animation: a('ffPop', 550, 380) }))];
+            if (id === '1d') return [home(a('ffIn', 1600, 300)),
+              h('div', { key: 's', style: { ...center, background: 'var(--color-bg)', animation: a('ffOut', 1500, 300) } },
+                mark(i => ({ pathLength: 1, stroke: i ? 'var(--color-accent)' : 'var(--color-text)', strokeWidth: 5, strokeDasharray: 1, strokeLinejoin: 'round',
+                  style: { animation: a('ffDraw', i * 150, 900, 'cubic-bezier(.45,.05,.3,1)') + ', ' + a('ffFill', 800 + i * 100, 350) } })),
+                word(30, { animation: a('ffWordIn', 1000, 350) }))];
+            if (id === '1e') return [home(a('ffIn', 1400, 300)),
+              h('div', { key: 'dot', style: { position: 'absolute', left: '50%', top: '45%', width: '10px', height: '10px', borderRadius: '50%', background: 'var(--color-accent-hover)', boxShadow: '0 0 24px 6px rgba(229,142,99,.6)', animation: a('ffDot', 0, 350) } }),
+              h('div', { key: 's', style: { ...center, background: 'radial-gradient(55% 65% at 50% 45%, rgba(217,122,78,.18), var(--color-bg) 75%)', animation: a('ffIris', 150, 700, 'cubic-bezier(.3,.6,.2,1)') + ', ' + a('ffOut', 1300, 300) } },
+                mark(), word(30, { animation: a('ffWordIn', 700, 350) }))];
+            if (id === '2a') {
+              const sweep = h('div', { 'aria-hidden': true, style: { position: 'absolute', inset: 0, display: 'flex', fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '30px', lineHeight: 1.25, letterSpacing: '-.01em', whiteSpace: 'nowrap', color: 'transparent',
+                backgroundImage: 'linear-gradient(100deg, transparent 35%, rgba(255,255,255,.85) 50%, transparent 65%)', backgroundSize: '250% 100%', WebkitBackgroundClip: 'text', backgroundClip: 'text', animation: a('ffTextSweep', 1080, 700, 'cubic-bezier(.4,0,.2,1)') } }, 'FamilyFlix');
+              const ORANGE = '255,150,90', WHITE = '255,255,255';
+              const band = (rgb, op) => `linear-gradient(100deg, rgba(${rgb},0) 30%, rgba(${rgb},${op}) 50%, rgba(${rgb},0) 70%)`;
+              const letters = h('div', { style: { display: 'flex', fontFamily: 'var(--font-serif)', fontWeight: 700, fontSize: '30px', lineHeight: 1.25, letterSpacing: '-.01em', whiteSpace: 'nowrap' } },
+                'FamilyFlix'.split('').map((ch, i) => {
+                  const flix = i > 5;
+                  return h('span', { key: i, style: { position: 'relative', display: 'inline-block', color: flix ? 'var(--color-accent)' : 'var(--color-text)', animation: a('ffLetter', 520 + i * 40, 420) } }, ch,
+                    h('span', { 'aria-hidden': true, style: { position: 'absolute', inset: 0, color: 'transparent', backgroundImage: band(flix ? WHITE : ORANGE, flix ? .9 : 1), backgroundSize: '300% 100%', WebkitBackgroundClip: 'text', backgroundClip: 'text', animation: a('ffTextSweep', 1150 + i * 45, 380, 'linear') } }, ch));
+                }));
+              const stops = (rgb, op) => [h('stop', { key: 0, offset: 0, stopColor: `rgb(${rgb})`, stopOpacity: 0 }), h('stop', { key: 1, offset: .5, stopColor: `rgb(${rgb})`, stopOpacity: op }), h('stop', { key: 2, offset: 1, stopColor: `rgb(${rgb})`, stopOpacity: 0 })];
+              const sweepRect = (gid) => h('rect', { x: 160, y: 300, width: 220, height: 424, fill: `url(#${gid})`, style: { animation: a('ffSweep', 1000, 700, 'cubic-bezier(.4,0,.2,1)') } });
+              const markSweep = {
+                defs: h('defs', { key: 'd' },
+                  h('clipPath', { id: 'ffc2a1' }, h('path', { d: F1 })), h('clipPath', { id: 'ffc2a2' }, h('path', { d: F2 })),
+                  h('linearGradient', { id: 'ffg2a1', x1: 0, x2: 1, y1: 0, y2: 0 }, stops(ORANGE, .95)),
+                  h('linearGradient', { id: 'ffg2a2', x1: 0, x2: 1, y1: 0, y2: 0 }, stops(WHITE, .7))),
+                over: [h('g', { key: 'o1', clipPath: 'url(#ffc2a1)' }, sweepRect('ffg2a1')), h('g', { key: 'o2', clipPath: 'url(#ffc2a2)' }, sweepRect('ffg2a2'))]
+              };
+              return [home(a('ffIn', 1850, 400), false),
+                h('div', { key: 'bg', style: { ...abs, background: 'var(--color-bg)', animation: a('ffOut', 1800, 400) } }),
+                h('div', { key: 'm', style: { position: 'absolute', left: '50%', top: 'calc(50% - 26px)', animation: a('ffMarkOut', 1750, 300) } }, mark(pathAnim(i => a('ffDrop', i * 150, 520, 'cubic-bezier(.3,.6,.4,1)')), markSweep)),
+                h('div', { key: 'w', style: { position: 'absolute', transformOrigin: '0 0', animation: a('ffToHeader', 1750, 500, 'cubic-bezier(.3,.7,.2,1)') } },
+                  letters)];
+            }
+            return [home(a('ffIn', 1000, 400), false),
+              h('div', { key: 'bg', style: { ...abs, background: 'var(--color-bg)', animation: a('ffOut', 950, 400) } }),
+              h('div', { key: 'm', style: { position: 'absolute', left: '50%', top: 'calc(50% - 26px)', animation: a('ffMarkOut', 900, 300) } }, mark(pathAnim(i => a('ffUp', i * 120, 350)))),
+              h('div', { key: 'w', style: { position: 'absolute', transformOrigin: '0 0', animation: a('ffToHeader', 900, 500, 'cubic-bezier(.3,.7,.2,1)') } }, word(30, { animation: a('ffWordIn', 350, 350) }))];
+          };
+
+          const all = OPTS.map(o => ({
+            ...o, rec: !!o.rec,
+            onReplay: () => this.replay(o.id),
+            stage: h('div', {
+              key: o.id + '-' + (this.state.keys[o.id] || 0), title: 'Click to skip',
+              onClick: () => { this.setState(s => ({ skip: { ...s.skip, [o.id]: true } })); this.sched(o.id); },
+              style: { position: 'relative', width: '480px', height: '270px', overflow: 'hidden', borderRadius: '10px', cursor: 'pointer', background: o.id === '1e' ? '#0a0805' : 'var(--color-bg)', border: '1px solid var(--color-border-soft)' }
+            }, build(o.id))
+          }));
+          return { options: all.filter(o => !o.turn), options2: all.filter(o => o.turn === 2) };
+        }
+      }
+    </script>
+  </body>
+</html>

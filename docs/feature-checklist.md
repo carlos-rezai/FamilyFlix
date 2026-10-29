@@ -2,71 +2,72 @@
 
 Every feature FamilyFlix has shipped or plans, in build order. The [README](../README.md) links here.
 
-| Feature                                             | Status  |
-| --------------------------------------------------- | ------- |
-| Nx + Vite + React workspace scaffold                | ✅ Done |
-| Claude Design handoff prototype                     | ✅ Done |
-| Library core (movie model, SQLite, repository)      | ✅ Done |
-| Browse grid — genre rows                            | ✅ Done |
-| Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done |
-| Movie detail page (synopsis, director, cast)        | ✅ Done |
-| Search + filter (title, genre, rating)              | ✅ Done |
-| Genre page — every movie in one genre, uncapped     | ✅ Done |
-| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done |
-| Ratings — 5-star display + half-star picker         | ✅ Done |
-| Favorites — mark + dedicated row                    | ✅ Done |
-| Continue Watching row                               | ✅ Done |
-| Built-in video player (playback, subtitles)         | ✅ Done |
-| Watch tracking (watched / in-progress / resume)     | ✅ Done |
-| Add Movie — manual file picker                      | ✅ Done |
-| Edit a movie — amend metadata and files             | ✅ Done |
-| Delete a movie — from the ⋯ menu, with confirmation | ✅ Done |
-| Bulk import (Excel/CSV → library)                   | ✅ Done |
-| Import progress console (scan/import, live log)     | ✅ Done |
-| Export (library → CSV/Excel)                        | ✅ Done |
-| Settings hub (six groups, Library to About)         | ✅ Done |
-| Codec manager — view installed codecs               | ✅ Done |
-| Codec manager — add a playback component            | ✅ Done |
-| Subtitle preferences (preferred language)           | ✅ Done |
-| Storage (media folder location, space used)         | ✅ Done |
-| Snackbar system (info / success / warning / error)  | ✅ Done |
-| Back-to-top FAB                                     | ✅ Done |
-| Back navigation — one Back rule on every screen     | ✅ Done |
-| Motion & interaction states (hover / press / focus) | ✅ Done |
-| Series (TV) — tab, series page, seasons, episodes   | ✅ Done |
-| Enrichment — TMDB metadata & posters sync           | ✅ Done |
-| Network group — the TMDB key and the sync row       | ✅ Done |
-| Electron desktop shell                              | ✅ Done |
-| Desktop packaging (Windows installer)               | ✅ Done |
-| Software update (check / install)                   | ✅ Done |
-| Codecs page — the codec list on its own page        | ✅ Done |
-| Ultrawide margins — side gutters for wide screens   | ✅ Done |
-| Default poster — a fallback for titles without one  | ✅ Done |
-| Add a series — the Add form for shows too           | ✅ Done |
-| Library folders — several root folders at once      | ✅ Done |
-| Export options — where to, and what travels         | ✅ Done |
-| Single-title Sync — the ⋯ menu's fetch, one movie   | ✅ Done |
-| Backdrop veil — full-screen art, accent-veiled      | ✅ Done |
-| Open the media folder from Settings → Storage       | ✅ Done |
-| Export name — the export folder's name as a field   | ✅ Done |
-| Factory reset — erase everything, behind a dialog   | ✅ Done |
-| Title editing — number, edit and delete a series    | ✅ Done |
-| Season posters — TMDB art on each season card       | ✅ Done |
-| Import review — folders + sheet, adjustments listed | ✅ Done |
-| Link or copy — import without a second copy         | ✅ Done |
-| Review at scale + Season art — grouped review       | ✅ Done |
-| TMDB ratings — fetched stars until the family rates | ✅ Done |
-| Episode stills — a frame from the file, as fallback | ✅ Done |
-| Add and sync — add by files, TMDB fills the rest    | ✅ Done |
-| Audio tracks — English by default, switch in player | ✅ Done |
-| Manage library — every title, edit, clear, delete   | ✅ Done |
-| Add a show folder — a show by its folder, numbered  | ✅ Done |
-| Start on Series — open FamilyFlix on the Series tab | ✅ Done |
-| Subtitle picker — choose a track in the player      | ✅ Done |
-| Library audit: every Library flow, tested live      | ✅ Done |
-| Keep originals: a Delete never touches your files   | ✅ Done |
-| Loading states: the FF mark while an action runs    | ✅ Done |
-| Scan new folders: and sync only what a run added    | ✅ Done |
+| Feature                                             | Status     |
+| --------------------------------------------------- | ---------- |
+| Nx + Vite + React workspace scaffold                | ✅ Done    |
+| Claude Design handoff prototype                     | ✅ Done    |
+| Library core (movie model, SQLite, repository)      | ✅ Done    |
+| Browse grid — genre rows                            | ✅ Done    |
+| Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done    |
+| Movie detail page (synopsis, director, cast)        | ✅ Done    |
+| Search + filter (title, genre, rating)              | ✅ Done    |
+| Genre page — every movie in one genre, uncapped     | ✅ Done    |
+| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done    |
+| Ratings — 5-star display + half-star picker         | ✅ Done    |
+| Favorites — mark + dedicated row                    | ✅ Done    |
+| Continue Watching row                               | ✅ Done    |
+| Built-in video player (playback, subtitles)         | ✅ Done    |
+| Watch tracking (watched / in-progress / resume)     | ✅ Done    |
+| Add Movie — manual file picker                      | ✅ Done    |
+| Edit a movie — amend metadata and files             | ✅ Done    |
+| Delete a movie — from the ⋯ menu, with confirmation | ✅ Done    |
+| Bulk import (Excel/CSV → library)                   | ✅ Done    |
+| Import progress console (scan/import, live log)     | ✅ Done    |
+| Export (library → CSV/Excel)                        | ✅ Done    |
+| Settings hub (six groups, Library to About)         | ✅ Done    |
+| Codec manager — view installed codecs               | ✅ Done    |
+| Codec manager — add a playback component            | ✅ Done    |
+| Subtitle preferences (preferred language)           | ✅ Done    |
+| Storage (media folder location, space used)         | ✅ Done    |
+| Snackbar system (info / success / warning / error)  | ✅ Done    |
+| Back-to-top FAB                                     | ✅ Done    |
+| Back navigation — one Back rule on every screen     | ✅ Done    |
+| Motion & interaction states (hover / press / focus) | ✅ Done    |
+| Series (TV) — tab, series page, seasons, episodes   | ✅ Done    |
+| Enrichment — TMDB metadata & posters sync           | ✅ Done    |
+| Network group — the TMDB key and the sync row       | ✅ Done    |
+| Electron desktop shell                              | ✅ Done    |
+| Desktop packaging (Windows installer)               | ✅ Done    |
+| Software update (check / install)                   | ✅ Done    |
+| Codecs page — the codec list on its own page        | ✅ Done    |
+| Ultrawide margins — side gutters for wide screens   | ✅ Done    |
+| Default poster — a fallback for titles without one  | ✅ Done    |
+| Add a series — the Add form for shows too           | ✅ Done    |
+| Library folders — several root folders at once      | ✅ Done    |
+| Export options — where to, and what travels         | ✅ Done    |
+| Single-title Sync — the ⋯ menu's fetch, one movie   | ✅ Done    |
+| Backdrop veil — full-screen art, accent-veiled      | ✅ Done    |
+| Open the media folder from Settings → Storage       | ✅ Done    |
+| Export name — the export folder's name as a field   | ✅ Done    |
+| Factory reset — erase everything, behind a dialog   | ✅ Done    |
+| Title editing — number, edit and delete a series    | ✅ Done    |
+| Season posters — TMDB art on each season card       | ✅ Done    |
+| Import review — folders + sheet, adjustments listed | ✅ Done    |
+| Link or copy — import without a second copy         | ✅ Done    |
+| Review at scale + Season art — grouped review       | ✅ Done    |
+| TMDB ratings — fetched stars until the family rates | ✅ Done    |
+| Episode stills — a frame from the file, as fallback | ✅ Done    |
+| Add and sync — add by files, TMDB fills the rest    | ✅ Done    |
+| Audio tracks — English by default, switch in player | ✅ Done    |
+| Manage library — every title, edit, clear, delete   | ✅ Done    |
+| Add a show folder — a show by its folder, numbered  | ✅ Done    |
+| Start on Series — open FamilyFlix on the Series tab | ✅ Done    |
+| Subtitle picker — choose a track in the player      | ✅ Done    |
+| Library audit: every Library flow, tested live      | ✅ Done    |
+| Keep originals: a Delete never touches your files   | ✅ Done    |
+| Loading states: the FF mark while an action runs    | ✅ Done    |
+| Scan new folders: and sync only what a run added    | ✅ Done    |
+| Intro animation: the FF mark opens FamilyFlix       | 🔜 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -299,3 +300,13 @@ the whole library. It is done (design log 54):
     all folders_ every one, as the scan always has. A run with the TMDB box
     ticked hands on to the Sync with _Just what was added_ chosen: the titles
     that run brought in, and a held show's new episodes, nothing else.
+
+Step 38 came out of the animation drawn for opening FamilyFlix
+(`docs/handoff/handoff-welcome-splash/`, option 2a). It is planned:
+
+38. 🔜 **Intro animation**: a cold start plays a short welcome of about two
+    seconds. The two Fs drop in, _FamilyFlix_ rises letter by letter, a
+    light sweeps across both, and the wordmark glides up into the header as
+    the library fades in underneath. Any click or key skips straight to the
+    library. A library not ready by the end keeps the mark as its loader
+    until it is; with reduced motion the welcome is a plain fade.
