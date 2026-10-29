@@ -11,6 +11,9 @@ export {
   ListSection as Episodes,
   ListLabel as EpisodesLabel,
   ListRows as EpisodeRows,
+  ListSection as ShowFolderSection,
+  ListLabel as ShowFolderLabel,
+  ListRows as ShowFolderRows,
 } from '../filesCard.styles';
 
 /** The _Season posters_ list: its caption over one File field per season. */

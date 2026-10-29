@@ -516,6 +516,55 @@
                   ></dc-import>
                 </sc-if>
 
+                <!-- ＋ Add show folder (log 48): the series add in the shell alone — a
+                     browser has no folder dialog and draws none. Its own row, labelled
+                     Show folder, so Episodes stays beside the episodes and ＋ Add episode
+                     files; once a folder is picked its row above carries the label and
+                     this one's is blank. It opens the one-folder dialog; a cancel changes
+                     nothing. The read fills the Show folder row, then one found row per
+                     episode, season then episode order, each with its found subtitles, and
+                     an empty title takes the Title guess. -->
+                <sc-if
+                  value="{{ form.canAddShowFolder }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <div style="display: flex; gap: 12px">
+                    <div
+                      style="
+                        flex: 0 0 70px;
+                        font-family: var(--font-sans);
+                        font-size: 14px;
+                        color: var(--color-text-dim);
+                        padding-top: 10px;
+                      "
+                    >
+                      {{ form.showFolderAddLabel }}
+                    </div>
+                    <button
+                      onClick="{{ form.addShowFolder }}"
+                      style="
+                        flex: 1;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 6px;
+                        height: 42px;
+                        background: transparent;
+                        border: 1px dashed var(--color-border);
+                        border-radius: 8px;
+                        color: var(--color-text-dim);
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        font-weight: 600;
+                        cursor: pointer;
+                      "
+                      style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
+                    >
+                      ＋ Add show folder
+                    </button>
+                  </div>
+                </sc-if>
+
                 <div style="display: flex; gap: 12px">
                   <div
                     style="
@@ -618,37 +667,6 @@
                       >
                         {{ form.strayLine }}
                       </p>
-                    </sc-if>
-                    <!-- ＋ Add show folder (log 48): the series add in the shell alone — a
-                         browser has no folder dialog and draws none. It opens the one-folder
-                         dialog; a cancel changes nothing. The read fills the Show folder row,
-                         then one found row per episode, season then episode order, each with
-                         its found subtitles, and an empty title takes the Title guess. -->
-                    <sc-if
-                      value="{{ form.canAddShowFolder }}"
-                      hint-placeholder-val="{{ true }}"
-                    >
-                      <button
-                        onClick="{{ form.addShowFolder }}"
-                        style="
-                          display: flex;
-                          align-items: center;
-                          justify-content: center;
-                          gap: 6px;
-                          height: 42px;
-                          background: transparent;
-                          border: 1px dashed var(--color-border);
-                          border-radius: 8px;
-                          color: var(--color-text-dim);
-                          font-family: var(--font-sans);
-                          font-size: 13px;
-                          font-weight: 600;
-                          cursor: pointer;
-                        "
-                        style-hover="border-color:var(--color-accent-line);color:var(--color-text)"
-                      >
-                        ＋ Add show folder
-                      </button>
                     </sc-if>
                     <button
                       onClick="{{ form.addEpisodeFiles }}"

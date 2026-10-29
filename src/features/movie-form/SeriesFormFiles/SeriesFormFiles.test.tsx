@@ -233,3 +233,82 @@ describe('SeriesFormFiles — the Season posters list', () => {
     expect(onRemoveSeasonPoster).toHaveBeenCalledWith(1);
   });
 });
+
+/**
+ * Each add button sits beside its own label: _＋ Add show folder_ in a
+ * _Show folder_ row above the Episodes section, _＋ Add episode files_ beside
+ * _Episodes_. With no rows yet, the one _Episodes_ label lined up with the
+ * show folder button and the episode picker had none.
+ */
+describe('SeriesFormFiles — the add buttons’ labels', () => {
+  function renderButtons(showFolder: string | null = null) {
+    render(
+      <ThemeProvider theme={theme}>
+        <SeriesFormFiles
+          poster={null}
+          onPickPoster={vi.fn()}
+          onRemovePoster={vi.fn()}
+          seasonPosters={[]}
+          onPickSeasonPoster={vi.fn()}
+          onRemoveSeasonPoster={vi.fn()}
+          episodes={[]}
+          refusals={{}}
+          onAddEpisodeFiles={vi.fn()}
+          onSeasonChange={vi.fn()}
+          onNumberChange={vi.fn()}
+          onEpisodeTitleChange={vi.fn()}
+          onRemoveEpisode={vi.fn()}
+          stills
+          onPickEpisodeStill={vi.fn()}
+          onRemoveEpisodeStill={vi.fn()}
+          onAddEpisodeSubtitle={vi.fn()}
+          onChangeEpisodeSubtitleLanguage={vi.fn()}
+          onRemoveEpisodeSubtitle={vi.fn()}
+          onAddShowFolder={vi.fn()}
+          showFolder={showFolder}
+          onRemoveShowFolder={vi.fn()}
+          straySubtitles={0}
+        />
+      </ThemeProvider>
+    );
+  }
+
+  /** The section a label names: the label's own parent. */
+  const sectionOf = (label: string) => {
+    const section = screen.getByText(label).parentElement;
+    if (section === null) throw new Error(`${label} has no section`);
+    return section;
+  };
+
+  it('draws Add show folder beside the Show folder label, not Episodes', () => {
+    renderButtons();
+
+    expect(
+      within(sectionOf('Show folder')).getByRole('button', {
+        name: /add show folder/i,
+      })
+    ).toBeDefined();
+    expect(
+      within(sectionOf('Episodes')).queryByRole('button', {
+        name: /add show folder/i,
+      })
+    ).toBeNull();
+  });
+
+  it('draws Add episode files beside the Episodes label', () => {
+    renderButtons();
+
+    expect(
+      within(sectionOf('Episodes')).getByLabelText(/add episode files/i)
+    ).toBeDefined();
+  });
+
+  it('labels a picked folder once, its button under it', () => {
+    renderButtons('E:/Shows/Harbor and Vine');
+
+    expect(screen.getAllByText('Show folder')).toHaveLength(1);
+    expect(
+      screen.getByRole('button', { name: /add show folder/i })
+    ).toBeDefined();
+  });
+});

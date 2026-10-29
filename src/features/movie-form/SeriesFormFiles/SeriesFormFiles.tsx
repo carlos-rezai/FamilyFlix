@@ -27,6 +27,9 @@ import {
   EpisodesLabel,
   SeasonPosters,
   SeasonPostersLabel,
+  ShowFolderLabel,
+  ShowFolderRows,
+  ShowFolderSection,
   StrayLine,
 } from './SeriesFormFiles.styles';
 
@@ -208,6 +211,20 @@ export function SeriesFormFiles({
           truncateStart
         />
       )}
+      {onAddShowFolder !== null && (
+        // Its own row, so the _Episodes_ label stays beside the episodes; a
+        // picked folder's row above already says _Show folder_.
+        <ShowFolderSection>
+          <ShowFolderLabel>
+            {showFolder === null ? SHOW_FOLDER_LABEL : ''}
+          </ShowFolderLabel>
+          <ShowFolderRows>
+            <AddShowFolder type="button" onClick={onAddShowFolder}>
+              ＋ {SHOW_FOLDER_ADD}
+            </AddShowFolder>
+          </ShowFolderRows>
+        </ShowFolderSection>
+      )}
       <Episodes>
         <EpisodesLabel>{EPISODES_LABEL}</EpisodesLabel>
         <EpisodeRows>
@@ -269,11 +286,6 @@ export function SeriesFormFiles({
           ))}
           {straySubtitles > 0 && (
             <StrayLine>{strayLine(straySubtitles)}</StrayLine>
-          )}
-          {onAddShowFolder !== null && (
-            <AddShowFolder type="button" onClick={onAddShowFolder}>
-              ＋ {SHOW_FOLDER_ADD}
-            </AddShowFolder>
           )}
           <FilePicker
             label={EPISODES_ADD}

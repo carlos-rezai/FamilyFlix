@@ -1157,7 +1157,7 @@
               addEpisodeFiles:()=>this.addEpisodeFiles(),
               // The Show folder pick: the shell's plain series add alone.
               canAddShowFolder:isSeriesForm&&s.addContext==='settings', addShowFolder:()=>this.addShowFolder(),
-              hasShowFolder:!!s.fShowFolder, showFolder:s.fShowFolder, strayLine:s.fStray>0?s.fStray+' subtitle file'+(s.fStray===1?'':'s')+' matched no episode.':'', removeShowFolder:()=>this.removeShowFolder(),
+              hasShowFolder:!!s.fShowFolder, showFolderAddLabel:s.fShowFolder?'':'Show folder', showFolder:s.fShowFolder, strayLine:s.fStray>0?s.fStray+' subtitle file'+(s.fStray===1?'':'s')+' matched no episode.':'', removeShowFolder:()=>this.removeShowFolder(),
               showFolderRefusal:isSeriesForm?s.fShowFolderRefusal:'',
               // The Import mode: the shell's plain add alone, both kinds — never an edit, a Resolve or a browser.
               showImportMode:s.addContext==='settings'&&s.folderBridge, modes:formModeChoices(), groupHeadingStyle,
