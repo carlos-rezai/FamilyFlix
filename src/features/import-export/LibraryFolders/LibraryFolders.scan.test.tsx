@@ -28,14 +28,14 @@ import {
  * 30 — Library folders, Phase 2: "the Folder scan" (issue #269).
  *
  * The page's group **Scan**: _What the scanner accepts_ (`FolderShapes`),
- * then **Scan folders** — `primary`, `lg` — disabled while no folder is
- * listed. A press posts `POST /api/library-folders/scan { enrich: false }`
+ * then **Scan all folders** — `primary`, `lg` — disabled while no folder
+ * is listed. A press posts `POST /api/library-folders/scan { enrich: false }`
  * and pushes `/import`; a `409` pushes too, so the run already in flight is
  * the one shown.
  *
  * Phase 4 (issue #271) draws `EnrichCheckCard` between the shapes and the
- * button, with Import setup's stored-key hint, and _Scan folders_ sends the
- * box's value as `enrich`.
+ * button, with Import setup's stored-key hint, and _Scan all folders_ sends
+ * the box's value as `enrich`.
  *
  * The wire is a stubbed `fetch`: the list on GET, the scan's answer on its
  * POST.
@@ -268,8 +268,8 @@ describe('LibraryFolders — Also fetch from TMDB', () => {
  * 41 — Link or copy, Slice 3: "a linked film plays" (issue #343).
  *
  * The group **Scan** draws the **Import mode** (`ImportModeChoice`) above
- * **Scan folders**: the _Files_ caption over two radios, **Link** chosen on
- * every mount and never remembered, and the press posts the chosen `mode`
+ * **Scan all folders**: the _Files_ caption over two radios, **Link** chosen
+ * on every mount and never remembered, and the press posts the chosen `mode`
  * beside `enrich`.
  */
 const modeGroup = () =>

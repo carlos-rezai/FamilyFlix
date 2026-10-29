@@ -18,10 +18,11 @@ import {
 /**
  * 30 — Library folders refactor (issue 274), commit 15.
  *
- * `useFolderScan()` — the _Scan folders_ press, out of the `LibraryFolders`
- * organism: `POST /api/library-folders/scan` with the box, then a push to
- * `/import` on a `201` and on a `409` alike, and `scanning` let go on any
- * other failure. What it does is move the router, so that is what is read.
+ * `useFolderScan()` — the _Scan new folders_ and _Scan all folders_ presses,
+ * out of the `LibraryFolders` organism: `POST /api/library-folders/scan` with
+ * the box, then a push to `/import` on a `201` and on a `409` alike, and
+ * `scanning` let go on any other failure. What it does is move the router, so
+ * that is what is read.
  *
  * 54: Scan new folders (issue #495): the press carries its **Scan scope**,
  * `new` for _Scan new folders_ and `all` for _Scan all folders_, sent beside

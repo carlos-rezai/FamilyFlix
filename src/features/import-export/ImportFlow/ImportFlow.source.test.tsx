@@ -21,7 +21,7 @@ import {
  * existing _Import library_ and its lede.
  *
  * The seam is `fetch` and the router: the run is already there on arrival, as
- * it is after _Scan folders_ pushes `/import`.
+ * it is after _Scan new folders_ or _Scan all folders_ pushes `/import`.
  */
 
 type FetchFn = (
