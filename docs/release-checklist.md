@@ -80,9 +80,9 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 - [ ] Settings → About reads the version.
 - [ ] Keep originals: add a sandbox Library folder holding a copy of
       `smoke.mp4` in a folder of its own, a show folder of two episodes, and
-      a second film, _Scan folders_ under **Link** for the first two, then add
+      a second film, _Scan all folders_ under **Link** for the first two, then add
       the second film by hand under **Copy**. Delete all three: every original
-      is still in the sandbox folder, byte for byte, and _Scan folders_ again
+      is still in the sandbox folder, byte for byte, and _Scan all folders_ again
       does not bring them back.
 - [ ] The Media directory refusal: on Settings → Library folders, type
       `%APPDATA%\FamilyFlix\media` and _Add_: it is refused with _That folder
@@ -94,7 +94,7 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
       pick a video inside a Library folder: Link is enabled and chosen again.
 - [ ] A linked movie add: with that video picked under **Link**, add it: it
       plays from where it lies, nothing new is under
-      `%APPDATA%\FamilyFlix\media`, and _Scan folders_ afterwards reads it as
+      `%APPDATA%\FamilyFlix\media`, and _Scan all folders_ afterwards reads it as
       _Already in library_.
 - [ ] A linked series add: Settings → Add a series, _Add a show folder_ from
       the real folder dialog on a show inside a Library folder, add it under
@@ -108,6 +108,13 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
       With Windows animations off (_Settings → Accessibility → Visual
       effects_), add the large film again and quit and open once more: the
       button's shine and the splash's mark fade, not freeze.
+- [ ] Scan new folders, over the sandbox library: add a new Library folder
+      holding a film: its row reads _Not scanned yet_. _Scan new folders_
+      logs one `Scanning` line, for that folder, and imports only its
+      titles. After the review its row reads _N titles_ and _Scan new
+      folders_ is disabled. Tick the TMDB box and scan a new folder again:
+      _Continue to TMDB sync_ opens the Sync on **Just what was added**,
+      reading _N titles this run brought in_, chosen.
 
 ## 6. The slot over the default
 
