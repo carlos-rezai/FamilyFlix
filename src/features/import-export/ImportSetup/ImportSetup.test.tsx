@@ -19,6 +19,7 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125), and
@@ -48,21 +49,18 @@ let fetchMock: ReturnType<typeof vi.fn<FetchFn>>;
 
 const DANGER = 'rgb(201, 122, 106)';
 
-const MOVIES: LibraryFolder = {
+const MOVIES: LibraryFolder = makeLibraryFolder({
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
-const ARCHIVE: LibraryFolder = {
+const ARCHIVE: LibraryFolder = makeLibraryFolder({
   id: 'f-archive',
   path: 'F:\\Archive',
   titleCount: 4,
   reachable: false,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
 const isFolders = (input: RequestInfo | URL, init?: RequestInit) =>
   String(input).endsWith('/api/library-folders') &&
@@ -90,13 +88,11 @@ function libraryWire(initial: LibraryFolder[]): void {
     if (method === 'POST') {
       const { path } = JSON.parse(String(init?.body)) as { path: string };
       next += 1;
-      const folder = {
+      const folder = makeLibraryFolder({
         id: `f-${next}`,
         path,
-        titleCount: 0,
-        reachable: true,
         scannedAt: null,
-      };
+      });
       listed = [...listed, folder];
       return createdResponse(folder);
     }

@@ -18,6 +18,7 @@ import {
   noContentResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 30 — Library folders, Phase 1: "a remembered list, end to end" (issue #268).
@@ -52,21 +53,17 @@ afterEach(() => {
 
 const DANGER = 'rgb(201, 122, 106)';
 
-const MOVIES: LibraryFolder = {
+const MOVIES: LibraryFolder = makeLibraryFolder({
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
-const KIDS: LibraryFolder = {
+const KIDS: LibraryFolder = makeLibraryFolder({
   id: 'f-kids',
   path: 'D:\\Kids',
   titleCount: 3,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
 const INSIDE =
   'That folder is inside E:\\Movies, which is already a library folder.';
@@ -104,13 +101,11 @@ function libraryWire(initial: LibraryFolder[]) {
         );
       }
       next += 1;
-      const added: LibraryFolder = {
+      const added: LibraryFolder = makeLibraryFolder({
         id: `f-new-${next}`,
         path,
-        titleCount: 0,
-        reachable: true,
         scannedAt: null,
-      };
+      });
       listed = [...listed, added];
       return Promise.resolve(createdResponse(added));
     }

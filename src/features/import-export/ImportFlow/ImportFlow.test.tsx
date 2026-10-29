@@ -29,6 +29,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125), "cancel,
@@ -58,13 +59,11 @@ import {
 
 const SHEET = 'C:\\Movies\\library.xlsx';
 /** The one folder the list route answers with, unless a test says. */
-const LISTED: LibraryFolder = {
+const LISTED: LibraryFolder = makeLibraryFolder({
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
 let fetchMock: ReturnType<
   typeof vi.fn<

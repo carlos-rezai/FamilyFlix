@@ -12,6 +12,7 @@ import {
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 30 — Library folders, Phase 5: "the native picker" (issue #272).
@@ -42,13 +43,11 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const MOVIES: LibraryFolder = {
+const MOVIES: LibraryFolder = makeLibraryFolder({
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
 const INSIDE =
   'That folder is inside E:\\Movies, which is already a library folder.';
@@ -86,13 +85,11 @@ function libraryWire(initial: LibraryFolder[]) {
         );
       }
       next += 1;
-      const added: LibraryFolder = {
+      const added: LibraryFolder = makeLibraryFolder({
         id: `f-new-${next}`,
         path,
-        titleCount: 0,
-        reachable: true,
         scannedAt: null,
-      };
+      });
       listed = [...listed, added];
       return Promise.resolve(createdResponse(added));
     }

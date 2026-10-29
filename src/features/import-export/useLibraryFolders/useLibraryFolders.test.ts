@@ -8,6 +8,7 @@ import {
   noContentResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 30 — Library folders, Phase 1: "a remembered list, end to end" (issue #268).
@@ -40,20 +41,12 @@ afterEach(() => {
 });
 
 const MOVIES: LibraryFolderView = {
-  id: 'f-movies',
-  path: 'E:\\Movies',
-  titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 0,
 };
 
 const KIDS: LibraryFolderView = {
-  id: 'f-kids',
-  path: 'D:\\Kids',
-  titleCount: 0,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-kids', path: 'D:\\Kids' }),
   leftOut: 0,
 };
 

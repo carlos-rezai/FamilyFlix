@@ -6,6 +6,7 @@ import { ThemeProvider } from 'styled-components';
 import { FolderRow } from './FolderRow';
 import type { LibraryFolderView } from '@/types';
 import { theme } from '@/styles/theme';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 30 — Library folders, Phase 1: "a remembered list, end to end" (issue #268).
@@ -23,11 +24,7 @@ const DANGER = 'rgb(201, 122, 106)';
 const folder = (
   overrides: Partial<LibraryFolderView> = {}
 ): LibraryFolderView => ({
-  id: 'f-movies',
-  path: 'E:\\Movies',
-  titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 0,
   ...overrides,
 });

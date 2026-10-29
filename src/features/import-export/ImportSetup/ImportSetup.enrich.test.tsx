@@ -9,15 +9,14 @@ import type { LibraryFolder } from '@/types';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /** One listed folder, as `GET /api/library-folders` answers it. */
-const MOVIES: LibraryFolder = {
+const MOVIES: LibraryFolder = makeLibraryFolder({
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
 // The step reads the list itself: the one request it makes.
 beforeEach(() => {

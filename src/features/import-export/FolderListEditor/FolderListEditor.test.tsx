@@ -9,6 +9,7 @@ import {
 import type { LibraryFolderView } from '@/types';
 import { theme } from '@/styles/theme';
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * The **Library folders** list, editable — the Library folders page's and
@@ -17,11 +18,7 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
  */
 
 const MOVIES: LibraryFolderView = {
-  id: 'f-movies',
-  path: 'E:\\Movies',
-  titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 0,
 };
 

@@ -11,6 +11,7 @@ import {
   noContentResponse,
   okResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 51, Library audit, Phase 12: "Bring back on Library folders" (issue #455).
@@ -40,20 +41,12 @@ afterEach(() => {
 });
 
 const MOVIES: LibraryFolderView = {
-  id: 'f-movies',
-  path: 'E:\\Movies',
-  titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 3,
 };
 
 const KIDS: LibraryFolderView = {
-  id: 'f-kids',
-  path: 'D:\\Kids',
-  titleCount: 3,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-kids', path: 'D:\\Kids', titleCount: 3 }),
   leftOut: 1,
 };
 

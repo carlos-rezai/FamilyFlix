@@ -23,6 +23,7 @@ import {
   normCss,
   resolvedStyle,
 } from '@/test-support/resolvedStyle/resolvedStyle';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 30 — Library folders, Phase 2: "the Folder scan" (issue #269).
@@ -60,22 +61,18 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-const MOVIES: LibraryFolder = {
+const MOVIES: LibraryFolder = makeLibraryFolder({
   id: 'f-movies',
   path: 'E:\\Movies',
   titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
 /** A **New folder**: listed, never read by a run. */
-const CARTOONS: LibraryFolder = {
+const CARTOONS: LibraryFolder = makeLibraryFolder({
   id: 'f-cartoons',
   path: 'E:\\Cartoons',
-  titleCount: 0,
-  reachable: true,
   scannedAt: null,
-};
+});
 
 const method = (init?: RequestInit) => (init?.method ?? 'GET').toUpperCase();
 const path = (input: RequestInfo | URL) =>

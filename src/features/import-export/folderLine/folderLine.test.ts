@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import { folderLine } from './folderLine';
 import type { LibraryFolder } from '@/types';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 40 — Import review refactor (issue #336): the folder line spelled once.
@@ -16,13 +17,11 @@ import type { LibraryFolder } from '@/types';
  * yet_ with some; an Unreachable folder's sentence wins over any mark.
  */
 
-const FOLDER: LibraryFolder = {
+const FOLDER: LibraryFolder = makeLibraryFolder({
   id: 'f1',
   path: 'D:/Films',
   titleCount: 42,
-  reachable: true,
-  scannedAt: '2026-10-28T09:30:00.000Z',
-};
+});
 
 const NEW_FOLDER: LibraryFolder = { ...FOLDER, scannedAt: null };
 

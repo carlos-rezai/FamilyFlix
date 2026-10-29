@@ -6,6 +6,7 @@ import { ThemeProvider } from 'styled-components';
 import { FolderRow } from './FolderRow';
 import type { LibraryFolderView } from '@/types';
 import { theme } from '@/styles/theme';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 51, Library audit, Phase 12: "Bring back on Library folders" (issue #455).
@@ -17,11 +18,7 @@ import { theme } from '@/styles/theme';
  */
 
 const folder = (leftOut: number): LibraryFolderView => ({
-  id: 'f-movies',
-  path: 'E:\\Movies',
-  titleCount: 12,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut,
 });
 

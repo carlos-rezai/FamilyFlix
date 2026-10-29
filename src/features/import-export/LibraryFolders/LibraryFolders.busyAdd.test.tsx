@@ -13,6 +13,7 @@ import {
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 53, Loading states, Phase 4 (issue #486): Library folders' _Add_ as a busy
@@ -28,13 +29,10 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  * real timers; the clock is faked from the press on.
  */
 
-const KIDS: LibraryFolder = {
+const KIDS: LibraryFolder = makeLibraryFolder({
   id: 'f-kids',
   path: 'D:\\Kids',
-  titleCount: 0,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
-};
+});
 
 const INSIDE =
   'That folder is inside E:\\Movies, which is already a library folder.';

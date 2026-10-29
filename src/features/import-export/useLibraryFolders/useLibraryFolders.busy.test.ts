@@ -9,6 +9,7 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
 /**
  * 53, Loading states, Phase 4 (issue #486): `adding` is a **Busy phase**.
@@ -19,11 +20,7 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  */
 
 const KIDS: LibraryFolderView = {
-  id: 'f-kids',
-  path: 'D:\\Kids',
-  titleCount: 0,
-  reachable: true,
-  scannedAt: '2026-10-01T09:00:00.000Z',
+  ...makeLibraryFolder({ id: 'f-kids', path: 'D:\\Kids' }),
   leftOut: 0,
 };
 
