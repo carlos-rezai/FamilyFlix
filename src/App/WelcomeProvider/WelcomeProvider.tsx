@@ -17,7 +17,10 @@ import {
   type WelcomePhase,
   type WelcomeState,
 } from '@/App/welcomeStep/welcomeStep';
-import { WelcomeSplash } from '@/App/WelcomeSplash/WelcomeSplash';
+import {
+  WelcomeSplash,
+  type WordmarkLanding,
+} from '@/App/WelcomeSplash/WelcomeSplash';
 import { HomeLayer } from './WelcomeProvider.styles';
 
 /** The `sessionStorage` flag a played welcome leaves for the session. */
@@ -37,6 +40,28 @@ const CLOCK: Partial<Record<WelcomePhase, { ms: number; ends: WelcomeEvent }>> =
 /** The design's frame the geometry scales from (log 55 Q13). */
 const FRAME_WIDTH = 480;
 const FRAME_HEIGHT = 270;
+
+/** The splash wordmark's `font-size` at scale 1 (log 55 Q13). */
+const SPLASH_FONT_PX = 30;
+
+/**
+ * Where the splash wordmark lands: the header wordmark's top-left, and its
+ * `font-size` over the splash's. `null` when there is nothing to measure.
+ */
+function measureLanding(
+  header: HTMLElement | null,
+  scale: number
+): WordmarkLanding | null {
+  if (header === null) {
+    return null;
+  }
+  const { left, top } = header.getBoundingClientRect();
+  const headerPx = parseFloat(getComputedStyle(header).fontSize);
+  if (Number.isNaN(headerPx)) {
+    return null;
+  }
+  return { left, top, ratio: headerPx / (SPLASH_FONT_PX * scale) };
+}
 
 /** Whether this session was welcomed already; a refused read is a no. */
 function wasWelcomed(): boolean {
@@ -66,7 +91,8 @@ export interface WelcomeProviderProps {
  * start** (the **Launch entry** and no `familyflix.welcomed` flag in
  * `sessionStorage`), sets the flag, and on one draws the **Welcome splash**
  * over the **Home layer** and runs the clock through `welcomeStep`: 1750ms
- * of intro, then the 500ms handoff (a plain fade for now). The home is
+ * of intro, then the 500ms **Wordmark handoff**: at its start the header
+ * wordmark is measured and the splash wordmark glides onto it. The home is
  * **Ready** when the header wordmark mounts on `useWelcome`'s ref; until the
  * end the header wordmark is hidden. At `done`, in one frame, the wordmark
  * shows, the splash unmounts, the Home layer loses its style and focus lands
@@ -93,21 +119,28 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
   const { phase } = state;
   const wordmark = useRef<HTMLElement | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [landing, setLanding] = useState<WordmarkLanding | null>(null);
 
   // The clock runs off the state it just stepped to, not off a render, so a
   // phase's timer starts the moment the phase does.
-  const send = useCallback((event: WelcomeEvent) => {
-    const before = current.current;
-    const next = welcomeStep(before, event);
-    if (next === before) {
-      return;
-    }
-    current.current = next;
-    setState(next);
-    if (next.phase !== before.phase) {
-      startClock(next.phase);
-    }
-  }, []);
+  const send = useCallback(
+    (event: WelcomeEvent) => {
+      const before = current.current;
+      const next = welcomeStep(before, event);
+      if (next === before) {
+        return;
+      }
+      current.current = next;
+      if (next.phase === 'handoff' && before.phase !== 'handoff') {
+        setLanding(measureLanding(wordmark.current, scale));
+      }
+      setState(next);
+      if (next.phase !== before.phase) {
+        startClock(next.phase);
+      }
+    },
+    [scale]
+  );
 
   function startClock(at: WelcomePhase) {
     clearTimeout(timer.current);
@@ -150,14 +183,12 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
 
   return (
     <WelcomeContext.Provider value={api}>
-      <HomeLayer $phase={phase} $fadeMs={HANDOFF_MS}>
-        {children}
-      </HomeLayer>
+      <HomeLayer $phase={phase}>{children}</HomeLayer>
       {phase !== 'done' && (
         <WelcomeSplash
           scale={scale}
-          fading={phase === 'handoff'}
-          fadeMs={HANDOFF_MS}
+          landing={landing}
+          handingOff={phase === 'handoff'}
         />
       )}
     </WelcomeContext.Provider>
