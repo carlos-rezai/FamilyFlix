@@ -915,6 +915,68 @@ so they need their own permission check and a dry-run log line.
 
 ---
 
+## 5b. Welcome splash → `src/App/` (log 55)
+
+From the frozen `handoff-welcome-splash/`, option **2a** (_Bounce, sweep, handoff_), its
+alternatives 1a to 1f for reference only. The renderer's cold-start animation, played once
+per window session on a **Cold start**, after the shell's **Start-up splash**: the Fs drop
+in, _FamilyFlix_ rises letter by letter, a light sweeps both, and the wordmark glides into
+the header. No sound, no route, no server change.
+
+| Unit              | Target                     | Role                                                                                                                                                                                                              |
+| ----------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `WelcomeProvider` | `src/App/WelcomeProvider/` | Decides whether the welcome plays, owns the phase and its timers, wraps `<Routes>` in the **Home layer**, listens for a skip, moves focus at the end; mounted in `App` inside `SnackbarProvider`                  |
+| `WelcomeSplash`   | `src/App/WelcomeSplash/`   | Draws the layers: `bg`, the FF mark (`MARK_F1`, `MARK_F2`, `MARK_VIEWBOX` of `src/tokens/brand.ts`) and the wordmark's ten letters; `role="status"`, `aria-label="Opening FamilyFlix"`, every layer `aria-hidden` |
+| `useWelcome`      | `src/App/useWelcome/`      | Answers `{ wordmarkRef, wordmarkHidden }` to `MainLayout`'s `LogoMark`; outside a provider, a no-op ref and `false`                                                                                               |
+| `welcomeStep`     | `src/App/welcomeStep/`     | The pure step over `{ phase, ready, skipped }`, with the events `'introEnded' \| 'ready' \| 'skip' \| 'handoffEnded' \| 'skipEnded'`                                                                              |
+
+**Phases.** A **Welcome phase** is `intro`, `holding`, `handoff`, `skipping` or `done`:
+
+- `intro` (the **Welcome intro**, 1750ms; 900ms under reduced motion) at `introEnded`:
+  `handoff` when ready, else `holding`. An early `ready` is recorded without leaving
+  `intro`: a home that is ready early never cuts the sequence short.
+- `holding` (the **Welcome hold**) at `ready`: `handoff`, or `skipping` if skipped.
+- `handoff` (the **Wordmark handoff**, 500ms; 400ms reduced) at `handoffEnded`, and
+  `skipping` (150ms) at `skipEnded`: `done`.
+- **Ready** is the header wordmark mounted (`wordmarkRef` receiving its element once
+  `StartTabGate` has settled), never the rows.
+
+**Curves.** Three new motion tokens in `src/tokens/motion.ts`, beside `easeOut`; no
+`cubic-bezier(` outside that file:
+
+| Token       | Value                            | Drives                                  |
+| ----------- | -------------------------------- | --------------------------------------- |
+| `easeDrop`  | `cubic-bezier(0.3, 0.6, 0.4, 1)` | each F's drop-in (520ms, F2 150ms late) |
+| `easeSweep` | `cubic-bezier(0.4, 0, 0.2, 1)`   | the light's sweep over the mark (700ms) |
+| `easeGlide` | `cubic-bezier(0.3, 0.7, 0.2, 1)` | the wordmark's glide to the header      |
+
+The letters rise on `easeOut`; the mark, splash and Home layer fade on `easeOut`.
+
+**Geometry.** `scale = min(innerWidth / 480, innerHeight / 270)`, read once at start. The
+mark is `132·scale × 80·scale`, centred `26·scale` above the window's centre; the wordmark
+is Source Serif 4 700 at `30·scale` px, centred `42·scale` below, _Family_ in `text` and
+_Flix_ in `accent`. The handoff lands it on the header's measured `LogoMark`, which stays
+`visibility: hidden` while `wordmarkHidden`.
+
+**The Welcome hold.** If the home is not ready when the intro ends, the splash keeps the
+intro's last frame with a **Logo loader** at the mark's width (`132·scale`) in the mark's
+place, beating, no label, `aria-hidden`; on ready the handoff runs from there, the loader
+fading out as the mark would.
+
+**The skip.** Any `pointerdown` or `keydown` on `window`, in the capture phase, while the
+welcome is up, is swallowed with `preventDefault` and `stopPropagation`, so skipping never
+presses what lies beneath. Ready: the splash goes at once, the Home layer fades in over
+150ms, the header wordmark is shown, then `done`. Not ready: the **Welcome hold**, ending
+the same way on ready. A skip during the handoff finishes it at once.
+
+**Reduced motion.** No drop, blur, sweep or glide: mark and wordmark fade in, hold, and
+the splash fades out, 900ms plus 400ms. Hold and skip behave as with full motion.
+
+**Focus.** Never trapped; at `done`, after a full welcome or a skip, focus moves to the
+header's logo button.
+
+---
+
 ## 6. Layout + Pages → `src/layouts/`, `src/pages/`
 
 > Status: **all screens are extracted as `page.*.dc.html` files and the root template is a
