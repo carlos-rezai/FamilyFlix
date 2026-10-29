@@ -1,8 +1,7 @@
 // @vitest-environment node
 //
-// 54, Scan new folders, Phase 2: "a folder knows it's new" (issue #493).
-//
-// The folders slice's mark over migration 16's `library_folders.scanned_at`:
+// 54, Scan new folders, Phase 2 (issue #493): the folders slice's mark over
+// migration 16's `library_folders.scanned_at`:
 //
 // - every **Library folder** carries `scannedAt`, an ISO stamp, null for a
 //   **New folder**; an add inserts it null;

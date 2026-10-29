@@ -507,7 +507,7 @@ describe('library: stillSourcesOf — each episode’s Still source', () => {
   });
 });
 
-// 54 — Scan new folders, Phase 5 (issue #496): `seriesInScope('added',
+// 54, Scan new folders, Phase 5 (issue #496): `seriesInScope('added',
 // since)` is every series created at or after `since`, and every held series
 // that took an **Episode** created at or after it: a held show a run brought
 // new episodes into is in the window. No upper bound.
@@ -546,7 +546,7 @@ const addedSeries = (storage: ReturnType<typeof freshStorage>) =>
     .map((series) => series.title)
     .sort();
 
-describe('library: seriesInScope — Just what was added', () => {
+describe('library: seriesInScope: Just what was added', () => {
   afterEach(() => {
     vi.useRealTimers();
   });

@@ -146,10 +146,10 @@ describe('GET /api/enrichment — the summary', () => {
   });
 });
 
-// 54 — Scan new folders, Phase 5 (issue #496): `?since=<ISO>` asks for the
+// 54, Scan new folders, Phase 5 (issue #496): `?since=<ISO>` asks for the
 // added window too, the count _Just what was added_ shows: three films a run
 // brought in, not the film held from before it.
-describe('GET /api/enrichment?since= — the added window', () => {
+describe('GET /api/enrichment?since=: the added window', () => {
   const SINCE = '2026-10-01T12:00:00.000Z';
 
   /** Run `add` with the clock at `iso`, so the rows it writes carry it. */

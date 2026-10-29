@@ -419,7 +419,7 @@ describe('library: enrichmentCounts — the Sync gap beside Full details', () =>
   });
 });
 
-// 54 — Scan new folders, Phase 5 (issue #496): _Just what was added_
+// 54, Scan new folders, Phase 5 (issue #496): _Just what was added_
 // (`added`) is every film created at or after `since`, the moment the run
 // that brought them in started. No upper bound: a film added since is in the
 // window too. A held film **Found again** (its video replaced) was created
@@ -460,7 +460,7 @@ const addedTitles = (storage: ReturnType<typeof freshStorage>) =>
     .map((movie) => movie.title)
     .sort();
 
-describe('library: moviesInScope — Just what was added', () => {
+describe('library: moviesInScope: Just what was added', () => {
   afterEach(() => {
     vi.useRealTimers();
   });

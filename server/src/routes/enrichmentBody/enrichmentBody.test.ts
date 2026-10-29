@@ -135,7 +135,7 @@ describe('startEnrichmentBody: each refusal keeps its sentence', () => {
   });
 });
 
-// 54 — Scan new folders, Phase 5 (issue #496): _Just what was added_ names
+// 54, Scan new folders, Phase 5 (issue #496): _Just what was added_ names
 // its `since`, the moment the run that brought the titles in started; no
 // other scope names one. The `movieId` rule's shape.
 describe('startEnrichmentBody: an added Sync and its since', () => {

@@ -16,9 +16,9 @@
 // that is, lies inside or holds the server's **Managed media directory** is
 // answered `409` in one sentence, after every rule before it.
 //
-// 54, Scan new folders, issue #493: "a folder knows it's new". Every listed
-// folder carries `scannedAt`, null for a **New folder** and the stamp once a
-// run has read it; a folder just added is new.
+// 54, Scan new folders, Phase 2 (issue #493): every listed folder carries
+// `scannedAt`, null for a **New folder** and the stamp once a run has read it;
+// a folder just added is new.
 
 import express from 'express';
 import { mkdirSync, rmSync, writeFileSync } from 'node:fs';

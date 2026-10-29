@@ -1,13 +1,11 @@
 // @vitest-environment node
 //
-// 54, Scan new folders, Phase 3: "a run marks what it read" (issue #494).
-//
-// A **Folder scan** and a sheet run each mark the **Library folders** their
-// walk read as scanned, at the moment the run sets its phase to review, so a
-// run left in review and let go by the next start has already marked them. A
-// folder that cannot be reached, a folder whose read fails mid-walk, and a run
-// cancelled before review mark nothing: each such folder stays a **New
-// folder**, `scannedAt` null.
+// 54, Scan new folders, Phase 3 (issue #494): a **Folder scan** and a sheet run
+// each mark the **Library folders** their walk read as scanned, at the moment
+// the run sets its phase to review, so a run left in review and let go by the
+// next start has already marked them. A folder that cannot be reached, a folder
+// whose read fails mid-walk, and a run cancelled before review mark nothing:
+// each such folder stays a **New folder**, `scannedAt` null.
 //
 // The runs are real: the film and series fixtures copied into two sandboxed
 // Library folders, one sheet naming all four titles, an on-disk library, a

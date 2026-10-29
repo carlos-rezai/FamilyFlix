@@ -219,8 +219,7 @@ describe('problemIdsBody', () => {
   });
 });
 
-// 54: Scan new folders (issue #495): the **Scan scope**.
-//
+// 54, Scan new folders, Phase 4 (issue #495): the **Scan scope**.
 // `POST /api/library-folders/scan { enrich, mode, scope }` reads its three
 // fields through `folderScanBody`: `enrich` and `mode` as `importStartBody`
 // reads them, and `scope` one of **SCAN_SCOPES**, required: a missing or

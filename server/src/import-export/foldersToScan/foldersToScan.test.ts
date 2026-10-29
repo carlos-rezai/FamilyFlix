@@ -1,10 +1,9 @@
 // @vitest-environment node
 //
-// 54: Scan new folders (issue #495): the **Scan scope** picks the folders.
-//
-// `foldersToScan(listed, scope)` answers the folders a **Folder scan** walks:
-// for `new` only the **New folders** (`scannedAt` null), in listed order; for
-// `all` every listed folder. An empty list answers empty either way.
+// 54, Scan new folders, Phase 4 (issue #495): the **Scan scope** picks the
+// folders. `foldersToScan(listed, scope)` answers the folders a **Folder scan**
+// walks: for `new` only the **New folders** (`scannedAt` null), in listed
+// order; for `all` every listed folder. An empty list answers empty either way.
 
 import { describe, expect, it } from 'vitest';
 

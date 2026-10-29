@@ -258,13 +258,12 @@ describe('POST /api/library-folders/scan — the Import mode', () => {
   );
 });
 
-// 54: Scan new folders (issue #495): the **Scan scope**.
-//
-// The body is `{ enrich, mode, scope }`. `scope: 'all'` walks every listed
-// folder, as the scan always has; `scope: 'new'` walks only the **New
-// folders**, one `Scanning   <path>` line each, and with none is a `400`
-// _No new folders to scan._ starting nothing. A missing or unknown scope is a
-// `400` _Scope must be new or all._, starting nothing.
+// 54, Scan new folders, Phase 4 (issue #495): the **Scan scope**. The body is
+// `{ enrich, mode, scope }`. `scope: 'all'` walks every listed folder, as the
+// scan always has; `scope: 'new'` walks only the **New folders**, one
+// `Scanning   <path>` line each, and with none is a `400` _No new folders to
+// scan._ starting nothing. A missing or unknown scope is a `400` _Scope must
+// be new or all._, starting nothing.
 describe('POST /api/library-folders/scan: the Scan scope', () => {
   /** The paths the run's log says it walked, in order. */
   async function walked(api: Api): Promise<string[]> {

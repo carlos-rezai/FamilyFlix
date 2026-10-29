@@ -24,9 +24,9 @@ import {
  * `scanning` let go on any other failure. What it does is move the router, so
  * that is what is read.
  *
- * 54: Scan new folders (issue #495): the press carries its **Scan scope**,
- * `new` for _Scan new folders_ and `all` for _Scan all folders_, sent beside
- * the box and the mode.
+ * 54, Scan new folders, Phase 4 (issue #495): the press carries its **Scan
+ * scope**, `new` for _Scan new folders_ and `all` for _Scan all folders_, sent
+ * beside the box and the mode.
  */
 
 const fetchMock = vi.fn<typeof fetch>();

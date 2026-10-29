@@ -1,12 +1,11 @@
 // @vitest-environment node
 //
-// 54, Scan new folders, Phase 2: "a folder knows it's new" (issue #493).
-//
-// Migration 16 adds `library_folders.scanned_at`, an ISO stamp, nullable, and
-// backfills `scanned_at = added_at` for every folder holding a movie or a
-// series; a folder holding none stays null, a **New folder**. A library
-// written at version 15 migrates in place. Real SQLite on disk, so the
-// database can be reopened.
+// 54, Scan new folders, Phase 2 (issue #493): migration 16 adds
+// `library_folders.scanned_at`, an ISO stamp, nullable, and backfills
+// `scanned_at = added_at` for every folder holding a movie or a series; a
+// folder holding none stays null, a **New folder**. A library written at
+// version 15 migrates in place. Real SQLite on disk, so the database can be
+// reopened.
 
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';

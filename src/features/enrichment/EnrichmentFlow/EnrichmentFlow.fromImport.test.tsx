@@ -16,13 +16,13 @@ import {
 /**
  * 23 — Enrichment, Phase 9: "from the import" (issue #212).
  *
- * The Import flow's _Finish_ on a run carrying `enrich` replaces `/import`
- * with `/enrich?added=<startedAt>` (log 54, issue #497). What lands there is
- * the **Setup step** reading the summary with `since`, the library's two
- * cards plus **Just what was added**, chosen, and nothing started: the
- * maintainer still presses _Start sync_, which posts `scope: 'added'` and
- * `since`. Back from there steps to Settings, because the replace left
- * Import out of the history. `?scope=all` is retired.
+ * 54, Scan new folders, Phase 6 (issue #497): the Import flow's _Finish_ on a
+ * run carrying `enrich` replaces `/import` with `/enrich?added=<startedAt>`.
+ * What lands there is the **Setup step** reading the summary with `since`,
+ * the library's two cards plus **Just what was added**, chosen, and nothing
+ * started: the maintainer still presses _Start sync_, which posts
+ * `scope: 'added'` and `since`. Back from there steps to Settings, because
+ * the replace left Import out of the history. `?scope=all` is retired.
  *
  * Issue #313: the review's _Done_ there pushes `/`, the library — where the
  * import's own Finish would have landed had it not handed on to the Sync.
@@ -154,7 +154,7 @@ async function pressStart() {
   fireEvent.click(start);
 }
 
-describe('EnrichmentFlow — arriving with ?added=', () => {
+describe('EnrichmentFlow: arriving with ?added=', () => {
   it('reads the summary with since', async () => {
     renderFlow();
     await scopeCard(ADDED);
@@ -226,7 +226,7 @@ describe('EnrichmentFlow — arriving with ?added=', () => {
   });
 });
 
-describe('EnrichmentFlow — arriving without ?added=', () => {
+describe('EnrichmentFlow: arriving without ?added=', () => {
   it('draws the library’s two cards, Only what’s missing chosen, from Settings', async () => {
     renderFlow(['/', '/settings', '/enrich']);
 

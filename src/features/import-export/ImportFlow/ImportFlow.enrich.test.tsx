@@ -27,11 +27,12 @@ import {
  * the _Also fetch metadata and posters from TMDB_ card, its hint chosen by
  * `GET /api/tmdb/key`; the box travels on the run as `enrich` in
  * `POST /api/import`, and comes back on `ImportRun.enrich`, so a run
- * re-attached on arrival still knows it. _Finish_ on such a run **replaces**
- * `/import` with `/enrich?added=<startedAt>` (log 54, issue #497) — nothing
- * starts unasked — and Back from
- * there steps to Settings. _Finish_ on a run without it is the push to `/` it
- * always was.
+ * re-attached on arrival still knows it. _Finish_ on a run without it is the
+ * push to `/` it always was.
+ *
+ * 54, Scan new folders, Phase 6 (issue #497): _Finish_ on a run carrying it
+ * **replaces** `/import` with `/enrich?added=<startedAt>`, nothing starting
+ * unasked, and Back from there steps to Settings.
  *
  * The seam is `fetch` and the router, as in `ImportFlow.test.tsx`.
  */

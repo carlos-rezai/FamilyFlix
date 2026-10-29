@@ -12,9 +12,10 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
  * count while the disk reaches it, and the prototype's sentence when it does
  * not.
  *
- * 54, Scan new folders, issue #493: a reachable **New folder** (`scannedAt`
- * null) says so, _Not scanned yet_ with no titles and _N titles · not scanned
- * yet_ with some; an Unreachable folder's sentence wins over any mark.
+ * 54, Scan new folders, Phase 2 (issue #493): a reachable **New folder**
+ * (`scannedAt` null) says so, _Not scanned yet_ with no titles and _N titles ·
+ * not scanned yet_ with some; an Unreachable folder's sentence wins over any
+ * mark.
  */
 
 const FOLDER: LibraryFolder = makeLibraryFolder({

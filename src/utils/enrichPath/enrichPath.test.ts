@@ -8,7 +8,7 @@ describe('enrichPath', () => {
     expect(enrichPath({})).toBe('/enrich');
   });
 
-  // 54 — Scan new folders (issue #497): _Just what was added_.
+  // 54, Scan new folders, Phase 6 (issue #497): _Just what was added_.
   it('names the run’s start for Import’s hand-off', () => {
     expect(enrichPath({ added: '2026-10-28T09:00:00.000Z' })).toBe(
       '/enrich?added=2026-10-28T09%3A00%3A00.000Z'

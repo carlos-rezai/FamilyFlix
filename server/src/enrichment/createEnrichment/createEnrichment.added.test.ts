@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 54 — Scan new folders, Phase 5 (issue #496): the `added` **Enrichment
+// 54, Scan new folders, Phase 5 (issue #496): the `added` **Enrichment
 // scope**, _Just what was added_.
 //
 // - An `added` **Sync** works the titles created at or after its `since`,
@@ -206,7 +206,7 @@ describe('createEnrichment: an added Sync plans fields as Everything does', () =
   });
 });
 
-describe('createEnrichment: summary — the added window', () => {
+describe('createEnrichment: summary: the added window', () => {
   it('counts the titles created at or after since as added, and only with a since', async () => {
     const { storage, enrichment, addHeldHarbor, addNewLantern } = world();
     await addHeldHarbor();

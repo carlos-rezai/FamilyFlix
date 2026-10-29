@@ -1,11 +1,9 @@
 // @vitest-environment node
 //
-// 54, Scan new folders, Phase 2: "a folder knows it's new" (issue #493).
-//
-// A removed and re-added **Library folder** is a **New folder** again: the
-// remove deleted its row, mark and all. Its titles stayed in the library, so
-// its next scan finds every one of them **Already in library** and adds
-// nothing.
+// 54, Scan new folders, Phase 2 (issue #493): a removed and re-added **Library
+// folder** is a **New folder** again: the remove deleted its row, mark and all.
+// Its titles stayed in the library, so its next scan finds every one of them
+// **Already in library** and adds nothing.
 //
 // The runs are real: the film fixture copied into a sandboxed Library folder,
 // an on-disk library, a real `Media` over a sandbox managed directory and the

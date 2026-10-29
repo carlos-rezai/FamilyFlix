@@ -41,8 +41,9 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
  * The wire is a stubbed `fetch`: the list on GET, the scan's answer on its
  * POST.
  *
- * 54: Scan new folders (issue #495): _Scan folders_ is now **Scan all
- * folders**, so the suites above press it; its own describe is at the foot.
+ * 54, Scan new folders, Phase 4 (issue #495): _Scan folders_ is now **Scan
+ * all folders**, so the suites above press it; its own describe is at the
+ * foot.
  */
 
 type FetchFn = (
@@ -166,7 +167,7 @@ describe('LibraryFolders — the group Scan', () => {
   });
 });
 
-describe('LibraryFolders — Scan all folders', () => {
+describe('LibraryFolders: Scan all folders', () => {
   it('posts the scan with enrich false and pushes /import on 201', async () => {
     serve([MOVIES]);
     renderPage();
@@ -346,13 +347,12 @@ describe('LibraryFolders — the Import mode', () => {
 });
 
 /**
- * 54: Scan new folders (issue #495).
- *
- * The group Scan ends in two `lg` presses side by side: **Scan new folders**
- * (`primary`), disabled with no **New folder** listed, then **Scan all
- * folders** (`secondary`), disabled with no folder listed. Each posts its
- * **Scan scope** beside the Import mode and the box and pushes `/import`;
- * both are held while either scan is asked. _Scan folders_ is gone.
+ * 54, Scan new folders, Phase 4 (issue #495): the group Scan ends in two `lg`
+ * presses side by side: **Scan new folders** (`primary`), disabled with no
+ * **New folder** listed, then **Scan all folders** (`secondary`), disabled with
+ * no folder listed. Each posts its **Scan scope** beside the Import mode and
+ * the box and pushes `/import`; both are held while either scan is asked. _Scan
+ * folders_ is gone.
  */
 const scanNewButton = () =>
   screen.findByRole('button', { name: 'Scan new folders' });
