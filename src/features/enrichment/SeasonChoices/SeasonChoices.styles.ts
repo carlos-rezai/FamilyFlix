@@ -76,14 +76,23 @@ export const Rule = styled.div`
   background: ${({ theme }) => theme.colors.borderSoft};
 `;
 
-/** One choice: `CandidatePicker`'s card, its border the accent line when picked. */
+/**
+ * One choice: `CandidatePicker`'s card. Picked, it wears the accent itself,
+ * ringed, on the accent wash, so it stands apart from a hovered card.
+ */
 export const ChoiceCard = styled(CandidateCard)<{ $picked: boolean }>`
   border-color: ${({ $picked, theme }) =>
-    $picked ? theme.colors.accentLine : theme.colors.borderSoft};
+    $picked ? theme.colors.accent : theme.colors.borderSoft};
+  background: ${({ $picked, theme }) =>
+    $picked ? theme.colors.accentSoft : theme.colors.surface2};
+  box-shadow: ${({ $picked, theme }) =>
+    $picked ? `0 0 0 2px ${theme.colors.accent}` : 'none'};
 
   &:hover {
-    border-color: ${({ theme }) => theme.colors.accentLine};
-    background: ${({ theme }) => theme.colors.surface3};
+    border-color: ${({ $picked, theme }) =>
+      $picked ? theme.colors.accent : theme.colors.accentLine};
+    background: ${({ $picked, theme }) =>
+      $picked ? theme.colors.accentSoft : theme.colors.surface3};
   }
 
   &:focus-visible {

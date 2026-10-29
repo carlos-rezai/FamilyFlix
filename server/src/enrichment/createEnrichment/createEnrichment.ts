@@ -961,17 +961,25 @@ export function createEnrichment({
     if (folder === null) return { kind: 'not-found' };
     const image = await client.image(path);
     if (image.kind !== 'ok') return { kind: 'unreachable' };
+    // Never the held poster's own name: the same name is the same url, and
+    // the page would go on drawing the image it already loaded.
+    const previous =
+      storage
+        .getSeriesDetail(seriesId)
+        ?.seasons.find((each) => each.number === season)?.posterPath ?? null;
+    const tag = spellEpisodeTag(season);
+    const free =
+      previous !== null && posix.basename(previous) === `${tag}-poster.jpg`
+        ? `${tag}-poster-2.jpg`
+        : `${tag}-poster.jpg`;
     let stored: string;
     try {
-      stored = await media.storeNamed(
-        folder,
-        `${spellEpisodeTag(season)}-poster.jpg`,
-        image.value
-      );
+      stored = await media.storeNamed(folder, free, image.value);
       storage.setSeasonPoster(seriesId, season, stored);
     } catch {
       return { kind: 'failed' };
     }
+    if (previous !== null && previous !== stored) media.removeFile(previous);
     held.posterUrl = imageUrl(stored);
     return { kind: 'chosen', choice: structuredClone(held) };
   }

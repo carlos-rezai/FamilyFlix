@@ -5,8 +5,10 @@
 //
 // `POST /api/enrichment/current/seasons/:season/poster { path }` → `200
 // SeasonChoice`: the chosen image streamed through `Media.storeNamed` into the
-// Series folder as `S02-poster.jpg`, overwriting, then `setSeasonPoster`'s
-// upsert — so the series page's Season card reads it. `400` for a path not
+// Series folder as `S02-poster.jpg`, or `S02-poster-2.jpg` when that is the
+// held poster's name, then `setSeasonPoster`'s upsert, and the replaced file
+// removed: a new name is a new url, so the page draws the new image rather
+// than the one it already loaded. `400` for a path not
 // among that season's choices; `404` without a single-series run, or for a
 // season it does not hold; `503` when TMDB is not reached, the poster left as
 // it was. Each refusal `{ error }`.
@@ -206,8 +208,8 @@ const seasonPosterRead = (api: Api, season: number) =>
     .getSeriesDetail(api.seriesId)
     ?.seasons.find((each) => each.number === season)?.posterPath ?? null;
 
-const storedBytes = (api: Api, season: number) =>
-  readFileSync(join(api.root, `${api.folder}/S0${season}-poster.jpg`), 'utf8');
+const storedBytes = (api: Api, season: number, name = `S0${season}-poster`) =>
+  readFileSync(join(api.root, `${api.folder}/${name}.jpg`), 'utf8');
 
 async function errorOf(response: Response): Promise<string> {
   const { error } = (await response.json()) as { error: unknown };
@@ -216,15 +218,18 @@ async function errorOf(response: Response): Promise<string> {
 }
 
 describe('POST /api/enrichment/current/seasons/:season/poster — 200', () => {
-  it('stores the chosen image as S02-poster.jpg, replacing the held one, and the series page reads it', async () => {
+  it('stores the chosen image as S02-poster-2.jpg beside the held S02-poster.jpg, removes that, and the series page reads it', async () => {
     const api = await inReview();
     expect(storedBytes(api, 2)).toBe(tmdbImageBytes('/s02-poster.jpg'));
 
     const response = await postPoster(api.baseUrl, 2, { path: '/s02-b.jpg' });
 
     expect(response.status).toBe(200);
-    expect(storedBytes(api, 2)).toBe(tmdbImageBytes('/s02-b.jpg'));
-    expect(seasonPosterRead(api, 2)).toBe(`${api.folder}/S02-poster.jpg`);
+    expect(storedBytes(api, 2, 'S02-poster-2')).toBe(
+      tmdbImageBytes('/s02-b.jpg')
+    );
+    expect(seasonPosterRead(api, 2)).toBe(`${api.folder}/S02-poster-2.jpg`);
+    expect(() => storedBytes(api, 2)).toThrow();
     // The other season is left as it was.
     expect(storedBytes(api, 1)).toBe(tmdbImageBytes('/s01-poster.jpg'));
   });
@@ -237,8 +242,20 @@ describe('POST /api/enrichment/current/seasons/:season/poster — 200', () => {
 
     const echo = (await response.json()) as SeasonChoice;
     expect(echo.season).toBe(2);
-    expect(echo.posterUrl).toBe(`/api/images/${api.folder}/S02-poster.jpg`);
+    expect(echo.posterUrl).toBe(`/api/images/${api.folder}/S02-poster-2.jpg`);
     expect(echo.choices).toEqual(before?.choices);
+  });
+
+  it('answers a new url for every choice taken, back to S02-poster.jpg on the next', async () => {
+    const api = await inReview();
+
+    await postPoster(api.baseUrl, 2, { path: '/s02-a.jpg' });
+    const response = await postPoster(api.baseUrl, 2, { path: '/s02-b.jpg' });
+
+    const echo = (await response.json()) as SeasonChoice;
+    expect(echo.posterUrl).toBe(`/api/images/${api.folder}/S02-poster.jpg`);
+    expect(storedBytes(api, 2)).toBe(tmdbImageBytes('/s02-b.jpg'));
+    expect(() => storedBytes(api, 2, 'S02-poster-2')).toThrow();
   });
 
   it('takes one of the series’ posters for a season too', async () => {
@@ -247,7 +264,9 @@ describe('POST /api/enrichment/current/seasons/:season/poster — 200', () => {
     const response = await postPoster(api.baseUrl, 1, { path: '/show-1.jpg' });
 
     expect(response.status).toBe(200);
-    expect(storedBytes(api, 1)).toBe(tmdbImageBytes('/show-1.jpg'));
+    expect(storedBytes(api, 1, 'S01-poster-2')).toBe(
+      tmdbImageBytes('/show-1.jpg')
+    );
   });
 
   it('gives a season with no poster yet its first one', async () => {

@@ -1338,7 +1338,7 @@
                   choices:choices.map((c,i)=>({isSeries:c.source==='series', pressed:String(picked===i),
                     name:(c.source==='series'?'Series poster ':'Poster ')+(i+1)+' for '+label,
                     onPick:()=>this.chooseSeasonPoster(n,i),
-                    cardStyle:{flex:'0 0 auto',width:'132px',textAlign:'left',padding:'10px',background:'var(--color-surface-2)',border:'1px solid '+(picked===i?'var(--color-accent-line)':'var(--color-border-soft)'),borderRadius:'var(--radius-md)',cursor:'pointer'},
+                    cardStyle:{flex:'0 0 auto',width:'132px',textAlign:'left',padding:'10px',background:picked===i?'var(--color-accent-soft)':'var(--color-surface-2)',border:'1px solid '+(picked===i?'var(--color-accent)':'var(--color-border-soft)'),boxShadow:picked===i?'0 0 0 2px var(--color-accent)':'none',borderRadius:'var(--radius-md)',cursor:'pointer'},
                     posterStyle:{display:'block',width:'100%',height:'160px',borderRadius:'8px',background:c.bg}})),
                 }; }):[];
               const targets = ['your library', s.enWriteSheet?'the sheet in your collection root':null, s.enWritePosters?'a poster.jpg in each movie folder':null].filter(Boolean);
