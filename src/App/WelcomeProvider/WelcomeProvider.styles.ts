@@ -15,7 +15,7 @@ const fadeIn = keyframes`
 /**
  * The **Home layer**: the routes, mounted beneath the splash from the first
  * frame. Unseen through the intro and the hold, faded in from the handoff's
- * 100ms for 400ms, and with no style at all once the welcome is done (or
+ * 100ms for 400ms (over 150ms on a skip), and with no style at all once the welcome is done (or
  * never played). It is never `aria-hidden` nor `inert`.
  */
 export const HomeLayer = styled.div<{ $phase: WelcomePhase }>`
@@ -23,6 +23,11 @@ export const HomeLayer = styled.div<{ $phase: WelcomePhase }>`
     if ($phase === 'intro' || $phase === 'holding') {
       return css`
         opacity: 0;
+      `;
+    }
+    if ($phase === 'skipping') {
+      return css`
+        animation: ${fadeIn} 150ms both ${theme.motion.easeOut};
       `;
     }
     if ($phase === 'handoff') {

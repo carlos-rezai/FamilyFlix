@@ -1,8 +1,10 @@
 import { useId } from 'react';
 
+import { LogoLoader } from '@/primitives';
 import { MARK_F1, MARK_F2, MARK_VIEWBOX } from '@/tokens';
 import {
   Background,
+  HoldMark,
   Letter,
   LetterCell,
   LetterSweep,
@@ -84,12 +86,18 @@ export interface WelcomeSplashProps {
   landing: WordmarkLanding | null;
   /** Whether the **Wordmark handoff** is running. */
   handingOff: boolean;
+  /**
+   * Whether the **Welcome hold** came: a beating `LogoLoader` then stands in
+   * the mark's place, through the handoff that follows it.
+   */
+  held?: boolean;
 }
 
 /**
  * The **Welcome splash**: the **Start-up splash**'s background, the FF mark
  * from the `brand` tokens and the wordmark (_Family_ in `text`, _Flix_ in
- * `accent`), sized by the geometry of log 55 Q13. In the handoff the mark
+ * `accent`), sized by the geometry of log 55 Q13. Held, a beating
+ * `LogoLoader` stands in the mark's place. In the handoff the mark (or it)
  * fades and shrinks, the background fades out and the wordmark glides onto
  * `landing`. Through the intro the Fs drop, the letters rise and a light
  * sweeps the mark (clipped to each F) and then each glyph. The clip and
@@ -100,6 +108,7 @@ export function WelcomeSplash({
   scale,
   landing,
   handingOff,
+  held = false,
 }: WelcomeSplashProps) {
   const id = useId().replace(/[^A-Za-z0-9_-]/g, '');
   const clip = [`ffc${id}1`, `ffc${id}2`];
@@ -108,36 +117,42 @@ export function WelcomeSplash({
   return (
     <Root role="status" aria-label="Opening FamilyFlix">
       <Background aria-hidden="true" $handingOff={handingOff} />
-      <Mark
-        aria-hidden="true"
-        viewBox={MARK_VIEWBOX}
-        $scale={scale}
-        $handingOff={handingOff}
-      >
-        <defs>
-          <clipPath id={clip[0]}>
-            <path d={MARK_F1} />
-          </clipPath>
-          <clipPath id={clip[1]}>
-            <path d={MARK_F2} />
-          </clipPath>
-          <BandGradient id={gradient[0]} rgb={ORANGE} peak={0.95} />
-          <BandGradient id={gradient[1]} rgb={WHITE} peak={0.7} />
-        </defs>
-        <MarkF1 d={MARK_F1} $delay={0} />
-        <MarkF2 d={MARK_F2} $delay={150} />
-        {[0, 1].map((f) => (
-          <g key={f} clipPath={`url(#${clip[f]})`}>
-            <SweepBand
-              x={160}
-              y={300}
-              width={220}
-              height={424}
-              fill={`url(#${gradient[f]})`}
-            />
-          </g>
-        ))}
-      </Mark>
+      {held ? (
+        <HoldMark aria-hidden="true" $scale={scale} $handingOff={handingOff}>
+          <LogoLoader size={132 * scale} />
+        </HoldMark>
+      ) : (
+        <Mark
+          aria-hidden="true"
+          viewBox={MARK_VIEWBOX}
+          $scale={scale}
+          $handingOff={handingOff}
+        >
+          <defs>
+            <clipPath id={clip[0]}>
+              <path d={MARK_F1} />
+            </clipPath>
+            <clipPath id={clip[1]}>
+              <path d={MARK_F2} />
+            </clipPath>
+            <BandGradient id={gradient[0]} rgb={ORANGE} peak={0.95} />
+            <BandGradient id={gradient[1]} rgb={WHITE} peak={0.7} />
+          </defs>
+          <MarkF1 d={MARK_F1} $delay={0} />
+          <MarkF2 d={MARK_F2} $delay={150} />
+          {[0, 1].map((f) => (
+            <g key={f} clipPath={`url(#${clip[f]})`}>
+              <SweepBand
+                x={160}
+                y={300}
+                width={220}
+                height={424}
+                fill={`url(#${gradient[f]})`}
+              />
+            </g>
+          ))}
+        </Mark>
+      )}
       <WordmarkLayer
         aria-hidden="true"
         $scale={scale}

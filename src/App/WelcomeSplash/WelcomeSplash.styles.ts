@@ -140,6 +140,22 @@ export const Mark = styled.svg<{ $scale: number; $handingOff: boolean }>`
     `}
 `;
 
+/**
+ * The **Welcome hold**'s `LogoLoader`, in the mark's place at its width; in
+ * the handoff it fades and shrinks as the mark would.
+ */
+export const HoldMark = styled.div<{ $scale: number; $handingOff: boolean }>`
+  position: absolute;
+  left: 50%;
+  top: ${({ $scale }) => `calc(50% - ${26 * $scale}px)`};
+  transform: translate(-50%, -50%);
+  ${({ $handingOff, theme }) =>
+    $handingOff &&
+    css`
+      animation: ${markOut} 300ms 0ms both ${theme.motion.easeOut};
+    `}
+`;
+
 /** An F drops from `$delay` ms for 520ms, about its own bottom middle. */
 const MarkF = styled.path<{ $delay: number }>`
   transform-box: fill-box;

@@ -29,12 +29,18 @@ const WELCOMED_KEY = 'familyflix.welcomed';
 /** The **Welcome intro** and the **Wordmark handoff**, in ms. */
 const INTRO_MS = 1750;
 const HANDOFF_MS = 500;
+/** The skip's fade of the **Home layer**, in ms. */
+const SKIP_MS = 150;
+
+/** The input that skips the welcome, swallowed on `window` while it is up. */
+const SKIP_INPUTS = ['pointerdown', 'keydown'] as const;
 
 /** The phases the clock ends on its own: how long each lasts, and its end. */
 const CLOCK: Partial<Record<WelcomePhase, { ms: number; ends: WelcomeEvent }>> =
   {
     intro: { ms: INTRO_MS, ends: 'introEnded' },
     handoff: { ms: HANDOFF_MS, ends: 'handoffEnded' },
+    skipping: { ms: SKIP_MS, ends: 'skipEnded' },
   };
 
 /** The design's frame the geometry scales from (log 55 Q13). */
@@ -96,8 +102,12 @@ export interface WelcomeProviderProps {
  * **Ready** when the header wordmark mounts on `useWelcome`'s ref; until the
  * end the header wordmark is hidden. At `done`, in one frame, the wordmark
  * shows, the splash unmounts, the Home layer loses its style and focus lands
- * on the header's logo button. Anywhere else it draws nothing but its
- * children.
+ * on the header's logo button. A home not ready at the intro's end holds,
+ * a beating `LogoLoader` in the mark's place, until it is (the **Welcome
+ * hold**). Any `pointerdown` or `keydown` while the welcome is up is
+ * swallowed on `window` and skips: the splash goes and the Home layer fades
+ * in over 150ms, once the home is ready. Anywhere else it draws nothing but
+ * its children.
  */
 export function WelcomeProvider({ children }: WelcomeProviderProps) {
   const location = useLocation();
@@ -120,6 +130,7 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
   const wordmark = useRef<HTMLElement | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [landing, setLanding] = useState<WordmarkLanding | null>(null);
+  const [held, setHeld] = useState(false);
 
   // The clock runs off the state it just stepped to, not off a render, so a
   // phase's timer starts the moment the phase does.
@@ -133,6 +144,9 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
       current.current = next;
       if (next.phase === 'handoff' && before.phase !== 'handoff') {
         setLanding(measureLanding(wordmark.current, scale));
+      }
+      if (next.phase === 'holding') {
+        setHeld(true);
       }
       setState(next);
       if (next.phase !== before.phase) {
@@ -160,6 +174,27 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
     // Once per mount: the clock then drives itself through `send`.
   }, [played]);
 
+  // While the welcome is up, any press or key is swallowed before it reaches
+  // the home, and skips.
+  useEffect(() => {
+    if (phase === 'done') {
+      return undefined;
+    }
+    const swallow = (event: Event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      send('skip');
+    };
+    for (const type of SKIP_INPUTS) {
+      window.addEventListener(type, swallow, true);
+    }
+    return () => {
+      for (const type of SKIP_INPUTS) {
+        window.removeEventListener(type, swallow, true);
+      }
+    };
+  }, [phase, send]);
+
   useLayoutEffect(() => {
     if (played && phase === 'done') {
       wordmark.current?.closest('button')?.focus();
@@ -177,18 +212,22 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
   );
 
   const api = useMemo<WelcomeApi>(
-    () => ({ wordmarkRef, wordmarkHidden: phase !== 'done' }),
+    () => ({
+      wordmarkRef,
+      wordmarkHidden: phase !== 'done' && phase !== 'skipping',
+    }),
     [wordmarkRef, phase]
   );
 
   return (
     <WelcomeContext.Provider value={api}>
       <HomeLayer $phase={phase}>{children}</HomeLayer>
-      {phase !== 'done' && (
+      {phase !== 'done' && phase !== 'skipping' && (
         <WelcomeSplash
           scale={scale}
           landing={landing}
           handingOff={phase === 'handoff'}
+          held={held}
         />
       )}
     </WelcomeContext.Provider>
