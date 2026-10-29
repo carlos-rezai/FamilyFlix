@@ -11,6 +11,101 @@ Newest entry first.
 
 ---
 
+## 2026-10-29: Scan new folders, the refactor (issue 498)
+
+Fifteen commits against
+`docs/refactor-plans/54-scan-new-folders-refactor.md`: one per plan commit,
+and one fix-up to commit 10. This is the initiative's closing round.
+**11203 tests pass across 704 files**, against 11195 across 703 at the end
+of the build (`d0e58b8a`): the enrich slice's three window-count cases and
+`makeLibraryFolder`'s suite of five. `tsc -b --force` is clean. `eslint src
+server electron` reports one error and 133 warnings, the count the build
+ended on.
+
+### What shipped
+
+Log 54's step 37: the prototype lift (492) and the build slices 493 to 497.
+A **New folder** is a listed **Library folder** with `scanned_at` null
+(migration 16). A run marks the folders its walk read at the moment it sets
+review. `foldersToScan` picks a **Scan scope**'s folders, and the group Scan
+draws **Scan new folders** and **Scan all folders**. The `added`
+**Enrichment scope** is bounded below by the run's `startedAt`, and _Finish_
+on a run carrying `enrich` replaces `/import` with `/enrich?added=`, where
+setup draws **Just what was added**, chosen.
+
+### What each group changed
+
+- **Group 1, one window rule, counted not assembled** (`130185d6`,
+  `0a7eb00f`, `146a92e2`, `331e27ac`). `addedSince(alias, kind)` sits
+  beside `syncGap` with one named `@since`, and both slices build their
+  `added` clause from it. `enrichmentCounts(since?)` answers `added` from a
+  `COUNT`, and `summary` spreads the counts instead of assembling every
+  title in the window. `LibraryStorage` says `Exclude<EnrichScope,
+'single'>`, and `ENRICH_SCOPES` reads in log 54's order.
+- **Group 2, a named walk and a read query** (`834aeced`, `009f1e29`).
+  `ListedWalk` sits beside `WalkedFolder`, and the summary route reads
+  `since` through `queryString`, an empty one still none.
+- **Group 3, small client seams** (`ed380407`). `api.ts`'s import list is A
+  to Z, and `scopeDescription`'s wrapped early return is braced.
+- **Group 4, comments** (`2a80cfc8`, `1288299a`). Five docblocks edited
+  mid-line are rewrapped, `EnrichmentSetup`'s dash a comma; the test
+  comments that named _Scan folders_ as the press name the new presses.
+- **Group 5, one folder builder and one header form** (`046f3ed0`,
+  `50a81811`, `1ff49765`, `f377c196`). `makeLibraryFolder` in
+  `src/test-support/`, a scanned, reachable folder holding no title by
+  default; the fourteen client suites build with it. The headers read `54,
+Scan new folders, Phase N (issue #n)`, and the seven `describe` titles
+  take a colon.
+- **Group 6, the docs** (`dcd9ecd3` and this commit). The checklist ticks
+  step 37; the README tree names `foldersToScan`; the release checklist says
+  _Scan all folders_ and walks a _Scan new folders_ run into **Just what was
+  added**; the glossary's **Folder scan** takes `mode`.
+
+### Where this round left the plan
+
+- **Commit 10's paths lost their backslashes.** Written through a bash
+  heredoc, the builder's default path landed as `'D:Movies'` and its test's
+  override as `'E:Series'`; the suite passed, since every check compares the
+  builder with itself, and `eslint` caught the useless escapes. `1ff49765`
+  restores `'D:\\Movies'` and `'E:\\Series'`.
+- **The new window-count cases** sit in their own `describe`, `library:
+enrichmentCounts: Just what was added`, after the movie window block, and
+  the series case builds its shows in the movie suite, where the counts are.
+- **`ImportFlow.enrich`'s sentence became its own paragraph**: the Phase 6
+  hand-off reads apart from the older _Finish_ rule it used to interrupt.
+- **The release smoke says _Scan all folders_ in italics**, as the checklist
+  writes every press, not in bold as the plan did.
+- The full suite ran after every commit. One run, at commit 12, failed
+  `routes.enrichment`'s _lets a new start begin after it_ under load; the
+  commit changed comments only, the case passed five times alone, and the
+  next full run was green. It is the 409 race the follow-ups already carry.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: a discriminated library scope,
+a server-side `StoredLibraryFolder` builder, `importPlaced`'s positional
+parameters, `libraryTitleView`'s household dash, a per-row Scan, watching
+folders, scanning on launch, an upper bound on the window and everything
+else log 54 put out of scope, and the frozen `handoff-scan-new-folders/`.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **A discriminated library scope**, `{ scope: 'added'; since }`, so
+  `moviesInScope('added')` without a window can't be written.
+- **`importPlaced`'s parameters as an object**, eight long now.
+- **From earlier entries**: the Reset dialog's idle face before the reload,
+  a danger-line primitive, CLAUDE.md's barrel list, `heldFetch` beyond the
+  busy suites, and Loading states' earlier list, the `routes.enrichment` 409
+  case under load among them.
+
+### The initiative
+
+**Scan new folders is done**: the prototype lift (492), the slices (493 to 497) and this round (498). Issue 491 is closed with it.
+
+---
+
 ## 2026-10-28: Loading states, the refactor (issue 490)
 
 Thirteen commits against
