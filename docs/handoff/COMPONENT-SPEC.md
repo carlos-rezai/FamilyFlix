@@ -1016,7 +1016,8 @@ The gear icon now opens **`page.SettingsPage`** (a full route), not a dropdown â
 maintenance menu's actions (Add / Import / Export) are the Library section there, so tasks
 and configuration share one home and the menu scales as settings grow. The browse and genre
 headers differ, so each page owns its header rather than sharing a `MainLayout` chrome; in
-code, factor the shared bits (logo, gear button) into `layouts/` as desired. The Export
+code, factor the shared bits (the **Wordmark**, never pressable; the gear button) into `layouts/`
+as desired. The Export
 dialog (`feat.ExportModal`) renders as an overlay above the current route.
 
 ### Content frame (Ultrawide margins)

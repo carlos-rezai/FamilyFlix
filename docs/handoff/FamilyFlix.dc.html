@@ -1022,7 +1022,7 @@
             // body
             showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:rows.length===0 && !otherRow,
             libModel:{
-              onLogo:()=>{ this.setState({tab:'movies'}); this.goBrowse(); }, search:s.search, onSearch:(e)=>this.onSearch(e),
+              search:s.search, onSearch:(e)=>this.onSearch(e),
               isMoviesTab:s.tab==='movies', isSeriesTab:s.tab==='series',
               tabOptions:[{value:'movies',label:'Movies'},{value:'series',label:'Series'}], tab:s.tab, onTab:(t)=>this.setTab(t),
 
