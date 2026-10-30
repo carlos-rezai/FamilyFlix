@@ -20,7 +20,7 @@ import { WelcomeProvider } from './WelcomeProvider';
  *
  * A **Cold start** (the **Launch entry**, and no `familyflix.welcomed` flag in
  * `sessionStorage`) draws the **Welcome splash** over the **Home layer**, the
- * header's wordmark hidden beneath it. The provider is the clock: 1750ms of
+ * header's wordmark hidden beneath it. The provider is the clock: 1950ms of
  * intro, then the 500ms handoff, and in one frame the splash goes and the
  * header wordmark shows; focus stays on the document body, the wordmark being
  * no control. Anywhere else, or a second time in a session, it draws nothing.
@@ -32,7 +32,7 @@ import { WelcomeProvider } from './WelcomeProvider';
 
 stubScrollMetrics(6390);
 
-const INTRO = 1750;
+const INTRO = 1950;
 const HANDOFF = 500;
 
 let fetchMock: ReturnType<
@@ -127,16 +127,19 @@ describe('WelcomeProvider: a cold start', () => {
 
   it('keeps the splash up until the end of intro plus handoff', async () => {
     renderWelcome();
-    await advanceClock(INTRO);
+    // The home is ready at once, so the clock reads the intro, not a hold.
+    await advanceClock(100);
+    await advanceClock(INTRO - 100);
     await advanceClock(HANDOFF - 1);
 
     expect(splash()).not.toBeNull();
     expect(isHidden(headerWordmark())).toBe(true);
   });
 
-  it('at 1750ms plus 500ms is gone, the header wordmark shown and focus left on the body', async () => {
+  it('at 1950ms plus 500ms is gone, the header wordmark shown and focus left on the body', async () => {
     renderWelcome();
-    await advanceClock(INTRO);
+    await advanceClock(100);
+    await advanceClock(INTRO - 100);
     await advanceClock(HANDOFF);
 
     expect(splash()).toBeNull();

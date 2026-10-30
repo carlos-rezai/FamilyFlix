@@ -932,7 +932,7 @@ the header. No sound, no route, no server change.
 
 **Phases.** A **Welcome phase** is `intro`, `holding`, `handoff`, `skipping` or `done`:
 
-- `intro` (the **Welcome intro**, 1750ms; 900ms under reduced motion) at `introEnded`:
+- `intro` (the **Welcome intro**, 1950ms, amended; 900ms under reduced motion) at `introEnded`:
   `handoff` when ready, else `holding`. An early `ready` is recorded without leaving
   `intro`: a home that is ready early never cuts the sequence short.
 - `holding` (the **Welcome hold**) at `ready`: `handoff`, or `skipping` if skipped.
@@ -985,6 +985,9 @@ header's logo button. _Amended below: focus stays where it is._
 - **Focus stays where it is at `done`**, the document body as a page load leaves it. The
   header **Wordmark** is no control (issue #509), and the next focusable element is the
   search bar, whose caret (and, on a touch screen, keyboard) no start should raise.
+- **The intro lasts 1950ms, not 1750ms.** The last letter's sweep (`1150 + 9·45` for
+  380ms) ends at 1935ms, so at 1750 the glide began with the light still on _lix_. The
+  sweep's own timing is kept; the intro waits it out.
 
 ---
 

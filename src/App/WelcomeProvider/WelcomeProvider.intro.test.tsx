@@ -39,6 +39,9 @@ stubScrollMetrics(6390);
 
 const WORD = 'FamilyFlix';
 
+/** The **Welcome intro**'s length: the handoff starts here. */
+const INTRO = 1950;
+
 beforeEach(() => {
   vi.useFakeTimers();
   sessionStorage.clear();
@@ -600,6 +603,21 @@ describe('WelcomeProvider: the letter sweep', () => {
       expect(styleOf(copy)['background-repeat'], `glyph ${i}, ${WORD[i]}`).toBe(
         'no-repeat'
       );
+    });
+  });
+
+  it('ends every letter’s sweep before the intro ends, so no light is left for the glide', async () => {
+    await renderIntro();
+
+    const { copies } = glyphs();
+    expect(copies).toHaveLength(WORD.length);
+    copies.forEach((copy, i) => {
+      const sweep = animationRunning(copy, FF_TEXT_SWEEP);
+      expect(sweep, `glyph ${i}, ${WORD[i]}`).toBeDefined();
+      expect(
+        (sweep?.delayMs ?? 0) + (sweep?.durationMs ?? 0),
+        `glyph ${i}'s sweep end`
+      ).toBeLessThanOrEqual(INTRO);
     });
   });
 

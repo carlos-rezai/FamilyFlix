@@ -37,7 +37,7 @@ import { WelcomeProvider } from './WelcomeProvider';
 
 stubScrollMetrics(6390);
 
-const INTRO = 1750;
+const INTRO = 1950;
 const HANDOFF = 500;
 
 /** The header `LogoMark`'s `font-size`. */

@@ -33,7 +33,7 @@ import { WelcomeProvider } from './WelcomeProvider';
 
 stubScrollMetrics(6390);
 
-const INTRO = 1750;
+const INTRO = 1950;
 const HANDOFF = 500;
 const SKIP = 150;
 
@@ -42,7 +42,7 @@ const SCALE = 2;
 
 let releaseSettings: () => void = () => undefined;
 
-/** Serves the settings at once: the home is ready long before 1750ms. */
+/** Serves the settings at once: the home is ready long before 1950ms. */
 function serveReadyHome() {
   vi.stubGlobal(
     'fetch',
@@ -193,7 +193,7 @@ function beneath(): Element {
 }
 
 describe('WelcomeProvider: the Welcome hold', () => {
-  it('holds a home not ready at 1750ms on a beating, unlabelled, aria-hidden loader at the mark’s width', async () => {
+  it('holds a home not ready at 1950ms on a beating, unlabelled, aria-hidden loader at the mark’s width', async () => {
     serveSlowHome();
     renderWelcome();
     await advanceClock(INTRO);
@@ -234,7 +234,7 @@ describe('WelcomeProvider: the Welcome hold', () => {
     expectHome();
   });
 
-  it('still plays a home ready early to 1750ms, never holding', async () => {
+  it('still plays a home ready early to 1950ms, never holding', async () => {
     renderWelcome();
     await advanceClock(100);
     expect(headerWordmark()).toBeDefined();

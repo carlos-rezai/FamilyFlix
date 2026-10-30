@@ -26,8 +26,12 @@ import { HomeLayer } from './WelcomeProvider.styles';
 /** The `sessionStorage` flag a played welcome leaves for the session. */
 const WELCOMED_KEY = 'familyflix.welcomed';
 
-/** The **Welcome intro** and the **Wordmark handoff**, in ms. */
-const INTRO_MS = 1750;
+/**
+ * The **Welcome intro** and the **Wordmark handoff**, in ms. The intro outlasts
+ * the last letter's sweep (`1150 + 9·45 + 380`, 1935ms), so the glide starts
+ * with no light left on _Flix_; the prototype's 1750 cut it short.
+ */
+const INTRO_MS = 1950;
 const HANDOFF_MS = 500;
 /** The same under reduced motion: fades alone, 1300ms in all (log 55 Q15). */
 const STILL_INTRO_MS = 900;
@@ -115,7 +119,7 @@ export interface WelcomeProviderProps {
  * The renderer's welcome. It decides, once, whether this mount is a **Cold
  * start** (the **Launch entry** and no `familyflix.welcomed` flag in
  * `sessionStorage`), sets the flag, and on one draws the **Welcome splash**
- * over the **Home layer** and runs the clock through `welcomeStep`: 1750ms
+ * over the **Home layer** and runs the clock through `welcomeStep`: 1950ms
  * of intro, then the 500ms **Wordmark handoff**: at its start the header
  * wordmark is measured and the splash wordmark glides onto it. The home is
  * **Ready** when the header wordmark mounts on `useWelcome`'s ref; until the
