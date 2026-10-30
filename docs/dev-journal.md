@@ -11,6 +11,98 @@ Newest entry first.
 
 ---
 
+## 2026-10-30: Intro animation, the refactor (issue 509)
+
+Eleven commits against
+`docs/refactor-plans/55-intro-animation-refactor.md`, one per plan commit.
+This is the initiative's closing round. **11341 tests pass across 714
+files**, against 11336 at the end of the build (`655f45a8`): the sweep's
+no-repeat case and four `splashPage` cases in, `MainLayout`'s two new
+wordmark cases in for the one withdrawn, and `App`'s logo case withdrawn.
+`tsc -b --force` is clean. `eslint src server electron` reports one error and
+135 warnings, the count the round began on.
+
+### What the walk found
+
+The maintainer's walk in the shell, before the plan, found three things:
+the header wordmark ended every **Cold start** wearing a focus ring as a
+button; a pale band rested on the right of each _Flix_ glyph before the
+sweep; and the shell's **Start-up splash** beat its tile just before the
+**Welcome splash** played its own, two brand moments back to back.
+
+### What each group changed
+
+- **Group 1, the wordmark is no button** (`7351cdb6`, `f7267d8e`,
+  `8bb9b3c8`). The prototype's header loses `onLogo` and its pointer.
+  `MainLayout`'s `Logo` button goes: `LogoMark` sits in the header itself,
+  with `flex: 0 0 auto` and `user-select: none`. `WelcomeProvider` moves no
+  focus at `done`; the suites expect it left on the document body. The
+  logo-goes-home cases went with the behaviour.
+- **Group 2, the sweep paints only its band** (`f8e96444`, `5f9400ca`,
+  `cdf58ee5`). `COMPONENT-SPEC.md` 5b gains an _Amendments_ list over the
+  frozen folder (the no-repeat band, focus left where it is), and
+  `LetterSweep` sets `background-repeat: no-repeat`.
+- **Group 3, the Start-up splash gives way** (`b805c6ba`, `2b5c8e5a`).
+  `splashPage` exports `SLOW_START_MS = 2000` and wraps the tile and
+  _Opening your library_ in one group at opacity 0, faded in over 300ms from
+  it. An ordinary open paints bare `bg`, the welcome's first frame.
+- **Group 4, docblocks** (`6304b070`). `WelcomeSplash`'s and
+  `LetterSweep`'s docblocks rewrapped to 80 columns, and the styles' `i·40`,
+  `i·45` and `100°` restored: the file held literal U+FFFD characters, not
+  a wrong encoding.
+- **Group 5, the docs** (`03136cb0` and this commit). The glossary gains
+  **Slow start** and updates **Start-up splash**, **Wordmark** and
+  **Wordmark handoff**, its invariants and a dialogue; the checklist ticks
+  step 38; the release checklist gains a cold-start smoke.
+
+### Where this round left the plan
+
+- **The walk before commit 10 was not done in this session.** The agent had
+  no way to watch the shell's window: no cold start on either tab, no skip
+  by click or key, no forced slow start was seen. The docs follow the code
+  and its suites. The release checklist's _Intro animation_ smoke is the
+  walk, still owed; `SLOW_START_MS` stays 2000 until it measures otherwise.
+- **The `MainLayout` header-it-always-had case** counts the gear as the
+  header's one button, where it counted two.
+- **`LibraryPage.test`'s `renderPage` waits on the banner**, which
+  `StartTabGate` draws with the header, where it waited on the logo button.
+- **COMPONENT-SPEC 5b's unit table** says `WelcomeProvider` leaves focus
+  where it is, and its _Focus_ paragraph points at the amendment.
+- **The release checklist's Loading states item** no longer opens on
+  _Opening your library_ or checks the splash's mark under reduced motion;
+  the new smoke checks the welcome's fade instead. No reload is in it: the
+  installed app has no menu bar to reload from.
+- **The checklist's status column narrowed** under Prettier once no row was
+  planned, so commit 10 reflows the whole table.
+- **`splashPage.test`'s new helpers read the style by string slicing**: a
+  first draft built its regexes through a bash heredoc and lost their
+  backslashes before any commit.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: folding the welcome into the shell or
+the shell's page into the renderer, measuring the start at runtime, the
+frozen `handoff-welcome-splash/`, replaying the welcome from Settings,
+sound, and every other pressable brand (there is none). The **Logo loader**,
+the **Welcome hold** and the **Dialog loader** are untouched, and so is
+`main.ts`.
+
+### Follow-ups this refactor surfaced
+
+None are filed yet:
+
+- **The walk**, as above: the real timings and the real first paint.
+- **The splash's status line under opacity 0**: _Opening your library_ is
+  still a `role="status"` a screen reader may read before it shows.
+- **From earlier entries**: a discriminated library scope, `importPlaced`'s
+  parameters as an object, and the earlier lists they carry.
+
+### The initiative
+
+**Intro animation is done**: the prototype lift (503), the slices (504 to 508) and this round (509). Issue 502 is closed with it.
+
+---
+
 ## 2026-10-29: Scan new folders, the refactor (issue 498)
 
 Fifteen commits against
