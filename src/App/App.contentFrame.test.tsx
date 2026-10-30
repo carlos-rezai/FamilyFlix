@@ -139,7 +139,11 @@ function frameAround(element: Element): HTMLElement {
 describe('App — the Content frame on a framed route', () => {
   it('caps the library at 1920px with auto side margins while the preference is on', async () => {
     renderApp('/');
-    const title = (await screen.findAllByText('Northwind'))[0];
+    // The file's first render pays for App's imports: on the Release
+    // workflow's runner it outlasts the default 1s (issue #510).
+    const title = (
+      await screen.findAllByText('Northwind', undefined, { timeout: 3000 })
+    )[0];
 
     await waitFor(() => expect(framesAround(title)).toHaveLength(1));
     const frame = frameAround(title);
