@@ -1,9 +1,12 @@
 /**
  * The **Start-up splash**: the page the shell's window opens over at
  * `whenReady`, before the server's `ready`, as a `data:` URL of static HTML.
- * The 88px tile with the FF mark beating (a fade under reduced motion) over
- * _Opening your library_, on `bg`. It is the window's first paint, so it loads
- * nothing: no network, no server, no font file.
+ * It is the window's first paint, so it loads nothing: no network, no
+ * server, no font file. That paint is bare `bg`, the **Welcome splash**'s
+ * first frame, so an ordinary start shows the welcome alone. On a **Slow
+ * start** the loader fades in: the 88px tile with the FF mark beating (a fade
+ * under reduced motion) over _Opening your library_. The beat runs from the
+ * start, so the mark shows mid-beat.
  *
  * The shell imports only types from `src/`, so the token values and the F
  * paths are copies: of `src/tokens/` and
@@ -11,6 +14,13 @@
  * `src/primitives/LogoLoader/LogoLoader.styles.ts`). They change only if
  * those do.
  */
+
+/**
+ * A **Slow start**: the server hasn't let the app load this long after the
+ * window opened, so the loader shows. Twice the slowest start in the **Shell
+ * log**, well short of `READY_TIMEOUT_MS`.
+ */
+export const SLOW_START_MS = 2000;
 
 /** `bg`, `text` and `accent` from `src/tokens/colors.ts`. */
 const BG = '#14110d';
@@ -37,7 +47,8 @@ const HTML = `<!doctype html>
 <title>FamilyFlix</title>
 <style>
 html, body { margin: 0; height: 100%; background: ${BG}; }
-body { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+body { display: flex; align-items: center; justify-content: center; }
+.loader { display: flex; flex-direction: column; align-items: center; gap: 14px; opacity: 0; animation: appear 300ms ease-out ${SLOW_START_MS}ms both; }
 svg { display: block; overflow: visible; }
 .f { transform-box: fill-box; transform-origin: 50% 100%; animation: beat 1.3s ease-in-out infinite; }
 .f2 { animation-delay: 0.22s; }
@@ -45,6 +56,9 @@ p { margin: 0; font-family: ${SANS}; font-size: 15px; font-weight: 600; color: $
 @keyframes beat {
   0%, 64%, 100% { opacity: 0.28; transform: translateY(0); }
   22% { opacity: 1; transform: translateY(-7%); }
+}
+@keyframes appear {
+  to { opacity: 1; }
 }
 @keyframes fade {
   0%, 100% { opacity: 0.4; }
@@ -56,12 +70,14 @@ p { margin: 0; font-family: ${SANS}; font-size: 15px; font-weight: 600; color: $
 </style>
 </head>
 <body>
+<div class="loader">
 <svg viewBox="0 0 1024 1024" width="88" height="88" aria-hidden="true">
 <rect width="1024" height="1024" rx="225.28" fill="${BG}"/>
 <path class="f" fill="${TEXT}" d="${F1}"/>
 <path class="f f2" fill="${ACCENT}" d="${F2}"/>
 </svg>
 <p role="status">Opening your library</p>
+</div>
 </body>
 </html>
 `;
