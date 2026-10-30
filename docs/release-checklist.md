@@ -99,15 +99,21 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 - [ ] A linked series add: Settings → Add a series, _Add a show folder_ from
       the real folder dialog on a show inside a Library folder, add it under
       **Link**: its episodes play from where they lie.
-- [ ] Loading states, over the sandbox Library folder: quit and open
-      FamilyFlix again: the window opens at once on _Opening your library_,
-      and the library loads over it. Add a large film by hand under **Copy**:
+- [ ] Loading states, over the sandbox Library folder: Add a large film by hand under **Copy**:
       the button reads _Adding…_ after a moment, and the form leaves once the
       copy is done. Delete a long linked series from Manage library: the
       dialog locks, shows _Deleting “<title>”_, and closes with its snackbar.
       With Windows animations off (_Settings → Accessibility → Visual
-      effects_), add the large film again and quit and open once more: the
-      button's shine and the splash's mark fade, not freeze.
+      effects_), add the large film again: the button's shine fades, not
+      freezes.
+- [ ] Intro animation: quit and open FamilyFlix: the window opens at once on
+      the plain background, with no tile before the welcome. The Fs drop,
+      _Flix_ stays plain orange until the light reaches it, and the wordmark
+      lands in the header unfocused; pressing it does nothing. Quit and open
+      again and press a key mid-way: the library shows at once. A start that
+      waits over 2s (a first open after a reboot can) fades the tile and
+      _Opening your library_ in. With Windows animations off, open once more:
+      the welcome is a plain fade.
 - [ ] Scan new folders, over the sandbox library: add a new Library folder
       holding a film: its row reads _Not scanned yet_. _Scan new folders_
       logs one `Scanning` line, for that folder, and imports only its
