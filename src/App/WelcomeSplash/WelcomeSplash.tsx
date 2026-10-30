@@ -111,8 +111,9 @@ export interface WelcomeSplashProps {
  * fades and shrinks, the background fades out and the wordmark glides onto
  * `landing`. Through the intro the Fs drop, the letters rise and a light
  * sweeps the mark (clipped to each F) and then each glyph. The clip and
- * gradient ids come from `useId`, stripped as `LogoLoader`'s are. It announces itself as a status, _Opening FamilyFlix_; every
- * drawn layer is `aria-hidden`.
+ * gradient ids come from `useId`, stripped as `LogoLoader`'s are. It
+ * announces itself as a status, _Opening FamilyFlix_; every drawn layer is
+ * `aria-hidden`.
  */
 export function WelcomeSplash({
   scale,

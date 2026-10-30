@@ -295,7 +295,7 @@ export const Word = styled.span`
   display: inline-flex;
 `;
 
-/** Letter `$i`'s cell: it rises and unblurs from `520 + i�40` for 420ms. */
+/** Letter `$i`'s cell: it rises and unblurs from `520 + i·40` for 420ms. */
 export const LetterCell = styled.span<{ $i: number; $still: boolean }>`
   position: relative;
   display: inline-block;
@@ -318,11 +318,11 @@ const band = (rgb: string, peak: number) =>
   `linear-gradient(100deg, rgba(${rgb},0) 30%, rgba(${rgb},${peak}) 50%, rgba(${rgb},0) 70%)`;
 
 /**
- * A glyph's transparent copy, over it in the `SweepLayer`, its background clipped to the text:
- * a 100� band 300% wide, orange over _Family_ and white over _Flix_, swept
- * from `1150 + i�45` for 380ms linear. The band is painted once, never
- * repeated: a tiled 300% band rests on the glyph's edge before and after
- * its run.
+ * A glyph's transparent copy, over it in the `SweepLayer`, its background
+ * clipped to the text: a 100° band 300% wide, orange over _Family_ and white
+ * over _Flix_, swept from `1150 + i·45` for 380ms linear. The band is painted
+ * once, never repeated: a tiled 300% band rests on the glyph's edge before
+ * and after its run.
  */
 export const LetterSweep = styled.span<{ $i: number; $flix: boolean }>`
   color: transparent;
