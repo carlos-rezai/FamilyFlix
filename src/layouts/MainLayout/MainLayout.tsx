@@ -5,19 +5,12 @@ import { BackToTop } from '@/components';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
 import { useWelcome } from '@/App/useWelcome/useWelcome';
 import { GearIcon, IconButton } from '@/primitives';
-import {
-  Root,
-  Header,
-  Logo,
-  LogoMark,
-  Spacer,
-  Body,
-} from './MainLayout.styles';
+import { Root, Header, LogoMark, Spacer, Body } from './MainLayout.styles';
 
 export interface MainLayoutProps {
   /** The scrollable page body rendered under the header. */
   children: ReactNode;
-  /** Header content between the logo and the spacer — the search bar. */
+  /** Header content between the wordmark and the spacer — the search bar. */
   headerStart?: ReactNode;
   /** Header content between the spacer and the gear — the filter dropdowns. */
   headerEnd?: ReactNode;
@@ -28,11 +21,11 @@ export interface MainLayoutProps {
  * scrollable body. Structure only — it renders whatever body it is given and
  * knows nothing about the library domain.
  *
- * The logo and the gear are app-wide navigation rather than anything the body
- * owns, so the chrome routes them itself: every page gets the same header
- * without re-wiring it.
+ * The gear is app-wide navigation rather than anything the body owns, so the
+ * chrome routes it itself: every page gets the same header without re-wiring
+ * it. The **Wordmark** beside it is brand, never a control.
  *
- * The header is the logo and the settings gear plus two slots: the prototype
+ * The header is the wordmark and the settings gear plus two slots: the prototype
  * puts the search bar before the flex spacer and the genre / rating / sort
  * dropdowns after it, so the chrome offers a `headerStart` and a `headerEnd`
  * and renders whatever a page hands in. They are structure — the layout learns
@@ -47,7 +40,7 @@ export interface MainLayoutProps {
  * attached, rendered right after the body and over it. The layout holds no
  * state for it and gains no prop — the control reads the body itself.
  *
- * The header wordmark is where the **Welcome splash** lands: `useWelcome`'s
+ * The header **Wordmark** is where the **Welcome splash** lands: `useWelcome`'s
  * ref receives it (its mounting is what makes the home **Ready**) and it stays
  * hidden while the welcome plays. Outside a welcome it simply shows.
  */
@@ -63,9 +56,7 @@ export function MainLayout({
   return (
     <Root>
       <Header>
-        <Logo type="button" onClick={() => navigate('/')}>
-          <LogoMark ref={wordmarkRef} $hidden={wordmarkHidden} />
-        </Logo>
+        <LogoMark ref={wordmarkRef} $hidden={wordmarkHidden} />
         {headerStart}
         <Spacer />
         {headerEnd}

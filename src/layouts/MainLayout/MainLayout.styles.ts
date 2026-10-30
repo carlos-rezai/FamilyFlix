@@ -17,23 +17,14 @@ export const Header = styled(ChromeHeader)`
   gap: ${({ theme }) => theme.space.s5};
 `;
 
-export const Logo = styled.button`
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-  flex: 0 0 auto;
-  background: transparent;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  user-select: none;
-`;
-
 /**
- * The header's **Wordmark**: 25px, a hair of tracking, 2px between the words;
- * `visibility: hidden` while `$hidden`, under a playing **Welcome splash**.
+ * The header's **Wordmark**, never pressable: 25px, a hair of tracking, 2px
+ * between the words, its size held in the header's flex row; `visibility:
+ * hidden` while `$hidden`, under a playing **Welcome splash**.
  */
 export const LogoMark = styled(Wordmark)<{ $hidden: boolean }>`
+  flex: 0 0 auto;
+  user-select: none;
   gap: 2px;
   font-size: 25px;
   letter-spacing: 0.3px;

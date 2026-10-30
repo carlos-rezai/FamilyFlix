@@ -1,7 +1,6 @@
 import {
   useCallback,
   useEffect,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -121,8 +120,8 @@ export interface WelcomeProviderProps {
  * wordmark is measured and the splash wordmark glides onto it. The home is
  * **Ready** when the header wordmark mounts on `useWelcome`'s ref; until the
  * end the header wordmark is hidden. At `done`, in one frame, the wordmark
- * shows, the splash unmounts, the Home layer loses its style and focus lands
- * on the header's logo button. A home not ready at the intro's end holds,
+ * shows, the splash unmounts and the Home layer loses its style; focus stays
+ * where it is. A home not ready at the intro's end holds,
  * a beating `LogoLoader` in the mark's place, until it is (the **Welcome
  * hold**). Any `pointerdown` or `keydown` while the welcome is up is
  * swallowed on `window` and skips: the splash goes and the Home layer fades
@@ -217,12 +216,6 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
       }
     };
   }, [phase, send]);
-
-  useLayoutEffect(() => {
-    if (played && phase === 'done') {
-      wordmark.current?.closest('button')?.focus();
-    }
-  }, [played, phase]);
 
   const wordmarkRef = useCallback(
     (element: HTMLElement | null) => {
