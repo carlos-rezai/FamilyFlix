@@ -591,6 +591,18 @@ describe('WelcomeProvider: the letter sweep', () => {
     });
   });
 
+  it('paints each copy’s band once, never repeated onto the glyph before or after its run', async () => {
+    await renderIntro();
+
+    const { copies } = glyphs();
+    expect(copies).toHaveLength(WORD.length);
+    copies.forEach((copy, i) => {
+      expect(styleOf(copy)['background-repeat'], `glyph ${i}, ${WORD[i]}`).toBe(
+        'no-repeat'
+      );
+    });
+  });
+
   it('runs letter sweep i (ffTextSweep, 160% to −60%) from 1150 + i·45 for 380ms linear', async () => {
     await renderIntro();
 
