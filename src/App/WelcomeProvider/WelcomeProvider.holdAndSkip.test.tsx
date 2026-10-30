@@ -24,8 +24,8 @@ import { WelcomeProvider } from './WelcomeProvider';
  *
  * Any `pointerdown` or `keydown` on `window` while the welcome is up is
  * swallowed and skips: ready, the splash goes at once and the home shows in
- * 150ms with focus on the logo button; not ready, the hold, then straight to
- * the home on ready. Once `done`, input reaches the home as usual.
+ * 150ms, focus left on the document body; not ready, the hold, then straight
+ * to the home on ready. Once `done`, input reaches the home as usual.
  *
  * The home's readiness is held back by holding the settings read that
  * `StartTabGate` waits on: until it lands, the header wordmark isn't mounted.
@@ -168,19 +168,11 @@ function holdLoader(): HTMLElement | null {
   return within(root).queryByRole('status', { name: 'Loading', hidden: true });
 }
 
-/** The header's logo button: the first button in the banner. */
-function logoButton(): HTMLButtonElement {
-  const button = screen.getByRole('banner').querySelector('button');
-  if (button === null) {
-    throw new Error('the header has no logo button');
-  }
-  return button;
-}
-
+/** The header's **Wordmark**: the banner's first element, never a control. */
 function headerWordmark(): Element {
-  const mark = logoButton().firstElementChild;
+  const mark = screen.getByRole('banner').firstElementChild;
   if (mark === null) {
-    throw new Error('the logo button has no wordmark');
+    throw new Error('the header has no wordmark');
   }
   return mark;
 }
@@ -188,11 +180,11 @@ function headerWordmark(): Element {
 const isHidden = (element: Element) =>
   getComputedStyle(element).visibility === 'hidden';
 
-/** The home is up: no splash, the header wordmark shown, the logo focused. */
+/** The home is up: no splash, the header wordmark shown, focus on the body. */
 function expectHome() {
   expect(splash()).toBeNull();
   expect(isHidden(headerWordmark())).toBe(false);
-  expect(document.activeElement).toBe(logoButton());
+  expect(document.activeElement).toBe(document.body);
 }
 
 /** Whatever lies beneath the splash; with a slow home, the document body. */

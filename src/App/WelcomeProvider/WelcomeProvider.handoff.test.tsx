@@ -71,11 +71,10 @@ function stubWindow(width: number, height: number) {
   vi.stubGlobal('innerHeight', height);
 }
 
-/** The header's wordmark: the banner's logo button's one child. */
+/** The header's **Wordmark**: the banner's first element, never a control. */
 function findHeaderWordmark(): Element | null {
   return (
-    document.querySelector('[role="banner"] button, header button')
-      ?.firstElementChild ?? null
+    document.querySelector('[role="banner"], header')?.firstElementChild ?? null
   );
 }
 

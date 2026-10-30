@@ -31,7 +31,9 @@ function renderLayout(
   );
 }
 
-const logo = () => screen.getByRole('button', { name: /familyflix/i });
+/** The header's **Wordmark**: the banner's first element, never a control. */
+const wordmark = () =>
+  screen.getByRole('banner').firstElementChild as HTMLElement;
 const gear = () => screen.getByRole('button', { name: 'Settings' });
 
 describe('MainLayout', () => {
@@ -49,19 +51,26 @@ describe('MainLayout', () => {
     ).toBeTruthy();
   });
 
-  it('offers the logo and the gear on every screen it wraps', () => {
+  it('draws the wordmark and offers the gear on every screen it wraps', () => {
     renderLayout(<p>the library goes here</p>);
 
-    expect(logo()).toBeDefined();
+    expect(wordmark().textContent).toBe('FamilyFlix');
     expect(gear()).toBeDefined();
   });
 
-  it('navigates home when the logo is clicked', () => {
+  it('draws the wordmark as no button', () => {
+    renderLayout(<p>the library goes here</p>);
+
+    expect(screen.queryByRole('button', { name: /familyflix/i })).toBeNull();
+    expect(wordmark().closest('button')).toBeNull();
+  });
+
+  it('leaves the route where it was when the wordmark is pressed', () => {
     renderLayout(<p>the settings screen</p>, '/settings');
 
-    fireEvent.click(logo());
+    fireEvent.click(wordmark());
 
-    expect(pathname()).toBe('/');
+    expect(pathname()).toBe('/settings');
   });
 
   it('navigates to settings when the gear is clicked', () => {
@@ -109,13 +118,15 @@ describe('MainLayout — the header slots', () => {
     expect(comesBefore(spacer, screen.getByText('the dropdowns'))).toBe(true);
   });
 
-  it('leaves the logo first and the gear last', () => {
+  it('leaves the wordmark first and the gear last', () => {
     renderLayout(<p>the library goes here</p>, '/', {
       headerStart: <p>the search bar</p>,
       headerEnd: <p>the dropdowns</p>,
     });
 
-    expect(comesBefore(logo(), screen.getByText('the search bar'))).toBe(true);
+    expect(comesBefore(wordmark(), screen.getByText('the search bar'))).toBe(
+      true
+    );
     expect(comesBefore(screen.getByText('the dropdowns'), gear())).toBe(true);
   });
 
@@ -129,11 +140,12 @@ describe('MainLayout — the header slots', () => {
   });
 
   it('renders the header it always had when neither slot is given', () => {
-    // Every other page passes no slots and must be untouched by this.
+    // Every other page passes no slots and must be untouched by this. The
+    // gear is the header's one control: the wordmark is no button.
     renderLayout(<p>the library goes here</p>);
 
     const header = screen.getByRole('banner');
-    expect(within(header).getAllByRole('button')).toHaveLength(2);
+    expect(within(header).getAllByRole('button')).toEqual([gear()]);
     expect(headerSpacer()).toBeDefined();
   });
 });
@@ -298,8 +310,7 @@ describe('MainLayout: the wordmark outside a welcome', () => {
   it('shows its wordmark when mounted alone', () => {
     renderLayout(<p>the library goes here</p>);
 
-    const wordmark = logo().firstElementChild;
-    expect(wordmark).not.toBeNull();
-    expect(getComputedStyle(wordmark as Element).visibility).not.toBe('hidden');
+    expect(wordmark().textContent).toBe('FamilyFlix');
+    expect(getComputedStyle(wordmark()).visibility).not.toBe('hidden');
   });
 });

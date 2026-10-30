@@ -533,9 +533,9 @@ describe('App — returning the browse home to where the parent was', () => {
 
     // Being *sent* to the home screen is a fresh visit — a new history entry
     // rather than the scrolled one — so it starts at the top. The vehicle is a
-    // finished save, because that is the only deliberate trip home the app has:
-    // this used to press the header logo on the Settings screen, and the real
-    // Settings screen (issue #98) has no app header for it to press.
+    // finished save, because that is the deliberate trip home from Settings:
+    // the real Settings screen (issue #98) has no app header, and the home's
+    // header wordmark is no control.
     fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
     await screen.findByRole('heading', { name: /settings/i });
     fireEvent.click(screen.getByRole('button', { name: /^Add a title/ }));
@@ -1962,9 +1962,9 @@ describe('App — the enrichment screen', () => {
  * real route table. With the **Start tab** Series stored, the **Launch entry**
  * opens on the Series tab with nothing behind it; every other way onto `/`
  * keeps its own destination and draws at once, with no settings read to wait
- * on: the logo, _Back to library_ and the movie page's **Landing** on the
- * Movies tab, a series delete, the series add and the series page's
- * no-history Back on the Series tab.
+ * on: _Back to library_ and the movie page's **Landing** on the Movies tab,
+ * a series delete, the series add and the series page's no-history Back on
+ * the Series tab.
  */
 describe('App: the launch on the Start tab', () => {
   const SERIES: Series[] = [
@@ -2111,21 +2111,6 @@ describe('App: the launch on the Start tab', () => {
     expect(pressed('Movies')).toBe('true');
     expect(pathname()).toBe('/');
     expect(search()).toBe('');
-  });
-
-  it('lands the logo on the Movies tab, with no wait', async () => {
-    renderApp('/?tab=series');
-    await screen.findByRole('heading', { name: 'All series' });
-    holdLaterReads = true;
-
-    fireEvent.click(screen.getByRole('button', { name: /familyflix/i }));
-
-    expect(
-      await screen.findByRole('heading', { name: 'Action' })
-    ).toBeDefined();
-    expect(pathname()).toBe('/');
-    expect(search()).toBe('');
-    expect(pressed('Movies')).toBe('true');
   });
 
   it('lands Back to library on the Movies tab, with no wait', async () => {

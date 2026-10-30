@@ -21,9 +21,9 @@ import { WelcomeProvider } from './WelcomeProvider';
  * A **Cold start** (the **Launch entry**, and no `familyflix.welcomed` flag in
  * `sessionStorage`) draws the **Welcome splash** over the **Home layer**, the
  * header's wordmark hidden beneath it. The provider is the clock: 1750ms of
- * intro, then the 500ms handoff, and in one frame the splash goes, the header
- * wordmark shows and focus lands on the header's logo button. Anywhere else,
- * or a second time in a session, it draws nothing.
+ * intro, then the 500ms handoff, and in one frame the splash goes and the
+ * header wordmark shows; focus stays on the document body, the wordmark being
+ * no control. Anywhere else, or a second time in a session, it draws nothing.
  *
  * The home here is the real one's shape: `StartTabGate` settling the Launch
  * entry, then `MainLayout`, whose wordmark mounting is what makes the home
@@ -92,20 +92,11 @@ function renderWelcome(
 const splash = () =>
   screen.queryByRole('status', { name: 'Opening FamilyFlix' });
 
-/** The header's logo button: the first button in the banner. */
-function logoButton(): HTMLButtonElement {
-  const button = screen.getByRole('banner').querySelector('button');
-  if (button === null) {
-    throw new Error('the header has no logo button');
-  }
-  return button;
-}
-
-/** The header's wordmark, the logo button's one child. */
+/** The header's **Wordmark**: the banner's first element, never a control. */
 function headerWordmark(): Element {
-  const mark = logoButton().firstElementChild;
+  const mark = screen.getByRole('banner').firstElementChild;
   if (mark === null) {
-    throw new Error('the logo button has no wordmark');
+    throw new Error('the header has no wordmark');
   }
   return mark;
 }
@@ -143,14 +134,14 @@ describe('WelcomeProvider: a cold start', () => {
     expect(isHidden(headerWordmark())).toBe(true);
   });
 
-  it('at 1750ms plus 500ms is gone, the header wordmark shown and the logo focused', async () => {
+  it('at 1750ms plus 500ms is gone, the header wordmark shown and focus left on the body', async () => {
     renderWelcome();
     await advanceClock(INTRO);
     await advanceClock(HANDOFF);
 
     expect(splash()).toBeNull();
     expect(isHidden(headerWordmark())).toBe(false);
-    expect(document.activeElement).toBe(logoButton());
+    expect(document.activeElement).toBe(document.body);
   });
 
   it.each<LibraryTab>(['movies', 'series'])(
@@ -166,7 +157,7 @@ describe('WelcomeProvider: a cold start', () => {
 
       expect(splash()).toBeNull();
       expect(isHidden(headerWordmark())).toBe(false);
-      expect(document.activeElement).toBe(logoButton());
+      expect(document.activeElement).toBe(document.body);
     }
   );
 

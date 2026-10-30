@@ -127,11 +127,17 @@ function mountPage(url = '/') {
  */
 async function renderPage(url = '/') {
   const view = mountPage(url);
-  await screen.findByRole('button', { name: /familyflix/i });
+  await screen.findByRole('banner');
   return view;
 }
 
-const logo = () => screen.getByRole('button', { name: /familyflix/i });
+/** The header's **Wordmark**: the banner's first element, never a control. */
+const logo = () => {
+  const wordmark = screen.getByRole('banner').firstElementChild;
+  expect(wordmark?.textContent).toBe('FamilyFlix');
+  expect(wordmark?.closest('button')).toBeNull();
+  return wordmark;
+};
 const gear = () => screen.getByRole('button', { name: 'Settings' });
 const searchBox = () =>
   screen.getByRole('textbox', {
@@ -728,7 +734,6 @@ describe('LibraryPage: the launch on the Start tab', () => {
     mountPage();
 
     expect(screen.queryByRole('banner')).toBeNull();
-    expect(screen.queryByRole('button', { name: /familyflix/i })).toBeNull();
     expect(screen.queryByRole('group', { name: 'Library' })).toBeNull();
   });
 

@@ -209,19 +209,11 @@ function holdLoader(): HTMLElement | null {
   return within(root).queryByRole('status', { name: 'Loading', hidden: true });
 }
 
-/** The header's logo button: the first button in the banner. */
-function logoButton(): HTMLButtonElement {
-  const button = screen.getByRole('banner').querySelector('button');
-  if (button === null) {
-    throw new Error('the header has no logo button');
-  }
-  return button;
-}
-
+/** The header's **Wordmark**: the banner's first element, never a control. */
 function headerWordmark(): Element {
-  const mark = logoButton().firstElementChild;
+  const mark = screen.getByRole('banner').firstElementChild;
   if (mark === null) {
-    throw new Error('the logo button has no wordmark');
+    throw new Error('the header has no wordmark');
   }
   return mark;
 }
@@ -229,11 +221,11 @@ function headerWordmark(): Element {
 const isHidden = (element: Element) =>
   getComputedStyle(element).visibility === 'hidden';
 
-/** The home is up: no splash, the header wordmark shown, the logo focused. */
+/** The home is up: no splash, the header wordmark shown, focus on the body. */
 function expectHome() {
   expect(splash()).toBeNull();
   expect(isHidden(headerWordmark())).toBe(false);
-  expect(document.activeElement).toBe(logoButton());
+  expect(document.activeElement).toBe(document.body);
 }
 
 /** Whatever lies beneath the splash; with a slow home, the document body. */
@@ -521,7 +513,7 @@ describe('WelcomeProvider under reduced motion: the timeline', () => {
     expect(isHidden(headerWordmark())).toBe(false);
   });
 
-  it('is gone at 900ms plus 400ms, with focus on the logo button', async () => {
+  it('is gone at 900ms plus 400ms, with focus left on the body', async () => {
     await renderReadyHomeTo(INTRO + HANDOFF - 1);
     expect(splash()).not.toBeNull();
 
