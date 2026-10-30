@@ -320,13 +320,16 @@ const band = (rgb: string, peak: number) =>
 /**
  * A glyph's transparent copy, over it in the `SweepLayer`, its background clipped to the text:
  * a 100� band 300% wide, orange over _Family_ and white over _Flix_, swept
- * from `1150 + i�45` for 380ms linear.
+ * from `1150 + i�45` for 380ms linear. The band is painted once, never
+ * repeated: a tiled 300% band rests on the glyph's edge before and after
+ * its run.
  */
 export const LetterSweep = styled.span<{ $i: number; $flix: boolean }>`
   color: transparent;
   background-image: ${({ $flix }) =>
     $flix ? band('255,255,255', 0.9) : band('255,150,90', 1)};
   background-size: 300% 100%;
+  background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
   animation: ${textSweep} 380ms ${({ $i }) => 1150 + $i * 45}ms both linear;
