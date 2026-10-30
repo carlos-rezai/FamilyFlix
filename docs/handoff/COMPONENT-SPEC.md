@@ -925,7 +925,7 @@ the header. No sound, no route, no server change.
 
 | Unit              | Target                     | Role                                                                                                                                                                                                              |
 | ----------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `WelcomeProvider` | `src/App/WelcomeProvider/` | Decides whether the welcome plays, owns the phase and its timers, wraps `<Routes>` in the **Home layer**, listens for a skip, moves focus at the end; mounted in `App` inside `SnackbarProvider`                  |
+| `WelcomeProvider` | `src/App/WelcomeProvider/` | Decides whether the welcome plays, owns the phase and its timers, wraps `<Routes>` in the **Home layer**, listens for a skip, leaves focus where it is at the end; mounted in `App` inside `SnackbarProvider`     |
 | `WelcomeSplash`   | `src/App/WelcomeSplash/`   | Draws the layers: `bg`, the FF mark (`MARK_F1`, `MARK_F2`, `MARK_VIEWBOX` of `src/tokens/brand.ts`) and the wordmark's ten letters; `role="status"`, `aria-label="Opening FamilyFlix"`, every layer `aria-hidden` |
 | `useWelcome`      | `src/App/useWelcome/`      | Answers `{ wordmarkRef, wordmarkHidden }` to `MainLayout`'s `LogoMark`; outside a provider, a no-op ref and `false`                                                                                               |
 | `welcomeStep`     | `src/App/welcomeStep/`     | The pure step over `{ phase, ready, skipped }`, with the events `'introEnded' \| 'ready' \| 'skip' \| 'handoffEnded' \| 'skipEnded'`                                                                              |
@@ -973,7 +973,18 @@ the same way on ready. A skip during the handoff finishes it at once.
 the splash fades out, 900ms plus 400ms. Hold and skip behave as with full motion.
 
 **Focus.** Never trapped; at `done`, after a full welcome or a skip, focus moves to the
-header's logo button.
+header's logo button. _Amended below: focus stays where it is._
+
+**Amendments.** Departures from the frozen folder, which stays as `e9c9d09c` left it
+(`App.welcomeSplashSpec` pins it):
+
+- **The letter sweep copies paint their band once** (`background-repeat: no-repeat`). The
+  2a `letters` copies set `backgroundSize: '300% 100%'` and no repeat, so before its run
+  a repeating band rests on each glyph's right edge (white over _Flix_, orange over
+  _Family_), and after it on its left. The gradient, size and positions are kept.
+- **Focus stays where it is at `done`**, the document body as a page load leaves it. The
+  header **Wordmark** is no control (issue #509), and the next focusable element is the
+  search bar, whose caret (and, on a touch screen, keyboard) no start should raise.
 
 ---
 
