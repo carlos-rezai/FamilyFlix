@@ -2,72 +2,73 @@
 
 Every feature FamilyFlix has shipped or plans, in build order. The [README](../README.md) links here.
 
-| Feature                                             | Status  |
-| --------------------------------------------------- | ------- |
-| Nx + Vite + React workspace scaffold                | ✅ Done |
-| Claude Design handoff prototype                     | ✅ Done |
-| Library core (movie model, SQLite, repository)      | ✅ Done |
-| Browse grid — genre rows                            | ✅ Done |
-| Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done |
-| Movie detail page (synopsis, director, cast)        | ✅ Done |
-| Search + filter (title, genre, rating)              | ✅ Done |
-| Genre page — every movie in one genre, uncapped     | ✅ Done |
-| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done |
-| Ratings — 5-star display + half-star picker         | ✅ Done |
-| Favorites — mark + dedicated row                    | ✅ Done |
-| Continue Watching row                               | ✅ Done |
-| Built-in video player (playback, subtitles)         | ✅ Done |
-| Watch tracking (watched / in-progress / resume)     | ✅ Done |
-| Add Movie — manual file picker                      | ✅ Done |
-| Edit a movie — amend metadata and files             | ✅ Done |
-| Delete a movie — from the ⋯ menu, with confirmation | ✅ Done |
-| Bulk import (Excel/CSV → library)                   | ✅ Done |
-| Import progress console (scan/import, live log)     | ✅ Done |
-| Export (library → CSV/Excel)                        | ✅ Done |
-| Settings hub (six groups, Library to About)         | ✅ Done |
-| Codec manager — view installed codecs               | ✅ Done |
-| Codec manager — add a playback component            | ✅ Done |
-| Subtitle preferences (preferred language)           | ✅ Done |
-| Storage (media folder location, space used)         | ✅ Done |
-| Snackbar system (info / success / warning / error)  | ✅ Done |
-| Back-to-top FAB                                     | ✅ Done |
-| Back navigation — one Back rule on every screen     | ✅ Done |
-| Motion & interaction states (hover / press / focus) | ✅ Done |
-| Series (TV) — tab, series page, seasons, episodes   | ✅ Done |
-| Enrichment — TMDB metadata & posters sync           | ✅ Done |
-| Network group — the TMDB key and the sync row       | ✅ Done |
-| Electron desktop shell                              | ✅ Done |
-| Desktop packaging (Windows installer)               | ✅ Done |
-| Software update (check / install)                   | ✅ Done |
-| Codecs page — the codec list on its own page        | ✅ Done |
-| Ultrawide margins — side gutters for wide screens   | ✅ Done |
-| Default poster — a fallback for titles without one  | ✅ Done |
-| Add a series — the Add form for shows too           | ✅ Done |
-| Library folders — several root folders at once      | ✅ Done |
-| Export options — where to, and what travels         | ✅ Done |
-| Single-title Sync — the ⋯ menu's fetch, one movie   | ✅ Done |
-| Backdrop veil — full-screen art, accent-veiled      | ✅ Done |
-| Open the media folder from Settings → Storage       | ✅ Done |
-| Export name — the export folder's name as a field   | ✅ Done |
-| Factory reset — erase everything, behind a dialog   | ✅ Done |
-| Title editing — number, edit and delete a series    | ✅ Done |
-| Season posters — TMDB art on each season card       | ✅ Done |
-| Import review — folders + sheet, adjustments listed | ✅ Done |
-| Link or copy — import without a second copy         | ✅ Done |
-| Review at scale + Season art — grouped review       | ✅ Done |
-| TMDB ratings — fetched stars until the family rates | ✅ Done |
-| Episode stills — a frame from the file, as fallback | ✅ Done |
-| Add and sync — add by files, TMDB fills the rest    | ✅ Done |
-| Audio tracks — English by default, switch in player | ✅ Done |
-| Manage library — every title, edit, clear, delete   | ✅ Done |
-| Add a show folder — a show by its folder, numbered  | ✅ Done |
-| Start on Series — open FamilyFlix on the Series tab | ✅ Done |
-| Subtitle picker — choose a track in the player      | ✅ Done |
-| Library audit: every Library flow, tested live      | ✅ Done |
-| Keep originals: a Delete never touches your files   | ✅ Done |
-| Loading states: the FF mark while an action runs    | ✅ Done |
-| Scan new folders: and sync only what a run added    | ✅ Done |
-| Intro animation: the FF mark opens FamilyFlix       | ✅ Done |
+| Feature                                             | Status     |
+| --------------------------------------------------- | ---------- |
+| Nx + Vite + React workspace scaffold                | ✅ Done    |
+| Claude Design handoff prototype                     | ✅ Done    |
+| Library core (movie model, SQLite, repository)      | ✅ Done    |
+| Browse grid — genre rows                            | ✅ Done    |
+| Card carousel — prev/next arrows, 15-per-row cap    | ✅ Done    |
+| Movie detail page (synopsis, director, cast)        | ✅ Done    |
+| Search + filter (title, genre, rating)              | ✅ Done    |
+| Genre page — every movie in one genre, uncapped     | ✅ Done    |
+| Sort (recent, A–Z, year, rating, unwatched)         | ✅ Done    |
+| Ratings — 5-star display + half-star picker         | ✅ Done    |
+| Favorites — mark + dedicated row                    | ✅ Done    |
+| Continue Watching row                               | ✅ Done    |
+| Built-in video player (playback, subtitles)         | ✅ Done    |
+| Watch tracking (watched / in-progress / resume)     | ✅ Done    |
+| Add Movie — manual file picker                      | ✅ Done    |
+| Edit a movie — amend metadata and files             | ✅ Done    |
+| Delete a movie — from the ⋯ menu, with confirmation | ✅ Done    |
+| Bulk import (Excel/CSV → library)                   | ✅ Done    |
+| Import progress console (scan/import, live log)     | ✅ Done    |
+| Export (library → CSV/Excel)                        | ✅ Done    |
+| Settings hub (six groups, Library to About)         | ✅ Done    |
+| Codec manager — view installed codecs               | ✅ Done    |
+| Codec manager — add a playback component            | ✅ Done    |
+| Subtitle preferences (preferred language)           | ✅ Done    |
+| Storage (media folder location, space used)         | ✅ Done    |
+| Snackbar system (info / success / warning / error)  | ✅ Done    |
+| Back-to-top FAB                                     | ✅ Done    |
+| Back navigation — one Back rule on every screen     | ✅ Done    |
+| Motion & interaction states (hover / press / focus) | ✅ Done    |
+| Series (TV) — tab, series page, seasons, episodes   | ✅ Done    |
+| Enrichment — TMDB metadata & posters sync           | ✅ Done    |
+| Network group — the TMDB key and the sync row       | ✅ Done    |
+| Electron desktop shell                              | ✅ Done    |
+| Desktop packaging (Windows installer)               | ✅ Done    |
+| Software update (check / install)                   | ✅ Done    |
+| Codecs page — the codec list on its own page        | ✅ Done    |
+| Ultrawide margins — side gutters for wide screens   | ✅ Done    |
+| Default poster — a fallback for titles without one  | ✅ Done    |
+| Add a series — the Add form for shows too           | ✅ Done    |
+| Library folders — several root folders at once      | ✅ Done    |
+| Export options — where to, and what travels         | ✅ Done    |
+| Single-title Sync — the ⋯ menu's fetch, one movie   | ✅ Done    |
+| Backdrop veil — full-screen art, accent-veiled      | ✅ Done    |
+| Open the media folder from Settings → Storage       | ✅ Done    |
+| Export name — the export folder's name as a field   | ✅ Done    |
+| Factory reset — erase everything, behind a dialog   | ✅ Done    |
+| Title editing — number, edit and delete a series    | ✅ Done    |
+| Season posters — TMDB art on each season card       | ✅ Done    |
+| Import review — folders + sheet, adjustments listed | ✅ Done    |
+| Link or copy — import without a second copy         | ✅ Done    |
+| Review at scale + Season art — grouped review       | ✅ Done    |
+| TMDB ratings — fetched stars until the family rates | ✅ Done    |
+| Episode stills — a frame from the file, as fallback | ✅ Done    |
+| Add and sync — add by files, TMDB fills the rest    | ✅ Done    |
+| Audio tracks — English by default, switch in player | ✅ Done    |
+| Manage library — every title, edit, clear, delete   | ✅ Done    |
+| Add a show folder — a show by its folder, numbered  | ✅ Done    |
+| Start on Series — open FamilyFlix on the Series tab | ✅ Done    |
+| Subtitle picker — choose a track in the player      | ✅ Done    |
+| Library audit: every Library flow, tested live      | ✅ Done    |
+| Keep originals: a Delete never touches your files   | ✅ Done    |
+| Loading states: the FF mark while an action runs    | ✅ Done    |
+| Scan new folders: and sync only what a run added    | ✅ Done    |
+| Intro animation: the FF mark opens FamilyFlix       | ✅ Done    |
+| Linux build: FamilyFlix on SteamOS, as an AppImage  | 🔜 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -315,3 +316,19 @@ Step 38 came out of the animation drawn for opening FamilyFlix
     than two seconds to start. The wordmark is never a button, nothing is
     focused when the welcome ends, and _Flix_ stays its plain orange until
     the light reaches it.
+
+Step 39 came out of wanting FamilyFlix on a Steam Deck (SteamOS) as well as
+on Windows. It is planned, and goes through grill-me first:
+
+39. 🔜 **Linux build**: FamilyFlix is released for Linux too, as an AppImage
+    beside the Windows installer, so it runs on SteamOS, whose read-only
+    system rules out a `.deb` or a package install. It lives in the home
+    folder, can be added to Steam as a non-Steam game, and updates itself
+    as the Windows build does. It carries a Linux FFmpeg as its **Default
+    component**, pinned and checked like the Windows one, and the release
+    workflow builds it on a Linux runner, since the SQLite binding can't be
+    built for Linux from Windows. The app code already names executables
+    and compares paths by platform; what changes is packaging. Open for the
+    grill: AppImage or Flatpak, whether Game Mode (a controller, no mouse)
+    is in scope or Desktop Mode is enough, and how well the Deck plays what
+    Chromium on Linux can't decode, HEVC above all, through FFmpeg.
