@@ -1,15 +1,24 @@
-# Release checklist — the Package smoke
+# Release checklist: the Package smoke
 
-The **Package smoke** is the proof of an **Installer** (design log 25 Q26):
-the Installer built, then installed, played, hardened-checked and uninstalled
-on real hardware — the maintainer's own Windows machine, with the parents' PC as
-the clean-machine check (dev journal, 2026-10-05: Windows Sandbox painted a
-blank window and was dropped undiagnosed). A release is ticked against this
-list, top to bottom, every time.
+The **Package smoke** is the proof of a **Draft release**, in two halves, one
+per **Platform build**:
 
-**A failed step blocks the release.** Fix it, rebuild the Installer, and run
-the smoke again from step 1. A failure that is not packaging's (one in the
-player, say) is filed as its own issue.
+- **The Windows half** (steps 1 to 9) proves the **Installer** (design log 25
+  Q26): built, then installed, played, hardened-checked and uninstalled on real
+  hardware, the maintainer's own Windows machine, with the parents' PC as the
+  clean-machine check (dev journal, 2026-10-05: Windows Sandbox painted a blank
+  window and was dropped undiagnosed).
+- **The Linux half** (step 12) proves the **AppImage** on the Steam Deck in
+  Desktop Mode (design log 56).
+
+A release is ticked against this list, top to bottom, every time.
+
+**A failed Windows step blocks the release.** Fix it, rebuild, and run the
+smoke again from step 1. **A failed Linux step blocks the Linux half**: fix it
+and run step 12 again, or, with the Windows half passed, publish a
+**Windows-only release** (step 13). There is never a Linux-only release. A
+failure that is not packaging's (one in the player, say) is filed as its own
+issue.
 
 Software update (build step 9) extends it with the publish and the update
 round-trip, log 17's proof cycle, rather than writing a second list: a release
@@ -28,7 +37,7 @@ npm run electron:package
 - [ ] No console window flashes while it runs.
 - [ ] `release/FamilyFlix-Setup-<version>.exe` is written.
 - [ ] `release/win-unpacked/resources/ffmpeg/` holds exactly `ffmpeg.exe`,
-      `ffprobe.exe`, `LICENSE.txt` and `README.txt` — no `ffplay.exe`.
+      `ffprobe.exe`, `LICENSE.txt` and `README.txt`, and no `ffplay.exe`.
 - [ ] `FamilyFlix-Setup-<version>.exe` wears the **App mark** in Explorer.
 
 The importer's fixture films are stand-ins of a few bytes, not video. Step 5
@@ -168,21 +177,28 @@ the family before it, and the smoke is run against the draft's own Installer.
 
 - [ ] On `main`, clean: `npm version minor` (or `patch`). The commit reads
       `chore: [release] v<version>` and the tag is `v<version>`.
-- [ ] `git push --follow-tags`. The **Release** workflow runs on the tag —
+- [ ] `git push --follow-tags`. The **Release** workflow runs on the tag,
       and only on a `v*` tag, never on a push to `main`.
-- [ ] The workflow is green: typecheck, tests, package.
+- [ ] The workflow is green: the `draft` job, then both `package` legs
+      (Windows and Linux), each through typecheck, tests and package.
 - [ ] GitHub → Releases holds exactly **one** **Draft** `v<version>`, and it
-      has all three: `FamilyFlix-Setup-<version>.exe`, its `.blockmap` and
-      `latest.yml`. A second draft means the uploads split (issue #284).
-- [ ] Download the draft's Installer and run steps 2–8 above against it.
-- [ ] Every step passed: publish the draft. Only now is it on the
-      **Release feed**.
+      has all five files: `FamilyFlix-Setup-<version>.exe`, its `.blockmap`
+      and `latest.yml` from the Windows leg, `FamilyFlix-x86_64.AppImage` and
+      `latest-linux.yml` from the Linux leg. A second draft means the uploads
+      split (issue #284). A failed leg is re-run; it uploads into the same
+      draft.
+- [ ] Download the draft's Installer and run steps 2 to 8 above against it.
+- [ ] On the Deck, run step 12 against the draft's AppImage.
+- [ ] Both halves passed: publish the draft. Only now is it on the
+      **Release feed**. A failed Windows half blocks the release; a failed
+      Linux half alone goes to step 13.
 
 ## 11. Update round-trip
 
 Proves the feed end to end: a machine on the previous version is offered this
 one and lands on it. On the target machine (step 2) install the **previous**
-published Installer first — the round-trip needs a version to update from.
+published Installer first: the round-trip needs a version to update from. The
+Deck's round-trip is in step 12.
 
 - [ ] The previous version opens and, at launch, the About card offers this
       release with **Update now**.
@@ -195,3 +211,64 @@ published Installer first — the round-trip needs a version to update from.
       the new version.
 - [ ] Turn the network off, press **Check for updates**: it answers
       _FamilyFlix couldn’t check for updates._, and nothing else changes.
+
+---
+
+## 12. The Linux half, on the Deck
+
+On the Steam Deck in **Desktop Mode**, from the draft's own
+`FamilyFlix-x86_64.AppImage`. Every step blocks the Linux half. Have
+`release/smoke.mp4` and `release/smoke.mkv` (step 1), the importer's fixture
+(`library.xlsx` and its `root/` folder) copied onto the SD card, an external
+drive holding a film, and one 1080p HEVC film to hand.
+
+From the second Linux release on (v0.14.0 is the first, and skips it), start
+with the **previous** published AppImage installed as below, for the update
+round-trip at the end.
+
+- [ ] The README's _Installing on SteamOS_, its three steps as written:
+      moved from `~/Downloads` to `~/Applications/`, made executable, a KDE
+      menu entry added. No helper app.
+- [ ] Launched from the menu entry, with no flags (no `--no-sandbox`, no
+      `--appimage-extract-and-run`): the sandbox and the AppImage runtime both
+      hold, and the app opens maximized on _Your library is empty_.
+- [ ] The **App mark** is on the window, the KDE taskbar and the menu entry.
+- [ ] Settings → Import from spreadsheet over the fixture's `library.xlsx`
+      and `root/` on the SD card (`/run/media/deck/<label>/...`): both films
+      import.
+- [ ] A **Library folder** on the external drive: mounted in Dolphin, it is
+      read and its film imports. Unmounted, its row reads **Unreachable**.
+- [ ] Settings → Add a movie with `smoke.mp4`: it direct-plays.
+- [ ] Settings → Add a movie with `smoke.mkv`: it remuxes and plays.
+- [ ] The HEVC film transcodes and plays. Note how smoothly it plays:
+      **\*\*\*\***\_\_\_**\*\*\*\*** (VAAPI is wired later only if this stutters).
+- [ ] Settings → Storage → _Open folder_: the file manager opens
+      `~/.config/FamilyFlix/media`.
+- [ ] Settings → Playback → Codecs: the Component row's pill reads
+      **Default**.
+- [ ] Settings → About reads the version.
+- [ ] From the second Linux release on, the update round-trip: on the
+      previous AppImage, the About card offers this release with **Update
+      now**. Press it: the app relaunches on the new version, the library is
+      still there, the AppImage is still executable, and the menu entry still
+      opens it.
+
+## 13. A Windows-only release
+
+Published only when the Linux leg or the Linux half of the smoke failed **and
+the Windows half passed**. Never to skip the Deck smoke by choice, and never
+the other way round: a failed Windows half blocks the whole release, and there
+is no Linux-only release.
+
+- [ ] Delete `FamilyFlix-x86_64.AppImage` and `latest-linux.yml` from the
+      draft, whichever are there, so a broken AppImage never reaches the
+      **Release feed**. The draft holds only the Installer, its `.blockmap`
+      and `latest.yml`.
+- [ ] The release notes say _Windows only; Linux follows in the next
+      version_.
+- [ ] The Linux problem is filed as an issue.
+- [ ] Publish the draft.
+
+The Deck stays on its current version: its **Update check** finds no Linux
+metadata, quietly at launch and `refused` when pressed. The next release
+carries both Platform builds again, and the Deck catches up.

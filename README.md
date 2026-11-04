@@ -20,12 +20,12 @@ This project has two purposes:
 
 ## Desktop App
 
-FamilyFlix is an offline-first desktop application for Windows. There is no cloud version, no authentication, and no network dependency. All data and media live locally on the machine.
+FamilyFlix is an offline-first desktop application for Windows and Linux (an AppImage, run on a Steam Deck). There is no cloud version, no authentication, and no network dependency. All data and media live locally on the machine.
 
 - **Shell:** Electron, one window over the bundled Express server, forked as a utility process and serving the built app beside its API on one loopback origin
-- **Storage:** SQLite via `better-sqlite3` for the library; an import links each video where it lies in its Library folder (or copies it, if you choose Copy), and copies posters and subtitles into FamilyFlix's own managed media folder. Installed, everything lives under `%APPDATA%\FamilyFlix\`
+- **Storage:** SQLite via `better-sqlite3` for the library; an import links each video where it lies in its Library folder (or copies it, if you choose Copy), and copies posters and subtitles into FamilyFlix's own managed media folder. Installed, everything lives under `%APPDATA%\FamilyFlix\` on Windows and `~/.config/FamilyFlix/` on Linux
 - **No auth**: single household, single shared watch history, local-only by design
-- **Packaging:** one file, `FamilyFlix-Setup-<version>.exe`, a one-click, per-user NSIS installer via `electron-builder`, no UAC prompt, unsigned, carrying the pinned FFmpeg build as the Default component; uninstalling keeps the library
+- **Packaging:** two Platform builds via `electron-builder`, each carrying its platform's pinned FFmpeg build as the Default component. On Windows, `FamilyFlix-Setup-<version>.exe`, a one-click, per-user NSIS installer, no UAC prompt, unsigned; uninstalling keeps the library. On Linux, `FamilyFlix-x86_64.AppImage`, one self-contained file whose name carries no version, so an update overwrites it in place
 
 ---
 
@@ -282,20 +282,25 @@ Run by hand when the mark in `docs/handoff/brand/` changes: it renders `electron
 
 ### The installer
 
+A Release carries two **Platform builds**, one per platform, each built on that platform:
+
+- **Windows:** the Installer, `FamilyFlix-Setup-<version>.exe`, with `latest.yml` and its blockmap. A one-click, per-user NSIS installer for x64, unsigned.
+- **Linux:** the AppImage, `FamilyFlix-x86_64.AppImage`, with `latest-linux.yml`. Its name carries no version, so an update overwrites it in place and a menu entry pointing at it survives.
+
 ```
-npm run electron:package         # release/FamilyFlix-Setup-<version>.exe
-npm run electron:package -- --dir  # release/win-unpacked/ only, no installer
+npm run electron:package         # Windows: release/FamilyFlix-Setup-<version>.exe; Linux: release/FamilyFlix-x86_64.AppImage
+npm run electron:package -- --dir  # the unpacked layout only (release/win-unpacked/ or release/linux-unpacked/)
 ```
 
-Builds the renderer and both bundles, fetches the Electron-ABI binding and the Default component, then hands `electron/packaging/builderConfig.json` to `electron-builder`: a one-click, per-user NSIS installer for x64, unsigned, with no `node_modules` inside it.
+Builds the renderer and both bundles, fetches the Electron-ABI binding and the Default component, then hands `electron/packaging/builderConfig.json` to `electron-builder` for the platform it runs on, with no `node_modules` inside the package. Any platform other than Windows or Linux is refused. A tag builds both on CI, one leg per runner (`.github/workflows/release.yml`).
 
 ```
 npm run electron:ffmpeg
 ```
 
-Downloads the build `electron/packaging/ffmpegPin.json` names, refuses it unless its SHA-256 is the pin's, and extracts `ffmpeg.exe`, `ffprobe.exe` and the licence into the gitignored `electron/.ffmpeg/`. `electron:package` runs it anyway; once fetched it needs no network.
+Downloads the build `electron/packaging/ffmpegPin.json` names for this platform (gyan.dev's on Windows, BtbN's on Linux), refuses it unless its SHA-256 is the pin's, and extracts `ffmpeg` and `ffprobe` (`.exe` on Windows) and the licence into the gitignored `electron/.ffmpeg/`. `electron:package` runs it anyway; once fetched it needs no network.
 
-Every Installer is proven by the [release checklist](./docs/release-checklist.md) before it reaches anyone.
+Every Platform build is proven by the [release checklist](./docs/release-checklist.md) before it reaches anyone.
 
 ### Installing on a new machine
 
@@ -304,6 +309,16 @@ Every Installer is proven by the [release checklist](./docs/release-checklist.md
 3. Import the library: Settings → Import from spreadsheet.
 
 The library lives in `%APPDATA%\FamilyFlix\` and survives an uninstall, so a reinstall finds it as it was.
+
+### Installing on SteamOS
+
+On the Steam Deck, in Desktop Mode, download `FamilyFlix-x86_64.AppImage` from the latest Release in the browser. No helper app (AppImageLauncher, Gear Lever) is needed. Then:
+
+1. Move it from `~/Downloads` to `~/Applications/` (make the folder if it isn't there), where a SteamOS update never removes it.
+2. Make it executable: in Dolphin, right-click it → _Properties_ → _Permissions_ → _Is executable_, or `chmod +x ~/Applications/FamilyFlix-x86_64.AppImage`.
+3. Add a KDE menu entry: right-click the application launcher → _Edit Applications…_ → _New Item_, named FamilyFlix, with `~/Applications/FamilyFlix-x86_64.AppImage` as the program.
+
+The library lives in `~/.config/FamilyFlix/`, so replacing or deleting the AppImage never touches it. An update overwrites the AppImage in place, so the menu entry keeps working.
 
 ### Commit message convention
 

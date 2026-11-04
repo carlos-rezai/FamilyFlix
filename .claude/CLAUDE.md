@@ -10,7 +10,7 @@ watch; I maintain the library. Portfolio project by Carlos Rezai.
 
 - **Frontend:** React + TypeScript, Vite, Nx, styled-components over a custom design system
 - **Backend:** Node.js + Express, SQLite via `better-sqlite3`
-- **Shell:** Electron, one sandboxed window over the Express server forked in a `utilityProcess`
+- **Shell:** Electron, one sandboxed window over the Express server forked in a `utilityProcess`; packaged for Windows and Linux (AppImage), one **Platform build** each
 - **Playback:** a plain `<video>` driven by our `usePlayback` hook; no video.js or react-player (design log 10 Q2). FFmpeg (the bundled **Default component**, replaceable from Settings → Codecs) remuxes or transcodes anything Chromium can't play natively, behind `server/src/playback/`
 - **Testing:** Vitest + @testing-library/react
 
