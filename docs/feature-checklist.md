@@ -323,12 +323,10 @@ on Windows. It is planned, and goes through grill-me first:
 39. 🔜 **Linux build**: FamilyFlix is released for Linux too, as an AppImage
     beside the Windows installer, so it runs on SteamOS, whose read-only
     system rules out a `.deb` or a package install. It lives in the home
-    folder, can be added to Steam as a non-Steam game, and updates itself
-    as the Windows build does. It carries a Linux FFmpeg as its **Default
+    folder, runs in Desktop Mode (Game Mode is out of scope), and updates
+    itself as the Windows build does. It carries a Linux FFmpeg as its **Default
     component**, pinned and checked like the Windows one, and the release
     workflow builds it on a Linux runner, since the SQLite binding can't be
     built for Linux from Windows. The app code already names executables
-    and compares paths by platform; what changes is packaging. Open for the
-    grill: AppImage or Flatpak, whether Game Mode (a controller, no mouse)
-    is in scope or Desktop Mode is enough, and how well the Deck plays what
-    Chromium on Linux can't decode, HEVC above all, through FFmpeg.
+    and compares paths by platform; what changes is packaging. Grilled in
+    design log 56.

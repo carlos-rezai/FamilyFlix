@@ -83,15 +83,20 @@ written in the codebase's own patterns.
 5. **What is the file called?** ✅ **`FamilyFlix-x86_64.AppImage`, with no
    version.** `electron-updater`'s AppImage updater overwrites the running
    file in place when its name carries no version, and renames it to the new
-   version otherwise, which would break the Steam shortcut pointing at the
-   old path. ❌ `FamilyFlix-<version>.AppImage`: the Installer's pattern,
+   version otherwise, which would break the menu entry pointing at the old
+   path (Q6). ❌ `FamilyFlix-<version>.AppImage`: the Installer's pattern,
    wrong here for that reason. The Installer keeps its versioned name.
 
 6. **Where does it live on the Deck?** ✅ **`~/Applications/`**, made
-   executable once (Dolphin → Properties → Permissions, or `chmod +x`), and
-   added to Steam with _Add a Non-Steam Game_. The README gains _Installing on
-   SteamOS_ beside _Installing on a new machine_. ❌ AppImageLauncher or Gear
-   Lever: an extra tool for the family's maintainer to keep; nothing needs it.
+   downloaded in Desktop Mode's browser and moved there from `~/Downloads`,
+   made executable once (Dolphin: Properties, Permissions, _Is executable_;
+   or `chmod +x`), and given a KDE menu entry by hand (right-click the
+   Application Launcher, _Edit Applications_, a new item pointing at the
+   file), since an AppImage registers nothing itself. The README gains
+   _Installing on SteamOS_ beside _Installing on a new machine_, with these
+   three steps. ❌ AppImageLauncher or Gear Lever: an extra tool for the
+   family's maintainer to keep; nothing needs it. ❌ A shortcut in Steam:
+   Game Mode is out of scope (Q9).
 
 7. **Where is the data?** ✅ **Electron's own `userData`**,
    `~/.config/FamilyFlix/`: the database, the **Managed media directory**, the
@@ -104,18 +109,18 @@ written in the codebase's own patterns.
    `target` AppImage, `category` `AudioVideo`, `icon`
    `electron/assets/icon.png`, `executableName` `familyflix`, a `synopsis`,
    and an `appImage` block naming the artifact (Q5). The desktop entry inside
-   the AppImage is what Steam and the Desktop Mode menu read the name and the
-   mark from.
+   the AppImage names the app and its window class; whether the KDE taskbar
+   then wears the **App mark** is proven by the smoke (Q24).
 
 ### SteamOS's two modes
 
-9. **Desktop Mode, Game Mode, or both?** ✅ **Desktop Mode is the target and
-   blocks a release; Game Mode is best effort.** In Game Mode FamilyFlix runs
-   as a Non-Steam game under gamescope, driven by the trackpad as a mouse and
-   the touchscreen (Steam Input's desktop template); it is smoked but a
-   failure there is filed, not blocking. ❌ Controller navigation (a focus
-   model the D-pad can walk, every screen): a feature with its own prototype,
-   a later step if the family wants it.
+9. **Desktop Mode, Game Mode, or both?** ✅ **Desktop Mode only.** FamilyFlix
+   is installed, launched and used in SteamOS's KDE desktop, as on any Linux
+   desktop, and that is the only mode the smoke runs or the README describes.
+   ❌ Game Mode: dropped completely (amended 2026-11-04, by the maintainer,
+   before any build), not smoked and not supported; nothing is done for
+   gamescope, Steam Input or a Steam shortcut. ❌ Controller navigation (a
+   focus model the D-pad can walk): goes with it.
 
 10. **The Chromium sandbox?** ✅ **Unchanged**: `sandbox: true`, the fuses as
     they are, no `--no-sandbox` anywhere. Inside an AppImage the SUID helper
@@ -237,15 +242,19 @@ written in the codebase's own patterns.
 ### The proof
 
 24. **How is the AppImage proven?** ✅ **The Package smoke gains a Linux
-    half, run on the Steam Deck**, from the draft's AppImage. Blocking, in
-    Desktop Mode: it launches maximized on _Your library is empty_; the
-    **App mark** in the taskbar and the menu; the importer's fixture imported
-    from the SD card; `smoke.mp4` direct-plays, `smoke.mkv` remuxes; an HEVC
+    half, run on the Steam Deck in Desktop Mode**, from the draft's AppImage,
+    every step blocking: Q6's three install steps, as the README writes them;
+    it launches (the sandbox of Q10 and the AppImage runtime both holding,
+    with no `--appimage-extract-and-run`) maximized on _Your library is
+    empty_; the **App mark** in the taskbar and the menu entry; the
+    importer's fixture imported from the SD card, and a **Library folder** on
+    an external drive read once Dolphin has mounted it (an unmounted one is
+    **Unreachable**); `smoke.mp4` direct-plays, `smoke.mkv` remuxes; an HEVC
     film transcodes, its smoothness noted (Q19); _Open folder_ opens
     `~/.config/FamilyFlix/media`; Codecs reads **Default**; About reads the
     version; and, from the second Linux release, an **Install** from the
-    previous AppImage keeps the library and the Steam shortcut. Not blocking,
-    in Game Mode: it launches from Steam and plays with the trackpad.
+    previous AppImage keeps the library, the executable bit and the menu
+    entry.
 
 25. **Which release is first?** ✅ **v0.14.0**, the first minor after the
     build. Its Linux half skips the update round-trip; v0.14.1 or v0.15.0
@@ -264,7 +273,7 @@ written in the codebase's own patterns.
 ### Chosen and rejected
 
 - ✅ An AppImage, unversioned name; ❌ Flatpak, a package, a versioned name.
-- ✅ Desktop Mode blocks, Game Mode best effort; ❌ controller navigation.
+- ✅ Desktop Mode only; ❌ Game Mode, controller navigation.
 - ✅ The sandbox and fuses unchanged; ❌ `--no-sandbox`.
 - ✅ The platform as an argument to pure units; ❌ reaching for
   `process.platform` inside them, importing the server's `EXE`.
@@ -335,6 +344,6 @@ flowchart LR
   Linux packaging change is first seen on CI; two FFmpeg pins to keep in
   step, one from a source that prunes old builds; a release now waits on two
   smokes, one on the Deck.
-- **Out of scope:** controller navigation and a Game Mode that needs no
-  trackpad, VAAPI hardware encoding, Flatpak and Flathub, arm64, code signing
+- **Out of scope:** Game Mode in any form, controller navigation, VAAPI
+  hardware encoding, Flatpak and Flathub, arm64, code signing
   on either platform, and any distro beyond SteamOS as a smoked target.
