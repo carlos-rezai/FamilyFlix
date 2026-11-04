@@ -60,11 +60,16 @@ describe.each(['dev', 'start'] as const)(
   'shellPaths — %s (an Unpackaged run)',
   (mode) => {
     const paths = () =>
-      shellPaths(mode, {
-        appPath: REPO,
-        resourcesPath: ELECTRON_RESOURCES,
-        userData: DEV_USER_DATA,
-      });
+      // Windows' layout, named so the suite answers the same on a Linux runner.
+      shellPaths(
+        mode,
+        {
+          appPath: REPO,
+          resourcesPath: ELECTRON_RESOURCES,
+          userData: DEV_USER_DATA,
+        },
+        'win32'
+      );
 
     it('finds the App mark under electron/assets', () => {
       expect(paths().icon).toBe(join(REPO, 'electron', 'assets', 'icon.ico'));
@@ -126,11 +131,16 @@ describe.each(['dev', 'start'] as const)(
 
 describe('shellPaths — installed (the Packaged layout)', () => {
   const paths = () =>
-    shellPaths('installed', {
-      appPath: ASAR,
-      resourcesPath: RESOURCES,
-      userData: USER_DATA,
-    });
+    // Windows' layout, named so the suite answers the same on a Linux runner.
+    shellPaths(
+      'installed',
+      {
+        appPath: ASAR,
+        resourcesPath: RESOURCES,
+        userData: USER_DATA,
+      },
+      'win32'
+    );
 
   it('finds the App mark inside app.asar', () => {
     expect(paths().icon).toBe(join(ASAR, 'electron', 'assets', 'icon.ico'));
