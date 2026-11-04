@@ -921,6 +921,26 @@ start**.
 | **Slow start** (new)          | A server not ready `SLOW_START_MS` (2000ms, `electron/splashPage/`) after the window opened: twice the slowest start in the **Shell log**. Only then does the **Start-up splash** draw its loader, by a CSS delay in the static page. Not **Loader timing**, which is for actions the household starts.                                | slow boot, long load, delayed start                    |
 | **Wordmark** (updated)        | As before, and never pressable anywhere, the header's included (issue 509): brand, not navigation. The header's is also the **Wordmark handoff**'s landing place, hidden while the **Welcome splash** is up. The splash's own letters copy its typography at splash size, since the primitive's two words can't rise letter by letter. | logo, brand name                                       |
 
+## Linux build
+
+Design log 56: step 39, initiative `linux-build`. Every **Release** carries a
+Linux **AppImage** for SteamOS beside the Windows **Installer**, both built
+from the one tag and smoked before the draft is published. Planned (🔜).
+
+| Term                        | Definition                                                                                                                                                                                                                                                                       | Aliases to avoid                                   |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| **Platform build** (new)    | One platform's install file in a **Release**, with its update metadata: the **Installer** with `latest.yml` and its blockmap for Windows, the **AppImage** with `latest-linux.yml` for Linux. Each is one leg of the release workflow's `package` matrix.                        | install file, release file, artifact (bare), build |
+| **AppImage** (new)          | `FamilyFlix-x86_64.AppImage`: the Linux **Platform build**, one self-contained executable file kept in `~/Applications/` on the Deck. Its name carries no version, so an **Install** overwrites it in place and the Steam shortcut to it survives.                               | Linux installer, package, .deb, Flatpak            |
+| **Installer** (updated)     | As before: the Windows **Platform build** alone, `FamilyFlix-Setup-<version>.exe`. Never the Linux file.                                                                                                                                                                         | setup (bare), MSI, Linux installer                 |
+| **Desktop Mode** (new)      | SteamOS's KDE desktop, where FamilyFlix runs as on any Linux desktop: the supported target, and the half of the Deck's smoke that blocks a release.                                                                                                                              | desktop (bare), PC mode                            |
+| **Game Mode** (new)         | SteamOS's Steam interface under gamescope, where FamilyFlix runs as a _Non-Steam Game_ driven by the trackpad and touchscreen. Best effort: smoked, never blocking. No controller navigation.                                                                                    | Big Picture, console mode, gamepad mode            |
+| **FFmpeg pin** (updated)    | `electron/packaging/ffmpegPin.json`, keyed by platform: `win32` (gyan.dev essentials, zip) and `linux` (BtbN linux64 GPL, tar.xz), each `{ version, url, sha256 }` of the same version line. `electron:ffmpeg` fetches the running platform's and refuses a digest that differs. | ffmpeg version, latest ffmpeg                      |
+| **FFmpeg target** (new)     | `ffmpegTarget(platform)` in `electron/scripts/ffmpegTarget/`: pure, what a platform's **FFmpeg pin** archive is (`zip` or `tar.xz`), which entries are taken and under what names, and the README's build line.                                                                  | ffmpeg config, platform map                        |
+| **Shell paths** (updated)   | As before, with the platform as a third argument (default `process.platform`): `ffmpeg` and `icon.png` off Windows, `ffmpeg.exe` and `icon.ico` on it.                                                                                                                           | cwd, app root (alone), paths config                |
+| **App mark** (updated)      | As before, rendered also to `electron/assets/icon.png` at 512: the window's and the **AppImage**'s icon off Windows. `icon.ico` stays the Windows one.                                                                                                                           | app icon (loosely), logo, favicon                  |
+| **Package smoke** (updated) | The proof of a **Draft release**, in two halves: the **Installer** on the maintainer's and the parents' Windows PCs, and the **AppImage** on the Steam Deck, **Desktop Mode** blocking and **Game Mode** not. Both halves pass before the draft is published.                    | QA, manual test (bare), install test               |
+| **Release** (updated)       | As before, carrying exactly two **Platform builds** from v0.14.0 on. A draft missing either is not published.                                                                                                                                                                    | build, version, deploy                             |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1103,6 +1123,8 @@ start**.
 - An import run's _Finish_, with the TMDB box ticked, opens one **Sync** in the **Just what was added** scope, bounded below by that run's `startedAt` and above by nothing (log 54).
 - A window session plays at most one **Welcome splash**, on its **Cold start**, in the place of the **Start-up splash**'s loader, which a **Slow start** alone draws (issue 509; log 55 had it after the splash, never instead).
 - A **Welcome splash** always runs its **Welcome intro** whole unless skipped; it reaches the **Wordmark handoff** only once the header **Wordmark** is mounted, through the **Welcome hold** if it isn't yet.
+- A **Release** carries exactly two **Platform builds**, one **Installer** and one **AppImage**, built from its one tag into its one **Draft release**; it is published only when both halves of the **Package smoke** pass (log 56).
+- A **Platform build** carries its own platform's **FFmpeg pin** build as its **Default component**; the two pins share one FFmpeg version line (log 56).
 
 ## Example dialogue
 
@@ -1837,6 +1859,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "No. The **Start-up splash** paints bare `bg`, the **Welcome splash**'s first frame, and the welcome plays straight on. Only a **Slow start**, a server not ready after 2s, fades the tile in."
 > **Dev:** "And when the wordmark lands in the header, can she press it?"
 > **Domain expert:** "No. The **Wordmark** is brand, never a control, and nothing takes focus at the end. The Movies tab is the way home."
+
+> **Dev:** "I tagged v0.14.0. Which files should the draft hold?"
+> **Domain expert:** "Two **Platform builds**: the **Installer** with `latest.yml` and its blockmap, and the **AppImage** with `latest-linux.yml`. If the Linux leg failed, re-run it; the draft isn't published with one."
+> **Dev:** "The Deck has the old AppImage in `~/Applications/`. Do I download the new one by hand?"
+> **Domain expert:** "Not after the first. **Software update** offers it, and the **Install** overwrites `FamilyFlix-x86_64.AppImage` in place, so Steam's shortcut still works. That's why the name carries no version."
+> **Dev:** "Dad launches it from **Game Mode** and the D-pad does nothing."
+> **Domain expert:** "Expected. **Game Mode** is best effort with the trackpad; only **Desktop Mode** blocks a release, and controller navigation is a later step."
 
 ## Flagged ambiguities
 
@@ -2802,3 +2831,12 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   is at work. A page load never draws the mark, and an action never draws a
   Skeleton. "Busy" alone means a **Busy phase** past `idle`; the **Upload
   state**'s `busy` predates it and keeps its own meaning there.
+- **"Installer" is Windows' alone (new):** since log 56 a **Release** has two
+  **Platform builds**, and only the Windows one is the **Installer**. The
+  Linux file is the **AppImage**, which installs nothing. Say **Platform
+  build** for either, never "the installers" or "install files", and never
+  "Linux installer".
+- **"Desktop" names a mode on the Deck (new):** **Desktop Mode** is SteamOS's
+  KDE session; "desktop" alone still means the Electron shell (the **Desktop
+  shell**) or the Windows desktop shortcut. Say **Desktop Mode** with its
+  capitals when the Deck's mode is meant.
