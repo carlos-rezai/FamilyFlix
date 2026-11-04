@@ -271,30 +271,66 @@ describe('the AppImage', () => {
   });
 });
 
-// Issue #231 — FFmpeg on board. The **FFmpeg pin** is `{ version, url, sha256 }`
-// in `ffmpegPin.json`, beside the config: one exact build, fetched over
-// `https:` and held to a full SHA-256. `electron:ffmpeg` extracts it into
-// `electron/.ffmpeg/`, and the config ships that directory to the place
-// `shellPaths` reads the **Default component** from.
+// Issue #231 — FFmpeg on board. The **FFmpeg pin** lives in `ffmpegPin.json`,
+// beside the config: one exact build, fetched over `https:` and held to a full
+// SHA-256. `electron:ffmpeg` extracts it into `electron/.ffmpeg/`, and the
+// config ships that directory to the place `shellPaths` reads the **Default
+// component** from.
+//
+// Issue #514 — the Linux FFmpeg. The pin is keyed by platform: `win32`
+// (gyan.dev essentials 9.0.2, unchanged) and `linux` (BtbN's linux64 GPL from
+// a dated `autobuild-*` release), each `{ version, url, sha256 }` of the one
+// 9.0 version line.
 
-interface FfmpegPin {
+interface FfmpegPinEntry {
   version?: unknown;
   url?: unknown;
   sha256?: unknown;
 }
 
+type FfmpegPin = Record<string, FfmpegPinEntry | undefined>;
+
 const pin = (): FfmpegPin => readJson('./ffmpegPin.json');
 
 describe('the FFmpeg pin', () => {
-  it('holds a SHA-256 of 64 hex characters', () => {
-    expect(pin().sha256).toMatch(/^[0-9a-f]{64}$/i);
+  it('holds a win32 and a linux entry, and nothing else', () => {
+    expect(Object.keys(pin()).sort()).toEqual(['linux', 'win32']);
   });
 
-  it('fetches over https:', () => {
-    const { url } = pin();
+  it.each(['win32', 'linux'])(
+    'holds a SHA-256 of 64 hex characters for %s',
+    (platform) => {
+      expect(pin()[platform]?.sha256).toMatch(/^[0-9a-f]{64}$/i);
+    }
+  );
+
+  it.each(['win32', 'linux'])('fetches %s’s build over https:', (platform) => {
+    const url = pin()[platform]?.url;
 
     expect(typeof url).toBe('string');
     expect(new URL(String(url)).protocol).toBe('https:');
+  });
+
+  it.each(['win32', 'linux'])('pins %s to the 9.0 line', (platform) => {
+    expect(pin()[platform]?.version).toMatch(/^9\.0(\.\d+)?$/);
+  });
+
+  it('keeps Windows on gyan.dev’s essentials 9.0.2', () => {
+    expect(pin().win32).toEqual({
+      version: '9.0.2',
+      url: 'https://github.com/GyanD/codexffmpeg/releases/download/9.0.2/ffmpeg-9.0.2-essentials_build.zip',
+      sha256:
+        '60f467265b1e312373dbcd92200c2618a74850f98d3d078e94296bb3fa2047ba',
+    });
+  });
+
+  it('pins Linux to a dated BtbN autobuild’s linux64 GPL 9.0 tar.xz', () => {
+    const url = String(pin().linux?.url);
+
+    expect(url).toMatch(
+      /^https:\/\/github\.com\/BtbN\/FFmpeg-Builds\/releases\/download\/autobuild-\d{4}-\d{2}-\d{2}-\d{2}-\d{2}\//
+    );
+    expect(url).toMatch(/linux64-gpl-9\.0\.tar\.xz$/);
   });
 });
 
