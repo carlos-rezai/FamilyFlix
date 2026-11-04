@@ -6,6 +6,8 @@
 //   bar, the taskbar, Alt+Tab and a pinned shortcut.
 // - `public/favicon.ico` at 16, 32 and 48: the browser tab under `npm run dev`,
 //   each image byte for byte `icon.ico`'s at that size.
+// - `electron/assets/icon.png` at 512: the window's and the AppImage's icon
+//   off Windows (issue #513).
 // - The preview PNGs at 256, 512 and 1024 beside the SVG.
 //
 // Run by hand when the mark changes; its outputs are committed.
@@ -22,6 +24,7 @@ const svg = readFileSync(join(brand, 'familyflix-mark.svg'));
 const ICON_SIZES = [16, 24, 32, 48, 64, 128, 256];
 const FAVICON_SIZES = [16, 32, 48];
 const PREVIEW_SIZES = [256, 512, 1024];
+const LINUX_SIZE = 512;
 
 /** The mark at one size, as PNG bytes. */
 function render(size) {
@@ -67,6 +70,7 @@ write(
   join(root, 'public', 'favicon.ico'),
   ico(images.filter((image) => FAVICON_SIZES.includes(image.size)))
 );
+write(join(root, 'electron', 'assets', 'icon.png'), await render(LINUX_SIZE));
 for (const size of PREVIEW_SIZES) {
   write(join(brand, `familyflix-mark-${size}.png`), await render(size));
 }

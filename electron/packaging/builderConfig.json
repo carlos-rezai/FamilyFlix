@@ -17,7 +17,8 @@
     "electron/dist/main.js",
     "electron/dist/server.js",
     "electron/dist/preload.js",
-    "electron/assets/icon.ico"
+    "electron/assets/icon.ico",
+    "electron/assets/icon.png"
   ],
   "extraResources": [
     { "from": "dist/familyflix", "to": "renderer" },
@@ -47,5 +48,15 @@
     "installerHeaderIcon": "electron/assets/icon.ico",
     "uninstallerIcon": "electron/assets/icon.ico",
     "artifactName": "FamilyFlix-Setup-${version}.${ext}"
+  },
+  "linux": {
+    "target": "AppImage",
+    "category": "AudioVideo",
+    "icon": "electron/assets/icon.png",
+    "executableName": "familyflix",
+    "synopsis": "A browsable library and player for the family movie folder"
+  },
+  "appImage": {
+    "artifactName": "FamilyFlix-x86_64.${ext}"
   }
 }

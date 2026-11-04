@@ -8,7 +8,8 @@
 // The chain: `nx build` (the renderer) → `buildElectron.mjs` (the two
 // bundles) → `fetchNative.mjs` (the Electron-ABI binding) → `fetchFfmpeg.mjs`
 // (the **Default component**, issue #231) → electron-builder's
-// `build()` over `electron/packaging/builderConfig.json`, NSIS x64, published
+// `build()` over `electron/packaging/builderConfig.json`, NSIS x64 on Windows
+// and the **AppImage** x64 on Linux (issue #513), published
 // only under `--publish` (issue #239) — the release workflow's flag. Every
 // step is run by path with no shell (CLAUDE.md, "never use npx"); no
 // typecheck and no tests run here. The Electron runtime packaged is the
@@ -25,7 +26,21 @@ import { packageOptions } from './packageOptions/packageOptions.ts';
 const { Arch, Platform, build } = builder;
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
-const options = packageOptions(process.argv.slice(2));
+
+/** Refuse an unknown platform before the chain builds anything. */
+function readOptions() {
+  try {
+    return packageOptions(process.argv.slice(2), process.platform);
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : error}\n`);
+    process.exit(1);
+  }
+}
+
+const options = readOptions();
+
+/** The options' platform, as electron-builder names it. */
+const PLATFORMS = { windows: Platform.WINDOWS, linux: Platform.LINUX };
 
 /** Run one step of the chain with Node, by path, and stop the chain on failure. */
 function step(script, args = []) {
@@ -58,7 +73,7 @@ try {
     projectDir: root,
     config,
     publish: options.publish,
-    targets: Platform.WINDOWS.createTarget(options.target, Arch.x64),
+    targets: PLATFORMS[options.platform].createTarget(options.target, Arch.x64),
   });
 } catch (error) {
   process.stderr.write(`${error instanceof Error ? error.stack : error}\n`);
