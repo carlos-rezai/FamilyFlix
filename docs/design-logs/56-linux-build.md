@@ -347,3 +347,33 @@ flowchart LR
 - **Out of scope:** Game Mode in any form, controller navigation, VAAPI
   hardware encoding, Flatpak and Flathub, arm64, code signing
   on either platform, and any distro beyond SteamOS as a smoked target.
+
+## Amendment: the Windows-only release (2026-11-04)
+
+Added after the session, at the maintainer's request, so that a Linux problem
+can't hold up a Windows fix. It supersedes Q21 where they differ; every other
+answer stands.
+
+27. **May a Release go out without its AppImage?** ✅ **Yes, as a
+    Windows-only release, and only that way round.** When the Linux leg fails
+    or the Linux half of the **Package smoke** fails, and the Windows half has
+    passed, the maintainer may publish the draft with the **Installer** alone:
+    - **The Linux files go first.** Any `FamilyFlix-x86_64.AppImage` or
+      `latest-linux.yml` the leg did upload is deleted from the draft before
+      it is published, so a broken AppImage never reaches the **Release
+      feed**.
+    - **The Deck stays where it is.** The published release has no
+      `latest-linux.yml`, so the Deck's **Update check** finds nothing to
+      install, and its failure is as quiet as any other: silent at launch,
+      `refused` when pressed. The Deck keeps its current version.
+    - **It is written down.** The release notes say _Windows only; Linux
+      follows in the next version_, the Linux problem is filed as an issue, and
+      the next Release carries both **Platform builds** again.
+    - ❌ **A Linux-only release:** the family's Windows PC is the main
+      install, so a failed Windows half still blocks the whole Release.
+    - ❌ **A Windows-only release by choice:** it is allowed only when the
+      Linux half has failed, never to skip the Deck smoke.
+
+    The workflow needs nothing new: the matrix's `fail-fast: false` (Q20)
+    already lets the Windows leg finish when the Linux one fails. The rule
+    goes in `docs/release-checklist.md` (Q26) beside Q21's first tick.
