@@ -44,6 +44,16 @@ interface BuilderConfig {
     uninstallerIcon?: string;
     artifactName?: string;
   };
+  linux?: {
+    target?: unknown;
+    category?: string;
+    icon?: string;
+    executableName?: string;
+    synopsis?: string;
+  };
+  appImage?: {
+    artifactName?: string;
+  };
 }
 
 function readJson<T>(relative: string): T {
@@ -57,6 +67,7 @@ const packageJson = (): Record<string, unknown> =>
   readJson('../../package.json');
 
 const ICON = 'electron/assets/icon.ico';
+const LINUX_ICON = 'electron/assets/icon.png';
 
 /** The **Packaged layout**, as `shellPaths` reads it when installed. */
 const RESOURCES_PATH = join('C:', 'FamilyFlix', 'resources');
@@ -147,7 +158,8 @@ describe('packagingConfig', () => {
   // Q7: the asar holds what main requires and nothing else. A glob here would
   // ship whatever it matched — the silent-shipping risk `dependencies: {}`
   // exists to stop.
-  it('packs only package.json, the three bundles and the icon into the asar, with no glob', () => {
+  // Issue #513 — and the Linux App mark beside it.
+  it('packs only package.json, the three bundles and the two icons into the asar, with no glob', () => {
     const files = config().files ?? [];
 
     expect([...files].sort()).toEqual(
@@ -157,6 +169,7 @@ describe('packagingConfig', () => {
         'electron/dist/server.js',
         'electron/dist/preload.js',
         ICON,
+        LINUX_ICON,
       ].sort()
     );
     for (const entry of files) {
@@ -201,6 +214,60 @@ describe('packagingConfig', () => {
     expect(pkg).not.toHaveProperty('build');
     expect(config().copyright).toBe('Copyright © 2026 Carlos Rezai');
     expect(config()).not.toHaveProperty('productName');
+  });
+});
+
+// Issue #513 — the **AppImage**. The `linux` block wears the App mark
+// `shellPaths` reads off Windows, a file the asar carries; the `appImage`
+// block names the file without a version, so the README's link to the latest
+// AppImage never moves. The Installer keeps its versioned name.
+
+const linuxPaths = () =>
+  shellPaths(
+    'installed',
+    {
+      appPath: '/opt/FamilyFlix/resources/app.asar',
+      resourcesPath: '/opt/FamilyFlix/resources',
+      userData: '/home/deck/.config/FamilyFlix',
+    },
+    'linux'
+  );
+
+describe('the AppImage', () => {
+  it('wears the icon shellPaths reads on Linux, one the asar carries', () => {
+    const icon = config().linux?.icon;
+
+    expect(icon).toBe(LINUX_ICON);
+    expect(config().files ?? []).toContain(icon);
+    expect(join('/opt/FamilyFlix/resources/app.asar', icon ?? '')).toBe(
+      linuxPaths().icon
+    );
+  });
+
+  it('builds an AppImage', () => {
+    expect(config().linux?.target).toBe('AppImage');
+  });
+
+  it('names its file with no version', () => {
+    const name = config().appImage?.artifactName;
+
+    expect(name).toBe('FamilyFlix-x86_64.${ext}');
+    expect(name).not.toMatch(/version/);
+  });
+
+  it('files itself under AudioVideo as the familyflix executable, with a synopsis', () => {
+    const { linux } = config();
+
+    expect(linux?.category).toBe('AudioVideo');
+    expect(linux?.executableName).toBe('familyflix');
+    expect(linux?.synopsis).toEqual(expect.any(String));
+    expect(linux?.synopsis?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  it('leaves the Installer named by its version', () => {
+    expect(config().nsis?.artifactName).toBe(
+      'FamilyFlix-Setup-${version}.${ext}'
+    );
   });
 });
 

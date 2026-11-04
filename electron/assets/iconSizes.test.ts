@@ -62,3 +62,44 @@ describe('iconSizes', () => {
     }
   });
 });
+
+// Issue #513 — the App mark on Linux. `buildIcon.mjs` also renders
+// `electron/assets/icon.png` at 512px, committed beside `icon.ico`: the
+// window's and the AppImage's icon off Windows. It is the same render as the
+// 512px preview beside the SVG, so it is the one mark, not a second drawing.
+
+const LINUX_ICON = fileURLToPath(new URL('./icon.png', import.meta.url));
+const PREVIEW_512 = fileURLToPath(
+  new URL('../../docs/handoff/brand/familyflix-mark-512.png', import.meta.url)
+);
+const PNG_SIGNATURE = Buffer.from([
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+]);
+
+describe('the Linux App mark', () => {
+  it('is a PNG of 512 by 512', () => {
+    const file = readFileSync(LINUX_ICON);
+
+    expect(file.subarray(0, 8).equals(PNG_SIGNATURE)).toBe(true);
+    expect(file.toString('ascii', 12, 16)).toBe('IHDR');
+    expect(file.readUInt32BE(16)).toBe(512);
+    expect(file.readUInt32BE(20)).toBe(512);
+  });
+
+  it('is the mark buildIcon.mjs renders at 512, byte for byte', () => {
+    expect(readFileSync(LINUX_ICON).equals(readFileSync(PREVIEW_512))).toBe(
+      true
+    );
+  });
+
+  it('is written by buildIcon.mjs', () => {
+    const source = readFileSync(
+      fileURLToPath(new URL('../scripts/buildIcon.mjs', import.meta.url)),
+      'utf8'
+    )
+      .replace(/\/\*[\s\S]*?\*\//g, '')
+      .replace(/^\s*\/\/.*$/gm, '');
+
+    expect(source).toMatch(/'icon\.png'/);
+  });
+});
