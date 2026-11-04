@@ -341,7 +341,7 @@ if (!app.requestSingleInstanceLock()) {
     );
 
     // The Storage card's _Open folder_: no argument, the **Managed media
-    // directory** made if absent and shown in Explorer; a failure logged.
+    // directory** made if absent and shown in the file manager; a failure logged.
     ipcMain.handle(FOLDER_CHANNELS.openMedia, () =>
       openMediaFolder(paths.mediaRoot, mediaFolderWorld)
     );

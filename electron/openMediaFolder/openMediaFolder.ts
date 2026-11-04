@@ -20,8 +20,8 @@ const reason = (error: unknown) =>
   error instanceof Error ? error.message : String(error);
 
 /**
- * Make the **Managed media directory** if it is absent, then show it in
- * Explorer. Every failure is one Shell log line naming the root; nothing
+ * Make the **Managed media directory** if it is absent, then show it in the
+ * file manager. Every failure is one Shell log line naming the root; nothing
  * reaches the screen, and it never rejects.
  */
 export async function openMediaFolder(

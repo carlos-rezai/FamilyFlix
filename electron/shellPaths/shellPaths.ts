@@ -14,7 +14,10 @@ export interface ShellLocations {
 
 /** Every path the shell and the **Server process** need. */
 export interface ShellPaths {
-  /** The **App mark**, rendered by `electron/scripts/buildIcon.mjs`. */
+  /**
+   * The **App mark**, rendered by `electron/scripts/buildIcon.mjs`:
+   * `icon.ico` on Windows, `icon.png` elsewhere.
+   */
   icon: string;
   /** The server bundle `buildElectron.mjs` writes. */
   serverEntry: string;
@@ -22,7 +25,10 @@ export interface ShellPaths {
   renderer: string;
   /** The Electron-ABI `better-sqlite3` binding. */
   sqliteBinding: string;
-  /** The Default component's `ffmpeg.exe`, or `null` when none is carried. */
+  /**
+   * The Default component's binary (`ffmpeg.exe` on Windows, the
+   * extensionless `ffmpeg` elsewhere), or `null` when none is carried.
+   */
   ffmpeg: string | null;
   /** The working directory the server is forked in. */
   serverCwd: string;
@@ -50,16 +56,24 @@ export interface ShellPaths {
  * Pure: the paths for this **Shell mode**. Unpackaged (`dev`, `start`),
  * `appPath` is the repo and every path is under it. Installed — the
  * **Packaged layout** — the icon and both bundles come from `appPath` (inside
- * `app.asar`), the renderer, the binding and `ffmpeg.exe` from
- * `resourcesPath`, and the server is forked in `userData`, because a working
- * directory cannot be inside an asar.
+ * `app.asar`), the renderer, the binding and FFmpeg from `resourcesPath`, and
+ * the server is forked in `userData`, because a working directory cannot be
+ * inside an asar. `platform` (default `process.platform`) picks only the
+ * icon's and FFmpeg's file names; every other path is the same everywhere.
  */
 export function shellPaths(
   mode: ShellMode,
-  { appPath, resourcesPath, userData }: ShellLocations
+  { appPath, resourcesPath, userData }: ShellLocations,
+  platform: NodeJS.Platform = process.platform
 ): ShellPaths {
+  const windows = platform === 'win32';
   const fromApp = {
-    icon: join(appPath, 'electron', 'assets', 'icon.ico'),
+    icon: join(
+      appPath,
+      'electron',
+      'assets',
+      windows ? 'icon.ico' : 'icon.png'
+    ),
     serverEntry: join(appPath, 'electron', 'dist', 'server.js'),
   };
 
@@ -68,7 +82,7 @@ export function shellPaths(
       ...fromApp,
       renderer: join(resourcesPath, 'renderer'),
       sqliteBinding: join(resourcesPath, 'native', 'better_sqlite3.node'),
-      ffmpeg: join(resourcesPath, 'ffmpeg', 'ffmpeg.exe'),
+      ffmpeg: join(resourcesPath, 'ffmpeg', windows ? 'ffmpeg.exe' : 'ffmpeg'),
       serverCwd: userData,
       mediaRoot: join(userData, 'media'),
       database: join(userData, 'familyflix.db'),

@@ -1,7 +1,7 @@
 // @vitest-environment node
 //
 // Issue #292 — Open folder. The Storage card's button asks main, over a
-// no-argument channel, to show the **Managed media directory** in Explorer;
+// no-argument channel, to show the **Managed media directory** in the file manager;
 // main hands `openMediaFolder` **Shell paths**' `mediaRoot` and a world of
 // `mkdir` (recursive `mkdirSync`), `shell.openPath` and the **Shell log**'s
 // `main`. Shaped like `shellDialogs`: the root is made first — a fresh install
