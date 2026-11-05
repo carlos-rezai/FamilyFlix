@@ -24,7 +24,7 @@ import { autoUpdater } from 'electron-updater';
 import { FOLDER_CHANNELS } from '../src/types/libraryFolders';
 import { UPDATE_CHANNELS } from '../src/types/update';
 
-import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
+import { APP_SYNOPSIS, APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { createUpdates } from './createUpdates/createUpdates';
 import { downloadPath } from './downloadPath/downloadPath';
 import { loadRenderer } from './loadRenderer/loadRenderer';
@@ -71,10 +71,6 @@ const BACKGROUND = '#14110d';
 
 /** How long the **Ordered shutdown** has before the server is killed. */
 const SHUTDOWN_MS = 5_000;
-
-/** The **Menu entry**'s `Comment`: `linux.synopsis` in `builderConfig.json`. */
-const LINUX_SYNOPSIS =
-  'A browsable library and player for the family movie folder';
 
 const mode = shellMode(app.isPackaged, process.env);
 
@@ -310,7 +306,7 @@ if (!app.requestSingleInstanceLock()) {
         appImage: process.env.APPIMAGE,
         home: homedir(),
       },
-      LINUX_SYNOPSIS
+      APP_SYNOPSIS
     );
     if (entry !== null) {
       writeMenuEntry({
