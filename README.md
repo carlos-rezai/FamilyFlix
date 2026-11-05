@@ -220,7 +220,7 @@ familyflix/
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; busy.ts, the Busy phase; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks, accentScale, isLibraryTab, libraryTabOptions and inTrackOrder among them)
 │   └── test-support/     # Shared test doubles (fakeResponse, heldFetch and advanceClock, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
-├── release/            # gitignored: the Installer, and win-unpacked/, the Packaged layout
+├── release/            # gitignored: the Installer or the AppImage, and win-unpacked/ or linux-unpacked/, the Packaged layout
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
     ├── PRDs/           # Product requirements and implementation plans
