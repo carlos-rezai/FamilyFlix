@@ -8,18 +8,18 @@
 // `LICENSE.txt`), and the README's `Build:` line. Any other platform is
 // refused in a sentence. Each answer is asked on any machine by passing the
 // platform in.
+//
+// Issue #522: each wanted entry says whether it ships executable, so the
+// executable bit is a fact a Windows test reads, not a name the fetch
+// script compares.
 
 import { describe, expect, it } from 'vitest';
 
-import { ffmpegTarget } from './ffmpegTarget';
+import { ffmpegTarget, type FfmpegEntry } from './ffmpegTarget';
 
-/** The pairs in a stable order, so the assertion is not about order. */
-function sorted(
-  pairs: ReadonlyArray<readonly [string, string]>
-): Array<[string, string]> {
-  return pairs
-    .map(([inner, shipped]): [string, string] => [inner, shipped])
-    .sort(([a], [b]) => a.localeCompare(b));
+/** The entries in a stable order, so the assertion is not about order. */
+function sorted(entries: ReadonlyArray<FfmpegEntry>): FfmpegEntry[] {
+  return [...entries].sort((a, b) => a.inner.localeCompare(b.inner));
 }
 
 describe('ffmpegTarget on Windows', () => {
@@ -27,12 +27,12 @@ describe('ffmpegTarget on Windows', () => {
     expect(ffmpegTarget('win32').archive).toBe('zip');
   });
 
-  it('takes ffmpeg.exe, ffprobe.exe and the licence, shipped as LICENSE.txt', () => {
+  it('takes ffmpeg.exe and ffprobe.exe, executable, and the licence as LICENSE.txt, not', () => {
     expect(sorted(ffmpegTarget('win32').wanted)).toEqual(
       sorted([
-        ['bin/ffmpeg.exe', 'ffmpeg.exe'],
-        ['bin/ffprobe.exe', 'ffprobe.exe'],
-        ['LICENSE', 'LICENSE.txt'],
+        { inner: 'bin/ffmpeg.exe', shipped: 'ffmpeg.exe', executable: true },
+        { inner: 'bin/ffprobe.exe', shipped: 'ffprobe.exe', executable: true },
+        { inner: 'LICENSE', shipped: 'LICENSE.txt', executable: false },
       ])
     );
   });
@@ -51,12 +51,12 @@ describe('ffmpegTarget on Linux', () => {
     expect(ffmpegTarget('linux').archive).toBe('tar.xz');
   });
 
-  it('takes the extensionless ffmpeg and ffprobe and the licence, shipped as LICENSE.txt', () => {
+  it('takes the extensionless ffmpeg and ffprobe, executable, and the licence as LICENSE.txt, not', () => {
     expect(sorted(ffmpegTarget('linux').wanted)).toEqual(
       sorted([
-        ['bin/ffmpeg', 'ffmpeg'],
-        ['bin/ffprobe', 'ffprobe'],
-        ['LICENSE.txt', 'LICENSE.txt'],
+        { inner: 'bin/ffmpeg', shipped: 'ffmpeg', executable: true },
+        { inner: 'bin/ffprobe', shipped: 'ffprobe', executable: true },
+        { inner: 'LICENSE.txt', shipped: 'LICENSE.txt', executable: false },
       ])
     );
   });
