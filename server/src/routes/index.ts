@@ -2775,7 +2775,7 @@ export function createApiRouter(
       }
 
       if (plan.path === 'direct') {
-        res.sendFile(file, (error) => {
+        res.sendFile(file, { dotfiles: 'allow' }, (error) => {
           if (error && !res.headersSent) {
             noVideoFile(res, kind, id);
           } else if (error) {

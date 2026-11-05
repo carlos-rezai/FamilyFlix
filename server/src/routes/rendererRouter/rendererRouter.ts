@@ -44,7 +44,7 @@ export function rendererRouter(rendererPath: string): Router {
   });
   router.use(express.static(root, { index: 'index.html' }));
   router.get(/.*/, (_req, res) => {
-    res.sendFile(join(root, 'index.html'));
+    res.sendFile(join(root, 'index.html'), { dotfiles: 'allow' });
   });
 
   return router;
