@@ -22,7 +22,7 @@ export interface PackageOptions {
  */
 export function packageOptions(
   args: readonly string[],
-  platform: string
+  platform: NodeJS.Platform
 ): PackageOptions {
   const publish = args.includes('--publish') ? 'always' : 'never';
   const dir = args.includes('--dir');

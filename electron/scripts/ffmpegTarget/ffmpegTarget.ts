@@ -17,7 +17,7 @@ export interface FfmpegTarget {
   home: string;
 }
 
-export function ffmpegTarget(platform: string): FfmpegTarget {
+export function ffmpegTarget(platform: NodeJS.Platform): FfmpegTarget {
   if (platform === 'win32') {
     return {
       archive: 'zip',
