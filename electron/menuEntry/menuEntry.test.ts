@@ -97,6 +97,52 @@ describe('menuEntry — the files', () => {
   });
 });
 
+// Issue #522: the Desktop Entry spec reserves characters. Inside a quoted
+// `Exec` argument `"`, `` ` ``, `$` and `\` take a backslash and a literal `%`
+// is `%%`; every string value then writes its backslashes as `\\`.
+
+/** A string value as the spec reads it: `\\` is one backslash. */
+const unescapeValue = (value: string): string => value.replace(/\\(.)/g, '$1');
+
+/** The one quoted argument before ` %U`, as the spec reads it back. */
+function execPath(exec: string): string {
+  const quoted = unescapeValue(exec).replace(/ %U$/, '');
+  expect(quoted.startsWith('"') && quoted.endsWith('"')).toBe(true);
+  return quoted
+    .slice(1, -1)
+    .replace(/\\(["`$\\])/g, '$1')
+    .replace(/%%/g, '%');
+}
+
+describe('menuEntry — escaping by the Desktop Entry spec', () => {
+  const RESERVED = '/home/deck/a"b`c$d\\e 50%/FamilyFlix-x86_64.AppImage';
+
+  it('escapes every reserved character of the path in Exec', () => {
+    const { keys } = parse(linux(RESERVED)?.entryText ?? '');
+
+    expect(keys.Exec).toBe(
+      '"/home/deck/a\\\\"b\\\\`c\\\\$d\\\\\\\\e 50%%/FamilyFlix-x86_64.AppImage" %U'
+    );
+    expect(execPath(keys.Exec ?? '')).toBe(RESERVED);
+  });
+
+  it('escapes the backslash in TryExec, a plain string value', () => {
+    const { keys } = parse(linux(RESERVED)?.entryText ?? '');
+
+    expect(keys.TryExec).toBe(
+      '/home/deck/a"b`c$d\\\\e 50%/FamilyFlix-x86_64.AppImage'
+    );
+    expect(unescapeValue(keys.TryExec ?? '')).toBe(RESERVED);
+  });
+
+  it('gives back a plain path unchanged in both', () => {
+    const { keys } = parse(linux()?.entryText ?? '');
+
+    expect(execPath(keys.Exec ?? '')).toBe(APPIMAGE);
+    expect(unescapeValue(keys.TryExec ?? '')).toBe(APPIMAGE);
+  });
+});
+
 /** An in-memory disk that records every call; it has no way to delete. */
 class MemoryFs implements MenuEntryFileSystem {
   readonly files = new Map<string, Buffer>();
@@ -218,16 +264,17 @@ describe('writeMenuEntry — a failure', () => {
     expect(log.mock.calls[0]?.[0]).toMatch(/EACCES/);
   });
 
-  it('is one Shell log line when the App mark cannot be read', () => {
+  // Main's disk answers `undefined` for any file it cannot read, so a
+  // missing App mark reaches the writer as no bytes, not as a throw.
+  it('is one Shell log line naming the App mark when there is none', () => {
     const fs = new MemoryFs();
-    fs.read = (path) => {
-      if (path === MARK_PATH) throw new Error('ENOENT: no such file');
-      return undefined;
-    };
     const log = vi.fn();
 
     expect(() => write(fs, log)).not.toThrow();
     expect(log).toHaveBeenCalledTimes(1);
-    expect(log.mock.calls[0]?.[0]).toMatch(/ENOENT/);
+    expect(log.mock.calls[0]?.[0]).toBe(
+      `Menu entry not written: No App mark at ${MARK_PATH}.`
+    );
+    expect(log.mock.calls[0]?.[0]).not.toMatch(/ENOENT/);
   });
 });
