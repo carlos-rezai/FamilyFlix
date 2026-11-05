@@ -6,7 +6,8 @@ import { posix } from 'node:path';
  * into the hicolor theme: KWin takes the window's icon from an entry named
  * exactly after the app id. `menuEntry` decides the two files;
  * `writeMenuEntry` puts them on disk only where the file differs, makes the
- * folders it needs and deletes nothing. See
+ * folders it needs and deletes nothing. `Exec` and `TryExec` escape the
+ * path as the Desktop Entry spec reserves (_The Exec key_). See
  * `docs/design-logs/56-linux-build.md`, _the Menu entry_.
  */
 
@@ -25,6 +26,20 @@ export interface MenuEntryEnv {
   home: string;
 }
 
+/** A string value: every backslash written as `\\`. */
+function stringValue(text: string): string {
+  return text.replace(/\\/g, '\\\\');
+}
+
+/**
+ * One quoted `Exec` argument: `"`, `` ` ``, `$` and `\` behind a backslash,
+ * a literal `%` as `%%`, then the whole as a string value.
+ */
+function execArgument(text: string): string {
+  const quoted = text.replace(/["`$\\]/g, '\\$&').replace(/%/g, '%%');
+  return stringValue(`"${quoted}"`);
+}
+
 export function menuEntry(
   { platform, appImage, home }: MenuEntryEnv,
   synopsis: string
@@ -39,8 +54,8 @@ export function menuEntry(
     'Type=Application',
     'Name=FamilyFlix',
     `Comment=${synopsis}`,
-    `Exec="${appImage}" %U`,
-    `TryExec=${appImage}`,
+    `Exec=${execArgument(appImage)} %U`,
+    `TryExec=${stringValue(appImage)}`,
     'Icon=familyflix',
     'StartupWMClass=FamilyFlix',
     'Categories=AudioVideo;',
@@ -103,7 +118,7 @@ export function writeMenuEntry({
     writeIfDiffers(fs, files.entryPath, Buffer.from(files.entryText, 'utf8'));
     const mark = fs.read(markPath);
     if (mark === undefined) {
-      throw new Error(`ENOENT: no App mark at ${markPath}`);
+      throw new Error(`No App mark at ${markPath}.`);
     }
     writeIfDiffers(fs, files.iconPath, mark);
   } catch (error) {
