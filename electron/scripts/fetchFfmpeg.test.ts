@@ -5,8 +5,8 @@
 // refuses it when its SHA-256 is not the pin's, and extracts only `ffmpeg`,
 // `ffprobe` and the licence — as `LICENSE.txt` — beside a `README.txt` naming
 // the build, its version and where its source is published. That directory is
-// what the **Installer** ships to `resources\ffmpeg\`, so it holds those four
-// files and nothing else — never `ffplay`. When the extracted copy already
+// what each **Platform build** ships to `resources/ffmpeg/`, so it holds those
+// four files and nothing else, never `ffplay`. When the extracted copy already
 // matches the pin it skips everything, so a second run needs no network.
 //
 // Issue #514 — the Linux FFmpeg. The pin is keyed by platform, and the script

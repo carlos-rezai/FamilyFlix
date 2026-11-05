@@ -37,7 +37,7 @@ export const FOLDER_CHANNELS = {
   pickSheet: 'familyflix:folders:pick-sheet',
   /**
    * invoke, no argument → nothing: main opens the **Managed media directory**
-   * in Explorer. The renderer never names a path.
+   * in the file manager. The renderer never names a path.
    */
   openMedia: 'familyflix:folders:open-media',
 } as const;
@@ -56,8 +56,8 @@ export interface FolderBridge {
    */
   pickSheet(): Promise<string | null>;
   /**
-   * Open the **Managed media directory** in Explorer, made first if absent;
-   * a failure is logged by main, never answered.
+   * Open the **Managed media directory** in the file manager, made first if
+   * absent; a failure is logged by main, never answered.
    */
   openMedia(): Promise<void>;
   /**

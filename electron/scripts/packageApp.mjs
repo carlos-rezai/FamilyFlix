@@ -1,9 +1,13 @@
-// `npm run electron:package` — the **Installer**. Issue #230.
+// `npm run electron:package`: the running platform's **Platform build**, the
+// **Installer** on Windows and the **AppImage** on Linux. Issues #230 and #513.
 //
-//   node electron/scripts/packageApp.mjs          release/FamilyFlix-Setup-<version>.exe
-//   node electron/scripts/packageApp.mjs --dir    release/win-unpacked/ only
-//   node electron/scripts/packageApp.mjs --publish   the Installer, uploaded to
-//                                                    the Release feed as a draft
+//   node electron/scripts/packageApp.mjs
+//       release/FamilyFlix-Setup-<version>.exe on Windows,
+//       release/FamilyFlix-x86_64.AppImage on Linux
+//   node electron/scripts/packageApp.mjs --dir
+//       release/win-unpacked/ or release/linux-unpacked/ only
+//   node electron/scripts/packageApp.mjs --publish
+//       the Platform build, uploaded to the Release feed as a draft
 //
 // The chain: `nx build` (the renderer) → `buildElectron.mjs` (the two
 // bundles) → `fetchNative.mjs` (the Electron-ABI binding) → `fetchFfmpeg.mjs`

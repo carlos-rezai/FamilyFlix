@@ -2775,6 +2775,9 @@ export function createApiRouter(
       }
 
       if (plan.path === 'direct') {
+        // `send` refuses any absolute path with a dot segment, and on Linux
+        // `~/.config/...` and the AppImage's `/tmp/.mount_...` both have one;
+        // the path is the library's, never the URL's, so dotfiles are allowed.
         res.sendFile(file, { dotfiles: 'allow' }, (error) => {
           if (error && !res.headersSent) {
             noVideoFile(res, kind, id);

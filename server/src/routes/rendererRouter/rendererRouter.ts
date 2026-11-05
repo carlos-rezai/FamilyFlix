@@ -28,7 +28,9 @@ function isApi(path: string): boolean {
  * and `index.html` for any other GET, so a reload on a deep route stays there
  * (**One origin**). Nothing under `/api` is ever answered here — it is passed
  * on before the policy is set, so the router can sit ahead of the API as well
- * as behind it.
+ * as behind it. `index.html` is sent with dotfiles allowed: `send` refuses any
+ * absolute path with a dot segment, and the AppImage's renderer lies under
+ * `/tmp/.mount_...`; the path is the app's own, never the URL's.
  */
 export function rendererRouter(rendererPath: string): Router {
   const root = resolve(rendererPath);

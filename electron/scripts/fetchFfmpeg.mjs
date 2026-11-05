@@ -1,5 +1,5 @@
-// `npm run electron:ffmpeg` — the **Default component** the **Installer**
-// carries. Issues #231 and #514.
+// `npm run electron:ffmpeg`: the **Default component** each **Platform
+// build** carries. Issues #231 and #514.
 //
 //   node electron/scripts/fetchFfmpeg.mjs [--pin <file>] [--outdir <dir>]
 //
