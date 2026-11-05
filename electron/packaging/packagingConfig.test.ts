@@ -11,7 +11,8 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
-import { APP_USER_MODEL_ID } from '../appIdentity/appIdentity';
+import { APP_SYNOPSIS, APP_USER_MODEL_ID } from '../appIdentity/appIdentity';
+import { menuEntry } from '../menuEntry/menuEntry';
 import { shellPaths } from '../shellPaths/shellPaths';
 
 interface ExtraResource {
@@ -256,13 +257,33 @@ describe('the AppImage', () => {
     expect(name).not.toMatch(/version/);
   });
 
-  it('files itself under AudioVideo as the familyflix executable, with a synopsis', () => {
+  it('files itself under AudioVideo as the familyflix executable', () => {
     const { linux } = config();
 
     expect(linux?.category).toBe('AudioVideo');
     expect(linux?.executableName).toBe('familyflix');
-    expect(linux?.synopsis).toEqual(expect.any(String));
-    expect(linux?.synopsis?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // Issue #522: the AppImage's embedded entry and FamilyFlix's own **Menu
+  // entry** describe and file the app alike.
+  it('carries the synopsis appIdentity spells, the Menu entry’s Comment', () => {
+    expect(config().linux?.synopsis).toBe(APP_SYNOPSIS);
+  });
+
+  it('files the Menu entry under the linux block’s category', () => {
+    const entry = menuEntry(
+      {
+        platform: 'linux',
+        appImage: '/home/deck/Applications/FamilyFlix-x86_64.AppImage',
+        home: '/home/deck',
+      },
+      APP_SYNOPSIS
+    );
+    const categories = (entry?.entryText ?? '')
+      .split('\n')
+      .find((line) => line.startsWith('Categories='));
+
+    expect(categories).toBe(`Categories=${config().linux?.category ?? ''};`);
   });
 
   // Issue #520: electron-builder's default `executableArgs` is
