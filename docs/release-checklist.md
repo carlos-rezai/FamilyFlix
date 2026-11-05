@@ -40,20 +40,23 @@ npm run electron:package
       `ffprobe.exe`, `LICENSE.txt` and `README.txt`, and no `ffplay.exe`.
 - [ ] `FamilyFlix-Setup-<version>.exe` wears the **App mark** in Explorer.
 
-The importer's fixture films are stand-ins of a few bytes, not video. Step 5
-plays the one real film the tests carry, `fixtureVideo`, as an MP4 and as an
-`.mkv` remuxed from it:
+The importer's fixture films are stand-ins of a few bytes, not video, and the
+tests' `fixtureVideo` is too small to prove playback. Make the smoke films
+instead: a realistic 20 s 720p H.264 High film with AAC as an MP4, its `.mkv`
+remux, and an HEVC encode. Steps 5 and 12 play them:
 
 ```
-cp server/src/test-support/fixtureVideo/fixture-video.mp4 release/smoke.mp4
+electron/.ffmpeg/ffmpeg.exe -f lavfi -i testsrc2=size=1280x720:rate=30:duration=20 -f lavfi -i sine=frequency=440:duration=20 -c:v libx264 -profile:v high -pix_fmt yuv420p -c:a aac -shortest release/smoke.mp4
 electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
+electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/smoke-hevc.mkv
 ```
 
 ## 2. Onto the target machine
 
 - [ ] Quit any running FamilyFlix. If a previous install exists, note that
       `%APPDATA%\FamilyFlix\` carries its library into this run.
-- [ ] Have the Installer, `release/smoke.mp4`, `release/smoke.mkv`, and the
+- [ ] Have the Installer, `release/smoke.mp4`, `release/smoke.mkv`,
+      `release/smoke-hevc.mkv`, and the
       importer's fixture to hand: `library.xlsx` and its `root/` folder from
       `server/src/import-export/createImporter/fixture/`.
 
@@ -82,6 +85,8 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 - [ ] Settings → Add a movie with `smoke.mp4` as the video: it direct-plays.
 - [ ] Settings → Add a movie with `smoke.mkv` as the video: it remuxes and
       plays.
+- [ ] Settings → Add a movie with `smoke-hevc.mkv` as the video: it
+      transcodes and plays.
 - [ ] Settings → Playback → Codecs: the Component row's pill reads
       **Default**.
 - [ ] Settings → Storage → _Open folder_: Explorer opens
@@ -134,15 +139,15 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c copy release/smoke.mkv
 ## 6. The slot over the default
 
 - [ ] Drop `ffmpeg.exe` and `ffprobe.exe` from the install directory's
-      `resources\ffmpeg\` onto the Component drop zone: the row reads
-      **Uploaded**.
+      `resources\ffmpeg\` (`%LOCALAPPDATA%\Programs\@familyflixsource\`)
+      onto the Component drop zone: the row reads **Uploaded**.
 - [ ] Play `smoke.mkv` again: it still plays.
 - [ ] Press ✕ on the Component row: it reads **Default** again.
 
 ## 7. The fuses
 
 Quit the app. Open a Command Prompt in the install directory,
-`%LOCALAPPDATA%\Programs\FamilyFlix\`, and quit the app after each check:
+`%LOCALAPPDATA%\Programs\@familyflixsource\`, and quit the app after each check:
 
 - [ ] `set ELECTRON_RUN_AS_NODE=1`, then `FamilyFlix.exe -e "console.log(1)"`:
       the app opens, not a Node prompt. Then `set ELECTRON_RUN_AS_NODE=`.
@@ -218,9 +223,9 @@ Deck's round-trip is in step 12.
 
 On the Steam Deck in **Desktop Mode**, from the draft's own
 `FamilyFlix-x86_64.AppImage`. Every step blocks the Linux half. Have
-`release/smoke.mp4` and `release/smoke.mkv` (step 1), the importer's fixture
-(`library.xlsx` and its `root/` folder) copied onto the SD card, an external
-drive holding a film, and one 1080p HEVC film to hand.
+`release/smoke.mp4`, `release/smoke.mkv` and `release/smoke-hevc.mkv` (step
+1), and the importer's fixture (`library.xlsx` and its `root/` folder), copied
+onto the SD card.
 
 From the second Linux release on (v0.14.0 is the first, and skips it), start
 with the **previous** published AppImage installed as below, for the update
@@ -242,11 +247,14 @@ round-trip at the end.
 - [ ] Settings → Import from spreadsheet over the fixture's `library.xlsx`
       and `root/` on the SD card (`/run/media/deck/<label>/...`): both films
       import.
-- [ ] A **Library folder** on the external drive: mounted in Dolphin, it is
-      read and its film imports. Unmounted, its row reads **Unreachable**.
+- [ ] A **Library folder** on the SD card, holding a copy of `smoke.mp4` in
+      a folder of its own: it is read and its film imports.
+      With the card ejected, its row reads **Unreachable**; put back, it is
+      read again.
 - [ ] Settings → Add a movie with `smoke.mp4`: it direct-plays.
 - [ ] Settings → Add a movie with `smoke.mkv`: it remuxes and plays.
-- [ ] The HEVC film transcodes and plays. Note how smoothly it plays:
+- [ ] Settings → Add a movie with `smoke-hevc.mkv`: it transcodes and
+      plays. Note how smoothly it plays:
       **\*\*\*\***\_\_\_**\*\*\*\*** (VAAPI is wired later only if this stutters).
 - [ ] Settings → Storage → _Open folder_: the file manager opens
       `~/.config/FamilyFlix/media`.

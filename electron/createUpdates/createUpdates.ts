@@ -56,6 +56,17 @@ const text = (message: unknown): string =>
   message instanceof Error ? message.message : String(message);
 
 /**
+ * The expected answer while the latest Release carries no metadata for this
+ * platform (no `latest-linux.yml` yet): the missing file's name, or `null`
+ * for any other message. It matches the error and the updater's own logged
+ * stack alike.
+ */
+const missingMetadata = (message: unknown): string | null =>
+  /Cannot find (\S+\.yml) in the latest release artifacts/.exec(
+    text(message)
+  )?.[1] ?? null;
+
+/**
  * Main's injected domain over `electron-updater`, the `serverHandle`
  * precedent: everything it touches comes in through its world. It leaves
  * `autoDownload` and `autoInstallOnAppQuit` at their defaults — on — always
@@ -73,12 +84,23 @@ export function createUpdates(world: UpdatesWorld): Updates {
   updater.logger = {
     info: (message) => log(`Updater: ${text(message)}`),
     warn: (message) => log(`Updater warning: ${text(message)}`),
-    error: (message) => log(`Updater error: ${text(message)}`),
+    // The updater logs every `error` with its stack; the expected missing
+    // metadata gets its one quiet line from the listener below instead.
+    error: (message) => {
+      if (missingMetadata(message) === null) {
+        log(`Updater error: ${text(message)}`);
+      }
+    },
     debug: () => undefined,
   };
 
   updater.on('error', (error) => {
-    log(`Update error: ${text(error)}`);
+    const file = missingMetadata(error);
+    log(
+      file === null
+        ? `Update error: ${text(error)}`
+        : `Updater: the latest release has no ${file}`
+    );
   });
 
   // The only thing that makes an **Update offer**: a found release that has
