@@ -56,14 +56,11 @@ const pinPath = option(
 );
 const outdir = option('outdir', join(root, 'electron', '.ffmpeg'));
 
-/** The names shipped that are programs, not the licence. */
-const binariesOf = (target) =>
-  target.wanted
-    .map(([, shipped]) => shipped)
-    .filter((shipped) => shipped !== 'LICENSE.txt');
-
 function readme(target, { version, url, sha256 }) {
-  const binaries = binariesOf(target).join(' and ');
+  const binaries = target.wanted
+    .filter(({ executable }) => executable)
+    .map(({ shipped }) => shipped)
+    .join(' and ');
   return [
     'FFmpeg — the Default component of FamilyFlix',
     '',
@@ -86,7 +83,7 @@ function readme(target, { version, url, sha256 }) {
 
 /** Whether the extracted copy already matches this pin. */
 async function matchesPin(target, pin) {
-  const files = [...target.wanted.map(([, shipped]) => shipped), 'README.txt'];
+  const files = [...target.wanted.map(({ shipped }) => shipped), 'README.txt'];
   if (!files.every((file) => existsSync(join(outdir, file)))) return false;
   const current = await readFile(join(outdir, 'README.txt'), 'utf8');
   return current === readme(target, pin);
@@ -106,15 +103,16 @@ async function download(url) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-/** The `[shipped, bytes]` pairs out of a zip, through `zipEntries`. */
+/** Each wanted entry with its bytes, out of a zip, through `zipEntries`. */
 function fromZip(target, zip) {
   const all = zipEntries(zip);
-  return target.wanted.map(([inner, shipped]) => {
+  return target.wanted.map((wanted) => {
+    const { inner } = wanted;
     const entry = all.find(
       ({ name }) => name.slice(name.indexOf('/') + 1) === inner
     );
     if (!entry) throw new Error(`The FFmpeg archive carries no ${inner}.`);
-    return [shipped, entryBytes(zip, entry)];
+    return { ...wanted, data: entryBytes(zip, entry) };
   });
 }
 
@@ -138,7 +136,7 @@ function tar(args) {
   });
 }
 
-/** The `[shipped, bytes]` pairs out of a tar.xz, through the system `tar`. */
+/** Each wanted entry with its bytes, out of a tar.xz, through the system `tar`. */
 async function fromTarXz(target, archive) {
   if (process.platform !== 'linux') {
     throw new Error('A tar.xz FFmpeg archive is extracted on Linux only.');
@@ -156,12 +154,12 @@ async function fromTarXz(target, archive) {
     }
     const top = join(into, tops[0]);
     const extracted = [];
-    for (const [inner, shipped] of target.wanted) {
-      const path = join(top, ...inner.split('/'));
+    for (const wanted of target.wanted) {
+      const path = join(top, ...wanted.inner.split('/'));
       if (!existsSync(path)) {
-        throw new Error(`The FFmpeg archive carries no ${inner}.`);
+        throw new Error(`The FFmpeg archive carries no ${wanted.inner}.`);
       }
-      extracted.push([shipped, await readFile(path)]);
+      extracted.push({ ...wanted, data: await readFile(path) });
     }
     return extracted;
   } finally {
@@ -193,11 +191,10 @@ async function main() {
       ? fromZip(target, archive)
       : await fromTarXz(target, archive);
 
-  const binaries = binariesOf(target);
   await rm(outdir, { recursive: true, force: true });
   await mkdir(outdir, { recursive: true });
-  for (const [shipped, data] of extracted) {
-    const mode = binaries.includes(shipped) ? 0o755 : 0o644;
+  for (const { shipped, executable, data } of extracted) {
+    const mode = executable ? 0o755 : 0o644;
     await writeFile(join(outdir, shipped), data, { mode });
   }
   await writeFile(join(outdir, 'README.txt'), readme(target, pin));
