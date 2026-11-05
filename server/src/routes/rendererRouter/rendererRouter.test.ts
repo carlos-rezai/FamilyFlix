@@ -219,3 +219,30 @@ describe('rendererRouter — FAMILYFLIX_RENDERER_PATH unset', () => {
     expect(JSON.parse(res.text)).toEqual({ ok: true });
   });
 });
+
+// Issue #519: in the AppImage the renderer sits under
+// `/tmp/.mount_Family.../resources/renderer`, a dot segment, and `send`
+// refuses such a path unless told dotfiles are allowed. The path is the
+// shell's, never the URL's.
+describe('rendererRouter — a renderer folder under a dot segment', () => {
+  let mounted: string;
+
+  beforeEach(async () => {
+    const outer = await mkdtemp(join(tmpdir(), 'familyflix-mount-'));
+    mounted = join(outer, '.mount_FamilyAbc', 'resources', 'renderer');
+    await mkdir(mounted, { recursive: true });
+    await writeFile(join(mounted, 'index.html'), INDEX);
+  });
+
+  afterEach(async () => {
+    await rm(join(mounted, '..', '..', '..'), { recursive: true, force: true });
+  });
+
+  it('answers a deep route with index.html', async () => {
+    const res = await request(serverWith(mounted)).get('/series/3/season/2');
+
+    expect(res.status).toBe(200);
+    expect(res.headers.get('content-type')).toMatch(/text\/html/);
+    expect(res.text).toBe(INDEX);
+  });
+});
