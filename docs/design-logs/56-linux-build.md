@@ -373,3 +373,138 @@ flowchart LR
 - **Out of scope:** Game Mode in any form, controller navigation, VAAPI
   hardware encoding, Flatpak and Flathub, arm64, code signing
   on either platform, and any distro beyond SteamOS as a smoked target.
+
+---
+
+## Amendment, 2026-11-05: the Menu entry (issue #520)
+
+A second `grill-me`, held after the v0.14.0 Package smoke (#518) failed its
+Linux half and shipped Windows-only. It amends **Q6** (the hand-made menu
+entry) and **Q8** (the desktop entry), and carries out **Q10** where the build
+broke it. The maintainer approved every recommendation. The sections above
+stand as they were written.
+
+### Background
+
+On the Deck (SteamOS 3.9.5, Plasma and KWin 6.7.3, Wayland) the smoke found
+three things, recorded on #520:
+
+- KWin reports the window as `desktopFile: FamilyFlix`, `resourceClass:
+FamilyFlix`, and takes its icon from a menu entry named exactly
+  `FamilyFlix.desktop`. None existed, so the window wore KDE's fallback "W".
+  `StartupWMClass=FamilyFlix` does not match under Wayland. A test entry of
+  that name, `Icon=familyflix` with the PNG in the hicolor theme, gave the
+  window the **App mark**.
+- This Plasma has no _Edit Applications..._ on the launcher's menu, so Q6's
+  third step could not be done; AppImageLauncher was used instead, which Q6
+  rejected.
+- The app ran as `familyflix --no-sandbox`: electron-builder writes
+  `Exec=AppRun --no-sandbox %U` into the AppImage's desktop entry by default,
+  and AppImageLauncher copied it. Launched with no flags the app opens, and
+  `unshare -Ur true` succeeds, so Q10's sandbox holds once the flag is gone.
+
+### Problem
+
+How does the Deck get a menu entry that wears the App mark, with no helper
+app and no step the family can't do, and how does no entry carry
+`--no-sandbox`?
+
+### Questions and Answers
+
+1. **When is the entry written?** ✅ **Checked at every launch, written only
+   when its content would change.** It names the AppImage's absolute path,
+   which only the running app knows; Q5's fixed name keeps that path stable,
+   so in practice it is written once, and rewritten only after a move, a
+   release that changes it, or a deletion. ❌ The first launch only: a moved
+   AppImage leaves an entry that opens nothing.
+2. **Its name and content?** ✅ `~/.local/share/applications/FamilyFlix.desktop`,
+   the window's app id:
+   `Type=Application`, `Name=FamilyFlix`, `Comment=` the `linux.synopsis`,
+   `Exec="<$APPIMAGE>" %U`, `TryExec=<$APPIMAGE>`, `Icon=familyflix`,
+   `StartupWMClass=FamilyFlix`, `Categories=AudioVideo;`, `Terminal=false`.
+   No `--no-sandbox`. `TryExec` hides the entry once the AppImage is gone.
+   ❌ Changing the app id to `familyflix` to match the embedded entry:
+   Linux-only identity code for no gain.
+3. **The icon?** ✅ `electron/assets/icon.png` (512, already in the asar)
+   copied to `~/.local/share/icons/hicolor/512x512/apps/familyflix.png`, by
+   Q1's rule. ❌ An absolute `Icon=` path into `userData`: unproven on the
+   Deck and not the theme's way.
+4. **An entry someone edited?** ✅ **FamilyFlix owns the file**: a differing
+   one is overwritten.
+5. **When is nothing written?** ✅ Unless it runs as an **AppImage**: Linux
+   with `$APPIMAGE` set. Windows, an **Unpackaged run** and an extracted
+   AppImage write nothing.
+6. **A failed write?** ✅ One **Shell log** line; launch goes on. It runs
+   after the window opens, so it never delays the **Start-up splash**.
+7. **Removal?** ✅ **Never.** There is no uninstall on Linux, and FamilyFlix
+   deletes nothing outside the **Managed media directory**; a deleted
+   AppImage's entry is hidden by `TryExec`.
+8. **Refreshing the menu?** ✅ **Nothing is spawned**: KDE watches
+   `~/.local/share/applications/`. The smoke proves it; if it fails, that is
+   a fix issue. ❌ Running `kbuildsycoca6`: a desktop-specific tool called on
+   a guess.
+9. **Where does it live?** ✅ A pure unit, `electron/menuEntry/`, with a
+   test; writing through an injected file system, as the **Shell log**'s
+   `LogFileSystem`. `main.ts` only wires it.
+10. **`--no-sandbox`?** ✅ `"executableArgs": []` in `builderConfig.json`'s
+    `appImage` block, so the embedded entry drops it too, guarded by
+    `packagingConfig.test.ts`. Q10 as written, now enforced.
+11. **The README?** ✅ _Installing on SteamOS_ becomes: move it to
+    `~/Applications/`; make it executable, if it isn't already; **open it
+    once by double-clicking**, after which FamilyFlix is in the menu with its
+    mark and can be pinned. A maintainer's note: remove AppImageLauncher's
+    FamilyFlix entry, which carries `--no-sandbox`.
+12. **The smoke?** ✅ Step 12's install checks become: the double-click adds
+    _FamilyFlix_ to the menu; launched from it, the window, taskbar and menu
+    entry wear the App mark; `ps` shows no `--no-sandbox`; after an update
+    or a move of the AppImage the entry still opens it.
+
+### Design
+
+- ✅ The app writes its own **Menu entry**; ❌ a hand-made entry (Q6), ❌
+  AppImageLauncher or Gear Lever, ❌ a Konsole command in the README.
+- ✅ No `--no-sandbox` in any entry.
+
+```ts
+// electron/menuEntry/menuEntry.ts
+export interface MenuEntryFiles {
+  /** `~/.local/share/applications/FamilyFlix.desktop` */
+  entryPath: string;
+  entryText: string;
+  /** `~/.local/share/icons/hicolor/512x512/apps/familyflix.png` */
+  iconPath: string;
+}
+
+/** `null` unless this is an AppImage run: Linux with `$APPIMAGE` set. */
+export function menuEntry(
+  env: {
+    platform: NodeJS.Platform;
+    appImage: string | undefined;
+    home: string;
+  },
+  synopsis: string
+): MenuEntryFiles | null;
+```
+
+Main, after `openWindow`, reads each file, writes `entryText` and copies the
+App mark only where they differ, and logs a failure as one **Shell log**
+line.
+
+### Implementation Plan
+
+1. **The sandbox and the Menu entry.** `executableArgs: []` and its guard;
+   `menuEntry` and its test; main's wiring; the README's _Installing on
+   SteamOS_ and the release checklist's step 12. Proven by the next
+   Release's Deck smoke.
+
+### Trade-offs
+
+- **Easier:** the family installs with a double-click and no helper app;
+  a moved AppImage heals its own entry; the sandbox is on wherever the app
+  is launched from.
+- **Harder:** FamilyFlix now writes two small files outside `userData` on
+  Linux, and keeps doing so; a desktop that matches entries differently from
+  KWin is unproven.
+- **Out of scope:** other desktops' menus (GNOME, the Deck's Game Mode),
+  removing the entry, and migrating an AppImageLauncher entry, which is the
+  maintainer's one manual step.
