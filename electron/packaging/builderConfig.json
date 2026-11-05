@@ -57,6 +57,7 @@
     "synopsis": "A browsable library and player for the family movie folder"
   },
   "appImage": {
-    "artifactName": "FamilyFlix-x86_64.${ext}"
+    "artifactName": "FamilyFlix-x86_64.${ext}",
+    "executableArgs": []
   }
 }

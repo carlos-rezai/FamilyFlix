@@ -54,7 +54,12 @@ describe('menuEntry — when there is one', () => {
   });
 
   it('answers null on Linux with no $APPIMAGE: an Unpackaged run or an extracted AppImage', () => {
-    expect(linux(undefined)).toBeNull();
+    expect(
+      menuEntry(
+        { platform: 'linux', appImage: undefined, home: HOME },
+        SYNOPSIS
+      )
+    ).toBeNull();
   });
 });
 

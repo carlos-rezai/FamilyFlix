@@ -227,12 +227,18 @@ with the **previous** published AppImage installed as below, for the update
 round-trip at the end.
 
 - [ ] The README's _Installing on SteamOS_, its three steps as written:
-      moved from `~/Downloads` to `~/Applications/`, made executable, a KDE
-      menu entry added. No helper app.
-- [ ] Launched from the menu entry, with no flags (no `--no-sandbox`, no
-      `--appimage-extract-and-run`): the sandbox and the AppImage runtime both
-      hold, and the app opens maximized on _Your library is empty_.
-- [ ] The **App mark** is on the window, the KDE taskbar and the menu entry.
+      moved from `~/Downloads` to `~/Applications/`, made executable if it
+      isn't already, opened once by double-clicking. No helper app. The
+      double-click adds _FamilyFlix_ to the application menu.
+- [ ] Launched from that menu entry, the app opens maximized on _Your
+      library is empty_, and the window, the KDE taskbar and the menu entry
+      all wear the **App mark**.
+- [ ] `ps -ef | grep -i familyflix` shows no `--no-sandbox` (and no
+      `--appimage-extract-and-run`): the sandbox and the AppImage runtime
+      both hold.
+- [ ] Moved to another folder and opened there once by double-clicking, the
+      AppImage's menu entry still opens it; moved back, the same. After an
+      update the entry still opens it too (the round-trip below).
 - [ ] Settings → Import from spreadsheet over the fixture's `library.xlsx`
       and `root/` on the SD card (`/run/media/deck/<label>/...`): both films
       import.

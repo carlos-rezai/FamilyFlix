@@ -315,10 +315,12 @@ The library lives in `%APPDATA%\FamilyFlix\` and survives an uninstall, so a rei
 On the Steam Deck, in Desktop Mode, download `FamilyFlix-x86_64.AppImage` from the latest Release in the browser. No helper app (AppImageLauncher, Gear Lever) is needed. Then:
 
 1. Move it from `~/Downloads` to `~/Applications/` (make the folder if it isn't there), where a SteamOS update never removes it.
-2. Make it executable: in Dolphin, right-click it → _Properties_ → _Permissions_ → _Is executable_, or `chmod +x ~/Applications/FamilyFlix-x86_64.AppImage`.
-3. Add a KDE menu entry: right-click the application launcher → _Edit Applications…_ → _New Item_, named FamilyFlix, with `~/Applications/FamilyFlix-x86_64.AppImage` as the program.
+2. Make it executable, if it isn't already: in Dolphin, right-click it → _Properties_ → _Permissions_ → _Is executable_, or `chmod +x ~/Applications/FamilyFlix-x86_64.AppImage`.
+3. Open it once by double-clicking it. FamilyFlix adds itself to the application menu, wearing its mark, and from then on opens from there and can be pinned to the taskbar.
 
-The library lives in `~/.config/FamilyFlix/`, so replacing or deleting the AppImage never touches it. An update overwrites the AppImage in place, so the menu entry keeps working.
+The library lives in `~/.config/FamilyFlix/`, so replacing or deleting the AppImage never touches it. Each launch checks the menu entry against where the AppImage now lies, so an update or a move keeps it working; a deleted AppImage's entry hides itself.
+
+> **Maintainer's note:** if AppImageLauncher ever added a FamilyFlix entry (an `appimagekit_<hash>-FamilyFlix.desktop` in `~/.local/share/applications/`), remove it: it launches the app with `--no-sandbox`.
 
 ### Commit message convention
 

@@ -2,9 +2,12 @@ import {
   appendFileSync,
   existsSync,
   mkdirSync,
+  readFileSync,
   renameSync,
   statSync,
+  writeFileSync,
 } from 'node:fs';
+import { homedir } from 'node:os';
 import { join } from 'node:path';
 import {
   app,
@@ -25,6 +28,11 @@ import { APP_USER_MODEL_ID } from './appIdentity/appIdentity';
 import { createUpdates } from './createUpdates/createUpdates';
 import { downloadPath } from './downloadPath/downloadPath';
 import { loadRenderer } from './loadRenderer/loadRenderer';
+import {
+  menuEntry,
+  writeMenuEntry,
+  type MenuEntryFileSystem,
+} from './menuEntry/menuEntry';
 import {
   openMediaFolder,
   type MediaFolderWorld,
@@ -64,6 +72,10 @@ const BACKGROUND = '#14110d';
 /** How long the **Ordered shutdown** has before the server is killed. */
 const SHUTDOWN_MS = 5_000;
 
+/** The **Menu entry**'s `Comment`: `linux.synopsis` in `builderConfig.json`. */
+const LINUX_SYNOPSIS =
+  'A browsable library and player for the family movie folder';
+
 const mode = shellMode(app.isPackaged, process.env);
 
 if (mode !== 'installed') {
@@ -96,6 +108,19 @@ const logFs: LogFileSystem = {
   },
   rename: (from, to) => renameSync(from, to),
   append: (path, text) => appendFileSync(path, text),
+  mkdir: (dir) => mkdirSync(dir, { recursive: true }),
+};
+
+/** The **Menu entry**'s file system: Node's own, synchronous, no delete. */
+const menuEntryFs: MenuEntryFileSystem = {
+  read(path) {
+    try {
+      return readFileSync(path);
+    } catch {
+      return undefined;
+    }
+  },
+  write: (path, data) => writeFileSync(path, data),
   mkdir: (dir) => mkdirSync(dir, { recursive: true }),
 };
 
@@ -276,6 +301,25 @@ if (!app.requestSingleInstanceLock()) {
     );
 
     openWindow(join(__dirname, 'preload.js'));
+
+    // The **Menu entry**: run as an **AppImage**, the app writes its own
+    // `FamilyFlix.desktop` and App mark; a failure is one Shell log line.
+    const entry = menuEntry(
+      {
+        platform: process.platform,
+        appImage: process.env.APPIMAGE,
+        home: homedir(),
+      },
+      LINUX_SYNOPSIS
+    );
+    if (entry !== null) {
+      writeMenuEntry({
+        files: entry,
+        markPath: paths.icon,
+        fs: menuEntryFs,
+        log: (text) => log.main(text),
+      });
+    }
 
     log.main('Starting the server.');
     const started = await startServer(server, dialogWorld);
