@@ -1,13 +1,16 @@
 // @vitest-environment node
 //
-// Issue #228 — the installed shape's paths. `shellPaths` is pure: from the
-// **Shell mode** and Electron's three locations — `app.getAppPath()`,
-// `process.resourcesPath` and `userData` — it answers every path the shell and
+// Issue #228, the installed shape's paths. `shellPaths` is pure: from the
+// **Shell mode** and Electron's three locations (`app.getAppPath()`,
+// `process.resourcesPath` and `userData`) it answers every path the shell and
 // the **Server process** need. Unpackaged (`dev`, `start`), `appPath` is the
-// repo and every path is today's. Installed, the icon and both bundles come
-// from `appPath` (`resources\app.asar`), and the renderer, the binding and
-// `ffmpeg.exe` from `resourcesPath` — the **Packaged layout**. The server is
-// forked in `userData`, because a working directory cannot be inside an asar.
+// repo and every path is under it. Installed, the icon and both bundles come
+// from `appPath` (`resources/app.asar`), and the renderer, the binding and
+// FFmpeg from `resourcesPath`: the **Packaged layout**. The **App mark** is
+// `icon.ico` on Windows and `icon.png` on Linux; the installed **Default
+// component** is `ffmpeg.exe` on Windows and the extensionless `ffmpeg` on
+// Linux. The server is forked in `userData`, because a working directory
+// cannot be inside an asar.
 //
 // Main reads it once, beside `shellMode`, and stops reading `process.cwd()`.
 
@@ -266,36 +269,6 @@ describe('shellPaths on Linux', () => {
   );
 });
 
-describe('shellPaths on Windows answers exactly today’s paths', () => {
-  it.each(['dev', 'start'] as const)('%s', (mode) => {
-    expect(shellPaths(mode, LOCATIONS.unpackaged, 'win32')).toEqual({
-      icon: join(REPO, 'electron', 'assets', 'icon.ico'),
-      serverEntry: join(REPO, 'electron', 'dist', 'server.js'),
-      renderer: join(REPO, 'dist', 'familyflix'),
-      sqliteBinding: join(REPO, 'electron', '.native', 'better_sqlite3.node'),
-      ffmpeg: null,
-      serverCwd: REPO,
-      mediaRoot: join(REPO, 'media'),
-      database: join(REPO, 'familyflix.db'),
-      componentSlot: join(REPO, 'playback-component'),
-    });
-  });
-
-  it('installed', () => {
-    expect(shellPaths('installed', LOCATIONS.installed, 'win32')).toEqual({
-      icon: join(ASAR, 'electron', 'assets', 'icon.ico'),
-      serverEntry: join(ASAR, 'electron', 'dist', 'server.js'),
-      renderer: join(RESOURCES, 'renderer'),
-      sqliteBinding: join(RESOURCES, 'native', 'better_sqlite3.node'),
-      ffmpeg: join(RESOURCES, 'ffmpeg', 'ffmpeg.exe'),
-      serverCwd: USER_DATA,
-      mediaRoot: join(USER_DATA, 'media'),
-      database: join(USER_DATA, 'familyflix.db'),
-      componentSlot: join(USER_DATA, 'playback-component'),
-    });
-  });
-});
-
 describe.each([
   ['dev', LOCATIONS.unpackaged],
   ['start', LOCATIONS.unpackaged],
@@ -322,15 +295,6 @@ describe('shellPaths without a platform', () => {
 
   afterEach(() => {
     if (realPlatform) Object.defineProperty(process, 'platform', realPlatform);
-  });
-
-  it('answers icon.png and the extensionless ffmpeg when process.platform is linux', () => {
-    Object.defineProperty(process, 'platform', { value: 'linux' });
-
-    const paths = shellPaths('installed', LOCATIONS.installed);
-
-    expect(paths.icon).toBe(join(ASAR, 'electron', 'assets', 'icon.png'));
-    expect(paths.ffmpeg).toBe(join(RESOURCES, 'ffmpeg', 'ffmpeg'));
   });
 
   it.each(['win32', 'linux'] as const)(
