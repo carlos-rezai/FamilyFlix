@@ -53,6 +53,7 @@ interface BuilderConfig {
   };
   appImage?: {
     artifactName?: string;
+    executableArgs?: unknown;
   };
 }
 
@@ -262,6 +263,13 @@ describe('the AppImage', () => {
     expect(linux?.executableName).toBe('familyflix');
     expect(linux?.synopsis).toEqual(expect.any(String));
     expect(linux?.synopsis?.length ?? 0).toBeGreaterThan(0);
+  });
+
+  // Issue #520: electron-builder's default `executableArgs` is
+  // `["--no-sandbox"]`, written into the AppImage's embedded desktop entry
+  // as `Exec=AppRun --no-sandbox %U`; the sandbox holds on the Deck.
+  it('launches with no --no-sandbox: its executableArgs are empty', () => {
+    expect(config().appImage?.executableArgs).toEqual([]);
   });
 
   it('leaves the Installer named by its version', () => {
