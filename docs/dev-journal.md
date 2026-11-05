@@ -11,6 +11,98 @@ Newest entry first.
 
 ---
 
+## 2026-11-05: Linux build, the refactor (issue 522)
+
+Eleven commits against
+`docs/refactor-plans/56-linux-build-refactor.md`, one per plan commit.
+This is the initiative's closing round. **11412 tests pass across 717
+files**, against 11408 at the end of the build (`3554580a`): three
+`appIdentity` synopsis cases, two `packagingConfig` leaves for the one that
+asked only for a non-empty synopsis, and three `menuEntry` escaping cases in;
+the missing-mark case rewritten in place; four `shellPaths` repeats out.
+`tsc -b --force` is clean. `eslint src server electron` reports one error and
+137 warnings, the count the round began on.
+
+### What shipped before this round
+
+The build slices (512 to 516) gave the shell a platform, the **AppImage**,
+the Linux FFmpeg, the two-leg release workflow and the SteamOS install
+steps. v0.14.0 went out as a draft (517) and through its first Deck smoke
+(518), which found three things, fixed in 519 to 521: `sendFile` refused a
+path under a dot folder, the AppImage's own entry launched with
+`--no-sandbox` and KWin gave the window no mark (hence the **Menu entry**),
+and a missing `latest-linux.yml` logged a stack. v0.14.1 passed both halves
+of its **Package smoke**, and the Deck updated itself from v0.14.0 to
+v0.14.1 through `latest-linux.yml`: the first Linux update round-trip.
+
+### What each group changed
+
+- **Group 1, one spelling of the synopsis** (`f5fb6187`, `0a50c55d`).
+  `APP_SYNOPSIS` joins `APP_USER_MODEL_ID` in `appIdentity`; main imports it
+  and `LINUX_SYNOPSIS` goes. The packaging guard holds `linux.synopsis` to it
+  and the **Menu entry**'s `Categories` to `linux.category`. `menuEntry`
+  still takes the synopsis as an argument.
+- **Group 2, the Menu entry escapes its path** (`dacfc6de`, `6884e250`).
+  `Exec` is built by `execArgument` (the quote rule, `%%`, then the string
+  value) and `TryExec` by `stringValue` (`\\` for a backslash), both
+  module-private. A missing **App mark** is now `No App mark at <path>.`,
+  and its case is driven by a `read` that answers `undefined`, the way
+  main's disk does.
+- **Group 3, the platform as a type, the executable bit as data**
+  (`c551d033`, `f0a5b96b`, `47d74594`). `packageOptions` and `ffmpegTarget`
+  take `NodeJS.Platform`. `FfmpegTarget.wanted` is a list of `FfmpegEntry`
+  (`inner`, `shipped`, `executable`); `fetchFfmpeg.mjs` loses `binariesOf`
+  and reads the bit. `fetchFfmpeg.test` passed unchanged, so the README
+  bytes and the modes did not move.
+- **Group 4, `shellPaths.test` says each thing once** (`1e291cd3`). The
+  whole-object Windows describe and the hand-written Linux case go; the
+  header names both platforms' icon and FFmpeg.
+- **Group 5, docblocks** (`67aa2793`). `packageApp.mjs` names both
+  **Platform builds** and their outputs; the FFmpeg script and its suite say
+  each Platform build carries the **Default component**; both `sendFile`
+  sites say why dotfiles are allowed; `libraryFolders.ts` says _the file
+  manager_.
+- **Group 6, the docs** (`49ee7779` and this commit). The README's
+  `release/` line, the glossary's **FFmpeg target** and **Menu entry**, and
+  step 39 ticked.
+
+### Where this round left the plan
+
+- **The escaping is proven on Windows only.** The suite unescapes by the
+  spec and gets the path back; the next tag's Linux leg runs it on Linux,
+  and the next Deck smoke's menu-entry step opens the app through it.
+- **The packaging guard reads the Menu entry's `Categories` from
+  `menuEntry`'s own answer**, so it imports the unit; it held green from
+  the RED commit on, a guard rather than a change.
+- **The checklist's status column narrowed** under Prettier once no row was
+  planned, so commit 10 reflows the whole table, as in issue 509.
+- **Two scripted edits lost their backslashes** through a bash heredoc
+  (`menuEntry.ts`'s regexes, `fetchFfmpeg.test`'s Windows path); both were
+  caught before their commits and made with Edit.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: VAAPI encoding (the v0.14.0 smoke
+found HEVC smooth in software), the shell's boundary guard where 512 put
+it, the FFmpeg README's wording and its em dashes, a guard over every
+`sendFile`, the two file-system adapters in `main.ts`, and Game Mode,
+controller navigation, Flatpak, arm64, macOS and signing. No wire, schema,
+route, renderer, workflow or `builderConfig.json` change.
+
+### Follow-ups this refactor surfaced
+
+None required. The next Release's Deck smoke re-proves the **Menu entry**
+with the escaping in. From earlier entries: a discriminated library scope,
+`importPlaced`'s parameters as an object, and the earlier lists they carry.
+
+### The initiative
+
+**Linux build is done**: the slices (512 to 516), the v0.14.0 draft and
+smoke (517, 518), the smoke's fixes (519 to 521) and this round (522). Issue
+511 was already closed.
+
+---
+
 ## 2026-10-30: Intro animation, the refactor (issue 509)
 
 Eleven commits against
