@@ -429,3 +429,96 @@ describe('createUpdates — install', () => {
     expect(fake.updater.quitAndInstall).toHaveBeenCalledWith(false, true);
   });
 });
+
+// Issue #521 — the quiet update 404. While the latest published Release
+// carries no `latest-linux.yml`, the AppImage's **Update check** is answered
+// with `ERR_UPDATER_CHANNEL_FILE_NOT_FOUND`. That answer is expected, so the
+// **Shell log** gets one quiet line for it, not two errors each with a stack
+// trace. The real `autoUpdater` registers its own `error` listener in its
+// constructor, before main ever sees it, writing `Error: ${error.stack}` to
+// whatever logger is installed; this fake does the same, so the test counts
+// every line a launch really writes.
+
+const STACK_FRAME = /\n\s+at /;
+
+/** The error `GitHubProvider` throws when the Release has no Linux metadata. */
+function missingLinuxMetadata(): Error {
+  const url =
+    'https://github.com/carlos-rezai/FamilyFlix/releases/download/v0.14.0/latest-linux.yml';
+  const inner = new Error(
+    `HttpError: 404 \n"method: GET url: ${url}\n\nPlease double check that your authentication token is correct."`
+  );
+  const error = new Error(
+    `Cannot find latest-linux.yml in the latest release artifacts (${url}): ${inner.stack ?? inner.message}`
+  ) as Error & { code: string };
+  error.code = 'ERR_UPDATER_CHANNEL_FILE_NOT_FOUND';
+  return error;
+}
+
+/** `setup()`, over an updater that already logs its own errors, as the real one does. */
+function setupLikeElectronUpdater() {
+  const fake = fakeUpdater();
+  fake.updater.on('error', (error: Error) => {
+    fake.updater.logger?.error(`Error: ${error.stack ?? error.message}`);
+  });
+  const log = vi.fn<(text: string) => void>();
+  const updates = createUpdates({
+    updater: fake.updater,
+    enabled: true,
+    now: () => NOW,
+    shutdown: () => Promise.resolve(),
+    onStatus: vi.fn<(status: UpdateStatus) => void>(),
+    log,
+  });
+  return { fake, updates, log };
+}
+
+/** A check answered the way electron-updater answers it: `error` emitted, then the rejection. */
+function answersMissingLinuxMetadata(fake: ReturnType<typeof fakeUpdater>) {
+  fake.answers(() => {
+    const error = missingLinuxMetadata();
+    fake.emit('error', error);
+    return Promise.reject(error);
+  });
+}
+
+describe('createUpdates — a missing latest-linux.yml', () => {
+  it('the launch check writes one line to the Shell log', async () => {
+    const { fake, updates, log } = setupLikeElectronUpdater();
+    answersMissingLinuxMetadata(fake);
+
+    await updates.start();
+
+    expect(log).toHaveBeenCalledTimes(1);
+  });
+
+  it('the line names latest-linux.yml, with no stack trace', async () => {
+    const { fake, updates, log } = setupLikeElectronUpdater();
+    answersMissingLinuxMetadata(fake);
+
+    await updates.start();
+
+    const [line] = log.mock.calls.map(([text]) => text);
+    expect(line).toContain('latest-linux.yml');
+    expect(line).not.toMatch(STACK_FRAME);
+  });
+
+  it('the line is not logged as an error', async () => {
+    const { fake, updates, log } = setupLikeElectronUpdater();
+    answersMissingLinuxMetadata(fake);
+
+    await updates.start();
+
+    const [line] = log.mock.calls.map(([text]) => text);
+    expect(line).not.toMatch(/^Updater? error/i);
+  });
+
+  it('the pressed check still answers refused, with the same one line', async () => {
+    const { fake, updates, log } = setupLikeElectronUpdater();
+    answersMissingLinuxMetadata(fake);
+
+    await expect(updates.check()).resolves.toBe('refused');
+    expect(log).toHaveBeenCalledTimes(1);
+    expect(log.mock.calls[0][0]).not.toMatch(STACK_FRAME);
+  });
+});
