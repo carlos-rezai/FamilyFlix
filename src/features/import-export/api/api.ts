@@ -274,6 +274,27 @@ export async function importManyGuessed(ids: string[]): Promise<ImportRun> {
   return (await response.json()) as ImportRun;
 }
 
+const BULK_TIDY_ENDPOINT = '/api/import/current/problems/tidy';
+
+/**
+ * _Tidy all_: the ids posted as JSON, and the **Current run** the route
+ * answers: the whole snapshot, each row imported, redrawn with why its move
+ * failed, or left listed after a folder that can't be reached. Any status
+ * but a `200` rejects, and so does a request that could not be made.
+ */
+export async function tidyManyLoose(ids: string[]): Promise<ImportRun> {
+  const response = await fetch(BULK_TIDY_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (response.status !== 200) {
+    throw new Error(`POST ${BULK_TIDY_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as ImportRun;
+}
+
 const EXPORT_ENDPOINT = '/api/export';
 
 /**

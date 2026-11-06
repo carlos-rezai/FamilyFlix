@@ -3188,6 +3188,33 @@ export function createApiRouter(
     }
   );
 
+  // _Tidy all_ beside a chosen `loose`: the ids read as the bulk dismiss
+  // reads them, then handed to the importer's `tidyMany`, which goes in order
+  // and stops at the first folder that can't be reached, and the whole
+  // snapshot answered, so the screen redraws from the echo. `404` with no
+  // run.
+  router.post(
+    '/import/current/problems/tidy',
+    async (req: Request, res: Response) => {
+      const read = problemIdsBody(req.body);
+      if (!read.ok) {
+        res.status(400).json({ error: read.error });
+        return;
+      }
+      if (importer.current() === null) {
+        res.status(404).json({ error: 'No import is running' });
+        return;
+      }
+      try {
+        await importer.tidyMany(read.value);
+      } catch {
+        res.status(500).json({ error: 'Could not tidy those videos' });
+        return;
+      }
+      res.json(importer.current());
+    }
+  );
+
   // The **Problem detail** _Resolve_ opens the form on: the problem, the
   // **Sheet row**, the matched **Source folder**, the candidates and the
   // folder's **Found files** as absolute paths under its **Library folder**. A

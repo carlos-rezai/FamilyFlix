@@ -825,6 +825,7 @@ describe('ImportReview — the Kind filter', () => {
             onPick={() => undefined}
             onImportAs={() => undefined}
             onTidy={async () => undefined}
+            onTidyMany={() => undefined}
             onSkipMany={() => undefined}
             onImportManyAsGuessed={() => undefined}
             finishLabel={FINISH}

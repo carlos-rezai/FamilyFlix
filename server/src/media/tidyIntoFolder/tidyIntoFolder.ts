@@ -7,7 +7,8 @@ import type { Tidy } from '@/types';
 export type TidyMove = { ok: true } | { ok: false; reason: string };
 
 const OPEN = "It's open in another app.";
-const GONE = "The folder can't be reached right now.";
+/** The sentence a move answers when its root has gone out of reach. */
+export const UNREACHABLE = "The folder can't be reached right now.";
 const REFUSED = 'The disk refused the move.';
 const clash = (folder: string): string =>
   `A folder called “${folder}” is already here.`;
@@ -40,7 +41,7 @@ async function reasonOf(
     return clash(folder);
   }
   if (!(await reachable(root))) {
-    return GONE;
+    return UNREACHABLE;
   }
   return REFUSED;
 }

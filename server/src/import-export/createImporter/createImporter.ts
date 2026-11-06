@@ -25,7 +25,10 @@ import {
   scanMovieFolder,
   type MovieFolderScan,
 } from '../../media/scanMovieFolder/scanMovieFolder';
-import { tidyIntoFolder } from '../../media/tidyIntoFolder/tidyIntoFolder';
+import {
+  tidyIntoFolder,
+  UNREACHABLE,
+} from '../../media/tidyIntoFolder/tidyIntoFolder';
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -291,6 +294,13 @@ export interface Importer {
    */
   tidy(id: string): Promise<ReviewOutcome>;
   /**
+   * _Tidy all_: each id tidied in order as {@link tidy} tidies it, a failed
+   * move redrawn and the next one tried, until the first move whose folder
+   * can't be reached: that row is redrawn and the rest are left listed as
+   * they were. An id not held is passed over.
+   */
+  tidyMany(ids: string[]): Promise<void>;
+  /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
    * and the folder's **Found files** as absolute paths. `null` for an id that
@@ -413,6 +423,26 @@ const inNameOrder = (paths: string[]): string[] =>
  * exactly one: two is the `no-video` verdict, and the detail guesses no more
  * than the run did — the maintainer picks, on the **Found-file choice**.
  */
+/**
+ * A loose film's share of its root's scan: the root as its folder, named off
+ * its **Tidy folder name**, holding only the Tidy's video and **Companion
+ * files**, so a _Resolve_ links it where it lies.
+ */
+const tidyScan = (root: MovieFolderScan, tidy: Tidy): MovieFolderScan => {
+  const own = new Set([...tidy.videos, ...tidy.companions]);
+  const mine = (path: string | null): boolean =>
+    path !== null && own.has(basename(path));
+  return {
+    dir: root.dir,
+    name: tidy.folder,
+    videos: root.videos.filter(mine),
+    poster: mine(root.poster) ? root.poster : null,
+    backdrop: mine(root.backdrop) ? root.backdrop : null,
+    images: root.images.filter(mine),
+    subtitles: root.subtitles.filter((track) => mine(track.path)),
+  };
+};
+
 const filesOf = (scan: MovieFolderScan): ImportProblemDetail['files'] => ({
   ...(scan.videos.length === 1 ? { video: scan.videos[0] } : {}),
   videos: inNameOrder(scan.videos),
@@ -2091,6 +2121,13 @@ export function createImporter({
       );
     });
     const none = { row: null, folder: null, candidates: [] };
+    let rootScan: MovieFolderScan | null = null;
+    try {
+      rootScan =
+        plan.tidies.length > 0 ? await scanMovieFolder(folder.path) : null;
+    } catch {
+      rootScan = null;
+    }
     for (const tidy of plan.tidies) {
       const problem: ImportProblem = {
         ...problemOf(
@@ -2100,7 +2137,12 @@ export function createImporter({
         ),
         tidy,
       };
-      file(current, problem, none);
+      // Resolve links the film where it lies: the root as its folder, and
+      // only the Tidy's own files as what was found in it.
+      file(current, problem, {
+        ...none,
+        folder: rootScan === null ? null : tidyScan(rootScan, tidy),
+      });
       loosened.set(problem.id, { tidy, libraryFolder: folder });
     }
     for (const kept of plan.kept) {
@@ -2118,6 +2160,67 @@ export function createImporter({
         'info'
       );
     }
+  };
+
+  /**
+   * One _Tidy into_: the {@link Importer.tidy} outcome, and whether the move
+   * failed because its folder can't be reached, which stops a _Tidy all_.
+   */
+  const tidyOne = async (
+    id: string
+  ): Promise<{ outcome: ReviewOutcome; unreachable: boolean }> => {
+    const current = run;
+    const at = current?.problems.findIndex((problem) => problem.id === id);
+    const loose = loosened.get(id);
+    if (
+      current === null ||
+      at === undefined ||
+      at === -1 ||
+      loose === undefined
+    ) {
+      return { outcome: { kind: 'not-found' }, unreachable: false };
+    }
+    const { tidy, libraryFolder } = loose;
+    const moved = await tidyIntoFolder(libraryFolder.path, tidy);
+    if (!moved.ok) {
+      // A rollback that failed too left files moved, and its reason
+      // already says where they are.
+      const stranded = moved.reason.endsWith(
+        `Some of its files are in “${tidy.folder}”.`
+      );
+      const problem: ImportProblem = {
+        ...current.problems[at],
+        reason: stranded
+          ? `Couldn't move it: ${moved.reason}`
+          : `Couldn't move it: ${moved.reason} Nothing was moved.`,
+      };
+      current.problems[at] = problem;
+      return {
+        outcome: { kind: 'redrawn', problem },
+        unreachable: moved.reason.startsWith(UNREACHABLE),
+      };
+    }
+    const companions = tidy.companions.length;
+    log(
+      current,
+      `✓ Tidied     ${tidy.videos[0] ?? ''} into ${tidy.folder} (+${companions} with it)`,
+      'success'
+    );
+    const scan = await scanMovieFolder(join(libraryFolder.path, tidy.folder));
+    const row = guessedRow(scan.name);
+    const outcome = await importFromReview(
+      current,
+      id,
+      row,
+      false,
+      scan,
+      libraryFolder
+    );
+    if (outcome.kind === 'imported') {
+      logPlaced(current, row.title);
+      warnOfMissingFiles(current, { row, folder: scan });
+    }
+    return { outcome, unreachable: false };
   };
 
   /**
@@ -2380,49 +2483,15 @@ export function createImporter({
       );
     },
 
-    tidy: async (id) => {
-      const current = run;
-      const at = current?.problems.findIndex((problem) => problem.id === id);
-      const loose = loosened.get(id);
-      if (
-        current === null ||
-        at === undefined ||
-        at === -1 ||
-        loose === undefined
-      ) {
-        return { kind: 'not-found' };
+    tidy: async (id) => (await tidyOne(id)).outcome,
+
+    tidyMany: async (ids) => {
+      for (const id of ids) {
+        const { unreachable } = await tidyOne(id);
+        if (unreachable) {
+          return;
+        }
       }
-      const { tidy, libraryFolder } = loose;
-      const moved = await tidyIntoFolder(libraryFolder.path, tidy);
-      if (!moved.ok) {
-        const problem: ImportProblem = {
-          ...current.problems[at],
-          reason: `Couldn't move it: ${moved.reason} Nothing was moved.`,
-        };
-        current.problems[at] = problem;
-        return { kind: 'redrawn', problem };
-      }
-      const companions = tidy.companions.length;
-      log(
-        current,
-        `✓ Tidied     ${tidy.videos[0] ?? ''} into ${tidy.folder} (+${companions} with it)`,
-        'success'
-      );
-      const scan = await scanMovieFolder(join(libraryFolder.path, tidy.folder));
-      const row = guessedRow(scan.name);
-      const outcome = await importFromReview(
-        current,
-        id,
-        row,
-        false,
-        scan,
-        libraryFolder
-      );
-      if (outcome.kind === 'imported') {
-        logPlaced(current, row.title);
-        warnOfMissingFiles(current, { row, folder: scan });
-      }
-      return outcome;
     },
 
     problem: (id) => {
