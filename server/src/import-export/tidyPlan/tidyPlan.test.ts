@@ -8,8 +8,8 @@
 // `safeFilename`; a name the root already holds, file or folder, case folded,
 // keeps the video where it is with the clash sentence; a video `kept` answers
 // true for (a **Held video** or a **Left-out video**) is in neither list. Two
-// videos with one folder name are both offered. Episodes are planned in a
-// later phase. The read is spelled here by name, as the root lists it.
+// videos with one folder name are both offered. Episodes are planned below,
+// in Phase 5's suites. The read is spelled here by name, as the root lists it.
 
 import { describe, expect, it } from 'vitest';
 
@@ -157,5 +157,155 @@ describe('tidyPlan — two videos, one folder name', () => {
     ]);
     expect(new Set(plan.tidies.map((tidy) => tidy.id)).size).toBe(2);
     expect(plan.kept).toEqual([]);
+  });
+});
+
+// 57, Phase 5: "loose shows" (issue #528). Tagged videos group by the **Title
+// key** of the text before the tag into one `show` **Tidy**, named by
+// `titleGuess` of that text through `safeFilename`; episodes stay flat.
+// Episodes with nothing before the tag are kept where they are.
+
+interface TaggedFile {
+  video: string;
+  companions: string[];
+  tag: { season: number; episode: number; title: string | null };
+}
+
+/** A loose episode as `readLooseVideos` reads it, its tag spelled out. */
+const episode = (
+  video: string,
+  season: number,
+  number: number,
+  companions: string[] = []
+): TaggedFile => ({
+  video,
+  companions,
+  tag: { season, episode: number, title: null },
+});
+
+/** A root's read over films and episodes alike. */
+const mixed = (loose: (ReadFile | TaggedFile)[], others: string[] = []) => ({
+  loose,
+  names: [
+    ...loose.flatMap((file) => [file.video, ...file.companions]),
+    ...others,
+  ],
+});
+
+describe('tidyPlan — a tagged video', () => {
+  it('is never planned as a film', () => {
+    const plan = tidyPlan(
+      ROOT,
+      mixed([episode('Breaking.Bad.S01E01.mp4', 1, 1)]),
+      nothingKept
+    );
+
+    expect(plan.tidies.map((tidy) => tidy.kind)).toEqual(['show']);
+    expect(plan.tidies.some((tidy) => tidy.kind === 'film')).toBe(false);
+  });
+
+  it('beside a film, only the film is a film tidy', () => {
+    const plan = tidyPlan(
+      ROOT,
+      mixed([
+        film('Apex.2026.1080p.mp4'),
+        episode('Breaking.Bad.S01E01.mp4', 1, 1),
+      ]),
+      nothingKept
+    );
+
+    expect(plan.tidies.map((tidy) => [tidy.kind, tidy.videos])).toEqual([
+      ['film', ['Apex.2026.1080p.mp4']],
+      ['show', ['Breaking.Bad.S01E01.mp4']],
+    ]);
+  });
+});
+
+describe('tidyPlan — a loose show', () => {
+  it('groups the episodes sharing a Title key into one show tidy, named from the text before the tag', () => {
+    const plan = tidyPlan(
+      ROOT,
+      mixed([
+        episode('Breaking.Bad.S01E01.mp4', 1, 1, [
+          'Breaking.Bad.S01E01.en.srt',
+        ]),
+        episode('breaking bad - S01E02.mp4', 1, 2),
+      ]),
+      nothingKept
+    );
+
+    expect(plan.tidies).toEqual([
+      {
+        id: 'breaking.bad.s01e01.mp4',
+        kind: 'show',
+        folder: 'Breaking Bad',
+        videos: ['Breaking.Bad.S01E01.mp4', 'breaking bad - S01E02.mp4'],
+        companions: ['Breaking.Bad.S01E01.en.srt'],
+      },
+    ]);
+    expect(plan.kept).toEqual([]);
+  });
+
+  it('makes two shows of two Title keys', () => {
+    const plan = tidyPlan(
+      ROOT,
+      mixed([
+        episode('Breaking.Bad.S01E01.mp4', 1, 1),
+        episode('Tidewater.S02E05.mp4', 2, 5),
+        episode('Breaking.Bad.S01E02.mp4', 1, 2),
+      ]),
+      nothingKept
+    );
+
+    expect(plan.tidies.map((tidy) => [tidy.folder, tidy.videos])).toEqual([
+      ['Breaking Bad', ['Breaking.Bad.S01E01.mp4', 'Breaking.Bad.S01E02.mp4']],
+      ['Tidewater', ['Tidewater.S02E05.mp4']],
+    ]);
+  });
+
+  it('drops release noise and a year from the show folder name', () => {
+    const plan = tidyPlan(
+      ROOT,
+      mixed([episode('Tidewater.2018.S01E01.1080p.mp4', 1, 1)]),
+      nothingKept
+    );
+
+    expect(plan.tidies.map((tidy) => tidy.folder)).toEqual(['Tidewater']);
+  });
+
+  it('makes the show folder name safe', () => {
+    const plan = tidyPlan(
+      ROOT,
+      mixed([episode('AC/DC Tales S01E01.mp4', 1, 1)]),
+      nothingKept
+    );
+
+    expect(plan.tidies.map((tidy) => tidy.folder)).toEqual([
+      safeFilename('AC/DC Tales'),
+    ]);
+  });
+});
+
+describe('tidyPlan — untitled episodes', () => {
+  it('keeps an episode with nothing before the tag where it is', () => {
+    const plan = tidyPlan(
+      ROOT,
+      mixed([
+        episode('S01E03.mp4', 1, 3, ['S01E03.en.srt']),
+        episode('1x04.mp4', 1, 4),
+        episode('Breaking.Bad.S01E01.mp4', 1, 1),
+      ]),
+      nothingKept
+    );
+
+    expect(plan.tidies.map((tidy) => tidy.videos)).toEqual([
+      ['Breaking.Bad.S01E01.mp4'],
+    ]);
+    expect(plan.kept.flatMap((kept) => kept.files).sort()).toEqual(
+      ['1x04.mp4', 'S01E03.en.srt', 'S01E03.mp4'].sort()
+    );
+    for (const kept of plan.kept) {
+      expect(kept.folder).toBeUndefined();
+    }
   });
 });

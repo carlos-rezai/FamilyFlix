@@ -104,3 +104,32 @@ describe('opensSeriesResolve', () => {
     expect(opensSeriesResolve({ kind, seriesId: 's1' })).toBe(false);
   });
 });
+
+// 57, Phase 5 (issue #528): a loose show's _Resolve_ opens the Series Resolve
+// over its episodes, as `unplaced`'s does; a loose film's and a clash's stay
+// with the movie form.
+describe('opensSeriesResolve — a loose row', () => {
+  const tidy = (kind: 'film' | 'show') => ({
+    id: 'breaking.bad.s01e01.mp4',
+    kind,
+    folder: 'Breaking Bad',
+    videos: ['Breaking.Bad.S01E01.mp4'],
+    companions: [],
+  });
+
+  it('opens it for a loose show', () => {
+    expect(opensSeriesResolve({ kind: 'loose', tidy: tidy('show') })).toBe(
+      true
+    );
+  });
+
+  it('leaves a loose film to the movie form', () => {
+    expect(opensSeriesResolve({ kind: 'loose', tidy: tidy('film') })).toBe(
+      false
+    );
+  });
+
+  it('leaves a clash, which has no tidy, to the movie form', () => {
+    expect(opensSeriesResolve({ kind: 'loose' })).toBe(false);
+  });
+});
