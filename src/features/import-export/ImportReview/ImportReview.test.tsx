@@ -74,6 +74,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
           onPick={props.onPick ?? (() => undefined)}
           onImportAs={props.onImportAs ?? (() => undefined)}
           onTidy={props.onTidy ?? (async () => undefined)}
+          onTidyMany={props.onTidyMany ?? (() => undefined)}
           onSkipMany={props.onSkipMany ?? (() => undefined)}
           onImportManyAsGuessed={
             props.onImportManyAsGuessed ?? (() => undefined)
@@ -99,6 +100,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               onPick={props.onPick ?? (() => undefined)}
               onImportAs={props.onImportAs ?? (() => undefined)}
               onTidy={props.onTidy ?? (async () => undefined)}
+              onTidyMany={props.onTidyMany ?? (() => undefined)}
               onSkipMany={props.onSkipMany ?? (() => undefined)}
               onImportManyAsGuessed={
                 props.onImportManyAsGuessed ?? (() => undefined)
@@ -1239,5 +1241,95 @@ describe('ImportReview — the Loose pill', () => {
     expect(screen.getByText('Apex (2026)')).toBeDefined();
     expect(screen.queryByText('Lighthouse Keepers')).toBeNull();
     expect(screen.queryByText('Amélie')).toBeNull();
+  });
+});
+
+/**
+ * 57 — Tidy into folders, Phase 4: "Tidy all, failures and Resolve" (issue
+ * #527).
+ *
+ * With _Loose_ chosen on the **Kind filter**, **Tidy all** sits among the
+ * Bulk actions in _Import all as guessed_'s place, before _Skip all_, and
+ * for no other kind. A press reports at once every `loose` row that has a
+ * **Tidy**, in the run's order; a clash row (no `tidy`) is not among them.
+ * The step settles nothing itself: the **Run hook** posts and holds the echo.
+ */
+describe('ImportReview — Tidy all', () => {
+  const tidyOf = (folder: string) => ({
+    id: `${folder.toLowerCase()}.mp4`,
+    kind: 'film' as const,
+    folder,
+    videos: [`${folder}.mp4`],
+    companions: [],
+  });
+  const loose = (id: string, folder: string, tidied = true): ImportProblem => ({
+    id,
+    kind: 'loose',
+    title: folder,
+    reason: tidied
+      ? 'Lies loose at the top of D:\Films, with no folder of its own.'
+      : `A folder called “${folder}” is already here.`,
+    ...(tidied ? { tidy: tidyOf(folder) } : {}),
+  });
+
+  /** Two loose films that tidy, a clash between them, and a `no-folder`. */
+  const LOOSE: ImportProblem[] = [
+    { id: 'f1', kind: 'no-folder', title: 'The Night Ferry', reason: 'R.' },
+    loose('a1', 'Apex (2026)'),
+    loose('c1', 'Harbor Lights (1999)', false),
+    loose('q1', 'Quarry Lane (2004)'),
+  ];
+
+  const filter = () =>
+    screen.getByRole('group', { name: 'Problem kinds' }) as HTMLElement;
+  const pill = (name: RegExp) => within(filter()).getByRole('button', { name });
+  const besideFilter = () =>
+    filter().parentElement?.parentElement as HTMLElement;
+  const tidyAll = () =>
+    within(besideFilter()).queryByRole('button', { name: 'Tidy all' });
+
+  it('draws Tidy all with Loose chosen, before Skip all, and no Import all as guessed', () => {
+    renderReview({ run: inReview(LOOSE) });
+
+    fireEvent.click(pill(/^Loose/));
+
+    const button = tidyAll();
+    expect(button).not.toBeNull();
+    const skipAll = within(besideFilter()).getByRole('button', {
+      name: 'Skip all',
+    });
+    expect(comesBefore(button as HTMLElement, skipAll)).toBe(true);
+    expect(
+      within(besideFilter()).queryByRole('button', {
+        name: 'Import all as guessed',
+      })
+    ).toBeNull();
+  });
+
+  it('draws Tidy all only while Loose is chosen: not on All, not on another kind', () => {
+    renderReview({ run: inReview(LOOSE) });
+    const drawn: boolean[] = [];
+
+    drawn.push(tidyAll() !== null);
+    fireEvent.click(pill(/^Loose/));
+    drawn.push(tidyAll() !== null);
+    fireEvent.click(pill(/^No folder/));
+    drawn.push(tidyAll() !== null);
+
+    expect(drawn).toEqual([false, true, false]);
+  });
+
+  it('reports every loose id that has a tidy, in the run’s order, at once', () => {
+    const onTidyMany = vi.fn<ImportReviewProps['onTidyMany']>();
+    const onSkipMany = vi.fn();
+    renderReview({ run: inReview(LOOSE), onTidyMany, onSkipMany });
+
+    fireEvent.click(pill(/^Loose/));
+    fireEvent.click(tidyAll() as HTMLElement);
+
+    expect(onTidyMany).toHaveBeenCalledTimes(1);
+    expect(onTidyMany).toHaveBeenCalledWith(['a1', 'q1']);
+    expect(onSkipMany).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
   });
 });
