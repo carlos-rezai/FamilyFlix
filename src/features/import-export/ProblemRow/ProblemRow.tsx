@@ -5,7 +5,10 @@ import { movieFormPath, opensSeriesResolve } from '@/utils';
 import { FolderPicker } from '../FolderPicker/FolderPicker';
 import {
   Card,
+  CompanionNames,
+  Companions,
   DOT_TONE,
+  Destination,
   Dot,
   Head,
   ImportAsSlot,
@@ -66,7 +69,9 @@ const sheetChoices = (
  * which the maintainer can middle-click; _Skip_ is an action, so it is a
  * button. An `ambiguous` row draws the **Folder picker**, _Resolve_ kept
  * beside it, and a `no-row` row _Import as_ its guess, _Resolve_ kept the
- * same. A `differs` row has no _Resolve_: it is settled on the row, by the
+ * same. A `loose` row draws, in the same slot, where its **Tidy** moves the
+ * video in mono and _Moves with it:_ and its **Companion files** when any;
+ * a clash, with no Tidy, draws no face. A `differs` row has no _Resolve_: it is settled on the row, by the
  * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_.
  * Neither knows what happens next: the row draws a problem and reports a
  * press.
@@ -127,6 +132,21 @@ export function ProblemRow({
             size="sm"
             onClick={onImportAs}
           />
+        </ImportAsSlot>
+      ) : null}
+      {problem.kind === 'loose' && problem.tidy !== undefined ? (
+        <ImportAsSlot>
+          <Destination>
+            {`→ ${problem.tidy.folder}\\${problem.tidy.videos[0] ?? ''}`}
+          </Destination>
+          {problem.tidy.companions.length > 0 ? (
+            <Companions>
+              Moves with it:{' '}
+              <CompanionNames>
+                {problem.tidy.companions.join(' · ')}
+              </CompanionNames>
+            </Companions>
+          ) : null}
         </ImportAsSlot>
       ) : null}
     </Card>

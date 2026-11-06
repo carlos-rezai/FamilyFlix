@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { setImmediate as nextTurn } from 'node:timers/promises';
-import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  join,
+  relative,
+} from 'node:path';
 
 import type {
   HeldTitle,
@@ -10,6 +17,10 @@ import type {
 } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
+import {
+  readLooseVideos,
+  type LooseRead,
+} from '../../media/readLooseVideos/readLooseVideos';
 import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
@@ -38,6 +49,7 @@ import {
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
+import { tidyPlan } from '../tidyPlan/tidyPlan';
 import {
   readShowFolder,
   type ShowFolderAnswer,
@@ -2034,6 +2046,62 @@ export function createImporter({
   };
 
   /**
+   * One walked folder's **Loose videos**, after its other Problems: one hard
+   * `loose` **Problem** per film **Tidy**, titled with its **Tidy folder
+   * name** and carrying it, and one per clash with its sentence and no
+   * `tidy`, then the folder's info line. A **Held video** or a **Left-out
+   * video** is not loose. A root that can no longer be read files none.
+   */
+  const fileLoose = async (
+    current: ImportRun,
+    folder: StoredLibraryFolder
+  ): Promise<void> => {
+    let read: LooseRead;
+    try {
+      read = await readLooseVideos(folder.path);
+    } catch {
+      return;
+    }
+    const out = storage.leftOut(folder.id);
+    const plan = tidyPlan(folder.path, read, (video) => {
+      const spelled = spellLinkedVideo(folder.path, join(folder.path, video));
+      return (
+        out.has(spelled) || storage.titleHolding(folder.id, spelled) !== null
+      );
+    });
+    const none = { row: null, folder: null, candidates: [] };
+    for (const tidy of plan.tidies) {
+      file(
+        current,
+        {
+          ...problemOf(
+            'loose',
+            tidy.folder,
+            `Lies loose at the top of ${folder.path}, with no folder of its own.`
+          ),
+          tidy,
+        },
+        none
+      );
+    }
+    for (const kept of plan.kept) {
+      file(
+        current,
+        problemOf('loose', kept.folder ?? kept.files[0], kept.reason),
+        none
+      );
+    }
+    const loose = plan.tidies.length + plan.kept.length;
+    if (loose > 0) {
+      log(
+        current,
+        `· ${loose} loose ${loose === 1 ? 'video' : 'videos'} at the top of ${folder.path}, listed in review to tidy`,
+        'info'
+      );
+    }
+  };
+
+  /**
    * A **Folder scan**: each listed folder walked in the order given, every
    * film and show named off its own folder. **Already in library** is the
    * sheet run's two rules in order. A held show still gains the episodes it
@@ -2096,6 +2164,7 @@ export function createImporter({
         fileUnplaced(current, match);
         shows.push({ match, libraryFolder: folder });
       }
+      await fileLoose(current, folder);
     }
 
     await importPlaced(current, films, shows, foundAgain, read, 'Scan', signal);
