@@ -80,6 +80,23 @@ export function episodeTag(
 }
 
 /**
+ * The text a filename carries before its **Episode tag**, as it is written
+ * (`Breaking.Bad` of `Breaking.Bad.S01E01.mkv`), its trailing separators
+ * dropped; empty for a name with nothing before the tag, or with no tag.
+ * Only the two full shapes are read: the Episode word needs a known season.
+ */
+export function textBeforeTag(filename: string): string {
+  const name = filename.slice(0, filename.length - extname(filename).length);
+  for (const shape of TAG_SHAPES) {
+    const found = shape.exec(name);
+    if (found !== null) {
+      return name.slice(0, found.index).replace(/[\s._-]+$/, '');
+    }
+  }
+  return '';
+}
+
+/**
  * Spell an **Episode tag** from its numbers — `S01E03`, two digits a side at
  * least — the inverse of {@link episodeTag}: whatever shape a tag was read
  * from, this is the one it is written back in, in the console, in a Problem's

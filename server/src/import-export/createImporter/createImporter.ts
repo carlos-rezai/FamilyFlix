@@ -2098,9 +2098,10 @@ export function createImporter({
 
   /**
    * One walked folder's **Loose videos**, after its other Problems: one hard
-   * `loose` **Problem** per film **Tidy**, titled with its **Tidy folder
-   * name** and carrying it, and one per clash with its sentence and no
-   * `tidy`, then the folder's info line. A **Held video** or a **Left-out
+   * `loose` **Problem** per **Tidy**, film or show, titled with its **Tidy
+   * folder name** and carrying it, and one per clash with its sentence and no
+   * `tidy`, then the folder's info line. Episodes naming no show file none:
+   * the folder's one Warning line counts them. A **Held video** or a **Left-out
    * video** is not loose. A root that can no longer be read files none.
    */
   const fileLoose = async (
@@ -2129,30 +2130,44 @@ export function createImporter({
       rootScan = null;
     }
     for (const tidy of plan.tidies) {
+      const count = tidy.videos.length;
+      const reason =
+        tidy.kind === 'film'
+          ? `Lies loose at the top of ${folder.path}, with no folder of its own.`
+          : count === 1
+            ? `1 episode lies loose at the top of ${folder.path}, with no folder of its own.`
+            : `${count} episodes lie loose at the top of ${folder.path}, with no folder of their own.`;
       const problem: ImportProblem = {
-        ...problemOf(
-          'loose',
-          tidy.folder,
-          `Lies loose at the top of ${folder.path}, with no folder of its own.`
-        ),
+        ...problemOf('loose', tidy.folder, reason),
         tidy,
       };
-      // Resolve links the film where it lies: the root as its folder, and
-      // only the Tidy's own files as what was found in it.
+      // Resolve links the film or the show where it lies: the root as its
+      // folder, and only the Tidy's own files as what was found in it.
       file(current, problem, {
         ...none,
         folder: rootScan === null ? null : tidyScan(rootScan, tidy),
       });
       loosened.set(problem.id, { tidy, libraryFolder: folder });
     }
-    for (const kept of plan.kept) {
+    const clashes = plan.kept.filter((kept) => kept.folder !== undefined);
+    for (const kept of clashes) {
       file(
         current,
         problemOf('loose', kept.folder ?? kept.files[0], kept.reason),
         none
       );
     }
-    const loose = plan.tidies.length + plan.kept.length;
+    const untitled = plan.kept.length - clashes.length;
+    if (untitled > 0) {
+      log(
+        current,
+        `⚠ ${untitled} loose episodes at the top of ${folder.path} don't name their show, left where they are`,
+        'warning'
+      );
+    }
+    const loose =
+      plan.tidies.reduce((sum, tidy) => sum + tidy.videos.length, 0) +
+      clashes.length;
     if (loose > 0) {
       log(
         current,
@@ -2160,6 +2175,34 @@ export function createImporter({
         'info'
       );
     }
+  };
+
+  /**
+   * A loose show once tidied: its folder read as one **Show folder**, the
+   * episodes flat in it, and imported as one series through `importShow`
+   * under the run's **Import mode**, joining a held series as a scan would.
+   */
+  const importTidiedShow = async (
+    current: ImportRun,
+    id: string,
+    scan: MovieFolderScan,
+    libraryFolder: StoredLibraryFolder
+  ): Promise<ReviewOutcome> => {
+    const [show] = groupShows([scan]).shows;
+    takeOff(id);
+    if (show === undefined) {
+      return { kind: 'imported' };
+    }
+    const row = guessedRow(show.name);
+    const held = heldSeriesList();
+    const match = showMatch(
+      row,
+      show,
+      heldShow(held, heldSeriesByKey(held), libraryFolder, show, row)
+    );
+    fileUnplaced(current, match);
+    await importShow(match, genreReader(), current, stop.signal, libraryFolder);
+    return { kind: 'imported' };
   };
 
   /**
@@ -2207,6 +2250,12 @@ export function createImporter({
       'success'
     );
     const scan = await scanMovieFolder(join(libraryFolder.path, tidy.folder));
+    if (tidy.kind === 'show') {
+      return {
+        outcome: await importTidiedShow(current, id, scan, libraryFolder),
+        unreachable: false,
+      };
+    }
     const row = guessedRow(scan.name);
     const outcome = await importFromReview(
       current,
