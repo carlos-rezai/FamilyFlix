@@ -336,6 +336,8 @@ describe('reviewGroups — the filter', () => {
 
 // 42 — Review at scale refactor (issue #366): the Kind filter graduated to
 // `utils/kindFilter`; the Import review keeps its own words and order.
+// 57 — Tidy into folders (issue #525): `loose` reads _Loose_, after
+// _Unplaced_ and before the soft kinds.
 describe('the Import review’s Kind filter — its words and order', () => {
   it('words each kind as the prototype does, in the glossary’s order', () => {
     const problems = [...PROBLEM_KINDS].reverse().map((kind) => ({ kind }));
@@ -343,13 +345,14 @@ describe('the Import review’s Kind filter — its words and order', () => {
     expect(
       kindFilter(problems, PROBLEM_KINDS, PROBLEM_KIND_LABELS, 'all').options
     ).toEqual([
-      { value: 'all', label: 'All 8' },
+      { value: 'all', label: 'All 9' },
       { value: 'no-folder', label: 'No folder 1' },
       { value: 'ambiguous', label: 'Ambiguous 1' },
       { value: 'no-video', label: 'No video 1' },
       { value: 'no-row', label: 'Not in sheet 1' },
       { value: 'failed', label: 'Failed 1' },
       { value: 'unplaced', label: 'Unplaced 1' },
+      { value: 'loose', label: 'Loose 1' },
       { value: 'missing-meta', label: 'Missing details 1' },
       { value: 'differs', label: 'Differs 1' },
     ]);

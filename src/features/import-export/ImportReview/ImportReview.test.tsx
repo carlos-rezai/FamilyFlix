@@ -1174,3 +1174,67 @@ describe('ImportReview — Import all as guessed', () => {
     expect(pill('All 3').getAttribute('aria-pressed')).toBe('true');
   });
 });
+
+/**
+ * 57 — Tidy into folders, Phase 2 (issue #525): the **Kind filter** draws
+ * _Loose_ for the `loose` rows a Folder scan files, after _Unplaced_ and
+ * before the soft kinds, and pressing it shows only those rows.
+ */
+describe('ImportReview — the Loose pill', () => {
+  const LOOSE_RUN: ImportProblem[] = [
+    {
+      id: 'l1',
+      kind: 'loose',
+      title: 'Apex (2026)',
+      reason: 'Lies loose at the top of E:\\Movies, with no folder of its own.',
+      tidy: {
+        id: 'apex.2026.1080p.mkv',
+        kind: 'film',
+        folder: 'Apex (2026)',
+        videos: ['Apex.2026.1080p.mkv'],
+        companions: [],
+      },
+    },
+    {
+      id: 'u1',
+      kind: 'unplaced',
+      title: 'Lighthouse Keepers',
+      reason: '2 episodes need numbers',
+    },
+    {
+      id: 'm1',
+      kind: 'missing-meta',
+      title: 'Amélie',
+      reason:
+        "Imported, but the row has no genre, so it won't appear in any genre row.",
+      movieId: 'm9',
+    },
+  ];
+
+  const filter = () => screen.getByRole('group', { name: 'Problem kinds' });
+  const pills = () =>
+    within(filter())
+      .getAllByRole('button')
+      .map((pill) => pill.textContent);
+
+  it('draws Loose after Unplaced and before the soft kinds', () => {
+    renderReview({ run: inReview(LOOSE_RUN) });
+
+    expect(pills()).toEqual([
+      'All 3',
+      'Unplaced 1',
+      'Loose 1',
+      'Missing details 1',
+    ]);
+  });
+
+  it('shows only the loose rows once Loose is pressed', () => {
+    renderReview({ run: inReview(LOOSE_RUN) });
+
+    fireEvent.click(within(filter()).getByRole('button', { name: 'Loose 1' }));
+
+    expect(screen.getByText('Apex (2026)')).toBeDefined();
+    expect(screen.queryByText('Lighthouse Keepers')).toBeNull();
+    expect(screen.queryByText('Amélie')).toBeNull();
+  });
+});

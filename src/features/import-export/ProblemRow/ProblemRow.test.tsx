@@ -69,6 +69,7 @@ const DOT: Record<ProblemKind, string> = {
   'no-video': DANGER,
   failed: DANGER,
   unplaced: DANGER,
+  loose: DANGER,
   ambiguous: ACCENT,
   'no-row': TEXT_FAINT,
   'missing-meta': TEXT_FAINT,
@@ -693,5 +694,85 @@ describe('ProblemRow — a show’s failed row', () => {
     renderRow({ problem: failedShow });
 
     expect(resolveLink().getAttribute('href')).toBe('/add?problem=p6');
+  });
+});
+
+/**
+ * 57 — Tidy into folders, Phase 2: "a scan lists loose films" (issue #525).
+ *
+ * A `loose` row draws, in the _Import as_ slot under its head, the
+ * destination in mono (the **Tidy folder name** and the video in it), then
+ * _Moves with it:_ and the **Companion files** joined by `·`, only when there
+ * are any. Its title and reason are the head's, as on every row.
+ */
+describe('ProblemRow — a loose row', () => {
+  const REASON =
+    'Lies loose at the top of E:\\Movies, with no folder of its own.';
+  const TIDY = {
+    id: 'apex.2026.1080p.bluray.mkv',
+    kind: 'film' as const,
+    folder: 'Apex (2026)',
+    videos: ['Apex.2026.1080p.BluRay.mkv'],
+    companions: [
+      'Apex.2026.1080p.BluRay.en.srt',
+      'Apex.2026.1080p.BluRay-poster.jpg',
+    ],
+  };
+  const loose = problem({
+    id: 'p7',
+    kind: 'loose',
+    title: 'Apex (2026)',
+    reason: REASON,
+    tidy: TIDY,
+  });
+
+  /** Names the folder with a path separator after it. */
+  const DESTINATION = /Apex \(2026\)[\\/]/;
+  const names = (element: Element | null): boolean =>
+    element !== null && DESTINATION.test(element.textContent ?? '');
+
+  /** The destination: the innermost element naming the folder as a path. */
+  const destination = () =>
+    screen.getByText(
+      (_, element) =>
+        names(element) &&
+        !Array.from(element?.children ?? []).some((child) => names(child))
+    );
+
+  it('draws the destination in mono', () => {
+    renderRow({ problem: loose });
+
+    expect(getComputedStyle(destination()).fontFamily).toContain(
+      'JetBrains Mono'
+    );
+  });
+
+  it('draws it under the head', () => {
+    renderRow({ problem: loose });
+
+    expect(
+      skipButton().compareDocumentPosition(destination()) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('draws Moves with it: and the companions joined by a dot', () => {
+    renderRow({ problem: loose });
+
+    expect(screen.getByText(/Moves with it:/)).toBeDefined();
+    expect(
+      screen.getByText(
+        /Apex\.2026\.1080p\.BluRay\.en\.srt · Apex\.2026\.1080p\.BluRay-poster\.jpg/
+      )
+    ).toBeDefined();
+  });
+
+  it('draws no Moves with it: for a video with no companions', () => {
+    renderRow({
+      problem: { ...loose, tidy: { ...TIDY, companions: [] } },
+    });
+
+    expect(destination()).toBeDefined();
+    expect(screen.queryByText(/Moves with it:/)).toBeNull();
   });
 });
