@@ -2220,17 +2220,54 @@ export function createApiRouter(
   // The **Library folders** list. `reachable` is the disk's answer, read
   // afresh on every list rather than stored, so a drive unplugged since the
   // add reads false on the next visit and true again once it is back.
+  // `loose` counts the videos the folder's **Tidy plan** tidies, 0 for an
+  // **Unreachable** folder.
   router.get('/library-folders', async (_req: Request, res: Response) => {
     const listed = storage.libraryFolders();
     const folders: LibraryFolderView[] = await Promise.all(
-      listed.map(async (folder) => ({
-        ...folder,
-        reachable: (await readableFolder(folder.path)) === 'readable',
-        leftOut: storage.leftOut(folder.id).size,
-      }))
+      listed.map(async (folder) => {
+        const reachable = (await readableFolder(folder.path)) === 'readable';
+        return {
+          ...folder,
+          reachable,
+          leftOut: storage.leftOut(folder.id).size,
+          loose: reachable ? await looseCount(folder.id) : 0,
+        };
+      })
     );
     res.json(folders);
   });
+
+  // How many videos a folder's **Tidy plan** tidies; 0 for a root that
+  // stopped reading between the reachability check and the plan.
+  const looseCount = async (folderId: string): Promise<number> => {
+    try {
+      const plan = await importer.looseOf(folderId);
+      return plan.tidies.reduce((sum, tidy) => sum + tidy.videos.length, 0);
+    } catch {
+      return 0;
+    }
+  };
+
+  // One folder's **Tidy plan**: `404` for a folder not listed, `503` for one
+  // the disk cannot reach.
+  router.get(
+    '/library-folders/:id/loose',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      if (!storage.libraryFolders().some((folder) => folder.id === id)) {
+        res
+          .status(404)
+          .json({ error: 'That folder is not in your library folders.' });
+        return;
+      }
+      try {
+        res.json(await importer.looseOf(id));
+      } catch {
+        res.status(503).json({ error: 'Can’t be reached right now.' });
+      }
+    }
+  );
 
   // The **Manage library page**'s one read for both tabs, `media/`'s
   // `libraryTitleList`: every title A–Z, its paths absolute and its **Linked

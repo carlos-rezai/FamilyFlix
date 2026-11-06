@@ -22,6 +22,7 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
 const KIDS: LibraryFolderView = {
   ...makeLibraryFolder({ id: 'f-kids', path: 'D:\\Kids' }),
   leftOut: 0,
+  loose: 0,
 };
 
 const { respond } = heldFetch((_url, init) =>

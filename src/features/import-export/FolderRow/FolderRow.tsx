@@ -18,6 +18,8 @@ export interface FolderRowProps {
    * What to do when _Bring back_ is pressed on the left-out line.
    */
   onBringBack: () => void;
+  /** What to do when **Tidy** is pressed on the loose line. */
+  onTidy: () => void;
   /**
    * What to do when the ✕ is pressed — the row knows nothing of what follows.
    */
@@ -29,9 +31,16 @@ export interface FolderRowProps {
  * tile with the folder glyph, the path in mono, the line — _N titles_, or
  * _Can't be reached right now_ in `danger` for an **Unreachable** folder —
  * and the `RemoveButton`, labelled _Remove `<path>`_. A folder with **Left-out
- * videos** draws a second line, _N videos left out_ with _Bring back_.
+ * videos** draws a second line, _N videos left out_ with _Bring back_; one
+ * with **Loose videos** a line under it, _N loose videos_ with **Tidy** in
+ * _Bring back_'s look.
  */
-export function FolderRow({ folder, onBringBack, onRemove }: FolderRowProps) {
+export function FolderRow({
+  folder,
+  onBringBack,
+  onTidy,
+  onRemove,
+}: FolderRowProps) {
   return (
     <Row>
       <Tile>
@@ -45,6 +54,14 @@ export function FolderRow({ folder, onBringBack, onRemove }: FolderRowProps) {
             <span>{`${folder.leftOut} ${folder.leftOut === 1 ? 'video' : 'videos'} left out`}</span>
             <BringBack type="button" onClick={onBringBack}>
               Bring back
+            </BringBack>
+          </LeftOutLine>
+        ) : null}
+        {folder.loose > 0 ? (
+          <LeftOutLine>
+            <span>{`${folder.loose} loose ${folder.loose === 1 ? 'video' : 'videos'}`}</span>
+            <BringBack type="button" onClick={onTidy}>
+              Tidy
             </BringBack>
           </LeftOutLine>
         ) : null}

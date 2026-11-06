@@ -43,11 +43,13 @@ afterEach(() => {
 const MOVIES: LibraryFolderView = {
   ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 0,
+  loose: 0,
 };
 
 const KIDS: LibraryFolderView = {
   ...makeLibraryFolder({ id: 'f-kids', path: 'D:\\Kids' }),
   leftOut: 0,
+  loose: 0,
 };
 
 /** A refusal the route words: `{ error }` under its status. */

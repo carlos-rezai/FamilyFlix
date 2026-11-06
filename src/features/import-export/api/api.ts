@@ -13,6 +13,7 @@ import {
   type ScanScope,
   type SheetChoices,
   type StartExport,
+  type TidyPlan,
 } from '@/types';
 import { refusalSentence } from '@/api/refusalSentence/refusalSentence';
 
@@ -438,6 +439,21 @@ export async function bringBackLeftOut(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error(`DELETE ${url} failed: ${response.status}`);
   }
+}
+
+/**
+ * One folder's **Tidy plan**: the tidies it offers and the loose files it
+ * leaves where they are. Any failure rejects.
+ */
+export async function fetchTidyPlan(id: string): Promise<TidyPlan> {
+  const url = `${FOLDERS_ENDPOINT}/${encodeURIComponent(id)}/loose`;
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    throw new Error(`GET ${url} failed: ${response.status}`);
+  }
+
+  return (await response.json()) as TidyPlan;
 }
 
 const SCAN_ENDPOINT = '/api/library-folders/scan';

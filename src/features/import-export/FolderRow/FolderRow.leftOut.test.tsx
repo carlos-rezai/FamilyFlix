@@ -20,12 +20,18 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
 const folder = (leftOut: number): LibraryFolderView => ({
   ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut,
+  loose: 0,
 });
 
 function renderRow(row: LibraryFolderView, onBringBack = vi.fn()) {
   render(
     <ThemeProvider theme={theme}>
-      <FolderRow folder={row} onBringBack={onBringBack} onRemove={vi.fn()} />
+      <FolderRow
+        folder={row}
+        onBringBack={onBringBack}
+        onTidy={vi.fn()}
+        onRemove={vi.fn()}
+      />
     </ThemeProvider>
   );
   return onBringBack;
@@ -54,6 +60,7 @@ describe('FolderRow: the left-out line', () => {
         <FolderRow
           folder={folder(2)}
           onBringBack={vi.fn()}
+          onTidy={vi.fn()}
           onRemove={vi.fn()}
         />
       </ThemeProvider>
@@ -65,6 +72,7 @@ describe('FolderRow: the left-out line', () => {
         <FolderRow
           folder={folder(0)}
           onBringBack={vi.fn()}
+          onTidy={vi.fn()}
           onRemove={vi.fn()}
         />
       </ThemeProvider>

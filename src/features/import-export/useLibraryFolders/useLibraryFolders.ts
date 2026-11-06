@@ -81,10 +81,11 @@ export function useLibraryFolders(): LibraryFoldersState {
           return false;
         }
         setRefusal(null);
-        // A folder just listed has nothing left out yet.
+        // A folder just listed has nothing left out yet, and its loose count
+        // waits for the next list read.
         setFolders((listed) => [
           ...(listed ?? []),
-          { ...outcome.folder, leftOut: 0 },
+          { ...outcome.folder, leftOut: 0, loose: 0 },
         ]);
         return true;
       } catch {

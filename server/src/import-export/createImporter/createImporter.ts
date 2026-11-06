@@ -80,6 +80,7 @@ import type {
   SheetDifference,
   StoredVideo,
   Tidy,
+  TidyPlan,
 } from '@/types';
 import { SHEET_FIELDS } from '@/types';
 
@@ -349,6 +350,12 @@ export interface Importer {
    * listed Library folders and the held series on record at a folder.
    */
   readShowFolder(path: string): Promise<ShowFolderAnswer>;
+  /**
+   * A listed **Library folder**'s **Tidy plan**, a call that is no run, as
+   * {@link readShowFolder} is: a **Held video** or a **Left-out video** is not
+   * loose. Rejects for an id not listed and for a root that cannot be read.
+   */
+  looseOf(folderId: string): Promise<TidyPlan>;
 }
 
 /** The sheet formats the reader opens, by extension. */
@@ -2097,6 +2104,22 @@ export function createImporter({
   };
 
   /**
+   * A **Library folder**'s **Tidy plan**: its root read with
+   * `readLooseVideos` and planned with `tidyPlan`, a **Held video** or a
+   * **Left-out video** not loose. Rejects for a root that cannot be read.
+   */
+  const planOf = async (folder: StoredLibraryFolder): Promise<TidyPlan> => {
+    const read: LooseRead = await readLooseVideos(folder.path);
+    const out = storage.leftOut(folder.id);
+    return tidyPlan(folder.path, read, (video) => {
+      const spelled = spellLinkedVideo(folder.path, join(folder.path, video));
+      return (
+        out.has(spelled) || storage.titleHolding(folder.id, spelled) !== null
+      );
+    });
+  };
+
+  /**
    * One walked folder's **Loose videos**, after its other Problems: one hard
    * `loose` **Problem** per **Tidy**, film or show, titled with its **Tidy
    * folder name** and carrying it, and one per clash with its sentence and no
@@ -2108,19 +2131,12 @@ export function createImporter({
     current: ImportRun,
     folder: StoredLibraryFolder
   ): Promise<void> => {
-    let read: LooseRead;
+    let plan: TidyPlan;
     try {
-      read = await readLooseVideos(folder.path);
+      plan = await planOf(folder);
     } catch {
       return;
     }
-    const out = storage.leftOut(folder.id);
-    const plan = tidyPlan(folder.path, read, (video) => {
-      const spelled = spellLinkedVideo(folder.path, join(folder.path, video));
-      return (
-        out.has(spelled) || storage.titleHolding(folder.id, spelled) !== null
-      );
-    });
     const none = { row: null, folder: null, candidates: [] };
     let rootScan: MovieFolderScan | null = null;
     try {
@@ -2446,6 +2462,16 @@ export function createImporter({
     },
 
     current: snapshot,
+
+    looseOf: async (folderId) => {
+      const folder = storage
+        .libraryFolders()
+        .find((listed) => listed.id === folderId);
+      if (folder === undefined) {
+        throw new Error(`No Library folder ${folderId}`);
+      }
+      return planOf(folder);
+    },
 
     readShowFolder: (path) =>
       readShowFolder(path, {

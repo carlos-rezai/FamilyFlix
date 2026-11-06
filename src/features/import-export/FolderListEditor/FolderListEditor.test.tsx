@@ -20,6 +20,7 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
 const MOVIES: LibraryFolderView = {
   ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 0,
+  loose: 0,
 };
 
 function renderEditor(props: Partial<FolderListEditorProps> = {}) {
