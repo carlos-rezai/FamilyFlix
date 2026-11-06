@@ -947,6 +947,23 @@ target**.
 | **Menu entry** (new)           | `~/.local/share/applications/FamilyFlix.desktop`, named for the window's app id, with the **App mark** as `familyflix.png` in the hicolor theme: written by an **AppImage** run itself, at launch, only where it would change, never deleted (log 56 amendment, issue #520). Its `Exec` names the AppImage's path and carries no `--no-sandbox`; its `Exec` and `TryExec` escape that path as the Desktop Entry spec reserves (updated, issue 522). | desktop file, shortcut, launcher, KDE menu item    |
 | **AppImage** (updated)         | As before, given its **Menu entry** by its own first launch rather than by hand or a helper app: the README's third step is _open it once_.                                                                                                                                                                                                                                                                                                         | Linux installer, package, .deb, Flatpak            |
 
+## Tidy into folders
+
+Design log 57: step 40, initiative `tidy-into-folders`. A video lying loose at
+a **Library folder**'s top level is given a folder of its own, from the scan's
+Review step or from its **Folder row**, so the next walk finds it as a film.
+
+| Term                       | Definition                                                                                                                                                                                                                                                                           | Aliases to avoid                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------- |
+| **Loose video** (new)      | A video file lying directly in a **Library folder**'s root, which the walk never reads as a film: not an extra (a sample, a trailer), not a **Held video**, not a **Left-out video**. One level down, several films' videos are a **Collection folder**, never loose.                | bare file, orphan video, stray video, unsorted    |
+| **Companion file** (new)   | A non-video file beside a **Loose video** whose name starts with the video's stem and a `.` or `-` (`Apex (2026).en.srt`, `Apex (2026)-poster.jpg`); it moves with the video. Never another video.                                                                                   | sidecar, attachment, related file                 |
+| **Tidy** (new)             | One move a maintainer's press makes: a **Loose video**, or a loose show's episodes, and their **Companion files**, renamed into a new folder in the same root, all or nothing. The only time FamilyFlix moves a file inside a **Library folder**; files keep their names.            | organise, sort, relocate, clean up, auto-folder   |
+| **Tidy folder name** (new) | The folder a **Tidy** makes: the name a **Folder scan** would give the film (`Title (Year)`, the `no-row` guess's spelling), or a loose show's name read before its **Episode tag**, made safe. A root already holding that name leaves the video loose.                             | target folder, new folder (that is log 54's term) |
+| **Tidy plan** (new)        | What one **Library folder**'s root offers: its **Tidies** and the loose videos kept where they are with a reason (a name already there, an episode naming no show). `GET /api/library-folders/:id/loose`, `TidyPlan`.                                                                | move list, preview                                |
+| **Tidy dialog** (new)      | The `Modal` the **Folder row**'s _Tidy_ opens: the **Tidy plan**, _Left where they are_, and _Move N videos_, which moves every tidy drawn and ends on a snackbar naming _Scan all folders_.                                                                                         | tidy page, tidy screen                            |
+| **`loose`** (new)          | The hard **Problem** kind a **Folder scan** files for each **Tidy** its walk finds: the row draws the destination and _Tidy into “<name>”_, which moves and then imports it under the run's **Import mode**; _Tidy all_ on its **Kind filter** pill _Loose_. A sheet run files none. | unfiled, untidy                                   |
+| **Folder row** (updated)   | Since log 57, a folder with **Loose videos** draws _N loose videos_ and the text button _Tidy_, which opens the **Tidy dialog**, under its left-out line.                                                                                                                            |                                                   |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1132,6 +1149,8 @@ target**.
 - A **Release** carries exactly two **Platform builds**, one **Installer** and one **AppImage**, built from its one tag into its one **Draft release**; it is published only when both halves of the **Package smoke** pass, or as a **Windows-only release** when the Linux half alone failed (log 56 Q21).
 - A **Platform build** carries its own platform's **FFmpeg pin** build as its **Default component**; the two pins share one FFmpeg version line (log 56).
 - An **AppImage** run keeps exactly one **Menu entry**, pointing at that AppImage's current path; a Windows run or an **Unpackaged run** writes none (log 56 amendment).
+- A **Tidy** moves one **Loose video** (or one loose show's episodes) and its **Companion files** into exactly one new folder it makes, named by the **Tidy folder name**; nothing on record names a file it moves, since a **Held video** and a **Left-out video** are never loose (log 57).
+- A **Folder scan** files one **`loose`** Problem per **Tidy** its walk finds; a sheet run files none (log 57).
 
 ## Example dialogue
 
@@ -2853,3 +2872,5 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   KDE session; "desktop" alone still means the Electron shell (the **Desktop
   shell**) or the Windows desktop shortcut. Say **Desktop Mode** with its
   capitals when the Deck's mode is meant.
+- **"Loose" is the top level only (new):** a **Loose video** lies directly in a **Library folder**'s root. Several films' videos side by side one level down are a **Collection folder**, which imports already; the loose tagged videos `groupShows` reads as a **Show folder** are episodes in their show's folder, not Loose videos. Never call a Collection folder "loose files".
+- **"Tidy" moves, it never adds or renames (new):** a **Write target** and an **Export** only add; a **Tidy** only moves, names only the folder it makes, and never renames a file. Say **Tidy**, never "organise" or "auto-folder".

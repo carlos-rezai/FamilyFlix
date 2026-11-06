@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div role="status" style="{{ cardStyle }}">
+        <div style="{{ accentBarStyle }}"></div>
+        <div style="{{ iconWrapStyle }}">
+          <sc-if value="{{ isInfo }}" hint-placeholder-val="{{ false }}"
+            ><svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                stroke-width="1.8"
+              />
+              <path
+                d="M12 11v5"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <circle cx="12" cy="7.6" r="1.2" fill="currentColor" /></svg
+          ></sc-if>
+          <sc-if value="{{ isSuccess }}" hint-placeholder-val="{{ true }}"
+            ><svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                stroke-width="1.8"
+              />
+              <path
+                d="M8 12.5l2.5 2.5L16 9.5"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+              /></svg
+          ></sc-if>
+          <sc-if value="{{ isWarning }}" hint-placeholder-val="{{ false }}"
+            ><svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 3.5l9 16H3l9-16z"
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linejoin="round"
+              />
+              <path
+                d="M12 10v4"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              />
+              <circle cx="12" cy="17" r="1.1" fill="currentColor" /></svg
+          ></sc-if>
+          <sc-if value="{{ isError }}" hint-placeholder-val="{{ false }}"
+            ><svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <circle
+                cx="12"
+                cy="12"
+                r="9"
+                stroke="currentColor"
+                stroke-width="1.8"
+              />
+              <path
+                d="M15 9l-6 6M9 9l6 6"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+              /></svg
+          ></sc-if>
+        </div>
+
+        <div style="flex: 1; min-width: 0">
+          <sc-if value="{{ hasTitle }}" hint-placeholder-val="{{ false }}">
+            <div
+              style="
+                font-family: var(--font-sans);
+                font-size: 15px;
+                font-weight: 600;
+                color: var(--color-text);
+                margin-bottom: 2px;
+              "
+            >
+              {{ title }}
+            </div>
+          </sc-if>
+          <div
+            style="
+              font-family: var(--font-sans);
+              font-size: 14px;
+              line-height: 1.45;
+              color: var(--color-text-dim);
+            "
+          >
+            {{ message }}
+          </div>
+          <sc-if value="{{ hasAction }}" hint-placeholder-val="{{ false }}">
+            <button
+              onClick="{{ onAction }}"
+              style="{{ actionStyle }}"
+              style-hover="opacity:.82"
+            >
+              {{ actionLabel }}
+            </button>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ dismissible }}" hint-placeholder-val="{{ true }}">
+          <button
+            onClick="{{ onDismiss }}"
+            aria-label="Dismiss"
+            style="
+              flex: 0 0 auto;
+              display: grid;
+              place-items: center;
+              width: 28px;
+              height: 28px;
+              background: transparent;
+              border: none;
+              border-radius: 7px;
+              color: var(--color-text-faint);
+              cursor: pointer;
+              font-size: 15px;
+              margin: -2px -4px 0 0;
+            "
+            style-hover="color:var(--color-text-dim);background:var(--color-surface-3)"
+          >
+            ✕
+          </button>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":400,"height":140},"variant":{"editor":"enum","default":"info","options":["info","success","warning","error"],"tsType":"&apos;info&apos; | &apos;success&apos; | &apos;warning&apos; | &apos;error&apos;"},"title":{"editor":"text","default":"Update available","tsType":"string"},"message":{"editor":"text","default":"FamilyFlix 1.1.0 is ready to install.","tsType":"string"},"actionLabel":{"editor":"text","default":"Update","tsType":"string"},"dismissible":{"editor":"boolean","default":true,"tsType":"boolean"},"onAction":{"editor":null,"tsType":"() =&gt; void"},"onDismiss":{"editor":null,"tsType":"() =&gt; void"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          const variant = this.props.variant || 'info';
+          const colorVar = ({info:'--color-info',success:'--color-success',warning:'--color-warning',error:'--color-danger'})[variant] || '--color-info';
+          const color = `var(${colorVar})`;
+          const title = this.props.title || '';
+          const actionLabel = this.props.actionLabel || '';
+          const dismissible = this.props.dismissible !== false;
+          return {
+            isInfo:variant==='info', isSuccess:variant==='success', isWarning:variant==='warning', isError:variant==='error',
+            title, hasTitle: !!title,
+            message: this.props.message || '',
+            actionLabel, hasAction: !!actionLabel, onAction: this.props.onAction || (()=>{}),
+            dismissible, onDismiss: this.props.onDismiss || (()=>{}),
+            cardStyle:{
+              position:'relative', display:'flex', alignItems:'flex-start', gap:'12px',
+              width:'360px', maxWidth:'calc(100vw - 48px)', padding:'14px 14px 14px 18px',
+              background:'var(--color-surface-2)', border:'1px solid var(--color-border)',
+              borderRadius:'var(--radius-md)', boxShadow:'0 16px 44px rgba(0,0,0,.5)',
+              overflow:'hidden', animation:'ffSnackIn .26s ease',
+            },
+            accentBarStyle:{ position:'absolute', left:0, top:0, bottom:0, width:'4px', background:color },
+            iconWrapStyle:{ flex:'0 0 auto', color, marginTop:'1px' },
+            actionStyle:{
+              marginTop:'10px', padding:'7px 14px', background:'transparent',
+              border:'1px solid '+color, borderRadius:'8px', color,
+              fontFamily:'var(--font-sans)', fontSize:'13px', fontWeight:'700', cursor:'pointer',
+            },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

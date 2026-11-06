@@ -1,0 +1,58 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <div ref="{{ setEl }}" style="{{ boxStyle }}">
+        <sc-for list="{{ rows }}" as="l" hint-placeholder-count="5">
+          <div style="{{ l.style }}">{{ l.text }}</div>
+        </sc-for>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":560,"height":220},"lines":{"editor":null,"tsType":"Array&lt;string | { text: string; kind?: &apos;info&apos;|&apos;scan&apos;|&apos;path&apos;|&apos;success&apos;|&apos;warning&apos;|&apos;error&apos; }&gt;"},"maxHeight":{"editor":"int","default":200,"min":80,"max":480,"tsType":"number"}}'
+    >
+      class Component extends DCLogic {
+        setEl = (el) => { this.el = el; };
+        _follow(){ const el=this.el; if(el) el.scrollTop = el.scrollHeight; }
+        componentDidMount(){ this._follow(); }
+        componentDidUpdate(){ this._follow(); }
+
+        renderVals(){
+          const lines = this.props.lines || [];
+          const maxHeight = this.props.maxHeight || 200;
+          const colorFor = (k) => ({
+            success:'var(--color-success)', warning:'var(--color-warning)', error:'var(--color-danger)',
+            scan:'var(--color-text-dim)', path:'var(--color-text-faint)', info:'var(--color-text-faint)',
+          })[k] || 'var(--color-text-dim)';
+          const rows = lines.map((l, i) => ({
+            text: typeof l === 'string' ? l : l.text,
+            style: {
+              fontFamily:'var(--font-mono)', fontSize:'12.5px', lineHeight:1.65,
+              color: colorFor(typeof l === 'string' ? 'info' : l.kind),
+              whiteSpace:'pre-wrap', wordBreak:'break-all',
+            },
+          }));
+          return {
+            setEl: this.setEl,
+            rows,
+            boxStyle: {
+              height: maxHeight+'px', overflowY:'auto', padding:'12px 14px',
+              background:'var(--color-bg)', border:'1px solid var(--color-border-soft)',
+              borderRadius:'var(--radius-sm)',
+            },
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

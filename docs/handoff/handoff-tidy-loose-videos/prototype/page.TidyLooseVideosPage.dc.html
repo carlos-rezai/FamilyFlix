@@ -1,0 +1,2046 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tidy loose videos</title>
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+        <style>
+          html,
+          body {
+            margin: 0;
+            height: 100%;
+            background: #1b1611;
+          }
+        </style>
+      </helmet>
+      <div
+        style="
+          position: relative;
+          height: 100vh;
+          min-height: 600px;
+          overflow: hidden;
+          background: var(--color-bg-2);
+          color: var(--color-text);
+          font-family: var(--font-sans);
+        "
+      >
+        <!-- ============ ENTRY: Settings → Library (prototype stand-in) ============ -->
+        <sc-if value="{{ isEntry }}" hint-placeholder-val="{{ true }}">
+          <div
+            data-screen-label="Settings · Library"
+            style="
+              height: 100%;
+              overflow-y: auto;
+              background: var(--color-bg-2);
+            "
+          >
+            <div
+              style="
+                max-width: 780px;
+                margin: 0 auto;
+                padding: var(--space-6) var(--space-6) var(--space-8);
+              "
+            >
+              <h1
+                style="
+                  font-family: var(--font-serif);
+                  font-weight: 600;
+                  font-size: 30px;
+                  color: var(--color-text);
+                  margin: 0 0 6px;
+                "
+              >
+                Settings
+              </h1>
+              <p
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  color: var(--color-text-faint);
+                  margin: 0 0 30px;
+                "
+              >
+                Manage your library, playback, and storage.
+              </p>
+              <div
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 12px;
+                  font-weight: 700;
+                  letter-spacing: 0.9px;
+                  text-transform: uppercase;
+                  color: var(--color-text-faint);
+                  margin: 0 0 12px 2px;
+                "
+              >
+                Library
+              </div>
+              <div style="display: flex; flex-direction: column; gap: 8px">
+                <sc-for
+                  list="{{ libraryActions }}"
+                  as="a"
+                  hint-placeholder-count="4"
+                >
+                  <button
+                    onClick="{{ a.onClick }}"
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 14px;
+                      width: 100%;
+                      text-align: left;
+                      padding: 15px 16px;
+                      background: var(--color-surface);
+                      border: 1px solid var(--color-border-soft);
+                      border-radius: var(--radius-md);
+                      cursor: pointer;
+                    "
+                    style-hover="border-color:var(--color-accent-line);background:var(--color-surface-2)"
+                  >
+                    <span
+                      style="
+                        flex: 0 0 auto;
+                        display: grid;
+                        place-items: center;
+                        width: 38px;
+                        height: 38px;
+                        border-radius: 9px;
+                        background: var(--color-accent-soft);
+                        color: var(--color-accent);
+                        font-size: 18px;
+                        font-weight: 700;
+                      "
+                      >{{ a.glyph }}</span
+                    >
+                    <span style="flex: 1; min-width: 0">
+                      <span
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 9px;
+                          flex-wrap: wrap;
+                        "
+                      >
+                        <span
+                          style="
+                            font-family: var(--font-sans);
+                            font-size: 16px;
+                            font-weight: 600;
+                            color: var(--color-text);
+                          "
+                          >{{ a.label }}</span
+                        >
+                        <sc-if
+                          value="{{ a.hasBadge }}"
+                          hint-placeholder-val="{{ false }}"
+                        >
+                          <span
+                            style="
+                              font-family: var(--font-sans);
+                              font-size: 11px;
+                              font-weight: 700;
+                              letter-spacing: 0.4px;
+                              text-transform: uppercase;
+                              color: var(--color-accent);
+                              background: var(--color-accent-soft);
+                              border: 1px solid var(--color-accent-line);
+                              padding: 2px 9px;
+                              border-radius: var(--radius-pill);
+                            "
+                            >{{ a.badge }}</span
+                          >
+                        </sc-if>
+                      </span>
+                      <span
+                        style="
+                          display: block;
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          color: var(--color-text-faint);
+                          margin-top: 2px;
+                        "
+                        >{{ a.desc }}</span
+                      >
+                    </span>
+                    <span style="flex: 0 0 auto; color: var(--color-text-faint)"
+                      ><svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M9 5l7 7-7 7"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        /></svg
+                    ></span>
+                  </button>
+                </sc-for>
+              </div>
+              <div style="margin-top: 22px">
+                <dc-import
+                  name="prim.Button"
+                  label="Simulate a scan"
+                  variant="secondary"
+                  size="md"
+                  icon="none"
+                  on-click="{{ onSimScan }}"
+                  hint-size="170px,50px"
+                ></dc-import>
+                <span
+                  style="
+                    margin-left: 12px;
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                  "
+                  >Prototype only. Shows the hint a scan gives when it walks
+                  past loose videos.</span
+                >
+              </div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ TIDY LOOSE VIDEOS ============ -->
+        <sc-if value="{{ isTidy }}" hint-placeholder-val="{{ false }}">
+          <div
+            data-screen-label="Tidy loose videos"
+            style="
+              height: 100%;
+              overflow-y: auto;
+              background: var(--color-bg-2);
+            "
+          >
+            <div
+              style="
+                max-width: 780px;
+                margin: 0 auto;
+                padding: var(--space-6) var(--space-6) var(--space-8);
+              "
+            >
+              <div
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 16px;
+                  margin-bottom: 8px;
+                "
+              >
+                <dc-import
+                  name="prim.IconButton"
+                  icon="back"
+                  variant="outline"
+                  size="42"
+                  title="Back"
+                  on-click="{{ tidy.onBack }}"
+                  hint-size="42px,42px"
+                ></dc-import>
+                <h1
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 600;
+                    font-size: 30px;
+                    color: var(--color-text);
+                    margin: 0;
+                  "
+                >
+                  Tidy loose videos
+                </h1>
+              </div>
+              <p
+                style="
+                  font-family: var(--font-sans);
+                  font-size: 15px;
+                  color: var(--color-text-faint);
+                  margin: 0 0 26px 58px;
+                  max-width: 560px;
+                  line-height: 1.5;
+                  text-wrap: pretty;
+                "
+              >
+                Gives every video lying loose in a Library folder a folder of
+                its own, named after the file, so the next scan finds it as a
+                film. You can rename any of them before they move.
+              </p>
+
+              <!-- ============ PLAN ============ -->
+              <sc-if value="{{ tidy.plan }}" hint-placeholder-val="{{ true }}">
+                <div style="display: flex; flex-direction: column; gap: 18px">
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 12px;
+                      padding: 14px 16px;
+                      background: var(--color-surface);
+                      border: 1px solid var(--color-border-soft);
+                      border-radius: var(--radius-md);
+                    "
+                  >
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V7z"
+                        stroke="var(--color-text-faint)"
+                        stroke-width="1.6"
+                      />
+                    </svg>
+                    <span
+                      style="
+                        flex: 1;
+                        min-width: 0;
+                        font-family: var(--font-mono);
+                        font-size: 14px;
+                        color: var(--color-text);
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                      "
+                      >{{ tidy.root }}</span
+                    >
+                    <span
+                      style="
+                        flex: 0 0 auto;
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        color: var(--color-text-faint);
+                      "
+                      >{{ tidy.foundLabel }}</span
+                    >
+                    <button
+                      onClick="{{ tidy.onRescanPlan }}"
+                      title="Look for loose videos again"
+                      style="
+                        flex: 0 0 auto;
+                        display: flex;
+                        align-items: center;
+                        gap: 7px;
+                        height: 34px;
+                        padding: 0 14px;
+                        background: transparent;
+                        border: 1px solid var(--color-border);
+                        border-radius: 8px;
+                        color: var(--color-text);
+                        font-family: var(--font-sans);
+                        font-size: 13.5px;
+                        font-weight: 600;
+                        cursor: pointer;
+                        white-space: nowrap;
+                      "
+                      style-hover="background:var(--color-surface-3)"
+                    >
+                      <svg
+                        width="14"
+                        height="14"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          stroke-linecap="round"
+                          stroke-linejoin="round"
+                        /></svg
+                      >{{ tidy.rescanLabel }}
+                    </button>
+                  </div>
+
+                  <div
+                    style="
+                      display: flex;
+                      gap: 12px;
+                      padding: 14px 16px;
+                      background: var(--color-accent-soft);
+                      border: 1px solid var(--color-accent-line);
+                      border-radius: 10px;
+                    "
+                  >
+                    <span
+                      style="
+                        flex: 0 0 auto;
+                        color: var(--color-accent);
+                        margin-top: 1px;
+                      "
+                      ><svg
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                      >
+                        <path
+                          d="M12 3a9 9 0 100 18 9 9 0 000-18zM12 11v6M12 7.5v.5"
+                          stroke="currentColor"
+                          stroke-width="1.7"
+                          stroke-linecap="round"
+                        /></svg
+                    ></span>
+                    <span
+                      style="
+                        flex: 1;
+                        min-width: 0;
+                        font-family: var(--font-sans);
+                        font-size: 13.5px;
+                        color: var(--color-text-dim);
+                        line-height: 1.5;
+                        text-wrap: pretty;
+                      "
+                      ><b style="color: var(--color-text)"
+                        >Nothing moves until you confirm.</b
+                      >
+                      This is the only place FamilyFlix moves a file inside a
+                      Library folder. Scans and imports only ever add.</span
+                    >
+                  </div>
+
+                  <!-- planned moves -->
+                  <div>
+                    <div
+                      style="
+                        display: flex;
+                        align-items: baseline;
+                        justify-content: space-between;
+                        gap: 12px;
+                        margin: 6px 2px 10px;
+                      "
+                    >
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 12px;
+                          font-weight: 700;
+                          letter-spacing: 0.9px;
+                          text-transform: uppercase;
+                          color: var(--color-text-faint);
+                        "
+                      >
+                        Planned moves
+                      </div>
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 13px;
+                          color: var(--color-text-faint);
+                        "
+                      >
+                        {{ tidy.selectedLabel }}
+                      </div>
+                    </div>
+                    <div
+                      style="display: flex; flex-direction: column; gap: 8px"
+                    >
+                      <sc-for
+                        list="{{ tidy.moves }}"
+                        as="mv"
+                        hint-placeholder-count="5"
+                      >
+                        <div style="{{ mv.rowStyle }}">
+                          <button
+                            onClick="{{ mv.toggle }}"
+                            title="Include this move"
+                            style="
+                              flex: 0 0 auto;
+                              padding: 0;
+                              background: transparent;
+                              border: none;
+                              cursor: pointer;
+                            "
+                          >
+                            <span style="{{ mv.boxStyle }}"
+                              >{{ mv.check }}</span
+                            >
+                          </button>
+                          <div style="flex: 1; min-width: 0">
+                            <div
+                              style="
+                                display: flex;
+                                align-items: center;
+                                gap: 10px;
+                                min-width: 0;
+                              "
+                            >
+                              <span
+                                style="
+                                  flex: 1;
+                                  min-width: 0;
+                                  font-family: var(--font-mono);
+                                  font-size: 13.5px;
+                                  color: var(--color-text);
+                                  overflow: hidden;
+                                  text-overflow: ellipsis;
+                                  white-space: nowrap;
+                                "
+                                >{{ mv.name }}</span
+                              >
+                              <sc-if
+                                value="{{ mv.showRenameBtn }}"
+                                hint-placeholder-val="{{ true }}"
+                              >
+                                <button
+                                  onClick="{{ mv.onEdit }}"
+                                  style="
+                                    flex: 0 0 auto;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                    height: 30px;
+                                    padding: 0 12px;
+                                    background: transparent;
+                                    border: 1px solid var(--color-border);
+                                    border-radius: 7px;
+                                    color: var(--color-text-dim);
+                                    font-family: var(--font-sans);
+                                    font-size: 13px;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                  "
+                                  style-hover="background:var(--color-surface-3);color:var(--color-text)"
+                                >
+                                  <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                  >
+                                    <path
+                                      d="M4 20h4L19 9l-4-4L4 16v4z"
+                                      stroke="currentColor"
+                                      stroke-width="1.9"
+                                      stroke-linejoin="round"
+                                    /></svg
+                                  >Rename
+                                </button>
+                              </sc-if>
+                              <sc-if
+                                value="{{ mv.isShow }}"
+                                hint-placeholder-val="{{ false }}"
+                              >
+                                <button
+                                  onClick="{{ mv.onEditShow }}"
+                                  style="
+                                    flex: 0 0 auto;
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 6px;
+                                    height: 30px;
+                                    padding: 0 12px;
+                                    background: transparent;
+                                    border: 1px solid var(--color-border);
+                                    border-radius: 7px;
+                                    color: var(--color-text-dim);
+                                    font-family: var(--font-sans);
+                                    font-size: 13px;
+                                    font-weight: 600;
+                                    cursor: pointer;
+                                  "
+                                  style-hover="background:var(--color-surface-3);color:var(--color-text)"
+                                >
+                                  <svg
+                                    width="13"
+                                    height="13"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                  >
+                                    <path
+                                      d="M4 20h4L19 9l-4-4L4 16v4z"
+                                      stroke="currentColor"
+                                      stroke-width="1.9"
+                                      stroke-linejoin="round"
+                                    /></svg
+                                  >Edit show
+                                </button>
+                              </sc-if>
+                            </div>
+
+                            <!-- inline rename -->
+                            <sc-if
+                              value="{{ mv.editing }}"
+                              hint-placeholder-val="{{ false }}"
+                            >
+                              <div
+                                style="
+                                  margin-top: 12px;
+                                  padding: 14px;
+                                  background: var(--color-bg-2);
+                                  border: 1px solid var(--color-border);
+                                  border-radius: 10px;
+                                "
+                              >
+                                <div
+                                  style="
+                                    display: flex;
+                                    gap: 10px;
+                                    flex-wrap: wrap;
+                                  "
+                                >
+                                  <label style="flex: 1 1 260px; min-width: 0">
+                                    <span
+                                      style="
+                                        display: block;
+                                        font-family: var(--font-sans);
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: var(--color-text-dim);
+                                        margin-bottom: 6px;
+                                      "
+                                      >Title</span
+                                    >
+                                    <input
+                                      value="{{ mv.draftTitle }}"
+                                      onInput="{{ mv.onDraftTitle }}"
+                                      style="
+                                        width: 100%;
+                                        box-sizing: border-box;
+                                        height: 42px;
+                                        padding: 0 12px;
+                                        background: var(--color-surface);
+                                        border: 1px solid var(--color-border);
+                                        border-radius: 8px;
+                                        color: var(--color-text);
+                                        font-family: var(--font-sans);
+                                        font-size: 15px;
+                                        outline: none;
+                                      "
+                                    />
+                                  </label>
+                                  <label style="flex: 0 0 110px">
+                                    <span
+                                      style="
+                                        display: block;
+                                        font-family: var(--font-sans);
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: var(--color-text-dim);
+                                        margin-bottom: 6px;
+                                      "
+                                      >Year</span
+                                    >
+                                    <input
+                                      value="{{ mv.draftYear }}"
+                                      onInput="{{ mv.onDraftYear }}"
+                                      placeholder="e.g. 1963"
+                                      maxlength="4"
+                                      inputmode="numeric"
+                                      style="
+                                        width: 100%;
+                                        box-sizing: border-box;
+                                        height: 42px;
+                                        padding: 0 12px;
+                                        background: var(--color-surface);
+                                        border: 1px solid var(--color-border);
+                                        border-radius: 8px;
+                                        color: var(--color-text);
+                                        font-family: var(--font-mono);
+                                        font-size: 15px;
+                                        outline: none;
+                                      "
+                                    />
+                                  </label>
+                                </div>
+                                <div
+                                  style="
+                                    margin-top: 10px;
+                                    font-family: var(--font-sans);
+                                    font-size: 12.5px;
+                                    color: var(--color-text-faint);
+                                    line-height: 1.5;
+                                  "
+                                >
+                                  Will be called
+                                  <span
+                                    style="
+                                      font-family: var(--font-mono);
+                                      color: var(--color-text);
+                                    "
+                                    >{{ mv.draftPreview }}</span
+                                  >. The folder, the video, its subtitles and
+                                  its poster all take this name.
+                                </div>
+                                <sc-if
+                                  value="{{ mv.draftClash }}"
+                                  hint-placeholder-val="{{ false }}"
+                                >
+                                  <div
+                                    style="
+                                      margin-top: 6px;
+                                      font-family: var(--font-sans);
+                                      font-size: 12.5px;
+                                      color: #c97a6a;
+                                    "
+                                  >
+                                    A folder with that name is already here.
+                                    Change the title or add a different year.
+                                  </div>
+                                </sc-if>
+                                <sc-if
+                                  value="{{ mv.draftDupe }}"
+                                  hint-placeholder-val="{{ false }}"
+                                >
+                                  <div
+                                    style="
+                                      margin-top: 6px;
+                                      font-family: var(--font-sans);
+                                      font-size: 12.5px;
+                                      color: #c97a6a;
+                                    "
+                                  >
+                                    Another loose video would get the same name.
+                                    Add a year to tell them apart.
+                                  </div>
+                                </sc-if>
+                                <div
+                                  style="
+                                    display: flex;
+                                    gap: 8px;
+                                    margin-top: 12px;
+                                  "
+                                >
+                                  <button
+                                    onClick="{{ mv.onSave }}"
+                                    style="
+                                      height: 36px;
+                                      padding: 0 16px;
+                                      background: var(--color-accent);
+                                      border: none;
+                                      border-radius: 8px;
+                                      color: #1a1109;
+                                      font-family: var(--font-sans);
+                                      font-size: 13.5px;
+                                      font-weight: 700;
+                                      cursor: pointer;
+                                    "
+                                    style-hover="background:var(--color-accent-hover)"
+                                  >
+                                    Use this name
+                                  </button>
+                                  <button
+                                    onClick="{{ mv.onCancelEdit }}"
+                                    style="
+                                      height: 36px;
+                                      padding: 0 12px;
+                                      background: transparent;
+                                      border: none;
+                                      color: var(--color-text-faint);
+                                      font-family: var(--font-sans);
+                                      font-size: 13.5px;
+                                      cursor: pointer;
+                                    "
+                                    style-hover="color:var(--color-text-dim)"
+                                  >
+                                    Cancel
+                                  </button>
+                                  <sc-if
+                                    value="{{ mv.renamed }}"
+                                    hint-placeholder-val="{{ false }}"
+                                  >
+                                    <button
+                                      onClick="{{ mv.onReset }}"
+                                      style="
+                                        height: 36px;
+                                        padding: 0 12px;
+                                        background: transparent;
+                                        border: none;
+                                        color: var(--color-text-faint);
+                                        font-family: var(--font-sans);
+                                        font-size: 13.5px;
+                                        cursor: pointer;
+                                        margin-left: auto;
+                                      "
+                                      style-hover="color:var(--color-text-dim)"
+                                    >
+                                      Back to file’s name
+                                    </button>
+                                  </sc-if>
+                                </div>
+                              </div>
+                            </sc-if>
+
+                            <sc-if
+                              value="{{ mv.notEditing }}"
+                              hint-placeholder-val="{{ true }}"
+                            >
+                              <div
+                                style="
+                                  display: flex;
+                                  align-items: center;
+                                  gap: 8px;
+                                  margin-top: 5px;
+                                  font-family: var(--font-mono);
+                                  font-size: 12.5px;
+                                  color: var(--color-accent);
+                                  min-width: 0;
+                                "
+                              >
+                                <span style="flex: 0 0 auto">→</span>
+                                <span
+                                  style="
+                                    overflow: hidden;
+                                    text-overflow: ellipsis;
+                                    white-space: nowrap;
+                                  "
+                                  >{{ mv.dest }}</span
+                                >
+                              </div>
+                              <sc-if
+                                value="{{ mv.renamed }}"
+                                hint-placeholder-val="{{ false }}"
+                              >
+                                <div
+                                  style="
+                                    margin-top: 5px;
+                                    font-family: var(--font-sans);
+                                    font-size: 12.5px;
+                                    color: var(--color-text-faint);
+                                  "
+                                >
+                                  Renamed by you · was
+                                  <span style="font-family: var(--font-mono)"
+                                    >{{ mv.originalName }}</span
+                                  >
+                                </div>
+                              </sc-if>
+                              <sc-if
+                                value="{{ mv.dupe }}"
+                                hint-placeholder-val="{{ false }}"
+                              >
+                                <div
+                                  style="
+                                    margin-top: 6px;
+                                    font-family: var(--font-sans);
+                                    font-size: 12.5px;
+                                    color: #c97a6a;
+                                  "
+                                >
+                                  Another loose video is also called “{{
+                                  mv.dupeName }}”. Rename one of them, usually
+                                  by adding its year, so each gets its own
+                                  folder.
+                                </div>
+                              </sc-if>
+                              <sc-if
+                                value="{{ mv.siblingHint }}"
+                                hint-placeholder-val="{{ false }}"
+                              >
+                                <div
+                                  style="
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 10px;
+                                    flex-wrap: wrap;
+                                    margin-top: 8px;
+                                    padding: 8px 10px;
+                                    background: var(--color-accent-soft);
+                                    border-radius: 8px;
+                                  "
+                                >
+                                  <span
+                                    style="
+                                      flex: 1 1 240px;
+                                      min-width: 0;
+                                      font-family: var(--font-sans);
+                                      font-size: 12.5px;
+                                      color: var(--color-text-dim);
+                                      line-height: 1.45;
+                                    "
+                                    >You gave the other “{{ mv.siblingTitle }}”
+                                    a year. Add one here too, so the two are
+                                    easy to tell apart.</span
+                                  >
+                                  <button
+                                    onClick="{{ mv.onEdit }}"
+                                    style="
+                                      flex: 0 0 auto;
+                                      height: 28px;
+                                      padding: 0 12px;
+                                      background: transparent;
+                                      border: 1px solid var(--color-accent-line);
+                                      border-radius: 7px;
+                                      color: var(--color-accent);
+                                      font-family: var(--font-sans);
+                                      font-size: 12.5px;
+                                      font-weight: 700;
+                                      cursor: pointer;
+                                    "
+                                    style-hover="background:var(--color-accent-line)"
+                                  >
+                                    Add a year
+                                  </button>
+                                </div>
+                              </sc-if>
+                              <sc-if
+                                value="{{ mv.clash }}"
+                                hint-placeholder-val="{{ false }}"
+                              >
+                                <div
+                                  style="
+                                    margin-top: 6px;
+                                    font-family: var(--font-sans);
+                                    font-size: 12.5px;
+                                    color: #c97a6a;
+                                  "
+                                >
+                                  A folder with this name is already here.
+                                  Rename this video to move it.
+                                </div>
+                              </sc-if>
+                              <sc-if
+                                value="{{ mv.hasCompanions }}"
+                                hint-placeholder-val="{{ true }}"
+                              >
+                                <div
+                                  style="
+                                    margin-top: 6px;
+                                    font-family: var(--font-sans);
+                                    font-size: 12.5px;
+                                    color: var(--color-text-faint);
+                                    line-height: 1.5;
+                                  "
+                                >
+                                  Moves with it:
+                                  <span style="font-family: var(--font-mono)"
+                                    >{{ mv.companionsLabel }}</span
+                                  >
+                                </div>
+                              </sc-if>
+                            </sc-if>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+
+                  <!-- left alone -->
+                  <sc-if
+                    value="{{ tidy.hasSkipped }}"
+                    hint-placeholder-val="{{ true }}"
+                  >
+                    <div>
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 12px;
+                          font-weight: 700;
+                          letter-spacing: 0.9px;
+                          text-transform: uppercase;
+                          color: var(--color-text-faint);
+                          margin: 6px 2px 10px;
+                        "
+                      >
+                        Left where they are
+                      </div>
+                      <div
+                        style="display: flex; flex-direction: column; gap: 8px"
+                      >
+                        <sc-for
+                          list="{{ tidy.skipped }}"
+                          as="sk"
+                          hint-placeholder-count="2"
+                        >
+                          <div style="{{ sk.rowStyle }}">
+                            <div
+                              style="
+                                display: flex;
+                                align-items: center;
+                                gap: 14px;
+                                flex-wrap: wrap;
+                              "
+                            >
+                              <div
+                                style="
+                                  flex: 0 0 auto;
+                                  width: 10px;
+                                  height: 10px;
+                                  border-radius: 99px;
+                                  background: #c9a86a;
+                                "
+                              ></div>
+                              <div style="flex: 1 1 260px; min-width: 0">
+                                <div
+                                  style="
+                                    font-family: var(--font-mono);
+                                    font-size: 13.5px;
+                                    color: var(--color-text-dim);
+                                    overflow: hidden;
+                                    text-overflow: ellipsis;
+                                    white-space: nowrap;
+                                  "
+                                >
+                                  {{ sk.name }}
+                                </div>
+                                <div
+                                  style="
+                                    font-family: var(--font-sans);
+                                    font-size: 13px;
+                                    color: var(--color-text-faint);
+                                    margin-top: 3px;
+                                    line-height: 1.45;
+                                    text-wrap: pretty;
+                                  "
+                                >
+                                  {{ sk.reason }}
+                                </div>
+                              </div>
+                              <sc-if
+                                value="{{ sk.notEditing }}"
+                                hint-placeholder-val="{{ true }}"
+                              >
+                                <div
+                                  style="
+                                    flex: 0 0 auto;
+                                    display: flex;
+                                    gap: 8px;
+                                  "
+                                >
+                                  <sc-if
+                                    value="{{ sk.hasAlt }}"
+                                    hint-placeholder-val="{{ false }}"
+                                  >
+                                    <button
+                                      onClick="{{ sk.onAlt }}"
+                                      style="
+                                        height: 38px;
+                                        padding: 0 16px;
+                                        background: transparent;
+                                        border: 1px solid var(--color-border);
+                                        border-radius: 8px;
+                                        color: var(--color-text);
+                                        font-family: var(--font-sans);
+                                        font-size: 13.5px;
+                                        font-weight: 600;
+                                        cursor: pointer;
+                                        white-space: nowrap;
+                                      "
+                                      style-hover="background:var(--color-surface-3)"
+                                    >
+                                      {{ sk.altLabel }}
+                                    </button>
+                                  </sc-if>
+                                  <button
+                                    onClick="{{ sk.onAction }}"
+                                    style="
+                                      height: 38px;
+                                      padding: 0 16px;
+                                      background: var(--color-accent-soft);
+                                      border: 1px solid var(--color-accent-line);
+                                      border-radius: 8px;
+                                      color: var(--color-accent);
+                                      font-family: var(--font-sans);
+                                      font-size: 13.5px;
+                                      font-weight: 700;
+                                      cursor: pointer;
+                                      white-space: nowrap;
+                                    "
+                                    style-hover="background:var(--color-accent-line)"
+                                  >
+                                    {{ sk.actionLabel }}
+                                  </button>
+                                </div>
+                              </sc-if>
+                            </div>
+
+                            <!-- show editor: episodes whose files don't name the show -->
+                            <sc-if
+                              value="{{ sk.editingShow }}"
+                              hint-placeholder-val="{{ false }}"
+                            >
+                              <div
+                                style="
+                                  margin-top: 14px;
+                                  padding: 14px;
+                                  background: var(--color-bg-2);
+                                  border: 1px solid var(--color-border);
+                                  border-radius: 10px;
+                                "
+                              >
+                                <div
+                                  style="
+                                    display: flex;
+                                    gap: 10px;
+                                    flex-wrap: wrap;
+                                  "
+                                >
+                                  <label style="flex: 1 1 260px; min-width: 0">
+                                    <span
+                                      style="
+                                        display: block;
+                                        font-family: var(--font-sans);
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: var(--color-text-dim);
+                                        margin-bottom: 6px;
+                                      "
+                                      >Show name</span
+                                    >
+                                    <input
+                                      value="{{ sk.showDraft }}"
+                                      onInput="{{ sk.onShowDraft }}"
+                                      placeholder="e.g. The Tin Forest"
+                                      style="
+                                        width: 100%;
+                                        box-sizing: border-box;
+                                        height: 42px;
+                                        padding: 0 12px;
+                                        background: var(--color-surface);
+                                        border: 1px solid var(--color-border);
+                                        border-radius: 8px;
+                                        color: var(--color-text);
+                                        font-family: var(--font-sans);
+                                        font-size: 15px;
+                                        outline: none;
+                                      "
+                                    />
+                                  </label>
+                                  <label style="flex: 0 0 110px">
+                                    <span
+                                      style="
+                                        display: block;
+                                        font-family: var(--font-sans);
+                                        font-size: 12px;
+                                        font-weight: 600;
+                                        color: var(--color-text-dim);
+                                        margin-bottom: 6px;
+                                      "
+                                      >Season</span
+                                    >
+                                    <input
+                                      value="{{ sk.seasonDraft }}"
+                                      onInput="{{ sk.onSeasonDraft }}"
+                                      maxlength="2"
+                                      inputmode="numeric"
+                                      style="
+                                        width: 100%;
+                                        box-sizing: border-box;
+                                        height: 42px;
+                                        padding: 0 12px;
+                                        background: var(--color-surface);
+                                        border: 1px solid var(--color-border);
+                                        border-radius: 8px;
+                                        color: var(--color-text);
+                                        font-family: var(--font-mono);
+                                        font-size: 15px;
+                                        outline: none;
+                                      "
+                                    />
+                                  </label>
+                                </div>
+                                <div
+                                  style="
+                                    margin-top: 12px;
+                                    font-family: var(--font-sans);
+                                    font-size: 12px;
+                                    font-weight: 600;
+                                    color: var(--color-text-dim);
+                                  "
+                                >
+                                  Where they’ll go
+                                </div>
+                                <div
+                                  style="
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 4px;
+                                    margin-top: 6px;
+                                  "
+                                >
+                                  <sc-for
+                                    list="{{ sk.preview }}"
+                                    as="pv"
+                                    hint-placeholder-count="3"
+                                  >
+                                    <div
+                                      style="
+                                        display: flex;
+                                        gap: 8px;
+                                        font-family: var(--font-mono);
+                                        font-size: 12.5px;
+                                        color: var(--color-accent);
+                                        min-width: 0;
+                                      "
+                                    >
+                                      <span style="flex: 0 0 auto">→</span
+                                      ><span
+                                        style="
+                                          overflow: hidden;
+                                          text-overflow: ellipsis;
+                                          white-space: nowrap;
+                                        "
+                                        >{{ pv.dest }}</span
+                                      >
+                                    </div>
+                                  </sc-for>
+                                </div>
+                                <div
+                                  style="
+                                    margin-top: 10px;
+                                    font-family: var(--font-sans);
+                                    font-size: 12.5px;
+                                    color: var(--color-text-faint);
+                                    line-height: 1.5;
+                                  "
+                                >
+                                  Episodes keep their file names. Only the show
+                                  and season folders are new.
+                                </div>
+                                <div
+                                  style="
+                                    display: flex;
+                                    gap: 8px;
+                                    margin-top: 12px;
+                                  "
+                                >
+                                  <button
+                                    onClick="{{ sk.onSaveShow }}"
+                                    style="{{ sk.saveShowStyle }}"
+                                  >
+                                    Add to planned moves
+                                  </button>
+                                  <button
+                                    onClick="{{ sk.onCancelShow }}"
+                                    style="
+                                      height: 36px;
+                                      padding: 0 12px;
+                                      background: transparent;
+                                      border: none;
+                                      color: var(--color-text-faint);
+                                      font-family: var(--font-sans);
+                                      font-size: 13.5px;
+                                      cursor: pointer;
+                                    "
+                                    style-hover="color:var(--color-text-dim)"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            </sc-if>
+                          </div>
+                        </sc-for>
+                      </div>
+                    </div>
+                  </sc-if>
+
+                  <div
+                    style="
+                      display: flex;
+                      align-items: center;
+                      gap: 14px;
+                      margin-top: 10px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <dc-import
+                      name="prim.Button"
+                      label="{{ tidy.confirmLabel }}"
+                      variant="{{ tidy.confirmVariant }}"
+                      size="md"
+                      icon="none"
+                      on-click="{{ tidy.onConfirm }}"
+                      hint-size="200px,50px"
+                    ></dc-import>
+                    <button
+                      onClick="{{ tidy.onBack }}"
+                      style="
+                        height: 44px;
+                        padding: 0 14px;
+                        background: transparent;
+                        border: none;
+                        color: var(--color-text-faint);
+                        font-family: var(--font-sans);
+                        font-size: 15px;
+                        cursor: pointer;
+                      "
+                      style-hover="color:var(--color-text-dim)"
+                    >
+                      Not now
+                    </button>
+                    <span style="flex: 1"></span>
+                    <span
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        color: var(--color-text-faint);
+                      "
+                      >{{ tidy.fileTotalLabel }}</span
+                    >
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ============ RESCANNING ============ -->
+              <sc-if
+                value="{{ tidy.rescanning }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div style="padding: 8px 0 0">
+                  <div
+                    style="
+                      font-family: var(--font-serif);
+                      font-size: 24px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                      margin-bottom: 4px;
+                    "
+                  >
+                    Scanning {{ tidy.root }} again…
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      color: var(--color-text-dim);
+                      margin-bottom: 16px;
+                    "
+                  >
+                    Adding the films that now have folders, and looking for
+                    anything still loose.
+                  </div>
+                  <dc-import
+                    name="prim.ProgressBar"
+                    percent="{{ 0 }}"
+                    indeterminate="{{ true }}"
+                    height="10"
+                    hint-size="100%,10px"
+                  ></dc-import>
+                </div>
+              </sc-if>
+
+              <!-- ============ ALL TIDY ============ -->
+              <sc-if
+                value="{{ tidy.clean }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div
+                  style="
+                    text-align: center;
+                    padding: 44px 24px 36px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border-soft);
+                    border-radius: var(--radius-md);
+                  "
+                >
+                  <div
+                    style="
+                      display: inline-grid;
+                      place-items: center;
+                      width: 56px;
+                      height: 56px;
+                      border-radius: 50%;
+                      background: rgba(138, 154, 107, 0.16);
+                      color: var(--color-watched);
+                      margin-bottom: 14px;
+                    "
+                  >
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+                      <path
+                        d="M5 12.5l4.5 4.5L19 7.5"
+                        stroke="currentColor"
+                        stroke-width="2.2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-serif);
+                      font-size: 26px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                      margin-bottom: 6px;
+                    "
+                  >
+                    No more loose files
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      color: var(--color-text-dim);
+                      max-width: 460px;
+                      margin: 0 auto;
+                      line-height: 1.5;
+                      text-wrap: pretty;
+                    "
+                  >
+                    {{ tidy.cleanMessage }}
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      justify-content: center;
+                      gap: 12px;
+                      margin-top: 24px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <dc-import
+                      name="prim.Button"
+                      label="Go to library"
+                      variant="primary"
+                      size="md"
+                      icon="none"
+                      on-click="{{ tidy.onLibrary }}"
+                      hint-size="160px,50px"
+                    ></dc-import>
+                    <dc-import
+                      name="prim.Button"
+                      label="Back to settings"
+                      variant="secondary"
+                      size="md"
+                      icon="none"
+                      on-click="{{ tidy.onSettings }}"
+                      hint-size="170px,50px"
+                    ></dc-import>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ============ SOME STILL LOOSE ============ -->
+              <sc-if
+                value="{{ tidy.stillLoose }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div
+                  style="
+                    padding: 28px 24px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-accent-line);
+                    border-radius: var(--radius-md);
+                  "
+                >
+                  <div
+                    style="
+                      font-family: var(--font-serif);
+                      font-size: 24px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                      margin-bottom: 6px;
+                    "
+                  >
+                    {{ tidy.stillLooseTitle }}
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      color: var(--color-text-dim);
+                      line-height: 1.5;
+                      text-wrap: pretty;
+                    "
+                  >
+                    {{ tidy.stillLooseMessage }}
+                  </div>
+                  <div
+                    style="
+                      display: flex;
+                      gap: 12px;
+                      margin-top: 22px;
+                      flex-wrap: wrap;
+                    "
+                  >
+                    <dc-import
+                      name="prim.Button"
+                      label="Review them"
+                      variant="primary"
+                      size="md"
+                      icon="none"
+                      on-click="{{ tidy.onReviewLeft }}"
+                      hint-size="150px,50px"
+                    ></dc-import>
+                    <dc-import
+                      name="prim.Button"
+                      label="Go to library"
+                      variant="secondary"
+                      size="md"
+                      icon="none"
+                      on-click="{{ tidy.onLibrary }}"
+                      hint-size="160px,50px"
+                    ></dc-import>
+                    <dc-import
+                      name="prim.Button"
+                      label="Back to settings"
+                      variant="secondary"
+                      size="md"
+                      icon="none"
+                      on-click="{{ tidy.onSettings }}"
+                      hint-size="170px,50px"
+                    ></dc-import>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ============ RUNNING ============ -->
+              <sc-if
+                value="{{ tidy.running }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <div style="padding: 8px 0 0">
+                  <div
+                    style="
+                      font-family: var(--font-serif);
+                      font-size: 24px;
+                      font-weight: 600;
+                      color: var(--color-text);
+                      margin-bottom: 4px;
+                    "
+                  >
+                    Moving videos into their folders…
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      color: var(--color-text-dim);
+                      margin-bottom: 16px;
+                    "
+                  >
+                    {{ tidy.statLine }}
+                  </div>
+                  <dc-import
+                    name="prim.ProgressBar"
+                    percent="{{ tidy.percent }}"
+                    indeterminate="{{ false }}"
+                    height="10"
+                    hint-size="100%,10px"
+                  ></dc-import>
+                  <div
+                    style="
+                      font-family: var(--font-mono);
+                      font-size: 12.5px;
+                      color: var(--color-text-faint);
+                      margin: 12px 0 22px;
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                      white-space: nowrap;
+                    "
+                  >
+                    {{ tidy.currentItem }}
+                  </div>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 12px;
+                      font-weight: 600;
+                      letter-spacing: 0.6px;
+                      text-transform: uppercase;
+                      color: var(--color-text-faint);
+                      margin-bottom: 8px;
+                    "
+                  >
+                    Activity log
+                  </div>
+                  <dc-import
+                    name="mol.LogConsole"
+                    lines="{{ tidy.log }}"
+                    max-height="220"
+                    hint-size="100%,220px"
+                  ></dc-import>
+                  <div
+                    style="
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 14px;
+                      line-height: 1.5;
+                    "
+                  >
+                    Each video moves together with its subtitles and poster, or
+                    not at all. Stopping now keeps what’s already moved.
+                  </div>
+                  <div style="margin-top: 18px">
+                    <dc-import
+                      name="prim.Button"
+                      label="Stop after this one"
+                      variant="secondary"
+                      size="md"
+                      icon="none"
+                      on-click="{{ tidy.onStop }}"
+                      hint-size="190px,50px"
+                    ></dc-import>
+                  </div>
+                </div>
+              </sc-if>
+
+              <!-- ============ DONE ============ -->
+              <sc-if value="{{ tidy.done }}" hint-placeholder-val="{{ false }}">
+                <div
+                  style="
+                    display: flex;
+                    gap: 16px;
+                    margin-bottom: 24px;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <div
+                    style="
+                      flex: 1 1 220px;
+                      padding: 22px;
+                      background: var(--color-surface);
+                      border: 1px solid var(--color-border-soft);
+                      border-radius: var(--radius-md);
+                    "
+                  >
+                    <div
+                      style="
+                        font-family: var(--font-serif);
+                        font-weight: 700;
+                        font-size: 40px;
+                        color: var(--color-watched);
+                        line-height: 1;
+                      "
+                    >
+                      {{ tidy.movedCount }}
+                    </div>
+                    <div
+                      style="
+                        font-family: var(--font-sans);
+                        font-size: 15px;
+                        color: var(--color-text-dim);
+                        margin-top: 6px;
+                      "
+                    >
+                      moved into<br />folders of their own
+                    </div>
+                  </div>
+                  <sc-if
+                    value="{{ tidy.hasFailed }}"
+                    hint-placeholder-val="{{ true }}"
+                  >
+                    <div
+                      style="
+                        flex: 1 1 220px;
+                        padding: 22px;
+                        background: var(--color-surface);
+                        border: 1px solid var(--color-accent-line);
+                        border-radius: var(--radius-md);
+                      "
+                    >
+                      <div
+                        style="
+                          font-family: var(--font-serif);
+                          font-weight: 700;
+                          font-size: 40px;
+                          color: var(--color-accent);
+                          line-height: 1;
+                        "
+                      >
+                        {{ tidy.failedCount }}
+                      </div>
+                      <div
+                        style="
+                          font-family: var(--font-sans);
+                          font-size: 15px;
+                          color: var(--color-text-dim);
+                          margin-top: 6px;
+                        "
+                      >
+                        couldn’t move<br />and stayed where they were
+                      </div>
+                    </div>
+                  </sc-if>
+                </div>
+
+                <sc-if
+                  value="{{ tidy.hasFailed }}"
+                  hint-placeholder-val="{{ true }}"
+                >
+                  <div
+                    style="
+                      display: flex;
+                      flex-direction: column;
+                      gap: 8px;
+                      margin-bottom: 24px;
+                    "
+                  >
+                    <sc-for
+                      list="{{ tidy.failed }}"
+                      as="f"
+                      hint-placeholder-count="1"
+                    >
+                      <div
+                        style="
+                          display: flex;
+                          align-items: center;
+                          gap: 14px;
+                          padding: 14px 16px;
+                          background: var(--color-surface);
+                          border: 1px solid var(--color-border-soft);
+                          border-radius: var(--radius-md);
+                        "
+                      >
+                        <div
+                          style="
+                            flex: 0 0 auto;
+                            width: 10px;
+                            height: 10px;
+                            border-radius: 99px;
+                            background: #c97a6a;
+                          "
+                        ></div>
+                        <div style="flex: 1; min-width: 0">
+                          <div
+                            style="
+                              font-family: var(--font-mono);
+                              font-size: 13.5px;
+                              color: var(--color-text);
+                              overflow: hidden;
+                              text-overflow: ellipsis;
+                              white-space: nowrap;
+                            "
+                          >
+                            {{ f.name }}
+                          </div>
+                          <div
+                            style="
+                              font-family: var(--font-sans);
+                              font-size: 13px;
+                              color: var(--color-text-faint);
+                              margin-top: 3px;
+                            "
+                          >
+                            {{ f.reason }}
+                          </div>
+                        </div>
+                        <button
+                          onClick="{{ f.onRetry }}"
+                          style="
+                            flex: 0 0 auto;
+                            height: 38px;
+                            padding: 0 16px;
+                            background: var(--color-surface-3);
+                            border: 1px solid var(--color-border);
+                            border-radius: 8px;
+                            color: var(--color-text);
+                            font-family: var(--font-sans);
+                            font-size: 13.5px;
+                            font-weight: 600;
+                            cursor: pointer;
+                          "
+                          style-hover="background:var(--color-border)"
+                        >
+                          Try again
+                        </button>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <div
+                  style="
+                    display: flex;
+                    gap: 14px;
+                    padding: 16px 18px;
+                    background: var(--color-surface);
+                    border: 1px solid var(--color-border-soft);
+                    border-radius: var(--radius-md);
+                    margin-bottom: 26px;
+                  "
+                >
+                  <span
+                    style="
+                      flex: 0 0 auto;
+                      display: grid;
+                      place-items: center;
+                      width: 38px;
+                      height: 38px;
+                      border-radius: 9px;
+                      background: var(--color-accent-soft);
+                      color: var(--color-accent);
+                    "
+                    ><svg
+                      width="19"
+                      height="19"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M20 11a8 8 0 10-2.3 5.7M20 5v6h-6"
+                        stroke="currentColor"
+                        stroke-width="1.9"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                      /></svg
+                  ></span>
+                  <span style="flex: 1; min-width: 0">
+                    <span
+                      style="
+                        display: block;
+                        font-family: var(--font-sans);
+                        font-size: 15px;
+                        font-weight: 600;
+                        color: var(--color-text);
+                      "
+                      >Scan again to add them</span
+                    >
+                    <span
+                      style="
+                        display: block;
+                        font-family: var(--font-sans);
+                        font-size: 13px;
+                        color: var(--color-text-faint);
+                        margin-top: 2px;
+                        line-height: 1.45;
+                      "
+                      >The tidied videos now look like films to the scanner. A
+                      rescan adds them to your library.</span
+                    >
+                  </span>
+                </div>
+
+                <div
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 14px;
+                    flex-wrap: wrap;
+                  "
+                >
+                  <dc-import
+                    name="prim.Button"
+                    label="Rescan this folder"
+                    variant="primary"
+                    size="md"
+                    icon="none"
+                    on-click="{{ tidy.onRescan }}"
+                    hint-size="190px,50px"
+                  ></dc-import>
+                  <button
+                    onClick="{{ tidy.onDone }}"
+                    style="
+                      height: 44px;
+                      padding: 0 14px;
+                      background: transparent;
+                      border: none;
+                      color: var(--color-text-faint);
+                      font-family: var(--font-sans);
+                      font-size: 15px;
+                      cursor: pointer;
+                    "
+                    style-hover="color:var(--color-text-dim)"
+                  >
+                    Done
+                  </button>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+        </sc-if>
+        <!-- ============================= SNACKBAR HOST ============================= -->
+        <sc-if value="{{ hasSnackbars }}" hint-placeholder-val="{{ false }}">
+          <div
+            style="
+              position: absolute;
+              right: 24px;
+              bottom: 24px;
+              z-index: 200;
+              display: flex;
+              flex-direction: column-reverse;
+              gap: 12px;
+              align-items: flex-end;
+              pointer-events: none;
+            "
+          >
+            <sc-for list="{{ snackbars }}" as="n" hint-placeholder-count="1">
+              <div style="pointer-events: auto">
+                <dc-import
+                  name="mol.Snackbar"
+                  variant="{{ n.variant }}"
+                  title="{{ n.title }}"
+                  message="{{ n.message }}"
+                  action-label="{{ n.actionLabel }}"
+                  on-action="{{ n.action }}"
+                  dismissible="{{ n.dismissible }}"
+                  on-dismiss="{{ n.onDismiss }}"
+                  hint-size="360px,80px"
+                ></dc-import>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":900,"height":860}}'
+    >
+      class Component extends DCLogic {
+        state = {
+          screen:'entry', snackbars:[],
+          tidyStep:'plan', tidyReturn:'settings', tidyOff:[], tidyAdopted:[], tidyQueue:[], tidyIdx:0, tidyLog:[], tidyMoved:[], tidyFailed:[], tidyStop:false, looseCount:9,
+          tidyNames:{}, tidyEditing:null, tidyDraft:{title:'',year:''},
+          tidyShows:{}, tidyShowEdit:null, tidyShowDraft:'', tidySeasonDraft:'1', tidyRescanning:false, tidyGone:[], tidyLastAdded:0,
+        };
+        _snackSeq = 0;
+        tidyRoot = 'E:\\Movies';
+        tidyPlanSeed = [
+          {id:'t1',file:'Apex (2026).mp4',comp:['Apex (2026).en.srt','Apex (2026)-poster.jpg']},
+          {id:'t2',file:'Winter Apples (2012).mkv',comp:['Winter Apples (2012).en.srt','Winter Apples (2012).es.srt']},
+          {id:'t3',file:'Blue Hour (2020).mp4',comp:[]},
+          {id:'t9',file:'Northwind.mkv',comp:['Northwind.en.srt']},
+          {id:'t10',file:'Northwind.mp4',comp:[]},
+          {id:'t4',file:'Ironwood (2017).mkv',comp:['Ironwood (2017)-poster.jpg']},
+          {id:'t5',file:'Lighthouse Road (2009).avi',comp:['Lighthouse Road (2009).nl.srt'],fails:'It’s open in another app. Close it there and try again.'},
+        ];
+        tidySkipSeed = [
+          {id:'k1',file:'Harbor Lights (2019).mkv',reason:'A folder named “Harbor Lights (2019)” is already here. If this is a different film with the same title, rename it. Changing the year is usually enough.',actionLabel:'Rename',
+            asMove:{id:'t8',file:'Harbor Lights (2019).mkv',comp:['Harbor Lights (2019).en.srt']}, openRename:true,
+            altLabel:'Move into it', asAlt:{id:'t6',file:'Harbor Lights (2019).mkv',comp:['Harbor Lights (2019).en.srt'],dest:'Harbor Lights (2019)\\Harbor Lights (2019).mkv  (existing folder)'}},
+          {id:'k2',kind:'show',file:'S01E01 The Gate in the Fence.mkv  · +2 more',season:'1',
+            episodes:['S01E01 The Gate in the Fence.mkv','S01E02 Copper Leaves.mkv','S01E03 What the Crane Saw.mkv'],
+            reason:'These look like episodes of a show, but the files don’t say which one. Name the show to give them a folder.',actionLabel:'Name the show'},
+        ];
+        tidyExisting = ['Harbor Lights (2019)','The Lantern Keeper (2019)','Salt and Cedar (2021)'];
+        tidyAdoptedOf(k){ const a=this.state.tidyAdopted.find(x=>x.split(':')[0]===k.id); if(!a) return null;
+          if(k.kind==='show'){ const sh=this.state.tidyShows[k.id]; if(!sh) return null; return {id:'show-'+k.id, kind:'show', skipId:k.id, file:k.episodes[0], comp:k.episodes.slice(1), dest:this.tidyShowFolder(sh.name, sh.season)}; }
+          return a.split(':')[1]==='alt' ? k.asAlt : k.asMove; }
+        tidyShowFolder(name, season){ return String(name).trim()+'\\Season '+String(parseInt(season,10)||1).padStart(2,'0')+'\\'; }
+        openShowEditor(id){ const k=this.tidySkipSeed.find(x=>x.id===id); const sh=this.state.tidyShows[id];
+          this.setState(s=>({tidyShowEdit:id, tidyShowDraft:sh?sh.name:'', tidySeasonDraft:sh?sh.season:(k.season||'1'), tidyAdopted:s.tidyAdopted.filter(x=>x.split(':')[0]!==id)})); }
+        saveShow(id){ const name=String(this.state.tidyShowDraft).trim(); if(!name) return;
+          this.setState(s=>({tidyShows:{...s.tidyShows,[id]:{name, season:s.tidySeasonDraft||'1'}}, tidyAdopted:[...s.tidyAdopted.filter(x=>x.split(':')[0]!==id), id+':main'], tidyShowEdit:null})); }
+        rescanTidyPlan(){ if(this.state.tidyRescanning) return; this.setState({tidyRescanning:true});
+          setTimeout(()=>{ this.setState({tidyRescanning:false}); const n=this.tidyRemaining();
+            this.pushSnack({variant:'info',message:'Looked through '+this.tidyRoot+' again. Still '+n+' loose videos, nothing new.',duration:4000,dismissible:true}); }, 1300); }
+        tidyAllMoves(){ return [...this.tidyPlanSeed, ...this.tidySkipSeed.map(k=>this.tidyAdoptedOf(k)).filter(Boolean)]; }
+        tidyMoves(){ const g=this.state.tidyGone; return this.tidyAllMoves().filter(m=>!g.includes(m.id)); }
+        tidySkipsLeft(){ return this.tidySkipSeed.filter(k=>!this.tidyAdoptedOf(k)); }
+        tidyRemaining(){ return this.tidyMoves().length + this.tidySkipsLeft().length; }
+        tidySibling(mv){ if(mv.dest || this.tidyRenamed(mv)) return null; const base=this.tidyBase(mv.file); if(this.tidyParse(base).year) return null;
+          return this.tidyAllMoves().find(o=>o.id!==mv.id && !o.dest && this.tidyBase(o.file).toLowerCase()===base.toLowerCase() && this.tidyRenamed(o) && this.state.tidyNames[o.id].year) || null; }
+        tidyBase(f){ return f.replace(/\.[^.]+$/,''); }
+        tidyExt(f){ const m=f.match(/\.[^.]+$/); return m?m[0]:''; }
+        tidyParse(base){ const m=base.match(/^(.*?)\s*\((\d{4})\)\s*$/); return m?{title:m[1],year:m[2]}:{title:base,year:''}; }
+        tidyFmt(t,y){ t=String(t||'').trim(); y=String(y||'').trim(); return t+(y?' ('+y+')':''); }
+        tidyNameOf(mv){ const n=this.state.tidyNames[mv.id]; return n ? this.tidyFmt(n.title,n.year) : this.tidyBase(mv.file); }
+        tidyRenamed(mv){ return !!this.state.tidyNames[mv.id]; }
+        tidyExistsClash(mv, name){ return !mv.dest && this.tidyExisting.includes(name==null?this.tidyNameOf(mv):name); }
+        tidyDupe(mv, name){ if(mv.dest) return false; const n=String(name==null?this.tidyNameOf(mv):name).toLowerCase();
+          return this.tidyMoves().some(o=>o.id!==mv.id && !o.dest && this.tidyNameOf(o).toLowerCase()===n); }
+        tidyClash(mv, name){ return this.tidyExistsClash(mv,name) || this.tidyDupe(mv,name); }
+        tidyDest(mv){ if(mv.dest) return this.tidyRoot+'\\'+mv.dest; const n=this.tidyNameOf(mv); return this.tidyRoot+'\\'+n+'\\'+n+this.tidyExt(mv.file); }
+        tidyComps(mv){ const ob=this.tidyBase(mv.file), nb=this.tidyNameOf(mv); return mv.comp.map(c=>c.startsWith(ob)?nb+c.slice(ob.length):c); }
+        editTidyName(mv){ const cur=this.state.tidyNames[mv.id] || this.tidyParse(this.tidyBase(mv.file)); this.setState({tidyEditing:mv.id, tidyDraft:{title:cur.title, year:cur.year}}); }
+        saveTidyName(mv){ const d=this.state.tidyDraft; if(!String(d.title).trim()) return; const orig=this.tidyParse(this.tidyBase(mv.file));
+          this.setState(s=>{ const names={...s.tidyNames}; if(d.title.trim()===orig.title && d.year.trim()===orig.year) delete names[mv.id]; else names[mv.id]={title:d.title.trim(),year:d.year.trim()};
+            return {tidyNames:names, tidyEditing:null, tidyOff:s.tidyOff.filter(x=>x!==mv.id)}; }); }
+        resetTidyName(id){ this.setState(s=>{ const names={...s.tidyNames}; delete names[id]; return {tidyNames:names, tidyEditing:null}; }); }
+        goTidy(from){ if(this._tidySnackId){ this.dismissSnack(this._tidySnackId); this._tidySnackId=null; } this.setState({screen:'tidy',tidyReturn:from||'settings',tidyStep:'plan',tidyOff:[],tidyIdx:0,tidyLog:[],tidyMoved:[],tidyFailed:[],tidyStop:false,tidyEditing:null,tidyShowEdit:null,gearOpen:false,openDrop:null}); }
+        backFromTidy(){ this.setState({screen:'entry'}); }
+        toggleTidyMove(id){ this.setState(s=>({tidyOff:s.tidyOff.includes(id)?s.tidyOff.filter(x=>x!==id):[...s.tidyOff,id]})); }
+        adoptTidySkip(id, alt){ const k=this.tidySkipSeed.find(x=>x.id===id); if(!k) return;
+          if(k.kind==='show'){ this.openShowEditor(id); return; }
+          this.setState(s=>({tidyAdopted:s.tidyAdopted.some(x=>x.split(':')[0]===id)?s.tidyAdopted:[...s.tidyAdopted,id+':'+(alt?'alt':'main')]}));
+          if(!alt && k.openRename) setTimeout(()=>this.editTidyName(k.asMove),0); }
+        tidySelected(){ return this.tidyMoves().filter(m=>!this.state.tidyOff.includes(m.id) && !this.tidyClash(m)); }
+        startTidy(){ const q=this.tidySelected().map(m=>m.id); if(!q.length) return;
+          this._tidyTick=0; this.setState({tidyStep:'running',tidyQueue:q,tidyIdx:0,tidyMoved:[],tidyFailed:[],tidyStop:false,
+            tidyLog:[{text:'Checking '+this.tidyRoot+' is still there and writable …',kind:'info'},{text:'Moving '+q.length+' video'+(q.length===1?'':'s')+' into folders of their own.',kind:'info'}]}); }
+        stepTidy(){ const s=this.state; const all=this.tidyMoves(); const id=s.tidyQueue[s.tidyIdx]; const mv=all.find(m=>m.id===id);
+          if(!mv || s.tidyStop){ this.finishTidy(); return; }
+          let patch; if(mv.fails){ patch={tidyFailed:[...s.tidyFailed,id],tidyLog:this.appendLog(s.tidyLog,{text:'⚠ '+mv.file+' did not move. '+mv.fails,kind:'warning'})}; }
+          else { const n=mv.comp.length; patch={tidyMoved:[...s.tidyMoved,id],tidyLog:this.appendLog(s.tidyLog,{text:'✓ '+mv.file+(this.tidyRenamed(mv)?'  (renamed)':'')+'  →  '+this.tidyDest(mv).replace(this.tidyRoot+'\\','')+(n?'   (+'+n+' with it)':''),kind:'success'})}; }
+          const nextIdx=s.tidyIdx+1; this.setState({...patch,tidyIdx:nextIdx}); if(nextIdx>=s.tidyQueue.length) setTimeout(()=>this.finishTidy(),400); }
+        finishTidy(){ this.setState(s=>({tidyStep:'done', tidyGone:[...s.tidyGone,...s.tidyMoved.filter(x=>!s.tidyGone.includes(x))]})); setTimeout(()=>this.setState({looseCount:this.tidyRemaining()}),0); }
+        retryTidy(id){ this.setState(s=>({tidyFailed:s.tidyFailed.filter(x=>x!==id),tidyMoved:[...s.tidyMoved,id],tidyGone:[...s.tidyGone,id],looseCount:Math.max(0,s.looseCount-1)})); this.pushSnack({variant:'success',message:'Moved. It’s in its own folder now.',duration:3500,dismissible:true}); }
+        rescanAfterTidy(){ this.setState({tidyStep:'rescanning', tidyLastAdded:this.state.tidyMoved.length});
+          setTimeout(()=>this.setState({tidyStep:'rescanned', looseCount:this.tidyRemaining()}), 1500); }
+        reviewLeftTidy(){ this.setState({tidyStep:'plan',tidyOff:[],tidyMoved:[],tidyFailed:[],tidyIdx:0,tidyLog:[],tidyQueue:[],tidyEditing:null,tidyShowEdit:null}); }
+        offerTidy(){ const n=this.state.looseCount; if(!n) return; this._tidySnackId=this.pushSnack({variant:'info',title:n+' loose videos left out',message:'They sit at the top of '+this.tidyRoot+' with no folder of their own, so the scan couldn’t add them as films.',actionLabel:'Review & tidy',action:()=>this.goTidy(this.state.screen==='import'?'import':'settings'),dismissible:true}); }
+        appendLog(log, entry){ const next=[...log, entry]; return next.length>80 ? next.slice(next.length-80) : next; }
+        pushSnack(snack){ const id=++this._snackSeq; this.setState(s=>({snackbars:[...s.snackbars, {...snack, id}]})); if(snack.duration){ setTimeout(()=>this.dismissSnack(id), snack.duration); } return id; }
+        dismissSnack(id){ this.setState(s=>({snackbars:s.snackbars.filter(n=>n.id!==id)})); }
+        goBrowse(){ this.setState({screen:'entry'}); this.pushSnack({variant:'info',message:'In the app, this opens the library.',duration:3000,dismissible:true}); }
+        goSettings(){ this.setState({screen:'entry'}); }
+        componentDidMount(){
+          this.timer=setInterval(()=>{ const s=this.state; if(s.screen==='tidy' && s.tidyStep==='running'){ this._tidyTick=(this._tidyTick||0)+1; if(this._tidyTick%4===0) this.stepTidy(); } },220);
+        }
+        componentWillUnmount(){ clearInterval(this.timer); }
+        renderVals(){
+          const s=this.state;
+          const accent='var(--color-accent)';
+          return {
+            isEntry:s.screen==='entry', isTidy:s.screen==='tidy',
+            onSimScan:()=>this.offerTidy(),
+            libraryActions:[
+              {key:'add',glyph:'＋',label:'Add a movie',desc:'Pick the video, poster, and subtitle files for one title.',onClick:()=>{}},
+              {key:'import',glyph:'⇪',label:'Import from spreadsheet',desc:'Bulk-migrate a spreadsheet + movie folders in one pass.',onClick:()=>{}},
+              {key:'tidy',glyph:'▤',label:'Tidy loose videos',
+                desc:s.looseCount?(s.looseCount+' videos at the top of '+this.tidyRoot+' have no folder of their own, so scans skip them.'):'Gives each loose video a folder of its own. Shows every move before anything happens.',
+                hasBadge:s.looseCount>0, badge:s.looseCount+' loose', onClick:()=>this.goTidy('settings')},
+            ].map(a=>({hasBadge:false,badge:'',...a})),
+            snackbars:s.snackbars.map(n=>({...n,onDismiss:()=>this.dismissSnack(n.id)})), hasSnackbars:s.snackbars.length>0,
+            tidy:(()=>{
+              const all=this.tidyMoves(); const sel=this.tidySelected(); const left=this.tidyRemaining(); const added=s.tidyLastAdded;
+              const fileCount=sel.reduce((a,m)=>a+1+m.comp.length,0);
+              const box=on=>({flex:'0 0 auto',display:'grid',placeItems:'center',width:'22px',height:'22px',marginTop:'1px',borderRadius:'6px',border:'2px solid '+(on?accent:'var(--color-text-faint)'),background:on?accent:'transparent',color:'#1a1109',fontSize:'14px',fontWeight:'700'});
+              const row=(on,ed)=>({display:'flex',alignItems:'flex-start',gap:'14px',width:'100%',boxSizing:'border-box',textAlign:'left',padding:'14px 16px',background:'var(--color-surface)',border:'1px solid '+(ed?'var(--color-accent-line)':'var(--color-border-soft)'),borderRadius:'var(--radius-md)',opacity:(on||ed)?1:0.55});
+              const d=s.tidyDraft; const draftName=this.tidyFmt(d.title,d.year);
+              const byId=id=>all.find(m=>m.id===id)||{file:'',comp:[]};
+              const qn=s.tidyQueue.length; const pct=qn?Math.round(s.tidyIdx/qn*100):0;
+              return {
+                plan:s.tidyStep==='plan' && left>0, running:s.tidyStep==='running', done:s.tidyStep==='done',
+                rescanning:s.tidyStep==='rescanning',
+                clean:(s.tidyStep==='plan'||s.tidyStep==='rescanned') && left===0,
+                stillLoose:s.tidyStep==='rescanned' && left>0,
+                cleanMessage:s.tidyStep==='rescanned'
+                  ? 'Every video in '+this.tidyRoot+' now has a folder of its own. '+added+' new film'+(added===1?' was':'s were')+' added to your library.'
+                  : 'Every video in '+this.tidyRoot+' already has a folder of its own.',
+                stillLooseTitle:left+' loose video'+(left===1?'':'s')+' still left',
+                stillLooseMessage:added+' new film'+(added===1?' was':'s were')+' added to your library. The rest still need something from you, such as a new name, a show name, or another try.',
+                onReviewLeft:()=>this.reviewLeftTidy(), onLibrary:()=>this.goBrowse(), onSettings:()=>this.goSettings(),
+                onBack:()=>this.backFromTidy(), root:this.tidyRoot,
+                foundLabel:left+' loose video'+(left===1?'':'s')+' at the top level',
+                moves:all.map(m=>{ const clash=this.tidyClash(m); const on=!s.tidyOff.includes(m.id) && !clash; const ed=s.tidyEditing===m.id; const canRename=!m.dest;
+                  return {name:m.file, dest:this.tidyDest(m), hasCompanions:m.comp.length>0, companionsLabel:this.tidyComps(m).join('  ·  '),
+                  check:on?'✓':'', boxStyle:box(on), rowStyle:row(on,ed), toggle:()=>{ if(!clash) this.toggleTidyMove(m.id); else this.editTidyName(m); },
+                  editing:ed, notEditing:!ed, showRenameBtn:canRename && !ed,
+                  isShow:m.kind==='show', onEditShow:()=>this.openShowEditor(m.skipId),
+                  renamed:this.tidyRenamed(m), originalName:this.tidyBase(m.file),
+                  siblingHint:!ed && !this.tidyDupe(m) && !!this.tidySibling(m), siblingTitle:this.tidyParse(this.tidyBase(m.file)).title,
+                  dupe:!ed && this.tidyDupe(m), dupeName:this.tidyNameOf(m), clash:!ed && this.tidyExistsClash(m),
+                  draftTitle:d.title, draftYear:d.year, draftPreview:(draftName||'Untitled')+this.tidyExt(m.file),
+                  draftClash:ed && this.tidyExistsClash(m, draftName), draftDupe:ed && this.tidyDupe(m, draftName),
+                  onDraftTitle:(e)=>this.setState({tidyDraft:{...this.state.tidyDraft,title:e.target.value}}),
+                  onDraftYear:(e)=>this.setState({tidyDraft:{...this.state.tidyDraft,year:e.target.value.replace(/[^0-9]/g,'').slice(0,4)}}),
+                  onEdit:()=>this.editTidyName(m), onSave:()=>this.saveTidyName(m), onCancelEdit:()=>this.setState({tidyEditing:null}), onReset:()=>this.resetTidyName(m.id)}; }),
+                selectedLabel:sel.length+' of '+all.length+' selected',
+                skipped:this.tidySkipSeed.filter(k=>!this.tidyAdoptedOf(k)).map(k=>{ const eds=s.tidyShowEdit===k.id; const nm=String(s.tidyShowDraft).trim();
+                  return {name:k.file,reason:k.reason,actionLabel:k.actionLabel,onAction:()=>this.adoptTidySkip(k.id,false),
+                  hasAlt:!!k.asAlt, altLabel:k.altLabel||'', onAlt:()=>this.adoptTidySkip(k.id,true),
+                  rowStyle:{padding:'14px 16px',background:'var(--color-surface)',border:'1px '+(eds?'solid var(--color-accent-line)':'dashed var(--color-border)'),borderRadius:'var(--radius-md)'},
+                  editingShow:eds, notEditing:!eds,
+                  showDraft:s.tidyShowDraft, seasonDraft:s.tidySeasonDraft,
+                  onShowDraft:(e)=>this.setState({tidyShowDraft:e.target.value}),
+                  onSeasonDraft:(e)=>this.setState({tidySeasonDraft:e.target.value.replace(/[^0-9]/g,'').slice(0,2)}),
+                  preview:(k.episodes||[]).map(ep=>({dest:this.tidyRoot+'\\'+(nm?this.tidyShowFolder(nm,s.tidySeasonDraft):'(show name)\\Season '+String(parseInt(s.tidySeasonDraft,10)||1).padStart(2,'0')+'\\')+ep})),
+                  saveShowStyle:{height:'36px',padding:'0 16px',background:nm?'var(--color-accent)':'var(--color-surface-3)',border:'none',borderRadius:'8px',color:nm?'#1a1109':'var(--color-text-faint)',fontFamily:'var(--font-sans)',fontSize:'13.5px',fontWeight:'700',cursor:nm?'pointer':'default'},
+                  onSaveShow:()=>this.saveShow(k.id), onCancelShow:()=>this.setState({tidyShowEdit:null})}; }),
+                rescanLabel:s.tidyRescanning?'Scanning…':'Rescan', onRescanPlan:()=>this.rescanTidyPlan(),
+                hasSkipped:this.tidySkipSeed.some(k=>!this.tidyAdoptedOf(k)),
+                confirmLabel:sel.length?('Move '+sel.length+' video'+(sel.length===1?'':'s')):'Nothing selected',
+                confirmVariant:sel.length?'primary':'secondary', onConfirm:()=>this.startTidy(),
+                fileTotalLabel:fileCount+' file'+(fileCount===1?'':'s')+' in all, including subtitles and posters',
+                percent:pct, statLine:s.tidyIdx+' of '+qn+' done',
+                currentItem:s.tidyIdx<qn ? byId(s.tidyQueue[s.tidyIdx]).file : '', log:s.tidyLog,
+                onStop:()=>this.setState({tidyStop:true}),
+                movedCount:s.tidyMoved.length, failedCount:s.tidyFailed.length, hasFailed:s.tidyFailed.length>0,
+                failed:s.tidyFailed.map(id=>{ const m=byId(id); return {name:m.file, reason:(m.fails||'Couldn’t be moved.')+' Its subtitles stayed with it.', onRetry:()=>this.retryTidy(id)}; }),
+                onRescan:()=>this.rescanAfterTidy(), onDone:()=>this.backFromTidy(),
+              };
+            })(),
+          };
+        }
+      }
+    </script>
+  </body>
+</html>
