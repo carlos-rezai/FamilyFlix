@@ -65,9 +65,7 @@ when a second feature needs it; no feature imports another's wire.
 - **`src/` never touches SQLite or the filesystem**: all file access goes
   through `server/src/media/`, the only code that touches managed storage.
 - **The only writers into a Library folder** are `enrichment/`'s Write targets
-  and an Export, each only ever adding what isn't there, and a **Tidy**, the
-  one mover: only on the maintainer's press, only a Loose video and its
-  Companion files, into a folder it makes.
+  and an Export, each only ever adding what isn't there.
 - **Enrichment (TMDB) is the only network client.** File paths are stored
   relative: to the media directory, or a **Linked video**'s to its Library
   folder by id.

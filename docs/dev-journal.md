@@ -11,6 +11,43 @@ Newest entry first.
 
 ---
 
+## 2026-11-06: Tidy into folders, dropped (issue 523)
+
+Step 40 was built through `issue-loop` (issues 524 to 530, `afac1fcd` to
+`345ef4c3`), and its refactor plan was filed as issue 532. Then the
+maintainer dropped the feature: moving files inside a Library folder is
+better done by a separate tool, outside FamilyFlix, that makes a folder of
+bare files FamilyFlix-ready. All fourteen commits were reverted in one; the
+tree matches `1991d1a1` byte for byte. **11412 tests pass across 717
+files**, the count before the build, and `tsc -b --force` is clean.
+
+### What stays
+
+- Design log 57, the PRD and the plan, as the record of the decision and its
+  reversal. `docs/handoff/handoff-tidy-loose-videos/` stays too, with its
+  note: its copy and intent are a fair brief for the outside tool.
+- CLAUDE.md's boundary is back to two writers into a Library folder, both
+  only adding. FamilyFlix moves nothing it doesn't own.
+
+### Worth carrying to the outside tool
+
+What the build learned, so the tool doesn't relearn it:
+
+- The folder name should be the walk's own guess for the file:
+  `titleWithYear(titleGuess(stem), yearInName(stem))`. `yearInName` misses a
+  year followed by Release noise (`Apex.2026.1080p.BluRay` reads no year),
+  and the walk's `no-row` guess and `matchRows` share that blind spot. That
+  one is FamilyFlix's own bug, and worth an issue of its own.
+- A companion is a non-video named by the video's stem plus `.` or `-`,
+  case folded, the longest stem winning; a second video is never one.
+- Never move into a folder that already exists: a folder with no video may
+  be a shelf, and a video moved into it hides every film under it.
+- Loose episodes group by the Title key of the text before the tag into one
+  flat show folder; an episode with nothing before its tag can't be placed.
+- A move is renames only, all or nothing, rolled back in reverse on failure.
+
+---
+
 ## 2026-11-05: Linux build, the refactor (issue 522)
 
 Eleven commits against

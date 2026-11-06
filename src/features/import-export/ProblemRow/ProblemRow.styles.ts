@@ -14,7 +14,7 @@ const GOLD = '#c9a86a';
 /**
  * The dot's colour by kind: `danger` for the film that is not there and cannot
  * be got without a hand — `no-folder`, `no-video`, `failed`, and the episode
- * that is `unplaced`, and the video lying `loose`; `accent` for
+ * that is `unplaced`; `accent` for
  * `ambiguous`, a choice to make; `text-faint` for `no-row` and the soft
  * `missing-meta`, which the library can live with; and the Sync's gold for
  * `differs`, a comparison to settle on the row.
@@ -24,7 +24,6 @@ export const DOT_TONE: Record<ProblemKind, DotTone> = {
   'no-video': 'danger',
   failed: 'danger',
   unplaced: 'danger',
-  loose: 'danger',
   ambiguous: 'accent',
   'no-row': 'textFaint',
   'missing-meta': 'textFaint',
@@ -84,27 +83,4 @@ export const Reason = styled.div`
 /** A `no-row` row's face: _Import as_, under the head past the dot. */
 export const ImportAsSlot = styled.div`
   padding: 14px 0 0 24px;
-`;
-
-/** A `loose` row's destination: the **Tidy folder name** and the video, in mono. */
-export const Destination = styled.div`
-  font-family: ${({ theme }) => theme.fonts.mono};
-  font-size: 13px;
-  color: ${({ theme }) => theme.colors.textDim};
-  overflow-wrap: anywhere;
-`;
-
-/** _Moves with it:_ under the destination, 12.5px in the faint ink. */
-export const Companions = styled.div`
-  margin-top: 6px;
-  font-family: ${({ theme }) => theme.fonts.sans};
-  font-size: 12.5px;
-  color: ${({ theme }) => theme.colors.textFaint};
-  line-height: 1.5;
-`;
-
-/** The companions' names in mono, inside _Moves with it:_. */
-export const CompanionNames = styled.span`
-  font-family: ${({ theme }) => theme.fonts.mono};
-  overflow-wrap: anywhere;
 `;

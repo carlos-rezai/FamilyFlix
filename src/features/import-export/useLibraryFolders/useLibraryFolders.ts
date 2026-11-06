@@ -41,8 +41,6 @@ export interface LibraryFoldersState {
    * was about; `null` until one is refused and once a remove lands.
    */
   removeRefusal: { id: string; sentence: string } | null;
-  /** Read the list again, its counts with it, as after a **Tidy**; never rejects. */
-  refresh: () => void;
 }
 
 /**
@@ -74,12 +72,6 @@ export function useLibraryFolders(): LibraryFoldersState {
     };
   }, []);
 
-  const refresh = useCallback(() => {
-    fetchLibraryFolders()
-      .then(setFolders)
-      .catch(() => undefined);
-  }, []);
-
   const add = useCallback(
     async (path: string) => {
       try {
@@ -89,11 +81,10 @@ export function useLibraryFolders(): LibraryFoldersState {
           return false;
         }
         setRefusal(null);
-        // A folder just listed has nothing left out yet, and its loose count
-        // waits for the next list read.
+        // A folder just listed has nothing left out yet.
         setFolders((listed) => [
           ...(listed ?? []),
-          { ...outcome.folder, leftOut: 0, loose: 0 },
+          { ...outcome.folder, leftOut: 0 },
         ]);
         return true;
       } catch {
@@ -142,6 +133,5 @@ export function useLibraryFolders(): LibraryFoldersState {
     adding,
     refusal,
     removeRefusal,
-    refresh,
   };
 }

@@ -1,15 +1,11 @@
 import { FieldDiff, type FieldDiffSide } from '@/components';
-import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { Button } from '@/primitives';
 import type { ImportProblem, SheetChoices, SheetField } from '@/types';
 import { movieFormPath, opensSeriesResolve } from '@/utils';
 import { FolderPicker } from '../FolderPicker/FolderPicker';
 import {
   Card,
-  CompanionNames,
-  Companions,
   DOT_TONE,
-  Destination,
   Dot,
   Head,
   ImportAsSlot,
@@ -29,10 +25,6 @@ export interface ProblemRowProps {
   onPick: (folder: string) => void;
   /** _Import as_ on a `no-row` row: the folder imported under its guess. */
   onImportAs: () => void;
-  /**
-   * _Tidy into_ on a `loose` row: the row is Busy until the promise settles.
-   */
-  onTidy: () => Promise<void>;
 }
 
 /**
@@ -74,9 +66,7 @@ const sheetChoices = (
  * which the maintainer can middle-click; _Skip_ is an action, so it is a
  * button. An `ambiguous` row draws the **Folder picker**, _Resolve_ kept
  * beside it, and a `no-row` row _Import as_ its guess, _Resolve_ kept the
- * same. A `loose` row draws, in the same slot, where its **Tidy** moves the
- * video in mono and _Moves with it:_ and its **Companion files** when any;
- * a clash, with no Tidy, draws no face. A `differs` row has no _Resolve_: it is settled on the row, by the
+ * same. A `differs` row has no _Resolve_: it is settled on the row, by the
  * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_.
  * Neither knows what happens next: the row draws a problem and reports a
  * press.
@@ -87,15 +77,8 @@ export function ProblemRow({
   onApply,
   onPick,
   onImportAs,
-  onTidy,
 }: ProblemRowProps) {
   const differs = problem.kind === 'differs';
-  const { phase: tidying, run } = useDelayedBusy();
-  const tidy = () => {
-    void run(onTidy).catch(() => {
-      // A press that did not land leaves the row as it was, to press again.
-    });
-  };
   return (
     <Card>
       <Head>
@@ -143,28 +126,6 @@ export function ProblemRow({
             variant="secondary"
             size="sm"
             onClick={onImportAs}
-          />
-        </ImportAsSlot>
-      ) : null}
-      {problem.kind === 'loose' && problem.tidy !== undefined ? (
-        <ImportAsSlot>
-          <Destination>
-            {`→ ${problem.tidy.folder}\\${problem.tidy.videos[0] ?? ''}`}
-          </Destination>
-          {problem.tidy.companions.length > 0 ? (
-            <Companions>
-              Moves with it:{' '}
-              <CompanionNames>
-                {problem.tidy.companions.join(' · ')}
-              </CompanionNames>
-            </Companions>
-          ) : null}
-          <Button
-            label={`Tidy into “${problem.tidy.folder}”`}
-            variant="secondary"
-            size="sm"
-            busy={tidying}
-            onClick={tidy}
           />
         </ImportAsSlot>
       ) : null}

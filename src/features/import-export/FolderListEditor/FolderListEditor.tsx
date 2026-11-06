@@ -4,7 +4,6 @@ import { Button, FolderIcon, TextField } from '@/primitives';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
 import type { LibraryFolderView } from '@/types';
 import { FolderRow } from '../FolderRow/FolderRow';
-import { TidyDialog } from '../TidyDialog/TidyDialog';
 import type { LibraryFoldersState } from '../useLibraryFolders/useLibraryFolders';
 import {
   Card,
@@ -29,7 +28,6 @@ export type FolderListEditorProps = Omit<LibraryFoldersState, 'folders'> & {
  * field, the typed path kept; a refused remove the same line under its row.
  * _Add_ locks from the press and reads _Adding…_ once the add has run 300ms,
  * on the **Loader timing**; _Browse…_ is disabled until the add settles.
- * **Tidy** on a row opens the **Tidy dialog** over that folder.
  *
  * The list is the caller's `useLibraryFolders()`, handed in, because the
  * caller decides what a listed folder enables — **Scan all folders** on the
@@ -43,11 +41,9 @@ export function FolderListEditor({
   adding,
   refusal,
   removeRefusal,
-  refresh,
 }: FolderListEditorProps) {
   const [typed, setTyped] = useState('');
   const [bridge] = useState(folderBridge);
-  const [tidying, setTidying] = useState<LibraryFolderView | null>(null);
 
   const submit = async () => {
     if (await add(typed.trim())) {
@@ -76,7 +72,6 @@ export function FolderListEditor({
                 onBringBack={() => {
                   void bringBack(folder.id);
                 }}
-                onTidy={() => setTidying(folder)}
                 onRemove={() => {
                   void remove(folder.id);
                 }}
@@ -123,15 +118,6 @@ export function FolderListEditor({
         )}
       </PathRow>
       {refusal === null ? null : <Refusal>{refusal}</Refusal>}
-      {tidying === null ? null : (
-        <TidyDialog
-          open
-          folderId={tidying.id}
-          path={tidying.path}
-          onClose={() => setTidying(null)}
-          onMoved={refresh}
-        />
-      )}
     </Card>
   );
 }

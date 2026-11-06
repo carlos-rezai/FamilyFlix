@@ -154,7 +154,6 @@ describe('GET /api/library-folders', () => {
         reachable: true,
         scannedAt: null,
         leftOut: 0,
-        loose: 0,
       },
       {
         id: expect.any(String),
@@ -163,7 +162,6 @@ describe('GET /api/library-folders', () => {
         reachable: true,
         scannedAt: null,
         leftOut: 0,
-        loose: 0,
       },
     ]);
   });

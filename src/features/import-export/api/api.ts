@@ -13,8 +13,6 @@ import {
   type ScanScope,
   type SheetChoices,
   type StartExport,
-  type TidyPlan,
-  type TidyResult,
 } from '@/types';
 import { refusalSentence } from '@/api/refusalSentence/refusalSentence';
 
@@ -211,26 +209,6 @@ export async function importGuessed(id: string): Promise<ImportProblem | null> {
   return null;
 }
 
-/**
- * _Tidy into_ on a `loose` **Problem**: `POST` to the Problem's tidy route,
- * no body. A `200` answers the row redrawn with why the move failed; the
- * `204` and the `404` both answer `null`, the Problem not there any more:
- * {@link importGuessed}'s answers. Anything else rejects, and so does a
- * request that could not be made.
- */
-export async function tidyLoose(id: string): Promise<ImportProblem | null> {
-  const endpoint = `${problemEndpoint(id)}/tidy`;
-  const response = await fetch(endpoint, { method: 'POST' });
-
-  if (response.status === 200) {
-    return (await response.json()) as ImportProblem;
-  }
-  if (response.status !== 204 && response.status !== 404) {
-    throw new Error(`POST ${endpoint} failed: ${response.status}`);
-  }
-  return null;
-}
-
 const BULK_DISMISS_ENDPOINT = '/api/import/current/problems/dismiss';
 
 /**
@@ -272,27 +250,6 @@ export async function importManyGuessed(ids: string[]): Promise<ImportRun> {
     throw new Error(
       `POST ${BULK_IMPORT_GUESSED_ENDPOINT} failed: ${response.status}`
     );
-  }
-  return (await response.json()) as ImportRun;
-}
-
-const BULK_TIDY_ENDPOINT = '/api/import/current/problems/tidy';
-
-/**
- * _Tidy all_: the ids posted as JSON, and the **Current run** the route
- * answers: the whole snapshot, each row imported, redrawn with why its move
- * failed, or left listed after a folder that can't be reached. Any status
- * but a `200` rejects, and so does a request that could not be made.
- */
-export async function tidyManyLoose(ids: string[]): Promise<ImportRun> {
-  const response = await fetch(BULK_TIDY_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ids }),
-  });
-
-  if (response.status !== 200) {
-    throw new Error(`POST ${BULK_TIDY_ENDPOINT} failed: ${response.status}`);
   }
   return (await response.json()) as ImportRun;
 }
@@ -440,55 +397,6 @@ export async function bringBackLeftOut(id: string): Promise<void> {
   if (!response.ok) {
     throw new Error(`DELETE ${url} failed: ${response.status}`);
   }
-}
-
-/**
- * One folder's **Tidy plan**: the tidies it offers and the loose files it
- * leaves where they are. Any failure rejects.
- */
-export async function fetchTidyPlan(id: string): Promise<TidyPlan> {
-  const url = `${FOLDERS_ENDPOINT}/${encodeURIComponent(id)}/loose`;
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`GET ${url} failed: ${response.status}`);
-  }
-
-  return (await response.json()) as TidyPlan;
-}
-
-/** What a folder's tidy came to: the route's result, or its `409` sentence. */
-export type TidyFolderOutcome =
-  | { kind: 'moved'; result: TidyResult }
-  | { kind: 'refused'; sentence: string };
-
-/**
- * _Move N videos_: the drawn tidies' ids posted to the folder's tidy route.
- * A `409` (a run is scanning or importing) resolves with the route's own
- * sentence, because the dialog draws it; any other failure rejects.
- */
-export async function tidyFolder(
-  id: string,
-  ids: string[]
-): Promise<TidyFolderOutcome> {
-  const url = `${FOLDERS_ENDPOINT}/${encodeURIComponent(id)}/tidy`;
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ ids }),
-  });
-
-  if (response.status === 409) {
-    const sentence = await refusalSentence(response);
-    if (sentence !== null) {
-      return { kind: 'refused', sentence };
-    }
-  }
-  if (!response.ok) {
-    throw new Error(`POST ${url} failed: ${response.status}`);
-  }
-
-  return { kind: 'moved', result: (await response.json()) as TidyResult };
 }
 
 const SCAN_ENDPOINT = '/api/library-folders/scan';

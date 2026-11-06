@@ -2220,90 +2220,17 @@ export function createApiRouter(
   // The **Library folders** list. `reachable` is the disk's answer, read
   // afresh on every list rather than stored, so a drive unplugged since the
   // add reads false on the next visit and true again once it is back.
-  // `loose` counts the videos the folder's **Tidy plan** tidies, 0 for an
-  // **Unreachable** folder.
   router.get('/library-folders', async (_req: Request, res: Response) => {
     const listed = storage.libraryFolders();
     const folders: LibraryFolderView[] = await Promise.all(
-      listed.map(async (folder) => {
-        const reachable = (await readableFolder(folder.path)) === 'readable';
-        return {
-          ...folder,
-          reachable,
-          leftOut: storage.leftOut(folder.id).size,
-          loose: reachable ? await looseCount(folder.id) : 0,
-        };
-      })
+      listed.map(async (folder) => ({
+        ...folder,
+        reachable: (await readableFolder(folder.path)) === 'readable',
+        leftOut: storage.leftOut(folder.id).size,
+      }))
     );
     res.json(folders);
   });
-
-  // How many videos a folder's **Tidy plan** tidies; 0 for a root that
-  // stopped reading between the reachability check and the plan.
-  const looseCount = async (folderId: string): Promise<number> => {
-    try {
-      const plan = await importer.looseOf(folderId);
-      return plan.tidies.reduce((sum, tidy) => sum + tidy.videos.length, 0);
-    } catch {
-      return 0;
-    }
-  };
-
-  // One folder's **Tidy plan**: `404` for a folder not listed, `503` for one
-  // the disk cannot reach.
-  router.get(
-    '/library-folders/:id/loose',
-    async (req: Request, res: Response) => {
-      const id = String(req.params.id);
-      if (!storage.libraryFolders().some((folder) => folder.id === id)) {
-        res
-          .status(404)
-          .json({ error: 'That folder is not in your library folders.' });
-        return;
-      }
-      try {
-        res.json(await importer.looseOf(id));
-      } catch {
-        res.status(503).json({ error: 'Can’t be reached right now.' });
-      }
-    }
-  );
-
-  // _Move N videos_: the tidies named by `ids`, against a fresh **Tidy
-  // plan**, answered as `TidyResult`; `409` while a run scans or imports.
-  router.post(
-    '/library-folders/:id/tidy',
-    async (req: Request, res: Response) => {
-      const id = String(req.params.id);
-      const body: unknown = req.body;
-      const raw =
-        typeof body === 'object' && body !== null && 'ids' in body
-          ? body.ids
-          : undefined;
-      if (
-        !Array.isArray(raw) ||
-        !raw.every((entry): entry is string => typeof entry === 'string')
-      ) {
-        res.status(400).json({ error: 'ids must be a list of tidy ids.' });
-        return;
-      }
-      if (!storage.libraryFolders().some((folder) => folder.id === id)) {
-        res
-          .status(404)
-          .json({ error: 'That folder is not in your library folders.' });
-        return;
-      }
-      try {
-        res.json(await importer.tidyFolder(id, raw));
-      } catch (error) {
-        if (error instanceof ImportBusyError) {
-          res.status(409).json({ error: 'A scan is running.' });
-          return;
-        }
-        res.status(503).json({ error: 'Can’t be reached right now.' });
-      }
-    }
-  );
 
   // The **Manage library page**'s one read for both tabs, `media/`'s
   // `libraryTitleList`: every title A–Z, its paths absolute and its **Linked
@@ -3218,20 +3145,6 @@ export function createApiRouter(
     }
   );
 
-  // _Tidy into_ on a `loose` row: the importer moves the film into a folder
-  // of its own and imports it (`204`) or, on a failed move, redraws the row
-  // with the reason (`200` with it). A row not there is the `404`.
-  router.post(
-    '/import/current/problems/:id/tidy',
-    async (req: Request<{ id: string }>, res: Response) => {
-      try {
-        answerReview(res, req.params.id, await importer.tidy(req.params.id));
-      } catch {
-        res.status(500).json({ error: 'Could not tidy that video' });
-      }
-    }
-  );
-
   // _Import all as guessed_ beside a chosen `no-row`: the ids read as the bulk
   // dismiss reads them, then each asked of the importer's `importGuessed` in
   // order under the run's **Import mode** — a row that redraws stays as its
@@ -3255,33 +3168,6 @@ export function createApiRouter(
         }
       } catch {
         res.status(500).json({ error: 'Could not import those folders' });
-        return;
-      }
-      res.json(importer.current());
-    }
-  );
-
-  // _Tidy all_ beside a chosen `loose`: the ids read as the bulk dismiss
-  // reads them, then handed to the importer's `tidyMany`, which goes in order
-  // and stops at the first folder that can't be reached, and the whole
-  // snapshot answered, so the screen redraws from the echo. `404` with no
-  // run.
-  router.post(
-    '/import/current/problems/tidy',
-    async (req: Request, res: Response) => {
-      const read = problemIdsBody(req.body);
-      if (!read.ok) {
-        res.status(400).json({ error: read.error });
-        return;
-      }
-      if (importer.current() === null) {
-        res.status(404).json({ error: 'No import is running' });
-        return;
-      }
-      try {
-        await importer.tidyMany(read.value);
-      } catch {
-        res.status(500).json({ error: 'Could not tidy those videos' });
         return;
       }
       res.json(importer.current());

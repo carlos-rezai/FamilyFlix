@@ -23,13 +23,6 @@ const titleOfVideo = (video: string): string =>
   titleKey(stemOf(video).replace(SEPARATORS, ' ').replace(EXTRAS, ' '));
 
 /**
- * Whether a video is a film's extra rather than a film of its own: its name,
- * separators read as spaces, carries one of the extras words.
- */
-export const isExtra = (video: string): boolean =>
-  stemOf(video).replace(SEPARATORS, ' ').search(EXTRAS) !== -1;
-
-/**
  * Whether a **Source folder** is a **Collection folder**: its videos name two
  * or more different titles once each extras word is dropped. A film beside
  * its sample or trailer names one.

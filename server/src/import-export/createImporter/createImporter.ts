@@ -1,14 +1,7 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { setImmediate as nextTurn } from 'node:timers/promises';
-import {
-  basename,
-  dirname,
-  extname,
-  isAbsolute,
-  join,
-  relative,
-} from 'node:path';
+import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
 
 import type {
   HeldTitle,
@@ -17,18 +10,7 @@ import type {
 } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
-import {
-  readLooseVideos,
-  type LooseRead,
-} from '../../media/readLooseVideos/readLooseVideos';
-import {
-  scanMovieFolder,
-  type MovieFolderScan,
-} from '../../media/scanMovieFolder/scanMovieFolder';
-import {
-  tidyIntoFolder,
-  UNREACHABLE,
-} from '../../media/tidyIntoFolder/tidyIntoFolder';
+import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -56,7 +38,6 @@ import {
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
-import { tidyPlan } from '../tidyPlan/tidyPlan';
 import {
   readShowFolder,
   type ShowFolderAnswer,
@@ -79,9 +60,6 @@ import type {
   SheetChoices,
   SheetDifference,
   StoredVideo,
-  Tidy,
-  TidyPlan,
-  TidyResult,
 } from '@/types';
 import { SHEET_FIELDS } from '@/types';
 
@@ -286,23 +264,6 @@ export interface Importer {
    */
   importGuessed(id: string): Promise<ReviewOutcome>;
   /**
-   * _Tidy into_ on a `loose` **Problem**: move its **Tidy** into the **Tidy
-   * folder name** with `tidyIntoFolder`, log the move line, then import the
-   * new folder named off its folder under the run's **Import mode**, as
-   * {@link importGuessed} does: `imported`. A move that fails is `redrawn`,
-   * the same row with the failure's sentence and its Tidy kept. `not-found`
-   * for an id that is not there, for a Problem with no Tidy, and when there
-   * is no run.
-   */
-  tidy(id: string): Promise<ReviewOutcome>;
-  /**
-   * _Tidy all_: each id tidied in order as {@link tidy} tidies it, a failed
-   * move redrawn and the next one tried, until the first move whose folder
-   * can't be reached: that row is redrawn and the rest are left listed as
-   * they were. An id not held is passed over.
-   */
-  tidyMany(ids: string[]): Promise<void>;
-  /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
    * and the folder's **Found files** as absolute paths. `null` for an id that
@@ -351,21 +312,6 @@ export interface Importer {
    * listed Library folders and the held series on record at a folder.
    */
   readShowFolder(path: string): Promise<ShowFolderAnswer>;
-  /**
-   * A listed **Library folder**'s **Tidy plan**, a call that is no run, as
-   * {@link readShowFolder} is: a **Held video** or a **Left-out video** is not
-   * loose. Rejects for an id not listed and for a root that cannot be read.
-   */
-  looseOf(folderId: string): Promise<TidyPlan>;
-  /**
-   * _Move N videos_ on the **Tidy dialog**: a listed **Library folder**'s
-   * tidies named by id, against its **Tidy plan** read afresh, each moved with
-   * `tidyIntoFolder`; an id the fresh plan no longer offers is left alone. A
-   * call that is no run: rejects with {@link ImportBusyError} while a run is
-   * scanning or importing, moving nothing, and the folder's `scannedAt` is
-   * left as it was. Rejects for an id not listed and a root that can't be read.
-   */
-  tidyFolder(folderId: string, ids: string[]): Promise<TidyResult>;
 }
 
 /** The sheet formats the reader opens, by extension. */
@@ -440,26 +386,6 @@ const inNameOrder = (paths: string[]): string[] =>
  * exactly one: two is the `no-video` verdict, and the detail guesses no more
  * than the run did — the maintainer picks, on the **Found-file choice**.
  */
-/**
- * A loose film's share of its root's scan: the root as its folder, named off
- * its **Tidy folder name**, holding only the Tidy's video and **Companion
- * files**, so a _Resolve_ links it where it lies.
- */
-const tidyScan = (root: MovieFolderScan, tidy: Tidy): MovieFolderScan => {
-  const own = new Set([...tidy.videos, ...tidy.companions]);
-  const mine = (path: string | null): boolean =>
-    path !== null && own.has(basename(path));
-  return {
-    dir: root.dir,
-    name: tidy.folder,
-    videos: root.videos.filter(mine),
-    poster: mine(root.poster) ? root.poster : null,
-    backdrop: mine(root.backdrop) ? root.backdrop : null,
-    images: root.images.filter(mine),
-    subtitles: root.subtitles.filter((track) => mine(track.path)),
-  };
-};
-
 const filesOf = (scan: MovieFolderScan): ImportProblemDetail['files'] => ({
   ...(scan.videos.length === 1 ? { video: scan.videos[0] } : {}),
   videos: inNameOrder(scan.videos),
@@ -789,11 +715,6 @@ export function createImporter({
    * difference — what _Apply choices_ writes from.
    */
   const differing = new Map<string, Differing>();
-  /** Each `loose` **Problem**'s **Tidy** and the **Library folder** it lies in. */
-  const loosened = new Map<
-    string,
-    { tidy: Tidy; libraryFolder: StoredLibraryFolder }
-  >();
   /**
    * Each film **Source folder** the walk found, by its path, before a
    * **Collection folder** was split: what a **Candidate folder** is, whole.
@@ -837,7 +758,6 @@ export function createImporter({
     run.problems.splice(at, 1);
     sources.delete(id);
     differing.delete(id);
-    loosened.delete(id);
     return true;
   };
 
@@ -2114,191 +2034,6 @@ export function createImporter({
   };
 
   /**
-   * A **Library folder**'s **Tidy plan**: its root read with
-   * `readLooseVideos` and planned with `tidyPlan`, a **Held video** or a
-   * **Left-out video** not loose. Rejects for a root that cannot be read.
-   */
-  const planOf = async (folder: StoredLibraryFolder): Promise<TidyPlan> => {
-    const read: LooseRead = await readLooseVideos(folder.path);
-    const out = storage.leftOut(folder.id);
-    return tidyPlan(folder.path, read, (video) => {
-      const spelled = spellLinkedVideo(folder.path, join(folder.path, video));
-      return (
-        out.has(spelled) || storage.titleHolding(folder.id, spelled) !== null
-      );
-    });
-  };
-
-  /**
-   * One walked folder's **Loose videos**, after its other Problems: one hard
-   * `loose` **Problem** per **Tidy**, film or show, titled with its **Tidy
-   * folder name** and carrying it, and one per clash with its sentence and no
-   * `tidy`, then the folder's info line. Episodes naming no show file none:
-   * the folder's one Warning line counts them. A **Held video** or a **Left-out
-   * video** is not loose. A root that can no longer be read files none.
-   */
-  const fileLoose = async (
-    current: ImportRun,
-    folder: StoredLibraryFolder
-  ): Promise<void> => {
-    let plan: TidyPlan;
-    try {
-      plan = await planOf(folder);
-    } catch {
-      return;
-    }
-    const none = { row: null, folder: null, candidates: [] };
-    let rootScan: MovieFolderScan | null = null;
-    try {
-      rootScan =
-        plan.tidies.length > 0 ? await scanMovieFolder(folder.path) : null;
-    } catch {
-      rootScan = null;
-    }
-    for (const tidy of plan.tidies) {
-      const count = tidy.videos.length;
-      const reason =
-        tidy.kind === 'film'
-          ? `Lies loose at the top of ${folder.path}, with no folder of its own.`
-          : count === 1
-            ? `1 episode lies loose at the top of ${folder.path}, with no folder of its own.`
-            : `${count} episodes lie loose at the top of ${folder.path}, with no folder of their own.`;
-      const problem: ImportProblem = {
-        ...problemOf('loose', tidy.folder, reason),
-        tidy,
-      };
-      // Resolve links the film or the show where it lies: the root as its
-      // folder, and only the Tidy's own files as what was found in it.
-      file(current, problem, {
-        ...none,
-        folder: rootScan === null ? null : tidyScan(rootScan, tidy),
-      });
-      loosened.set(problem.id, { tidy, libraryFolder: folder });
-    }
-    const clashes = plan.kept.filter((kept) => kept.folder !== undefined);
-    for (const kept of clashes) {
-      file(
-        current,
-        problemOf('loose', kept.folder ?? kept.files[0], kept.reason),
-        none
-      );
-    }
-    const untitled = plan.kept.length - clashes.length;
-    if (untitled > 0) {
-      log(
-        current,
-        `⚠ ${untitled} loose episodes at the top of ${folder.path} don't name their show, left where they are`,
-        'warning'
-      );
-    }
-    const loose =
-      plan.tidies.reduce((sum, tidy) => sum + tidy.videos.length, 0) +
-      clashes.length;
-    if (loose > 0) {
-      log(
-        current,
-        `· ${loose} loose ${loose === 1 ? 'video' : 'videos'} at the top of ${folder.path}, listed in review to tidy`,
-        'info'
-      );
-    }
-  };
-
-  /**
-   * A loose show once tidied: its folder read as one **Show folder**, the
-   * episodes flat in it, and imported as one series through `importShow`
-   * under the run's **Import mode**, joining a held series as a scan would.
-   */
-  const importTidiedShow = async (
-    current: ImportRun,
-    id: string,
-    scan: MovieFolderScan,
-    libraryFolder: StoredLibraryFolder
-  ): Promise<ReviewOutcome> => {
-    const [show] = groupShows([scan]).shows;
-    takeOff(id);
-    if (show === undefined) {
-      return { kind: 'imported' };
-    }
-    const row = guessedRow(show.name);
-    const held = heldSeriesList();
-    const match = showMatch(
-      row,
-      show,
-      heldShow(held, heldSeriesByKey(held), libraryFolder, show, row)
-    );
-    fileUnplaced(current, match);
-    await importShow(match, genreReader(), current, stop.signal, libraryFolder);
-    return { kind: 'imported' };
-  };
-
-  /**
-   * One _Tidy into_: the {@link Importer.tidy} outcome, and whether the move
-   * failed because its folder can't be reached, which stops a _Tidy all_.
-   */
-  const tidyOne = async (
-    id: string
-  ): Promise<{ outcome: ReviewOutcome; unreachable: boolean }> => {
-    const current = run;
-    const at = current?.problems.findIndex((problem) => problem.id === id);
-    const loose = loosened.get(id);
-    if (
-      current === null ||
-      at === undefined ||
-      at === -1 ||
-      loose === undefined
-    ) {
-      return { outcome: { kind: 'not-found' }, unreachable: false };
-    }
-    const { tidy, libraryFolder } = loose;
-    const moved = await tidyIntoFolder(libraryFolder.path, tidy);
-    if (!moved.ok) {
-      // A rollback that failed too left files moved, and its reason
-      // already says where they are.
-      const stranded = moved.reason.endsWith(
-        `Some of its files are in “${tidy.folder}”.`
-      );
-      const problem: ImportProblem = {
-        ...current.problems[at],
-        reason: stranded
-          ? `Couldn't move it: ${moved.reason}`
-          : `Couldn't move it: ${moved.reason} Nothing was moved.`,
-      };
-      current.problems[at] = problem;
-      return {
-        outcome: { kind: 'redrawn', problem },
-        unreachable: moved.reason.startsWith(UNREACHABLE),
-      };
-    }
-    const companions = tidy.companions.length;
-    log(
-      current,
-      `✓ Tidied     ${tidy.videos[0] ?? ''} into ${tidy.folder} (+${companions} with it)`,
-      'success'
-    );
-    const scan = await scanMovieFolder(join(libraryFolder.path, tidy.folder));
-    if (tidy.kind === 'show') {
-      return {
-        outcome: await importTidiedShow(current, id, scan, libraryFolder),
-        unreachable: false,
-      };
-    }
-    const row = guessedRow(scan.name);
-    const outcome = await importFromReview(
-      current,
-      id,
-      row,
-      false,
-      scan,
-      libraryFolder
-    );
-    if (outcome.kind === 'imported') {
-      logPlaced(current, row.title);
-      warnOfMissingFiles(current, { row, folder: scan });
-    }
-    return { outcome, unreachable: false };
-  };
-
-  /**
    * A **Folder scan**: each listed folder walked in the order given, every
    * film and show named off its own folder. **Already in library** is the
    * sheet run's two rules in order. A held show still gains the episodes it
@@ -2361,7 +2096,6 @@ export function createImporter({
         fileUnplaced(current, match);
         shows.push({ match, libraryFolder: folder });
       }
-      await fileLoose(current, folder);
     }
 
     await importPlaced(current, films, shows, foundAgain, read, 'Scan', signal);
@@ -2426,7 +2160,6 @@ export function createImporter({
     listedPaths = runFolders;
     sources.clear();
     differing.clear();
-    loosened.clear();
     stop = new AbortController();
     return current;
   };
@@ -2472,47 +2205,6 @@ export function createImporter({
     },
 
     current: snapshot,
-
-    looseOf: async (folderId) => {
-      const folder = storage
-        .libraryFolders()
-        .find((listed) => listed.id === folderId);
-      if (folder === undefined) {
-        throw new Error(`No Library folder ${folderId}`);
-      }
-      return planOf(folder);
-    },
-
-    tidyFolder: async (folderId, ids) => {
-      if (busy()) {
-        throw new ImportBusyError();
-      }
-      const folder = storage
-        .libraryFolders()
-        .find((listed) => listed.id === folderId);
-      if (folder === undefined) {
-        throw new Error(`No Library folder ${folderId}`);
-      }
-      const named = new Set(ids);
-      const plan = await planOf(folder);
-      const result: TidyResult = { moved: 0, failed: [] };
-      for (const tidy of plan.tidies) {
-        if (!named.has(tidy.id)) {
-          continue;
-        }
-        const moved = await tidyIntoFolder(folder.path, tidy);
-        if (moved.ok) {
-          result.moved += tidy.videos.length;
-        } else {
-          result.failed.push({
-            id: tidy.id,
-            folder: tidy.folder,
-            reason: moved.reason,
-          });
-        }
-      }
-      return result;
-    },
 
     readShowFolder: (path) =>
       readShowFolder(path, {
@@ -2597,17 +2289,6 @@ export function createImporter({
         folder,
         libraryFolder
       );
-    },
-
-    tidy: async (id) => (await tidyOne(id)).outcome,
-
-    tidyMany: async (ids) => {
-      for (const id of ids) {
-        const { unreachable } = await tidyOne(id);
-        if (unreachable) {
-          return;
-        }
-      }
     },
 
     problem: (id) => {

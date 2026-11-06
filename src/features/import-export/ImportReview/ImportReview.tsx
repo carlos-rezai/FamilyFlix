@@ -49,16 +49,6 @@ export interface ImportReviewProps {
   /** _Import as_ was pressed on the `no-row` **Problem** with this id. */
   onImportAs: (id: string) => void;
   /**
-   * _Tidy into_ was pressed on the `loose` **Problem** with this id; the row
-   * is Busy until the promise settles.
-   */
-  onTidy: (id: string) => Promise<void>;
-  /**
-   * _Tidy all_ was pressed beside a chosen `loose`, with every id of that
-   * kind that has a **Tidy**, in the run's order.
-   */
-  onTidyMany: (ids: string[]) => void;
-  /**
    * A bulk **Dismiss** was pressed — _Skip all_ on a **Review group** or
    * beside a chosen kind, or _Keep all mine_ beside `differs` — with every id
    * it dismisses, in the run's order.
@@ -92,7 +82,7 @@ export interface ImportReviewProps {
  * in the URL, and falls back to _All_ once its kind empties.
  *
  * A chosen kind draws its Bulk actions at the filter row's end — _Skip all_,
- * _Import all as guessed_ before it for `no-row` or _Tidy all_ for `loose`, or _Keep all mine_ in its
+ * _Import all as guessed_ before it for `no-row`, or _Keep all mine_ in its
  * place for `differs` — and each group carries
  * _Skip all_ among its Accordion actions; every one reports its ids at once,
  * no confirm.
@@ -113,8 +103,6 @@ export function ImportReview({
   onApply,
   onPick,
   onImportAs,
-  onTidy,
-  onTidyMany,
   onSkipMany,
   onImportManyAsGuessed,
   finishLabel,
@@ -142,9 +130,6 @@ export function ImportReview({
       : run.problems
           .filter((problem) => problem.kind === filter.value)
           .map((problem) => problem.id);
-  const tidyIds = run.problems
-    .filter((problem) => problem.kind === 'loose' && problem.tidy !== undefined)
-    .map((problem) => problem.id);
 
   const row = (problem: ImportProblem) => (
     <ProblemRow
@@ -154,7 +139,6 @@ export function ImportReview({
       onApply={(choices) => onApply(problem.id, choices)}
       onPick={(folder) => onPick(problem.id, folder)}
       onImportAs={() => onImportAs(problem.id)}
-      onTidy={() => onTidy(problem.id)}
     />
   );
 
@@ -224,14 +208,6 @@ export function ImportReview({
                         onClick={() => onImportManyAsGuessed(kindIds)}
                       >
                         Import all as guessed
-                      </BulkButton>
-                    )}
-                    {filter.value === 'loose' && (
-                      <BulkButton
-                        type="button"
-                        onClick={() => onTidyMany(tidyIds)}
-                      >
-                        Tidy all
                       </BulkButton>
                     )}
                     <SkipAllButton

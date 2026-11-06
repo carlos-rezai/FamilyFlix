@@ -81,8 +81,6 @@ export function ImportFlow() {
     apply,
     pick,
     importAsGuessed,
-    tidy,
-    tidyMany,
   } = useImportRun();
 
   // Leaving is a step, not a push at Settings: the hub's own Back then steps
@@ -209,25 +207,6 @@ export function ImportFlow() {
     [importAsGuessed]
   );
 
-  const onTidy = useCallback(
-    (id: string) =>
-      tidy(id).catch(() => {
-        // A tidy that did not land leaves the row where it is, to press
-        // again or settle another way.
-      }),
-    [tidy]
-  );
-
-  const onTidyMany = useCallback(
-    (ids: string[]) => {
-      void tidyMany(ids).catch(() => {
-        // A bulk tidy that did not land leaves every row where it is, and the
-        // button is still there to press again.
-      });
-    },
-    [tidyMany]
-  );
-
   return (
     <>
       <PageHeader
@@ -256,8 +235,6 @@ export function ImportFlow() {
           onApply={onApply}
           onPick={onPick}
           onImportAs={onImportAs}
-          onTidy={onTidy}
-          onTidyMany={onTidyMany}
           onSkipMany={onSkipMany}
           onImportManyAsGuessed={onImportManyAsGuessed}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}

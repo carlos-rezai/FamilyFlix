@@ -5,8 +5,6 @@
  * `docs/design-logs/13-bulk-import.md`.
  */
 
-import type { Tidy } from './tidy';
-
 /**
  * The two things the **Setup step** draws a refusal under — the sheet field
  * and the **Library folders** group: a start the route refuses before any run
@@ -109,7 +107,6 @@ export const PROBLEM_KINDS = [
   'no-row',
   'failed',
   'unplaced',
-  'loose',
   'missing-meta',
   'differs',
 ] as const;
@@ -150,11 +147,6 @@ export interface ImportProblem {
    * _Import as_ imports it under.
    */
   guess?: string;
-  /**
-   * Set on a `loose` Problem: the **Tidy** it offers; absent on a clash,
-   * which keeps the video where it is.
-   */
-  tidy?: Tidy;
 }
 
 /**

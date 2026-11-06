@@ -565,27 +565,15 @@ listed folders draw the same line (`folderLine`). A folder with **Left-out video
 left out_ (_1 video_ for one) with _Bring back_ beside it, a text button in `GenreRow`'s _View
 all_ idiom (13px 600 dim, accent on hover). A press forgets them
 (`DELETE /api/library-folders/:id/left-out`) and the line goes. A folder with none draws no
-line. A folder with **Loose videos** (`loose > 0`, log 57 Q12) draws a line under that one, 13px faint: _4 loose videos_ (_1 loose video_ for one) with **Tidy** beside it, in _Bring back_'s look; a press opens the **Tidy dialog**. A folder with none draws no line. Last the ✕ (`RemoveButton`, labelled _Remove `<path>`_). Feature-local rather
+line. Last the ✕ (`RemoveButton`, labelled _Remove `<path>`_). Feature-local rather
 than a `components/` molecule: one caller, and it draws a domain record. Presentational: the
 press is handed back.
-Props: `folder { path, titleCount, reachable, scannedAt, leftOut, loose }` (a `LibraryFolderView`), `onBringBack`, `onTidy`, `onRemove`.
+Props: `folder { path, titleCount, reachable, scannedAt, leftOut }` (a `LibraryFolderView`), `onBringBack`, `onRemove`.
 The prototype's prop is `scanned: boolean` (default `true`); the row reads `folder.scannedAt === null`.
 
 A refused removal is not the row's: the page draws the route's `409` sentence — _12 titles
 play from this folder. Delete them before removing it._, _1 title plays …_ for one — as one
 13px `danger` **Refusal** under the row it is about, and the row stays.
-
-The **Tidy dialog** (`features/import-export/TidyDialog/`, with `useTidy`, log 57 Q12) is a
-`Modal`, built from existing units and not from the handoff's page: titled _Tidy into
-folders_, the folder's path in mono beneath. It reads the **Tidy plan** on open
-(`GET /api/library-folders/:id/loose`) and draws nothing until it lands. Then one row per
-tidy in `ProblemRow`'s `loose` face without its buttons (the video, the destination in mono,
-_Moves with it:_), and _Left where they are_ with each kept file and its reason when any. The
-footer: **Move N videos** / _Move 1 video_ (`primary`, Busy) and _Cancel_, or only _Close_
-with nothing to move. The press posts the drawn ids (`POST /api/library-folders/:id/tidy`).
-All moved: it closes on the snackbar _Moved N videos into folders of their own. Scan all
-folders to add them._ Some failed: it stays, the count moved over each failure as _<folder>:
-<why>_. A `409` shows _A scan is running._ as one 13px `danger` line over the footer.
 
 ### ChoiceCard: drawn inline in `feat.ExportModal`, `feat.ImportFlow`, `page.LibraryFoldersPage` and `feat.MovieForm`
 
@@ -735,11 +723,11 @@ dialog. Props: `children` (the `MenuItem`s).
 
 labelled _Problem kinds_, _All N_ then one pill per kind held with its count, in the
 glossary's order and words: _No folder_, _Ambiguous_, _No video_, _Not in sheet_, _Failed_,
-_Unplaced_, _Loose_, _Missing details_, _Differs_ — drawn only with two kinds or more, in a
+_Unplaced_, _Missing details_, _Differs_ — drawn only with two kinds or more, in a
 sideways-scrolling wrapper, screen state and never in the URL; a chosen kind that empties
 falls back to _All_. A chosen kind draws its **Bulk actions** at the row's end, wrapping
 under the track when it is full: _Skip all_ (the row's Skip) for every kind; _Import all as
-guessed_ (`secondary`, `sm`) before it for `no-row`; _Tidy all_ (`secondary`, `sm`) in its place for `loose`, each tidy in order, stopping at the first _can't be reached_ (log 57 Q9); for `differs`, _Keep all mine_
+guessed_ (`secondary`, `sm`) before it for `no-row`; for `differs`, _Keep all mine_
 (`secondary`, `sm`) in its place, the row's own word for the same Dismiss. No confirm. Then
 the **Review groups**, 10px apart: a title with one Problem is its bare `ProblemRow`, exactly
 as before; two or more are one `Accordion` — the title, each kind's dot, the count, _Skip
@@ -760,7 +748,7 @@ same `ProblemRow`s. Hard kinds' groups come first in the run's order, soft-only 
 | **DeleteTitleDialog** | `features/manage-library/DeleteTitleDialog` | Modal, GoesAndStays, Button ×2 | the **Delete dialog** (log 47 Q12), the same everywhere, shell or browser (log 52 Q4, Q5): _Delete “Coco”?_ over _This takes the movie out of FamilyFlix. It can’t be undone from here._, the path well, **What goes** / **What stays** by the title's **Linked files** (FamilyFlix's copy goes for a copied title, whose original stays: _Your original in its library folder, Scan all folders would bring it back_; an unreachable title's files stay). A linked title's files always stay: _Its folder, in your library folder_ (or _Its video file(s), in your library folder_) under **What stays**. When the Linked files are `shared` (every video another title's), **What stays** reads _Its video file(s), which another title plays_. Then _Delete movie_ / _Delete series_ (`danger`, _Deleting…_ in flight) before _Cancel_, never _Delete folder_. No Delete is refused (log 52 Q7). `{ title, deleting, onConfirm, onClose }` |
 | **GoesAndStays** | `features/manage-library/GoesAndStays` | — | **What goes** beside **What stays**, two even columns: each 12px uppercase tracked heading (What goes in `--color-danger`, What stays in `--color-text-faint`) over its list, each line led by ✕ in danger or ✓ in success. Both dialogs draw it. `{ goes, stays }` |
 | **Found-file choice** | `features/movie-form/FoundFileChoice` | radio rows, the dashed picker | a film Resolve whose folder holds two or more videos draws, in place of the Video FileField, the _Video_ label beside a `radiogroup`: one 42px row per video by name (the radio dot, the name in mono), the first preselected, the chosen one in `accent-soft` with the `accent-line` border; under them the dashed _Choose video file_, the slot's own label, whose pick joins the group as its last row, chosen. One video or none: the FileField, as before. Drawn by `MovieFormFiles` in the video slot's place, handed one **Found file** slot per video: it parses no path. `{ videos: MovieFormFile[], video, onChoose(video), onPick }` |
-| **ProblemRow** | `features/import-export/ProblemRow` | Button ×2, the face slot: mol.FieldDiff / FolderPicker / Button | one **Problem** of the import's **Review step**, in the Sync `DecisionRow`'s layout. The head is a 10px dot by kind: `danger` for `no-folder`, `no-video`, `unplaced`, `loose` and `failed`, `accent` for `ambiguous`, the Sync's conflict gold `#c9a86a` for `differs`, faint for `no-row` and `missing-meta`. Then the title, the reason under it, _Resolve_ on every kind but `differs`, and _Skip_ on every kind. **The face slot** sits under the head and is chosen by kind. `differs` draws `mol.FieldDiff` as _Yours \| Spreadsheet_, the sheet chosen by default, _Apply choices_ and _Keep all mine_ (Dismiss); its reason is _The spreadsheet has different values for fields you already filled in._ `ambiguous` draws the `FolderPicker`. `no-row` draws _Import as “Ironwood (2018)”_ (`secondary`, `sm`), the folder imported under the name a Folder scan would give it. `loose` (log 57 Q9) draws in the same slot the destination in mono (`<root>\<folder>\`), then _Moves with it:_ and the companions joined by `·` when it has any, then **Tidy into “<folder>”** (`secondary`, `sm`, its Busy button, no confirm); a clash (no `tidy`) draws no Tidy, its reason _A folder called “<folder>” is already here._ A failed move redraws the row with _Couldn't move it: <why>. Nothing was moved._ Every other kind has no face. A show's `failed` row is folded (log 42 Q11): one row titled with the show, its reason the count and the first error — _3 episodes couldn't be copied: no space left on device._ — its _Resolve_ the **Series Resolve** when the series is held, else the form. Drawn in `mol.ProblemRow.dc.html`, the `FolderRow` precedent — a `mol.` file for a feature-local unit — so a bare row and a grouped one share one template. `{ problem: ImportProblem, onSkip, onApply(choices), onPick(folder), onImportAs, onTidy }` |
+| **ProblemRow** | `features/import-export/ProblemRow` | Button ×2, the face slot: mol.FieldDiff / FolderPicker / Button | one **Problem** of the import's **Review step**, in the Sync `DecisionRow`'s layout. The head is a 10px dot by kind: `danger` for `no-folder`, `no-video`, `unplaced` and `failed`, `accent` for `ambiguous`, the Sync's conflict gold `#c9a86a` for `differs`, faint for `no-row` and `missing-meta`. Then the title, the reason under it, _Resolve_ on every kind but `differs`, and _Skip_ on every kind. **The face slot** sits under the head and is chosen by kind. `differs` draws `mol.FieldDiff` as _Yours \| Spreadsheet_, the sheet chosen by default, _Apply choices_ and _Keep all mine_ (Dismiss); its reason is _The spreadsheet has different values for fields you already filled in._ `ambiguous` draws the `FolderPicker`. `no-row` draws _Import as “Ironwood (2018)”_ (`secondary`, `sm`), the folder imported under the name a Folder scan would give it. Every other kind has no face. A show's `failed` row is folded (log 42 Q11): one row titled with the show, its reason the count and the first error — _3 episodes couldn't be copied: no space left on device._ — its _Resolve_ the **Series Resolve** when the series is held, else the form. Drawn in `mol.ProblemRow.dc.html`, the `FolderRow` precedent — a `mol.` file for a feature-local unit — so a bare row and a grouped one share one template. `{ problem: ImportProblem, onSkip, onApply(choices), onPick(folder), onImportAs }` |
 | **FolderPicker** | `features/import-export/FolderPicker` | buttons ×n | an `ambiguous` row's **Folder picker**. It takes `CandidatePicker`'s shape, a horizontally scrolling `group` of cards under the head, but has its own pixels: no poster and no _% match_. Each **Candidate folder** is a 220px card on `--color-surface-2` with the `--color-border-soft` hairline, its border `--color-accent-line` on hover. The card holds the 32px accent folder tile, then the folder's name (13px 600), its path in mono (12px faint) and its video count as a faint pill (_1 video_ / _N videos_). A press imports the row from that folder. A folder with no video or several turns the row into that folder's `no-video` Problem, redrawn in place, whose _Resolve_ is the **Found-file choice**. It is feature-local, not a shared molecule, because a folder is not a TMDB Candidate (log 23 Q40). `{ candidates: CandidateFolder[], onPick(folder) }` |
 
 ### The Movie form's two kinds

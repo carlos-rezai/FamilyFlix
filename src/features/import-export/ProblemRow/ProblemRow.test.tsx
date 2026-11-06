@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { act, render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -41,7 +41,6 @@ function renderRow(props: Partial<ProblemRowProps> = {}) {
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}
           onImportAs={props.onImportAs ?? (() => undefined)}
-          onTidy={props.onTidy ?? (async () => undefined)}
         />
       </ThemeProvider>
     </MemoryRouter>
@@ -70,7 +69,6 @@ const DOT: Record<ProblemKind, string> = {
   'no-video': DANGER,
   failed: DANGER,
   unplaced: DANGER,
-  loose: DANGER,
   ambiguous: ACCENT,
   'no-row': TEXT_FAINT,
   'missing-meta': TEXT_FAINT,
@@ -695,200 +693,5 @@ describe('ProblemRow — a show’s failed row', () => {
     renderRow({ problem: failedShow });
 
     expect(resolveLink().getAttribute('href')).toBe('/add?problem=p6');
-  });
-});
-
-/**
- * 57 — Tidy into folders, Phase 2: "a scan lists loose films" (issue #525).
- *
- * A `loose` row draws, in the _Import as_ slot under its head, the
- * destination in mono (the **Tidy folder name** and the video in it), then
- * _Moves with it:_ and the **Companion files** joined by `·`, only when there
- * are any. Its title and reason are the head's, as on every row.
- */
-describe('ProblemRow — a loose row', () => {
-  const REASON =
-    'Lies loose at the top of E:\\Movies, with no folder of its own.';
-  const TIDY = {
-    id: 'apex.2026.1080p.bluray.mkv',
-    kind: 'film' as const,
-    folder: 'Apex (2026)',
-    videos: ['Apex.2026.1080p.BluRay.mkv'],
-    companions: [
-      'Apex.2026.1080p.BluRay.en.srt',
-      'Apex.2026.1080p.BluRay-poster.jpg',
-    ],
-  };
-  const loose = problem({
-    id: 'p7',
-    kind: 'loose',
-    title: 'Apex (2026)',
-    reason: REASON,
-    tidy: TIDY,
-  });
-
-  /** Names the folder with a path separator after it. */
-  const DESTINATION = /Apex \(2026\)[\\/]/;
-  const names = (element: Element | null): boolean =>
-    element !== null && DESTINATION.test(element.textContent ?? '');
-
-  /** The destination: the innermost element naming the folder as a path. */
-  const destination = () =>
-    screen.getByText(
-      (_, element) =>
-        names(element) &&
-        !Array.from(element?.children ?? []).some((child) => names(child))
-    );
-
-  it('draws the destination in mono', () => {
-    renderRow({ problem: loose });
-
-    expect(getComputedStyle(destination()).fontFamily).toContain(
-      'JetBrains Mono'
-    );
-  });
-
-  it('draws it under the head', () => {
-    renderRow({ problem: loose });
-
-    expect(
-      skipButton().compareDocumentPosition(destination()) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-  });
-
-  it('draws Moves with it: and the companions joined by a dot', () => {
-    renderRow({ problem: loose });
-
-    expect(screen.getByText(/Moves with it:/)).toBeDefined();
-    expect(
-      screen.getByText(
-        /Apex\.2026\.1080p\.BluRay\.en\.srt · Apex\.2026\.1080p\.BluRay-poster\.jpg/
-      )
-    ).toBeDefined();
-  });
-
-  it('draws no Moves with it: for a video with no companions', () => {
-    renderRow({
-      problem: { ...loose, tidy: { ...TIDY, companions: [] } },
-    });
-
-    expect(destination()).toBeDefined();
-    expect(screen.queryByText(/Moves with it:/)).toBeNull();
-  });
-});
-
-/**
- * 57 — Tidy into folders, Phase 3: "Tidy into, one film" (issue #526).
- *
- * A `loose` row with a **Tidy** draws **Tidy into “<folder>”** in the slot,
- * a `Button secondary sm`, pressed with no confirm: the row reports the
- * press as `onTidy` and is a **Busy button** until the press settles. A
- * clash row, with no Tidy, draws no button.
- */
-describe('ProblemRow — a loose row’s Tidy into', () => {
-  const TIDY = {
-    id: 'apex.2026.1080p.mkv',
-    kind: 'film' as const,
-    folder: 'Apex (2026)',
-    videos: ['Apex.2026.1080p.mkv'],
-    companions: ['Apex.2026.1080p.en.srt'],
-  };
-  const loose = problem({
-    id: 'p8',
-    kind: 'loose',
-    title: 'Apex (2026)',
-    reason: 'Lies loose at the top of E:\\Movies, with no folder of its own.',
-    tidy: TIDY,
-  });
-  const clash = problem({
-    id: 'p9',
-    kind: 'loose',
-    title: 'Ironwood (2018)',
-    reason: 'A folder called “Ironwood (2018)” is already here.',
-  });
-
-  const tidyInto = () =>
-    screen.getByRole('button', { name: 'Tidy into “Apex (2026)”' });
-
-  it('draws Tidy into with the folder named', () => {
-    renderRow({ problem: loose });
-
-    expect(tidyInto()).toBeDefined();
-  });
-
-  it('draws it under the head', () => {
-    renderRow({ problem: loose });
-
-    expect(
-      skipButton().compareDocumentPosition(tidyInto()) &
-        Node.DOCUMENT_POSITION_FOLLOWING
-    ).toBeTruthy();
-  });
-
-  it('draws it as a secondary sm Button', () => {
-    renderRow({ problem: loose });
-
-    const style = getComputedStyle(tidyInto());
-    expect(style.height).toBe('40px');
-    expect(style.fontSize).toBe('14px');
-    expect(style.borderTopWidth).toBe('1px');
-    expect(style.borderTopColor).toBe('rgb(58, 48, 36)');
-    expect(style.backgroundColor).toMatch(/^(transparent|rgba\(0, 0, 0, 0\))$/);
-  });
-
-  it('reports the press at once, with no confirm, and skips nothing', () => {
-    const onTidy = vi.fn(async () => undefined);
-    const onSkip = vi.fn();
-    renderRow({ problem: loose, onTidy, onSkip });
-
-    fireEvent.click(tidyInto());
-
-    expect(onTidy).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(onSkip).not.toHaveBeenCalled();
-  });
-
-  it('is Busy while the press is in flight, and pressed only once', () => {
-    const onTidy = vi.fn(() => new Promise<void>(() => undefined));
-    renderRow({ problem: loose, onTidy });
-
-    fireEvent.click(tidyInto());
-    fireEvent.click(tidyInto());
-
-    expect(tidyInto().getAttribute('aria-busy')).toBe('true');
-    expect((tidyInto() as HTMLButtonElement).disabled).toBe(true);
-    expect(onTidy).toHaveBeenCalledTimes(1);
-  });
-
-  it('is not Busy before it is pressed, nor once the press settles', async () => {
-    let settle: () => void = () => undefined;
-    const onTidy = vi.fn(
-      () =>
-        new Promise<void>((resolve) => {
-          settle = resolve;
-        })
-    );
-    renderRow({ problem: loose, onTidy });
-    expect(tidyInto().getAttribute('aria-busy')).toBeNull();
-
-    fireEvent.click(tidyInto());
-    await act(async () => {
-      settle();
-    });
-
-    expect(tidyInto().getAttribute('aria-busy')).toBeNull();
-    expect((tidyInto() as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it('draws no Tidy into on a clash row, where a loose row beside it draws one', () => {
-    renderRow({ problem: clash });
-    renderRow({ problem: loose });
-
-    expect(
-      screen
-        .getAllByRole('button', { name: /^Tidy into/ })
-        .map((button) => button.textContent)
-    ).toEqual(['Tidy into “Apex (2026)”']);
   });
 });

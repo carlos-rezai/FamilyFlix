@@ -26,19 +26,13 @@ const folder = (
 ): LibraryFolderView => ({
   ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 0,
-  loose: 0,
   ...overrides,
 });
 
 function renderRow(row: LibraryFolderView = folder(), onRemove = vi.fn()) {
   render(
     <ThemeProvider theme={theme}>
-      <FolderRow
-        folder={row}
-        onBringBack={vi.fn()}
-        onTidy={vi.fn()}
-        onRemove={onRemove}
-      />
+      <FolderRow folder={row} onBringBack={vi.fn()} onRemove={onRemove} />
     </ThemeProvider>
   );
   return onRemove;

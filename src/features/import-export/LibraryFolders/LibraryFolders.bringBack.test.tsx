@@ -43,13 +43,11 @@ afterEach(() => {
 const MOVIES: LibraryFolderView = {
   ...makeLibraryFolder({ id: 'f-movies', path: 'E:\\Movies', titleCount: 12 }),
   leftOut: 3,
-  loose: 0,
 };
 
 const KIDS: LibraryFolderView = {
   ...makeLibraryFolder({ id: 'f-kids', path: 'D:\\Kids', titleCount: 3 }),
   leftOut: 1,
-  loose: 0,
 };
 
 /** GET answers the list; a DELETE of `…/left-out` zeroes that folder. */

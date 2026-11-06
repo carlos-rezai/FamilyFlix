@@ -14,8 +14,6 @@ import {
   fetchCurrentImport,
   ImportBusyError,
   importGuessed,
-  tidyLoose,
-  tidyManyLoose,
   importManyGuessed,
   pickCandidateFolder,
   startImport,
@@ -90,18 +88,6 @@ export interface ImportRunState {
    * Rejects otherwise; the row stays.
    */
   importAsGuessed: (id: string) => Promise<void>;
-  /**
-   * _Tidy into_ on a `loose` **Problem**: post it, and settle the row as
-   * `pick` does: off on a `204` or a `404`, redrawn in place from a `200`.
-   * Rejects otherwise; the row stays.
-   */
-  tidy: (id: string) => Promise<void>;
-  /**
-   * _Tidy all_: tidy every `loose` id at once, and hold the route's echo, the
-   * whole snapshot, as the run. Rejects when the post could not be made; the
-   * run stays as it was.
-   */
-  tidyMany: (ids: string[]) => Promise<void>;
 }
 
 /**
@@ -248,17 +234,6 @@ export function useImportRun(): ImportRunState {
     [settle]
   );
 
-  const tidy = useCallback(
-    async (id: string) => {
-      settle(id, await tidyLoose(id));
-    },
-    [settle]
-  );
-
-  const tidyMany = useCallback(async (ids: string[]) => {
-    setRun(await tidyManyLoose(ids));
-  }, []);
-
   const live = isLive(run);
   useEffect(() => {
     if (!live) {
@@ -299,7 +274,5 @@ export function useImportRun(): ImportRunState {
     apply,
     pick,
     importAsGuessed,
-    tidy,
-    tidyMany,
   };
 }

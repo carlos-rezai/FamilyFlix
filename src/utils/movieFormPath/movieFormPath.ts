@@ -46,19 +46,13 @@ export function movieFormPath({
 
 /**
  * Whether a **Problem**'s _Resolve_ opens the **Series Resolve**: an
- * `unplaced` show, a show's `failed` row once its series is held, or a
- * `loose` show, its tidy a `show`. The
+ * `unplaced` show, or a show's `failed` row once its series is held. The
  * Review step's _Resolve_ routes by it, and the form's Import context reads
  * the record by it, so the two can never disagree.
  */
 export function opensSeriesResolve({
   kind,
   seriesId,
-  tidy,
-}: Pick<ImportProblem, 'kind' | 'seriesId' | 'tidy'>): boolean {
-  return (
-    kind === 'unplaced' ||
-    (kind === 'failed' && seriesId !== undefined) ||
-    (kind === 'loose' && tidy?.kind === 'show')
-  );
+}: Pick<ImportProblem, 'kind' | 'seriesId'>): boolean {
+  return kind === 'unplaced' || (kind === 'failed' && seriesId !== undefined);
 }
