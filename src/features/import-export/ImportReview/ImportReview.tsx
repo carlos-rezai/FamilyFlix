@@ -49,6 +49,11 @@ export interface ImportReviewProps {
   /** _Import as_ was pressed on the `no-row` **Problem** with this id. */
   onImportAs: (id: string) => void;
   /**
+   * _Tidy into_ was pressed on the `loose` **Problem** with this id; the row
+   * is Busy until the promise settles.
+   */
+  onTidy: (id: string) => Promise<void>;
+  /**
    * A bulk **Dismiss** was pressed — _Skip all_ on a **Review group** or
    * beside a chosen kind, or _Keep all mine_ beside `differs` — with every id
    * it dismisses, in the run's order.
@@ -103,6 +108,7 @@ export function ImportReview({
   onApply,
   onPick,
   onImportAs,
+  onTidy,
   onSkipMany,
   onImportManyAsGuessed,
   finishLabel,
@@ -139,6 +145,7 @@ export function ImportReview({
       onApply={(choices) => onApply(problem.id, choices)}
       onPick={(folder) => onPick(problem.id, folder)}
       onImportAs={() => onImportAs(problem.id)}
+      onTidy={() => onTidy(problem.id)}
     />
   );
 

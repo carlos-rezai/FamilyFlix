@@ -3145,6 +3145,20 @@ export function createApiRouter(
     }
   );
 
+  // _Tidy into_ on a `loose` row: the importer moves the film into a folder
+  // of its own and imports it (`204`) or, on a failed move, redraws the row
+  // with the reason (`200` with it). A row not there is the `404`.
+  router.post(
+    '/import/current/problems/:id/tidy',
+    async (req: Request<{ id: string }>, res: Response) => {
+      try {
+        answerReview(res, req.params.id, await importer.tidy(req.params.id));
+      } catch {
+        res.status(500).json({ error: 'Could not tidy that video' });
+      }
+    }
+  );
+
   // _Import all as guessed_ beside a chosen `no-row`: the ids read as the bulk
   // dismiss reads them, then each asked of the importer's `importGuessed` in
   // order under the run's **Import mode** — a row that redraws stays as its

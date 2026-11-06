@@ -73,6 +73,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}
           onImportAs={props.onImportAs ?? (() => undefined)}
+          onTidy={props.onTidy ?? (async () => undefined)}
           onSkipMany={props.onSkipMany ?? (() => undefined)}
           onImportManyAsGuessed={
             props.onImportManyAsGuessed ?? (() => undefined)
@@ -97,6 +98,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               onApply={props.onApply ?? (() => undefined)}
               onPick={props.onPick ?? (() => undefined)}
               onImportAs={props.onImportAs ?? (() => undefined)}
+              onTidy={props.onTidy ?? (async () => undefined)}
               onSkipMany={props.onSkipMany ?? (() => undefined)}
               onImportManyAsGuessed={
                 props.onImportManyAsGuessed ?? (() => undefined)
@@ -820,6 +822,7 @@ describe('ImportReview — the Kind filter', () => {
             onApply={() => undefined}
             onPick={() => undefined}
             onImportAs={() => undefined}
+            onTidy={async () => undefined}
             onSkipMany={() => undefined}
             onImportManyAsGuessed={() => undefined}
             finishLabel={FINISH}

@@ -21,7 +21,11 @@ import {
   readLooseVideos,
   type LooseRead,
 } from '../../media/readLooseVideos/readLooseVideos';
-import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
+import {
+  scanMovieFolder,
+  type MovieFolderScan,
+} from '../../media/scanMovieFolder/scanMovieFolder';
+import { tidyIntoFolder } from '../../media/tidyIntoFolder/tidyIntoFolder';
 import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
@@ -72,6 +76,7 @@ import type {
   SheetChoices,
   SheetDifference,
   StoredVideo,
+  Tidy,
 } from '@/types';
 import { SHEET_FIELDS } from '@/types';
 
@@ -275,6 +280,16 @@ export interface Importer {
    * for a Problem that is not a `no-row`, and when there is no run.
    */
   importGuessed(id: string): Promise<ReviewOutcome>;
+  /**
+   * _Tidy into_ on a `loose` **Problem**: move its **Tidy** into the **Tidy
+   * folder name** with `tidyIntoFolder`, log the move line, then import the
+   * new folder named off its folder under the run's **Import mode**, as
+   * {@link importGuessed} does: `imported`. A move that fails is `redrawn`,
+   * the same row with the failure's sentence and its Tidy kept. `not-found`
+   * for an id that is not there, for a Problem with no Tidy, and when there
+   * is no run.
+   */
+  tidy(id: string): Promise<ReviewOutcome>;
   /**
    * The **Problem detail** _Resolve_ prefills the form from: the problem, the
    * **Sheet row**, the **Source folder** it is about, the candidate folders
@@ -727,6 +742,11 @@ export function createImporter({
    * difference — what _Apply choices_ writes from.
    */
   const differing = new Map<string, Differing>();
+  /** Each `loose` **Problem**'s **Tidy** and the **Library folder** it lies in. */
+  const loosened = new Map<
+    string,
+    { tidy: Tidy; libraryFolder: StoredLibraryFolder }
+  >();
   /**
    * Each film **Source folder** the walk found, by its path, before a
    * **Collection folder** was split: what a **Candidate folder** is, whole.
@@ -770,6 +790,7 @@ export function createImporter({
     run.problems.splice(at, 1);
     sources.delete(id);
     differing.delete(id);
+    loosened.delete(id);
     return true;
   };
 
@@ -2071,18 +2092,16 @@ export function createImporter({
     });
     const none = { row: null, folder: null, candidates: [] };
     for (const tidy of plan.tidies) {
-      file(
-        current,
-        {
-          ...problemOf(
-            'loose',
-            tidy.folder,
-            `Lies loose at the top of ${folder.path}, with no folder of its own.`
-          ),
-          tidy,
-        },
-        none
-      );
+      const problem: ImportProblem = {
+        ...problemOf(
+          'loose',
+          tidy.folder,
+          `Lies loose at the top of ${folder.path}, with no folder of its own.`
+        ),
+        tidy,
+      };
+      file(current, problem, none);
+      loosened.set(problem.id, { tidy, libraryFolder: folder });
     }
     for (const kept of plan.kept) {
       file(
@@ -2229,6 +2248,7 @@ export function createImporter({
     listedPaths = runFolders;
     sources.clear();
     differing.clear();
+    loosened.clear();
     stop = new AbortController();
     return current;
   };
@@ -2358,6 +2378,51 @@ export function createImporter({
         folder,
         libraryFolder
       );
+    },
+
+    tidy: async (id) => {
+      const current = run;
+      const at = current?.problems.findIndex((problem) => problem.id === id);
+      const loose = loosened.get(id);
+      if (
+        current === null ||
+        at === undefined ||
+        at === -1 ||
+        loose === undefined
+      ) {
+        return { kind: 'not-found' };
+      }
+      const { tidy, libraryFolder } = loose;
+      const moved = await tidyIntoFolder(libraryFolder.path, tidy);
+      if (!moved.ok) {
+        const problem: ImportProblem = {
+          ...current.problems[at],
+          reason: `Couldn't move it: ${moved.reason} Nothing was moved.`,
+        };
+        current.problems[at] = problem;
+        return { kind: 'redrawn', problem };
+      }
+      const companions = tidy.companions.length;
+      log(
+        current,
+        `✓ Tidied     ${tidy.videos[0] ?? ''} into ${tidy.folder} (+${companions} with it)`,
+        'success'
+      );
+      const scan = await scanMovieFolder(join(libraryFolder.path, tidy.folder));
+      const row = guessedRow(scan.name);
+      const outcome = await importFromReview(
+        current,
+        id,
+        row,
+        false,
+        scan,
+        libraryFolder
+      );
+      if (outcome.kind === 'imported') {
+        logPlaced(current, row.title);
+        warnOfMissingFiles(current, { row, folder: scan });
+      }
+      return outcome;
     },
 
     problem: (id) => {

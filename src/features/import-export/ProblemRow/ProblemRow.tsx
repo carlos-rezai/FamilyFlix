@@ -1,4 +1,5 @@
 import { FieldDiff, type FieldDiffSide } from '@/components';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { Button } from '@/primitives';
 import type { ImportProblem, SheetChoices, SheetField } from '@/types';
 import { movieFormPath, opensSeriesResolve } from '@/utils';
@@ -28,6 +29,10 @@ export interface ProblemRowProps {
   onPick: (folder: string) => void;
   /** _Import as_ on a `no-row` row: the folder imported under its guess. */
   onImportAs: () => void;
+  /**
+   * _Tidy into_ on a `loose` row: the row is Busy until the promise settles.
+   */
+  onTidy: () => Promise<void>;
 }
 
 /**
@@ -82,8 +87,15 @@ export function ProblemRow({
   onApply,
   onPick,
   onImportAs,
+  onTidy,
 }: ProblemRowProps) {
   const differs = problem.kind === 'differs';
+  const { phase: tidying, run } = useDelayedBusy();
+  const tidy = () => {
+    void run(onTidy).catch(() => {
+      // A press that did not land leaves the row as it was, to press again.
+    });
+  };
   return (
     <Card>
       <Head>
@@ -147,6 +159,13 @@ export function ProblemRow({
               </CompanionNames>
             </Companions>
           ) : null}
+          <Button
+            label={`Tidy into “${problem.tidy.folder}”`}
+            variant="secondary"
+            size="sm"
+            busy={tidying}
+            onClick={tidy}
+          />
         </ImportAsSlot>
       ) : null}
     </Card>

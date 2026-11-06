@@ -209,6 +209,26 @@ export async function importGuessed(id: string): Promise<ImportProblem | null> {
   return null;
 }
 
+/**
+ * _Tidy into_ on a `loose` **Problem**: `POST` to the Problem's tidy route,
+ * no body. A `200` answers the row redrawn with why the move failed; the
+ * `204` and the `404` both answer `null`, the Problem not there any more:
+ * {@link importGuessed}'s answers. Anything else rejects, and so does a
+ * request that could not be made.
+ */
+export async function tidyLoose(id: string): Promise<ImportProblem | null> {
+  const endpoint = `${problemEndpoint(id)}/tidy`;
+  const response = await fetch(endpoint, { method: 'POST' });
+
+  if (response.status === 200) {
+    return (await response.json()) as ImportProblem;
+  }
+  if (response.status !== 204 && response.status !== 404) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+  return null;
+}
+
 const BULK_DISMISS_ENDPOINT = '/api/import/current/problems/dismiss';
 
 /**
