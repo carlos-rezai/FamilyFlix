@@ -33,3 +33,10 @@ export interface TidyPlan {
   tidies: Tidy[];
   kept: KeptLoose[];
 }
+
+/** What _Move N videos_ answers: the videos moved and each Tidy that failed. */
+export interface TidyResult {
+  /** Videos moved, across every Tidy that moved. */
+  moved: number;
+  failed: { id: string; folder: string; reason: string }[];
+}

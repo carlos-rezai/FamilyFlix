@@ -5,6 +5,7 @@ import { ThemeProvider } from 'styled-components';
 import { TidyDialog } from './TidyDialog';
 import type { TidyPlan } from '@/types';
 import { theme } from '@/styles/theme';
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 
@@ -55,7 +56,9 @@ const PLAN: TidyPlan = {
 function renderDialog() {
   render(
     <ThemeProvider theme={theme}>
-      <TidyDialog open folderId="f-movies" path={PATH} onClose={vi.fn()} />
+      <SnackbarProvider>
+        <TidyDialog open folderId="f-movies" path={PATH} onClose={vi.fn()} />
+      </SnackbarProvider>
     </ThemeProvider>
   );
 }

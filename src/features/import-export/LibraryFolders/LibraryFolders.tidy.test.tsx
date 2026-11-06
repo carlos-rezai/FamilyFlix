@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LibraryFolders } from './LibraryFolders';
 import type { LibraryFolderView, TidyPlan } from '@/types';
 import { theme } from '@/styles/theme';
+import { SnackbarProvider } from '@/App/SnackbarProvider/SnackbarProvider';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
 
@@ -76,9 +77,11 @@ function renderPage() {
   return render(
     <MemoryRouter initialEntries={['/settings/folders']}>
       <ThemeProvider theme={theme}>
-        <Routes>
-          <Route path="/settings/folders" element={<LibraryFolders />} />
-        </Routes>
+        <SnackbarProvider>
+          <Routes>
+            <Route path="/settings/folders" element={<LibraryFolders />} />
+          </Routes>
+        </SnackbarProvider>
       </ThemeProvider>
     </MemoryRouter>
   );

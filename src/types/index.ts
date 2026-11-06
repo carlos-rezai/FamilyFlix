@@ -158,7 +158,7 @@ export type {
   FilterOption,
 } from './viewModels';
 export type { LibraryFolder, LibraryFolderView } from './libraryFolders';
-export type { Tidy, KeptLoose, TidyPlan } from './tidy';
+export type { Tidy, KeptLoose, TidyPlan, TidyResult } from './tidy';
 export { DETAILS_STATES } from './libraryTitles';
 export type {
   DeleteFacts,

@@ -81,6 +81,7 @@ import type {
   StoredVideo,
   Tidy,
   TidyPlan,
+  TidyResult,
 } from '@/types';
 import { SHEET_FIELDS } from '@/types';
 
@@ -356,6 +357,15 @@ export interface Importer {
    * loose. Rejects for an id not listed and for a root that cannot be read.
    */
   looseOf(folderId: string): Promise<TidyPlan>;
+  /**
+   * _Move N videos_ on the **Tidy dialog**: a listed **Library folder**'s
+   * tidies named by id, against its **Tidy plan** read afresh, each moved with
+   * `tidyIntoFolder`; an id the fresh plan no longer offers is left alone. A
+   * call that is no run: rejects with {@link ImportBusyError} while a run is
+   * scanning or importing, moving nothing, and the folder's `scannedAt` is
+   * left as it was. Rejects for an id not listed and a root that can't be read.
+   */
+  tidyFolder(folderId: string, ids: string[]): Promise<TidyResult>;
 }
 
 /** The sheet formats the reader opens, by extension. */
@@ -2471,6 +2481,37 @@ export function createImporter({
         throw new Error(`No Library folder ${folderId}`);
       }
       return planOf(folder);
+    },
+
+    tidyFolder: async (folderId, ids) => {
+      if (busy()) {
+        throw new ImportBusyError();
+      }
+      const folder = storage
+        .libraryFolders()
+        .find((listed) => listed.id === folderId);
+      if (folder === undefined) {
+        throw new Error(`No Library folder ${folderId}`);
+      }
+      const named = new Set(ids);
+      const plan = await planOf(folder);
+      const result: TidyResult = { moved: 0, failed: [] };
+      for (const tidy of plan.tidies) {
+        if (!named.has(tidy.id)) {
+          continue;
+        }
+        const moved = await tidyIntoFolder(folder.path, tidy);
+        if (moved.ok) {
+          result.moved += tidy.videos.length;
+        } else {
+          result.failed.push({
+            id: tidy.id,
+            folder: tidy.folder,
+            reason: moved.reason,
+          });
+        }
+      }
+      return result;
     },
 
     readShowFolder: (path) =>

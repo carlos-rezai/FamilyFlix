@@ -43,6 +43,7 @@ export function FolderListEditor({
   adding,
   refusal,
   removeRefusal,
+  refresh,
 }: FolderListEditorProps) {
   const [typed, setTyped] = useState('');
   const [bridge] = useState(folderBridge);
@@ -122,12 +123,15 @@ export function FolderListEditor({
         )}
       </PathRow>
       {refusal === null ? null : <Refusal>{refusal}</Refusal>}
-      <TidyDialog
-        open={tidying !== null}
-        folderId={tidying?.id ?? ''}
-        path={tidying?.path ?? ''}
-        onClose={() => setTidying(null)}
-      />
+      {tidying === null ? null : (
+        <TidyDialog
+          open
+          folderId={tidying.id}
+          path={tidying.path}
+          onClose={() => setTidying(null)}
+          onMoved={refresh}
+        />
+      )}
     </Card>
   );
 }

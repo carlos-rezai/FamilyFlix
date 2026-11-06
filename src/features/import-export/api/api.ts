@@ -14,6 +14,7 @@ import {
   type SheetChoices,
   type StartExport,
   type TidyPlan,
+  type TidyResult,
 } from '@/types';
 import { refusalSentence } from '@/api/refusalSentence/refusalSentence';
 
@@ -454,6 +455,40 @@ export async function fetchTidyPlan(id: string): Promise<TidyPlan> {
   }
 
   return (await response.json()) as TidyPlan;
+}
+
+/** What a folder's tidy came to: the route's result, or its `409` sentence. */
+export type TidyFolderOutcome =
+  | { kind: 'moved'; result: TidyResult }
+  | { kind: 'refused'; sentence: string };
+
+/**
+ * _Move N videos_: the drawn tidies' ids posted to the folder's tidy route.
+ * A `409` (a run is scanning or importing) resolves with the route's own
+ * sentence, because the dialog draws it; any other failure rejects.
+ */
+export async function tidyFolder(
+  id: string,
+  ids: string[]
+): Promise<TidyFolderOutcome> {
+  const url = `${FOLDERS_ENDPOINT}/${encodeURIComponent(id)}/tidy`;
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ids }),
+  });
+
+  if (response.status === 409) {
+    const sentence = await refusalSentence(response);
+    if (sentence !== null) {
+      return { kind: 'refused', sentence };
+    }
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${url} failed: ${response.status}`);
+  }
+
+  return { kind: 'moved', result: (await response.json()) as TidyResult };
 }
 
 const SCAN_ENDPOINT = '/api/library-folders/scan';

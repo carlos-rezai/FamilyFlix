@@ -86,3 +86,34 @@ export const Actions = styled.div`
   gap: 12px;
   margin-top: 24px;
 `;
+
+/** _N moved into folders of their own_, over a partial failure's list. */
+export const Moved = styled.p`
+  margin: 20px 0 8px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.textDim};
+`;
+
+/** The count moved, in the success ink. */
+export const MovedCount = styled.strong`
+  font-weight: 600;
+  color: ${({ theme }) => theme.colors.success};
+`;
+
+/** One failure, _<folder>: <why>_, a 13px `danger` line. */
+export const Failure = styled.p`
+  margin: 4px 0 0;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.danger};
+  overflow-wrap: anywhere;
+`;
+
+/** A refused move's sentence, one 13px `danger` line over the footer. */
+export const Refusal = styled.p`
+  margin: 20px 0 0;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  color: ${({ theme }) => theme.colors.danger};
+`;

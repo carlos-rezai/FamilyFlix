@@ -2269,6 +2269,42 @@ export function createApiRouter(
     }
   );
 
+  // _Move N videos_: the tidies named by `ids`, against a fresh **Tidy
+  // plan**, answered as `TidyResult`; `409` while a run scans or imports.
+  router.post(
+    '/library-folders/:id/tidy',
+    async (req: Request, res: Response) => {
+      const id = String(req.params.id);
+      const body: unknown = req.body;
+      const raw =
+        typeof body === 'object' && body !== null && 'ids' in body
+          ? body.ids
+          : undefined;
+      if (
+        !Array.isArray(raw) ||
+        !raw.every((entry): entry is string => typeof entry === 'string')
+      ) {
+        res.status(400).json({ error: 'ids must be a list of tidy ids.' });
+        return;
+      }
+      if (!storage.libraryFolders().some((folder) => folder.id === id)) {
+        res
+          .status(404)
+          .json({ error: 'That folder is not in your library folders.' });
+        return;
+      }
+      try {
+        res.json(await importer.tidyFolder(id, raw));
+      } catch (error) {
+        if (error instanceof ImportBusyError) {
+          res.status(409).json({ error: 'A scan is running.' });
+          return;
+        }
+        res.status(503).json({ error: 'Can’t be reached right now.' });
+      }
+    }
+  );
+
   // The **Manage library page**'s one read for both tabs, `media/`'s
   // `libraryTitleList`: every title A–Z, its paths absolute and its **Linked
   // files** read against the disk now. The clear's echo reads the same list.

@@ -41,6 +41,8 @@ export interface LibraryFoldersState {
    * was about; `null` until one is refused and once a remove lands.
    */
   removeRefusal: { id: string; sentence: string } | null;
+  /** Read the list again, its counts with it, as after a **Tidy**; never rejects. */
+  refresh: () => void;
 }
 
 /**
@@ -70,6 +72,12 @@ export function useLibraryFolders(): LibraryFoldersState {
     return () => {
       live = false;
     };
+  }, []);
+
+  const refresh = useCallback(() => {
+    fetchLibraryFolders()
+      .then(setFolders)
+      .catch(() => undefined);
   }, []);
 
   const add = useCallback(
@@ -134,5 +142,6 @@ export function useLibraryFolders(): LibraryFoldersState {
     adding,
     refusal,
     removeRefusal,
+    refresh,
   };
 }

@@ -36,6 +36,7 @@ function renderEditor(props: Partial<FolderListEditorProps> = {}) {
         adding="idle"
         refusal={null}
         removeRefusal={null}
+        refresh={vi.fn()}
         {...props}
       />
     </ThemeProvider>
