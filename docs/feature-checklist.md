@@ -69,7 +69,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Scan new folders: and sync only what a run added    | ✅ Done    |
 | Intro animation: the FF mark opens FamilyFlix       | ✅ Done    |
 | Linux build: FamilyFlix on SteamOS, as an AppImage  | ✅ Done    |
-| Loose videos: a folder of bare files, scanned       | 🔜 Planned |
+| Tidy into folders: each loose video its own folder  | 🔜 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -339,14 +339,24 @@ on an external drive, `E:\Movies\Movies (2026)`, holding about a hundred
 `Title (Year).mp4` files side by side with no folder of their own, found 0
 titles. The walk treats a Library folder's top level as a shelf, never a
 film, so a video lying loose there is not read (design log 30, Q15 left
-it out). It is planned, and goes through grill-me first:
+it out). The walk keeps that rule; instead, FamilyFlix offers to give each
+loose video the folder the walk expects. It is planned, and goes through
+grill-me first:
 
-40. 🔜 **Loose videos**: a video lying directly in a Library folder, or loose
-    beside the folders under it, is found by a scan as a film of its own, so
-    a folder of bare files imports like a folder of film folders. Open for
-    the grill: whether the top level is read as a **Collection folder**
-    (each video its own film, a poster or subtitles found by the video's
-    name), how loose episodes with an `S01E01` tag group into a show, where
-    a **Write target** puts a loose film's art when there is no film folder
-    to add it to, and whether a video loose beside film folders at a deeper
-    level is found too.
+40. 🔜 **Tidy into folders**: Settings → Library gains _Tidy into folders_,
+    which finds every video lying loose at a Library folder's top level and
+    moves each into a new folder of its own, named after the file:
+    `Apex (2026).mp4` becomes `Apex (2026)\Apex (2026).mp4`, its subtitles
+    and its `-poster` image moving with it. It first lists every move it
+    plans, and moves nothing until the maintainer confirms. A scan that
+    walks past loose videos says how many it left and links to the tidy, so
+    the next scan finds them as films. This is the one place FamilyFlix
+    moves a file inside a Library folder, and only on that confirm; a scan
+    and a Write target still only add. Open for the grill: where a scan's
+    hint lives (a log line, the run's result, the folder's row), what
+    belongs to a video (subtitles and art by its name, a sample or trailer
+    beside it), a folder of that name already there, a held **Linked
+    video** whose stored path the move must follow, loose episodes with an
+    `S01E01` tag (one show folder, or left alone), whether loose videos one
+    level down are tidied too, and what a move that fails halfway leaves
+    behind (an external drive unplugged, a file in use).
