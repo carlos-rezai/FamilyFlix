@@ -3,6 +3,7 @@ import express from 'express';
 import { createEnrichment } from './enrichment/createEnrichment/createEnrichment';
 import { createTmdbClient } from './enrichment/tmdbClient/tmdbClient';
 import { createImporter } from './import-export/createImporter/createImporter';
+import { createLibrarySheet } from './import-export/createLibrarySheet/createLibrarySheet';
 import { createSqliteStorage } from './library';
 import { createMedia } from './media/createMedia/createMedia';
 import { createComponentSlot } from './playback/componentSlot/componentSlot';
@@ -44,6 +45,10 @@ const parentPort = parentPortOf(process);
  */
 async function start(): Promise<Started> {
   const storage = createSqliteStorage(DB_PATH);
+  // The **Library sheet writer**, told of every write that changes a sheet
+  // cell, and flushed by the **Ordered shutdown**.
+  const librarySheet = createLibrarySheet({ storage });
+  storage.onChange((folderIds) => librarySheet.touch(folderIds));
 
   /**
    * The **Component slot**: the writable directory an **Uploaded component**
@@ -109,6 +114,7 @@ async function start(): Promise<Started> {
     stopping ??= orderedShutdown({
       importer,
       enrichment,
+      librarySheet,
       server,
       closeDatabase: () => storage.close(),
       exit: (code) => process.exit(code),

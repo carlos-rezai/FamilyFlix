@@ -61,11 +61,13 @@ import { createSeriesWatch } from './series/watch/watch';
 import { createTitles, type StoredLibraryTitles } from './titles/titles';
 import { createHolding, type HeldTitle } from './holding/holding';
 import { createLeftOut, type LeftOutVideo } from './leftOut/leftOut';
+import { createChanges, type ChangeListener } from './changes/changes';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
 export type { HeldTitle } from './holding/holding';
 export type { LeftOutVideo } from './leftOut/leftOut';
+export type { ChangeListener } from './changes/changes';
 export type {
   LinkedVideo,
   StoredLibraryMovie,
@@ -483,6 +485,14 @@ export interface LibraryStorage {
    * {@link close} is, so the router never reaches `db/` itself.
    */
   reset(): void;
+  /**
+   * Subscribe to every write that changes a cell of a **Library sheet**: an
+   * add, an edit, a delete, Clear details, a Sync, an import or a scan, a
+   * rating, a heart, a Status crossing. The listener is handed the **Library
+   * folders** the write touched; a **Watch tick** that crosses no Status
+   * calls nothing. Answers the unsubscribe.
+   */
+  onChange(listener: ChangeListener): () => void;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -515,19 +525,74 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const titles = createTitles(db);
   const holding = createHolding(db);
   const leftOut = createLeftOut(db);
+  const changes = createChanges(db);
+  const { touch, folderOfTitle, folderOfEpisode } = changes;
+
+  /** A write over one Movie or Series, then its folder touched. */
+  function onTitle<A extends unknown[], R>(
+    write: (id: string, ...rest: A) => R
+  ): (id: string, ...rest: A) => R {
+    return (id, ...rest) => {
+      const result = write(id, ...rest);
+      touch([folderOfTitle(id)]);
+      return result;
+    };
+  }
+
+  /** A delete or a clear: the folder read first, while the title is held. */
+  function beforeTitle<A extends unknown[], R>(
+    write: (id: string, ...rest: A) => R
+  ): (id: string, ...rest: A) => R {
+    return (id, ...rest) => {
+      const folder = folderOfTitle(id);
+      const result = write(id, ...rest);
+      touch([folder]);
+      return result;
+    };
+  }
+
+  /** A write over one Episode, then its series' folder touched. */
+  function onEpisode<A extends unknown[], R>(
+    write: (id: string, ...rest: A) => R
+  ): (id: string, ...rest: A) => R {
+    return (id, ...rest) => {
+      const result = write(id, ...rest);
+      touch([folderOfEpisode(id)]);
+      return result;
+    };
+  }
+
+  /** A **Watch tick**: its folder touched only when it crosses a Status. */
+  function onCrossing(
+    statusOf: (id: string) => string | null,
+    folderOf: (id: string) => string | null,
+    write: (id: string, seconds: number) => void
+  ): (id: string, seconds: number) => void {
+    return (id, seconds) => {
+      const before = statusOf(id);
+      write(id, seconds);
+      if (statusOf(id) !== before) {
+        touch([folderOf(id)]);
+      }
+    };
+  }
 
   return {
-    addMovie: write.addMovie,
-    updateMovie: write.updateMovie,
-    enrichMovie: enrich.enrichMovie,
-    enrichSeries: seriesEnrich.enrichSeries,
-    enrichEpisode: seriesEnrich.enrichEpisode,
-    setSeasonPoster: seriesEnrich.setSeasonPoster,
+    addMovie(input) {
+      const movie = write.addMovie(input);
+      touch([folderOfTitle(movie.id)]);
+      return movie;
+    },
+    updateMovie: onTitle(write.updateMovie),
+    enrichMovie: onTitle(enrich.enrichMovie),
+    enrichSeries: onTitle(seriesEnrich.enrichSeries),
+    enrichEpisode: onEpisode(seriesEnrich.enrichEpisode),
+    setSeasonPoster: onTitle(seriesEnrich.setSeasonPoster),
     stillSourcesOf: seriesEnrich.stillSourcesOf,
     moviesInScope: enrich.moviesInScope,
     seriesInScope: seriesEnrich.seriesInScope,
     enrichmentCounts: enrich.enrichmentCounts,
-    deleteMovie: write.deleteMovie,
+    deleteMovie: beforeTitle(write.deleteMovie),
     getMovie: reader.getMovie,
     getSeries: seriesReader.getSeries,
     listMovies: browse.listMovies,
@@ -539,15 +604,23 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     getHome: home.getHome,
     getGenre: genre.getGenre,
     getGenreLess: genre.getGenreLess,
-    setResumePosition: watch.setResumePosition,
-    markWatched: watch.markWatched,
-    markUnwatched: watch.markUnwatched,
-    setEpisodeResumePosition: seriesWatch.setEpisodeResumePosition,
-    setEpisodeWatched: seriesWatch.setEpisodeWatched,
-    setSeasonWatched: seriesWatch.setSeasonWatched,
-    setSeriesWatched: seriesWatch.setSeriesWatched,
-    setFavorite: curation.setFavorite,
-    setRating: curation.setRating,
+    setResumePosition: onCrossing(
+      changes.movieStatus,
+      folderOfTitle,
+      watch.setResumePosition
+    ),
+    markWatched: onTitle(watch.markWatched),
+    markUnwatched: onTitle(watch.markUnwatched),
+    setEpisodeResumePosition: onCrossing(
+      changes.episodeStatus,
+      folderOfEpisode,
+      seriesWatch.setEpisodeResumePosition
+    ),
+    setEpisodeWatched: onEpisode(seriesWatch.setEpisodeWatched),
+    setSeasonWatched: onTitle(seriesWatch.setSeasonWatched),
+    setSeriesWatched: onTitle(seriesWatch.setSeriesWatched),
+    setFavorite: onTitle(curation.setFavorite),
+    setRating: onTitle(curation.setRating),
     settings: settingsRepository.settings,
     setSubtitleLanguage: settingsRepository.setSubtitleLanguage,
     setAudioLanguage: settingsRepository.setAudioLanguage,
@@ -558,7 +631,17 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setTmdbKey: settingsRepository.setTmdbKey,
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,
     setEnrichmentLastSyncedAt: settingsRepository.setEnrichmentLastSyncedAt,
-    setSourceFolder: enrich.setSourceFolder,
+    setSourceFolder(id, folderId, sourceFolder, sourceFile) {
+      const before = folderOfTitle(id);
+      const held = enrich.setSourceFolder(
+        id,
+        folderId,
+        sourceFolder,
+        sourceFile
+      );
+      touch([before, folderOfTitle(id)]);
+      return held;
+    },
     titleSource: enrich.titleSource,
     mediaFolderOf: enrich.mediaFolderOf,
     sourcePath: enrich.sourcePath,
@@ -568,12 +651,16 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     leftOut: leftOut.leftOut,
     clearLeftOut: leftOut.clearLeftOut,
     bringBack: leftOut.bringBack,
-    addSeries: seriesWrite.addSeries,
-    addEpisode: seriesWrite.addEpisode,
-    deleteSeries: seriesWrite.deleteSeries,
-    updateSeries: seriesWrite.updateSeries,
-    setSeriesFavorite: seriesCuration.setSeriesFavorite,
-    setSeriesRating: seriesCuration.setSeriesRating,
+    addSeries(input, episodes, seasonPosters) {
+      const series = seriesWrite.addSeries(input, episodes, seasonPosters);
+      touch([folderOfTitle(series.id)]);
+      return series;
+    },
+    addEpisode: onTitle(seriesWrite.addEpisode),
+    deleteSeries: beforeTitle(seriesWrite.deleteSeries),
+    updateSeries: onTitle(seriesWrite.updateSeries),
+    setSeriesFavorite: onTitle(seriesCuration.setSeriesFavorite),
+    setSeriesRating: onTitle(seriesCuration.setSeriesRating),
     getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesBrowse.getSeriesHome,
     listSeriesGenres: seriesBrowse.listSeriesGenres,
@@ -582,13 +669,17 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     libraryFolders: folders.libraryFolders,
     addLibraryFolder: folders.addLibraryFolder,
     removeLibraryFolder: folders.removeLibraryFolder,
-    markScanned: folders.markScanned,
+    markScanned(ids, at) {
+      folders.markScanned(ids, at);
+      touch(ids);
+    },
     libraryTitles: titles.libraryTitles,
-    clearMovieDetails: titles.clearMovieDetails,
-    clearSeriesDetails: titles.clearSeriesDetails,
+    clearMovieDetails: onTitle(titles.clearMovieDetails),
+    clearSeriesDetails: onTitle(titles.clearSeriesDetails),
     reset() {
       resetDatabase(db);
     },
+    onChange: changes.onChange,
     close() {
       db.close();
     },
