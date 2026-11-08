@@ -30,6 +30,10 @@ export interface LibrarySheet {
   touch(folderIds: readonly string[]): void;
   /** Write every pending sheet now, settling once they are written. */
   flush(): Promise<void>;
+  /** Write nothing to a folder while a run's review holds its sheet values. */
+  hold(folderId: string): void;
+  /** Stop holding a folder and rewrite its sheet from the library. */
+  release(folderId: string): void;
 }
 
 /**
@@ -45,13 +49,18 @@ export function createLibrarySheet({
   storage,
 }: LibrarySheetDeps): LibrarySheet {
   const pending = new Set<string>();
+  const held = new Set<string>();
   let timer: ReturnType<typeof setTimeout> | undefined;
   let writing: Promise<void> = Promise.resolve();
 
-  /** The titles recorded against a folder with a Source folder. */
+  /**
+   * The titles recorded against a folder with a Source folder, and each
+   * one's Source folder by its id.
+   */
   function contentOf(folderId: string): {
     movies: Movie[];
     series: SeriesDetail[];
+    sourceFolders: Map<string, string>;
   } {
     const titles = storage.libraryTitles();
     const recorded = <T extends { libraryFolderId: string | null }>(
@@ -61,7 +70,17 @@ export function createLibrarySheet({
         (title) =>
           title.libraryFolderId === folderId && title.sourceFolder !== null
       );
+    const sourceFolders = new Map<string, string>();
+    for (const title of [
+      ...recorded(titles.movies),
+      ...recorded(titles.series),
+    ]) {
+      if (title.sourceFolder !== null) {
+        sourceFolders.set(title.id, title.sourceFolder);
+      }
+    }
     return {
+      sourceFolders,
       movies: recorded(titles.movies).flatMap(
         (movie) => storage.getMovie(movie.id) ?? []
       ),
@@ -78,11 +97,13 @@ export function createLibrarySheet({
     if (!folder || (await readableFolder(folder.path)) !== 'readable') {
       return;
     }
-    const { movies, series } = contentOf(folderId);
-    const { table } = exportRows(movies, series, {
-      images: true,
-      subtitles: true,
-    });
+    const { movies, series, sourceFolders } = contentOf(folderId);
+    const { table } = exportRows(
+      movies,
+      series,
+      { images: true, subtitles: true },
+      (titleId) => sourceFolders.get(titleId) ?? null
+    );
     const bytes = await writeSheet(table, 'csv');
     const sheet = join(folder.path, LIBRARY_SHEET);
     const temporary = join(folder.path, TEMPORARY_SHEET);
@@ -98,8 +119,10 @@ export function createLibrarySheet({
 
   /** Take every pending folder and queue its write behind any in flight. */
   function writePending(): Promise<void> {
-    const folderIds = [...pending];
-    pending.clear();
+    const folderIds = [...pending].filter((folderId) => !held.has(folderId));
+    for (const folderId of folderIds) {
+      pending.delete(folderId);
+    }
     writing = writing.then(async () => {
       for (const folderId of folderIds) {
         await writeOne(folderId).catch(() => undefined);
@@ -108,21 +131,30 @@ export function createLibrarySheet({
     return writing;
   }
 
+  function touch(folderIds: readonly string[]): void {
+    for (const folderId of folderIds) {
+      pending.add(folderId);
+    }
+    clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = undefined;
+      void writePending();
+    }, LIBRARY_SHEET_DELAY_MS);
+  }
+
   return {
-    touch(folderIds) {
-      for (const folderId of folderIds) {
-        pending.add(folderId);
-      }
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        timer = undefined;
-        void writePending();
-      }, LIBRARY_SHEET_DELAY_MS);
-    },
+    touch,
     flush() {
       clearTimeout(timer);
       timer = undefined;
       return writePending();
+    },
+    hold(folderId) {
+      held.add(folderId);
+    },
+    release(folderId) {
+      held.delete(folderId);
+      touch([folderId]);
     },
   };
 }

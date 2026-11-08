@@ -76,7 +76,7 @@ async function start(): Promise<Started> {
   // The import domain over the same library and managed directory the routes
   // write through, so an imported film is a hand-added one to every read in
   // the app.
-  const importer = createImporter({ storage, media, playback });
+  const importer = createImporter({ storage, media, playback, librarySheet });
   // The one domain that goes online, over the global `fetch`.
   const enrichment = createEnrichment({
     storage,

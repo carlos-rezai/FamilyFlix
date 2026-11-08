@@ -40,6 +40,7 @@ import {
   planSheetFields,
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
+import type { LibrarySheet } from '../createLibrarySheet/createLibrarySheet';
 import { readSheet, type SheetRow } from '../readSheet/readSheet';
 import {
   readShowFolder,
@@ -597,6 +598,8 @@ interface WalkedFolder {
   folder: StoredLibraryFolder;
   films: FilmScan[];
   shows: ShowScan[];
+  /** The folder's `Meta/` sheet's path, or `null` when it has none. */
+  sheet: string | null;
 }
 
 /** What the walk both starts take answers: the folders walked, and read. */
@@ -734,12 +737,28 @@ export function createImporter({
   storage,
   media,
   playback,
+  librarySheet,
 }: {
   storage: LibraryStorage;
   media: Media;
   playback: Playback;
+  /**
+   * The **Library sheet writer**, told which folders' sheets the **Current
+   * run** read: held while the run holds their values, released when it
+   * closes.
+   */
+  librarySheet?: Pick<LibrarySheet, 'hold' | 'release'>;
 }): Importer {
   let run: ImportRun | null = null;
+  /** The Library folders whose `Meta/` sheet the **Current run** read, held. */
+  const heldSheets = new Set<string>();
+  /** Release every folder the run held: the run has closed. */
+  const releaseSheets = (): void => {
+    for (const folderId of heldSheets) {
+      librarySheet?.release(folderId);
+    }
+    heldSheets.clear();
+  };
   /** The run's **Library folders**: the only places a found file may be. */
   let listedPaths: string[] = [];
   /** What the run knew when it filed each **Problem**, by the problem's id. */
@@ -1053,6 +1072,7 @@ export function createImporter({
         title: row.title,
         ...video,
         watched: row.watched,
+        ...(row.favorite ? { isFavorite: true } : {}),
         ...(row.year === null ? {} : { year: row.year }),
         ...(runtime === null ? {} : { runtimeMinutes: runtime }),
         ...(row.director === null ? {} : { director: row.director }),
@@ -1654,6 +1674,7 @@ export function createImporter({
     const read: StoredLibraryFolder[] = [];
     let found = 0;
     let leftOut = 0;
+    const sheets = new Map<StoredLibraryFolder, string>();
     // Every folder the walk went through, by the found line's rule, before
     // left-out videos come off: `run.found` follows it as the walk goes.
     const walkedFolders = new Set<string>();
@@ -1681,6 +1702,9 @@ export function createImporter({
           log(current, warning, 'warning');
         }
         scans = walk.titles.flatMap(scansOf);
+        if (walk.sheet !== null) {
+          sheets.set(folder, walk.sheet);
+        }
         read.push(folder);
       } catch {
         // A folder that stopped being readable mid-walk: what was found is
@@ -1703,7 +1727,12 @@ export function createImporter({
       const films = grouped.films;
       // Titles, not folders: every film and every show grouped, held or new.
       found += films.length + grouped.shows.length;
-      walked.push({ folder, films, shows: grouped.shows });
+      walked.push({
+        folder,
+        films,
+        shows: grouped.shows,
+        sheet: sheets.get(folder) ?? null,
+      });
     }
 
     log(
@@ -1885,18 +1914,6 @@ export function createImporter({
       source.sourceFolder,
       source.sourceFile
     );
-  };
-
-  /** A held film linked to where it was found, and its skip line. */
-  const skipHeld = (
-    current: ImportRun,
-    heldId: string,
-    folder: StoredLibraryFolder,
-    scan: FilmScan,
-    row: SheetRow
-  ): void => {
-    linkHeld(heldId, folder, scan);
-    logAlreadyHeld(current, row);
   };
 
   /**
@@ -2098,10 +2115,36 @@ export function createImporter({
   };
 
   /**
+   * A Library folder's `Meta/` sheet, read for a **Folder scan**, the folder
+   * held first so the **Library sheet** keeps the values the run reads until
+   * it closes. A sheet that cannot be read is a **Warning line**, and the
+   * folder is scanned by its layout alone.
+   */
+  const readMetaSheet = async (
+    current: ImportRun,
+    folder: StoredLibraryFolder,
+    sheetPath: string
+  ): Promise<SheetRow[]> => {
+    heldSheets.add(folder.id);
+    librarySheet?.hold(folder.id);
+    try {
+      return await readSheet(await readFile(sheetPath), sheetPath);
+    } catch {
+      log(
+        current,
+        `⚠ Could not read ${sheetPath}, scanned without it`,
+        'warning'
+      );
+      return [];
+    }
+  };
+
+  /**
    * A **Folder scan**: each listed folder walked in the order given, every
-   * film and show named off its own folder. **Already in library** is the
-   * sheet run's two rules in order. A held show still gains the episodes it
-   * lacks.
+   * film and show named by its folder's `Meta/` sheet, through `matchRows`,
+   * else off its own folder. **Already in library** is the sheet run's rules
+   * in order; a held title a row names takes its **Sheet fills** and files
+   * its **Sheet differences**. A held show still gains the episodes it lacks.
    */
   const executeScan = async (
     current: ImportRun,
@@ -2112,6 +2155,7 @@ export function createImporter({
     const missing = missingFilms(filmsByKey);
     const held = heldSeriesList();
     const seriesByKey = heldSeriesByKey(held);
+    const genres = genreReader();
 
     const walk = await walkListed(current, folders, signal);
     if (walk === null) {
@@ -2122,19 +2166,47 @@ export function createImporter({
     const films: Placed<Match>[] = [];
     const shows: Placed<ShowMatch>[] = [];
     const foundAgain: Placed<FoundAgain>[] = [];
-    for (const { folder, films: found, shows: grouped } of walked) {
+    for (const { folder, films: found, shows: grouped, sheet } of walked) {
+      const rows =
+        sheet === null ? [] : await readMetaSheet(current, folder, sheet);
+      if (signal.aborted) {
+        return;
+      }
+      // A show is matched by the film's own rule, over a scan standing for it.
+      const showOf = new Map<FilmScan, ShowScan>();
+      for (const show of grouped) {
+        showOf.set(asMatchable(show), show);
+      }
+      // Each folder a row names, with that row, its path cells resolved.
+      const named = new Map<FilmScan, SheetRow>();
+      const titleRows = rows.filter(
+        (row) => row.type === 'Movie' || row.type === 'Series'
+      );
+      if (titleRows.length > 0) {
+        const verdicts = matchRows(titleRows, [...found, ...showOf.keys()]);
+        for (const match of verdicts.matched) {
+          named.set(match.folder, match.row);
+        }
+      }
+
       for (const scan of found) {
-        const row = guessedRow(scan.name);
+        const sheetRow = named.get(scan);
+        const row = sheetRow ?? guessedRow(scan.name);
         const heldId = heldFilm(filmsByKey, missing, folder, scan, row);
         if (heldId !== null) {
           // Held: linked to where it was found, and nothing is added; a film
           // whose video is missing is **Found again**, in the Import phase.
+          // A row naming it fills its empty fields.
           const again = foundAgainOf(missing, heldId, scan);
-          if (again === null) {
-            skipHeld(current, heldId, folder, scan, row);
-          } else {
-            linkHeld(heldId, folder, scan);
+          linkHeld(heldId, folder, scan);
+          if (again !== null) {
             foundAgain.push({ match: again, libraryFolder: folder });
+          }
+          const filled =
+            sheetRow !== undefined &&
+            fillHeld(current, { kind: 'movie', id: heldId }, sheetRow, genres);
+          if (!filled && again === null) {
+            logAlreadyHeld(current, row);
           }
           continue;
         }
@@ -2150,19 +2222,44 @@ export function createImporter({
         }
         films.push({ match: { row, folder: scan }, libraryFolder: folder });
       }
-      for (const show of grouped) {
-        const row = guessedRow(show.name);
+      for (const [matchable, show] of showOf) {
+        const sheetRow = named.get(matchable);
+        const row = sheetRow ?? guessedRow(show.name);
         const match = showMatch(
           row,
           show,
-          heldShow(held, seriesByKey, folder, show, row)
+          heldShow(held, seriesByKey, folder, show, row),
+          sheetRow === undefined
+            ? []
+            : rows.filter(
+                (each) =>
+                  each.type === 'Episode' &&
+                  each.folder.toLowerCase() === sheetRow.folder.toLowerCase()
+              )
         );
+        if (sheetRow !== undefined && match.held !== null) {
+          match.updated = fillHeld(
+            current,
+            { kind: 'series', id: match.held.series.id },
+            sheetRow,
+            genres
+          );
+        }
         fileUnplaced(current, match);
         shows.push({ match, libraryFolder: folder });
       }
     }
 
-    await importPlaced(current, films, shows, foundAgain, read, 'Scan', signal);
+    await importPlaced(
+      current,
+      films,
+      shows,
+      foundAgain,
+      read,
+      'Scan',
+      signal,
+      genres
+    );
   };
 
   /** A run's first state, from its source and the flag it carries. */
@@ -2219,6 +2316,8 @@ export function createImporter({
       throw new ImportBusyError();
     }
 
+    // A run in review let go is closed: its sheets are written again.
+    releaseSheets();
     const current = freshRun(source, enrich, mode);
     run = current;
     listedPaths = runFolders;
@@ -2289,6 +2388,7 @@ export function createImporter({
       run = null;
       stop.abort();
       await running;
+      releaseSheets();
     },
 
     dismiss: takeOff,

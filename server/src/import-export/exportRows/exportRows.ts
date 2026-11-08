@@ -292,23 +292,28 @@ const byKey = (a: Planned, b: Planned): number =>
  * a second of one language `(2)`. The path cells carry those same paths,
  * blank when nothing travels; `Video` names where the video goes, though no
  * video is planned. Two titles sharing a Folder key are numbered `(1)`,
- * `(2)`, … in sheet order, each with a Warning line.
+ * `(2)`, … in sheet order, each with a Warning line. `sourceFolderOf`, the
+ * **Library sheet**'s, names a title's Folder key by its **Source folder**
+ * instead of spelling it from its title and year.
  */
 export function exportRows(
   movies: readonly Movie[],
   series: readonly SeriesDetail[],
-  include: ExportInclude
+  include: ExportInclude,
+  sourceFolderOf: (titleId: string) => string | null = () => null
 ): ExportRows {
   const planned: Planned[] = [
     ...movies.map(
       (movie): Planned => ({
-        key: folderKeyName(movie.title, movie.year),
+        key: sourceFolderOf(movie.id) ?? folderKeyName(movie.title, movie.year),
         rows: movieRows(movie),
       })
     ),
     ...series.map(
       (detail): Planned => ({
-        key: folderKeyName(detail.series.title, detail.series.year),
+        key:
+          sourceFolderOf(detail.series.id) ??
+          folderKeyName(detail.series.title, detail.series.year),
         rows: seriesRows(detail),
       })
     ),

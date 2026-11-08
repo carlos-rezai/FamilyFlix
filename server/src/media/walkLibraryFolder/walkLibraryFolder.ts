@@ -27,8 +27,8 @@ export interface LayoutWalk {
 /** The folder holding a Library folder's own sheet, and an Export's. */
 const META = 'Meta';
 
-/** The **Library sheet**, under `Meta/`. */
-const SHEET = 'familyflix-library.csv';
+/** The `Meta/` sheets a walk reads, the **Library sheet** first. */
+const SHEETS = ['familyflix-library.csv', 'familyflix-library.xlsx'];
 
 /** A **Layout warning**'s text for a root folder left out. */
 const WARNING: Record<LeftOutReason, (name: string) => string> = {
@@ -53,13 +53,17 @@ async function holdsMeta(dir: string): Promise<boolean> {
   }
 }
 
-/** The root's `Meta/` sheet, or `null` when there is none. */
+/**
+ * The root's `Meta/` sheet, the `.csv` when there, else the `.xlsx`, or
+ * `null` when there is neither.
+ */
 async function sheetIn(root: string): Promise<string | null> {
   try {
     const entries = await readdir(join(root, META), { withFileTypes: true });
-    return entries.some((entry) => entry.isFile() && entry.name === SHEET)
-      ? join(root, META, SHEET)
-      : null;
+    const sheet = SHEETS.find((name) =>
+      entries.some((entry) => entry.isFile() && entry.name === name)
+    );
+    return sheet === undefined ? null : join(root, META, sheet);
   } catch {
     return null;
   }
