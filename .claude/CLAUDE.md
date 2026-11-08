@@ -64,12 +64,16 @@ when a second feature needs it; no feature imports another's wire.
   `createApiRouter`, so no route knows there is an FFmpeg or a TMDB.
 - **`src/` never touches SQLite or the filesystem**: all file access goes
   through `server/src/media/`, the only code that touches managed storage.
-- **The only writers into a Library folder** are `enrichment/`'s Write targets
-  and an Export, each only ever adding what isn't there.
+- **The only writers into a Library folder** are the **Layout fill**, which
+  only ever adds what isn't there, and the **Library sheet** writer, which
+  only ever rewrites `Meta/familyflix-library.csv`. An Export only ever adds
+  its own new folder.
 - **Enrichment (TMDB) is the only network client.** File paths are stored
   relative: to the media directory, or a **Linked video**'s to its Library
   folder by id.
-- **Dev library:** import `server/src/import-export/createImporter/fixture/`;
+- **Dev library:** import `server/src/import-export/createImporter/fixture/`,
+  its Title folders in the layout (`Die Hard (1988)/`, `Amelie (2001)/`,
+  `Tidewater (2018)/Season 01/`);
   `npm run db:seed-series` adds mock series with watch progress.
 
 ## Product Rules
