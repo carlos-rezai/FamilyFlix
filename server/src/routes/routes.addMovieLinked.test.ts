@@ -350,6 +350,44 @@ describe('POST /api/movies — the Source folder', () => {
     expect(storage.titleSource(movie.id)).toBeNull();
   });
 
+  /**
+   * 58, Folder layout, Phase 4 (issue #537): a video under a Library folder
+   * but in no **Title folder** of the layout is linked with no Source folder.
+   */
+  it('links a video loose in the Library folder with no Source folder', async () => {
+    const { storage, baseUrl, root, folderId } = freshApi();
+    const loose = videoAt(join(root, 'Films', 'Ronin.1998.mp4'));
+
+    const response = await postMovie(baseUrl, [
+      ['mode', 'link'],
+      ...fieldsOf('Ronin', '1998'),
+      ['videoPath', loose],
+    ]);
+
+    expect(response.status).toBe(201);
+    const movie = (await response.json()) as Movie;
+    expect(storage.titleSource(movie.id)).toBeNull();
+    expect(storage.getMovie(movie.id)?.videoFolderId).toBe(folderId);
+  });
+
+  it('links a video in a Title folder deeper than the root with no Source folder', async () => {
+    const { storage, baseUrl, root, folderId } = freshApi();
+    const deep = videoAt(
+      join(root, 'Films', 'Crime', 'Ronin (1998)', 'Ronin.1998.mp4')
+    );
+
+    const response = await postMovie(baseUrl, [
+      ['mode', 'link'],
+      ...fieldsOf('Ronin', '1998'),
+      ['videoPath', deep],
+    ]);
+
+    expect(response.status).toBe(201);
+    const movie = (await response.json()) as Movie;
+    expect(storage.titleSource(movie.id)).toBeNull();
+    expect(storage.getMovie(movie.id)?.videoFolderId).toBe(folderId);
+  });
+
   it('records nothing for a video under no listed folder', async () => {
     const { storage, baseUrl, media, files } = freshApi();
 

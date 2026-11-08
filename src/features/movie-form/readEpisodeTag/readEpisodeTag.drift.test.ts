@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { readEpisodeTag } from './readEpisodeTag';
 import { readSeasonFolder } from '../readSeasonFolder/readSeasonFolder';
 import { episodeTag } from '../../../../server/src/media/episodeTag/episodeTag';
+import { seasonOf } from '../../../../server/src/import-export/groupShows/groupShows';
 import { ALL_SEASON_FOLDER_CASES } from '../../../../server/src/test-support/seasonFolderCases/seasonFolderCases';
 
 /**
@@ -138,20 +139,19 @@ describe('the Episode tag — client and server agree', () => {
 });
 
 /**
- * 58, Folder layout (issue #536): the server's `seasonOf` reads `Season NN`
- * only, while the client's `readSeasonFolder` keeps log 51's wider rule until
- * phase 4 (issue #537) narrows it too. Until then the client alone answers the
- * wide table, and #537 pairs the two sides again.
+ * 58, Folder layout (issue #537): the **Season folder** is read on two sides
+ * too, the server's `seasonOf`, which groups a scan and a **Show folder
+ * pick**, and the client's `readSeasonFolder`, which seeds the **Numbering
+ * guess**. Both read `Season NN` only, over one table.
  */
-describe('the Season folder: the client reads the wide table', () => {
-  /**
-   * 51, Library audit (issue #447): the wider rule's one table, the same
-   * the unit's table test reads.
-   */
+describe('the Season folder: client and server agree', () => {
   it.each(ALL_SEASON_FOLDER_CASES.map(([name, season]) => [name, season]))(
-    '%s reads as season %s',
+    '%s reads as season %s on both sides',
     (name, season) => {
-      expect(readSeasonFolder(name)).toBe(season);
+      expect({
+        server: seasonOf(name),
+        client: readSeasonFolder(name),
+      }).toEqual({ server: season, client: season });
     }
   );
 });

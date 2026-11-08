@@ -1,79 +1,69 @@
 /**
- * 51, Library audit (issue #447): the **Season folder**'s one table.
+ * 58, Folder layout (issue #537): the **Season folder**'s one table.
  *
- * The client's `readSeasonFolder` seeds the **Numbering guess** off a folder
- * name; its table test and the drift guard read these cases. The server's
- * `seasonOf` reads `Season NN` only since log 58 (issue #536), so only the
- * client reads this wide table until phase 4 (issue #537) narrows it too.
+ * The server's `seasonOf` reads `Season NN` only (issue #536), and the
+ * client's `readSeasonFolder`, which seeds the **Numbering guess** off a
+ * folder name, mirrors it. The client's table test and the drift guard read
+ * these cases, the drift guard over both sides.
  *
- * Each group is one rule of the wider reading (log 51 Q11), a name and the
- * season it says, `null` for a name that is no Season folder.
+ * Each group is one rule, a name and the season it says, `null` for a name
+ * that is no Season folder. Log 51's wider spellings are kept, each now
+ * answering `null`, so a reader that still reads one fails.
  */
 export type SeasonFolderCase = readonly [name: string, season: number | null];
 
 export const SEASON_FOLDER_CASES = {
-  /** `Season N`, `Season 0N`, `Seizoen N` and `SNN`, in either case. */
-  spellings: [
-    ['Season 1', 1],
+  /** `Season NN`: two digits or more, in either case. */
+  layout: [
     ['Season 01', 1],
-    ['season 1', 1],
+    ['season 01', 1],
     ['SEASON 01', 1],
-    ['Season02', 2],
+    ['Season 02', 2],
     ['season 12', 12],
-    ['Seizoen 1', 1],
-    ['Seizoen 01', 1],
-    ['seizoen 2', 2],
-    ['SEIZOEN 03', 3],
-    ['S01', 1],
-    ['s01', 1],
-    ['s3', 3],
-    ['  Season 4  ', 4],
+    ['Season 100', 100],
   ],
-  /** A spelling followed by a separator and anything, the year never the number. */
+  /** `Season 00` is the specials, season 0. */
+  specials: [
+    ['Season 00', 0],
+    ['season 00', 0],
+  ],
+  /** Log 51's wider spellings, no Season folder of the layout. */
+  wider: [
+    ['Season 1', null],
+    ['season 2', null],
+    ['Season 0', null],
+    ['Season02', null],
+    ['Seizoen 01', null],
+    ['Seizoen 1', null],
+    ['S01', null],
+    ['s3', null],
+    ['Specials', null],
+    ['SPECIALS', null],
+  ],
+  /** A spelling followed by anything is no Season folder. */
   trailing: [
-    ['Season 1 (2008)', 1],
-    ['season 12 (2019)', 12],
-    ['Seizoen 3 (2010)', 3],
-    ['SEIZOEN 2 - De Terugkeer', 2],
-    ['Season 2 - The Return', 2],
-    ['S04 [1080p]', 4],
-    ['s02 - Bonus', 2],
+    ['Season 01 (2008)', null],
+    ['Season 02 - The Return', null],
+    ['S04 [1080p]', null],
   ],
-  /** A release name holding a standalone `SNN` not followed by `E\d`. */
+  /** A release name holding `SNN` is no Season folder. */
   release: [
-    ['Release.Show.S01.1080p.WEB-DL', 1],
-    ['release.show.s02.720p.hdtv', 2],
-    ['Harbor and Vine S03 Complete', 3],
-    ['Harbor_and_Vine_S04_1080p', 4],
+    ['Release.Show.S01.1080p.WEB-DL', null],
+    ['Harbor and Vine S03 Complete', null],
   ],
-  /** An episode tag is never a Season folder, as a name or inside one. */
+  /** An episode tag is never a Season folder. */
   episodes: [
     ['S01E01', null],
-    ['s02e03', null],
     ['Release.Show.S01E01.1080p.WEB-DL', null],
-    ['Harbor.and.Vine.S01E01-E02', null],
   ],
-  /** `Specials` and `Season 0` are season 0. */
-  specials: [
-    ['Specials', 0],
-    ['specials', 0],
-    ['SPECIALS', 0],
-    ['Season 0', 0],
-    ['Season 00', 0],
-    ['season 0', 0],
-  ],
-  /** A film folder, or any other name, is no Season folder. */
+  /** A Title folder, or any other name, is no Season folder. */
   others: [
-    ['Die.Hard.1988.1080p', null],
     ['Amelie (2001)', null],
-    ['Blade Runner 2049', null],
     ['Seasons of Love (2005)', null],
-    ['Season of the Witch (1973)', null],
     ['Disc 2', null],
     ['Extras', null],
     ['Season', null],
-    ['Series 2', null],
-    ['The Night Ferry 2', null],
+    ['Series 02', null],
   ],
 } as const satisfies Record<string, readonly SeasonFolderCase[]>;
 

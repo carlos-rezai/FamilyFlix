@@ -68,9 +68,9 @@ const POOL: Genre[] = ['Action', 'Comedy', 'Drama'].map((name, index) => ({
 const SHOW = 'E:\\Series\\The Night Ferry';
 
 /** The show's unplaced videos, in the name order the detail lists them. */
-const DEPARTURE = `${SHOW}\\Season 2\\eps2.0_departure.mov`;
-const FOG_HORN = `${SHOW}\\Season 2\\eps2.1_fog_horn.mov`;
-const PURSER = `${SHOW}\\Season 2\\the_purser Episode 2.mov`;
+const DEPARTURE = `${SHOW}\\Season 02\\eps2.0_departure.mov`;
+const FOG_HORN = `${SHOW}\\Season 02\\eps2.1_fog_horn.mov`;
+const PURSER = `${SHOW}\\Season 02\\the_purser Episode 2.mov`;
 const LANDFALL = `${SHOW}\\landfall.mov`;
 
 /** The `unplaced` Problem of a show the library does not hold yet. */
@@ -94,8 +94,8 @@ const NIGHT_FERRY: ImportProblemDetail = {
 };
 
 /** The two new files of a show the run already holds, in its Season 1 folder. */
-const BONUS_A = `${SHOW}\\Season 1\\bonus_a.mov`;
-const BONUS_B = `${SHOW}\\Season 1\\bonus_b.mov`;
+const BONUS_A = `${SHOW}\\Season 01\\bonus_a.mov`;
+const BONUS_B = `${SHOW}\\Season 01\\bonus_b.mov`;
 
 const JOINING: ImportProblemDetail = {
   id: 'p6',
@@ -374,8 +374,8 @@ describe('MovieForm — the Series Resolve, a show not yet held', () => {
     expect(episodes[3]).toMatchObject({ season: 1, number: 0 });
   });
 
-  it('guesses season 0 under a Season 0 folder, as the server reads it', async () => {
-    const special = `${SHOW}\\Season 0\\christmas_special.mov`;
+  it('guesses season 0 under a Season 00 folder, as the server reads it', async () => {
+    const special = `${SHOW}\\Season 00\\christmas_special.mov`;
     answerProblem = () =>
       Promise.resolve(
         okResponse({

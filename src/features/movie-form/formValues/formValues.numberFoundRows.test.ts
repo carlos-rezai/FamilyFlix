@@ -21,9 +21,9 @@ import { numberFoundRows } from './formValues';
 
 const SHOW = 'E:\\Series\\The Night Ferry';
 
-const DEPARTURE = `${SHOW}\\Season 2\\eps2.0_departure.mov`;
-const FOG_HORN = `${SHOW}\\Season 2\\eps2.1_fog_horn.mov`;
-const PURSER = `${SHOW}\\Season 2\\the_purser Episode 2.mov`;
+const DEPARTURE = `${SHOW}\\Season 02\\eps2.0_departure.mov`;
+const FOG_HORN = `${SHOW}\\Season 02\\eps2.1_fog_horn.mov`;
+const PURSER = `${SHOW}\\Season 02\\the_purser Episode 2.mov`;
 const LANDFALL = `${SHOW}\\landfall.mov`;
 
 /** Each video with its path inside the Show folder. */
@@ -61,15 +61,15 @@ describe('numberFoundRows — the Series Resolve’s cases', () => {
     expect(numbered([disc])).toEqual([[disc, 1, 1]]);
   });
 
-  it('guesses season 0 under a Season 0 folder', () => {
-    const special = `${SHOW}\\Season 0\\christmas_special.mov`;
+  it('guesses season 0 under a Season 00 folder', () => {
+    const special = `${SHOW}\\Season 00\\christmas_special.mov`;
 
     expect(numbered([special])).toEqual([[special, 0, 1]]);
   });
 
   it('numbers after the pairs a held series takes', () => {
-    const bonusA = `${SHOW}\\Season 1\\bonus_a.mov`;
-    const bonusB = `${SHOW}\\Season 1\\bonus_b.mov`;
+    const bonusA = `${SHOW}\\Season 01\\bonus_a.mov`;
+    const bonusB = `${SHOW}\\Season 01\\bonus_b.mov`;
 
     expect(
       numbered(
@@ -96,9 +96,9 @@ describe('numberFoundRows — the Series Resolve’s cases', () => {
 
 describe('numberFoundRows — continuing after numbered rows', () => {
   it('numbers Unplaced videos after the episodes a Show folder read numbered', () => {
-    const bonus = `${SHOW}\\Season 1\\bonus.mov`;
+    const bonus = `${SHOW}\\Season 01\\bonus.mov`;
     const loose = `${SHOW}\\loose.mov`;
-    const finale = `${SHOW}\\Season 2\\finale.mov`;
+    const finale = `${SHOW}\\Season 02\\finale.mov`;
 
     expect(
       numbered(
@@ -117,8 +117,8 @@ describe('numberFoundRows — continuing after numbered rows', () => {
   });
 
   it('answers the Episode word’s title, and none without one', () => {
-    const tagged = `${SHOW}\\Season 1\\The.Night.Ferry.S01E05.Fog.mkv`;
-    const untagged = `${SHOW}\\Season 1\\bonus.mov`;
+    const tagged = `${SHOW}\\Season 01\\The.Night.Ferry.S01E05.Fog.mkv`;
+    const untagged = `${SHOW}\\Season 01\\bonus.mov`;
 
     const [fog, bonus] = numberFoundRows(found([tagged, untagged]), []);
 

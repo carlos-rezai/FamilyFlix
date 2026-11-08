@@ -31,7 +31,7 @@ import {
 } from 'node:fs';
 import type { Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { createApiRouter } from '.';
@@ -457,6 +457,39 @@ describe('POST /api/series — the Show folder', () => {
       folderId,
       sourceFolder: 'Harbor and Vine (2021)',
     });
+  });
+
+  /**
+   * 58, Folder layout, Phase 4 (issue #537): loose tagged videos under a
+   * Library folder lie in no Season folder of the layout, so the show links
+   * with no Source folder.
+   */
+  it('links loose tagged videos under a Library folder with no Source folder', async () => {
+    const { storage, baseUrl, media, show } = freshApi();
+    const loose = join(dirname(show.dir), 'Tidewater (2018)');
+    mkdirSync(loose);
+    const first = join(loose, 'Tidewater.S01E01.Low.Water.mp4');
+    const second = join(loose, 'Tidewater.S01E02.The.Crossing.mp4');
+    writeFileSync(first, mp4Of(2520));
+    writeFileSync(second, mp4Of(2520));
+
+    const response = await postSeries(baseUrl, [
+      ['mode', 'link'],
+      ['title', 'Tidewater'],
+      ['year', '2018'],
+      ['creator', ''],
+      ['description', ''],
+      ['rating', ''],
+      foundEpisode(1, 1, 'Low Water', first),
+      foundEpisode(1, 2, 'The Crossing', second),
+    ]);
+
+    expect(response.status).toBe(201);
+    const series = (await response.json()) as Series;
+    expect(storage.titleSource(series.id)).toBeNull();
+    expect(filesUnder(media).filter((file) => file.endsWith('.mp4'))).toEqual(
+      []
+    );
   });
 
   it('is Already in library to a Folder scan after a linked add', async () => {

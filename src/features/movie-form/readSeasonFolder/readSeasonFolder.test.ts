@@ -7,52 +7,39 @@ import {
 } from '../../../../server/src/test-support/seasonFolderCases/seasonFolderCases';
 
 /**
- * The **Season folder**'s name read on the client, the server's `seasonOf`
- * rule: `Season 01`, `Season 1` or `S01`, either case, and nothing else.
+ * 58, Folder layout (issue #537): the **Season folder**'s name read on the
+ * client, the server's `seasonOf` rule: `Season NN`, two digits or more, in
+ * either case, and nothing else. One table shared with the drift guard; each
+ * group is one rule, asserted whole, so a group fails until every name in it
+ * reads right.
  */
-describe('readSeasonFolder', () => {
-  it.each([
-    ['Season 01', 1],
-    ['Season 1', 1],
-    ['season 12', 12],
-    ['Season02', 2],
-    ['S01', 1],
-    ['s3', 3],
-    ['  Season 4  ', 4],
-  ])('reads %s as season %s', (name, season) => {
-    expect(readSeasonFolder(name)).toBe(season);
-  });
-
-  it.each(['Disc 2', 'Extras', 'Season', 'The Night Ferry 2', 'Series 2'])(
-    'reads %s as no Season folder',
-    (name) => {
-      expect(readSeasonFolder(name)).toBeNull();
-    }
-  );
-});
-
-/**
- * 51, Library audit (issue #447): the wider rule, one table shared with the
- * server's `seasonOf` and the drift guard. Each group is one rule, asserted
- * whole, so a group fails until every name in it reads right.
- */
-describe('readSeasonFolder: the wider Season folder rule', () => {
+describe('readSeasonFolder: Season NN only', () => {
   const readAll = (cases: readonly SeasonFolderCase[]) =>
     cases.map(([name]) => [name, readSeasonFolder(name)]);
   const expected = (cases: readonly SeasonFolderCase[]) =>
     cases.map(([name, season]) => [name, season]);
 
-  it('reads every spelling, Season, Seizoen and S, in either case', () => {
-    const cases = SEASON_FOLDER_CASES.spellings;
+  it('reads Season NN, two digits or more, in either case', () => {
+    const cases = SEASON_FOLDER_CASES.layout;
     expect(readAll(cases)).toEqual(expected(cases));
   });
 
-  it('reads a spelling with trailing text, never the year as the number', () => {
+  it('reads Season 00 as season 0', () => {
+    const cases = SEASON_FOLDER_CASES.specials;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+
+  it('reads no wider spelling: Season 1, Seizoen, S01, Specials', () => {
+    const cases = SEASON_FOLDER_CASES.wider;
+    expect(readAll(cases)).toEqual(expected(cases));
+  });
+
+  it('reads no spelling followed by trailing text', () => {
     const cases = SEASON_FOLDER_CASES.trailing;
     expect(readAll(cases)).toEqual(expected(cases));
   });
 
-  it('reads a release name holding a standalone S01', () => {
+  it('reads no release name holding a standalone S01', () => {
     const cases = SEASON_FOLDER_CASES.release;
     expect(readAll(cases)).toEqual(expected(cases));
   });
@@ -62,12 +49,7 @@ describe('readSeasonFolder: the wider Season folder rule', () => {
     expect(readAll(cases)).toEqual(expected(cases));
   });
 
-  it('reads Specials and Season 0 as season 0', () => {
-    const cases = SEASON_FOLDER_CASES.specials;
-    expect(readAll(cases)).toEqual(expected(cases));
-  });
-
-  it('reads a film folder as no Season folder', () => {
+  it('reads a Title folder or any other name as no Season folder', () => {
     const cases = SEASON_FOLDER_CASES.others;
     expect(readAll(cases)).toEqual(expected(cases));
   });
