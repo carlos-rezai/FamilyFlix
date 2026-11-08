@@ -9,8 +9,10 @@
 //   2. cancel the **Current enrichment run**;
 //   3. `closeAllConnections()`, **before** `close()`, so a playing film's
 //      streaming response cannot hold the exit past the shell's 5 s;
-//   4. close the database (the WAL checkpoint);
-//   5. exit `0`.
+//   4. flush the **Library sheet writer** (issue #540), awaited, while the
+//      library it rewrites from is still open;
+//   5. close the database (the WAL checkpoint);
+//   6. exit `0`.
 //
 // `shutdownOnSignals(target, shutdown)` is the standalone half: it hands both
 // signals to the same function.
@@ -93,6 +95,11 @@ function worldOver(server: Server, log: string[]): ShutdownWorld {
         log.push('cancel enrichment');
       }),
     },
+    librarySheet: {
+      flush: vi.fn(async () => {
+        log.push('flush library sheet');
+      }),
+    },
     server,
     closeDatabase: vi.fn(() => {
       log.push('close database');
@@ -104,7 +111,7 @@ function worldOver(server: Server, log: string[]): ShutdownWorld {
 }
 
 describe('orderedShutdown', () => {
-  it('cancels the import and the sync, drops connections before closing, closes the database, and exits 0 — in that order', async () => {
+  it('cancels the import and the sync, drops connections before closing, flushes the Library sheet, closes the database, and exits 0 — in that order', async () => {
     const log: string[] = [];
     const server = await listening();
 
@@ -115,6 +122,7 @@ describe('orderedShutdown', () => {
       'cancel enrichment',
       'closeAllConnections',
       'close',
+      'flush library sheet',
       'close database',
       'exit 0',
     ]);
@@ -144,6 +152,36 @@ describe('orderedShutdown', () => {
     await done;
 
     expect(log.indexOf('import rolled back')).toBeLessThan(
+      log.indexOf('close database')
+    );
+    expect(world.exit).toHaveBeenCalledWith(0);
+  });
+
+  it('waits for the Library sheet’s flush before closing the database', async () => {
+    const log: string[] = [];
+    const server = await listening();
+    const world = worldOver(server, log);
+    let flushed!: () => void;
+    world.librarySheet.flush = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          flushed = () => {
+            log.push('library sheet written');
+            resolve();
+          };
+        })
+    );
+
+    const done = orderedShutdown(world);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(world.librarySheet.flush).toHaveBeenCalledTimes(1);
+    expect(world.closeDatabase).not.toHaveBeenCalled();
+    expect(world.exit).not.toHaveBeenCalled();
+
+    flushed();
+    await done;
+
+    expect(log.indexOf('library sheet written')).toBeLessThan(
       log.indexOf('close database')
     );
     expect(world.exit).toHaveBeenCalledWith(0);
