@@ -1,94 +1,84 @@
 // @vitest-environment node
 //
-// 31 — Export options, Phase 1: "the tracer" (issue #276).
+// 58 — Folder layout, Phase 5: the one sheet (issue #538).
 //
-// `writeSheet(tables, format, name)` — the **Sheet writer**, still pure and
-// still the **Sheet reader**'s mirror, now answering named files. The cell
-// rules have moved to `exportRows`, so the tables it is handed here are
-// `exportRows`' own, and what is left to pin is the writer's: the file's name
-// after the **Export name**, the CSV's BOM, the workbook's `Titles`
-// worksheet, a number where a number was stored, no styling, and the round
-// trip — every file read back through `readSheet` as one **Sheet row** per
-// film with every field equal.
-//
-// (Log 14's suite pinned the eight cell rules here; they are `exportRows`'
-// suite's now.)
+// `writeSheet(table, format)` is the **Sheet writer**: `exportRows`' one
+// table and an **Export format** in, the sheet's bytes out. Pure over the
+// table: it sorts nothing and names nothing, the Export (and the Library
+// sheet writer) deciding where the bytes land. As csv it is one file behind
+// its UTF-8 BOM, every row type in it; as xlsx one worksheet named `Library`,
+// a number where a number was stored, no styling, and each filled path cell a
+// hyperlink whose text is its path (log 58, Q11).
 
 import ExcelJS from 'exceljs';
 import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
 
-import { writeSheet } from './writeSheet';
-import { exportRows } from '../exportRows/exportRows';
-import { readSheet } from '../readSheet/readSheet';
-import { EXPORT_COLUMNS, EXPORT_FORMATS } from '@/types';
-import type { ExportFormat, Movie, Subtitle } from '@/types';
+import { EXPORT_FORMATS, SHEET_COLUMNS } from '@/types';
+import type { Episode, ExportFormat, Movie, SeriesDetail } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
+import { exportRows, type ExportTable } from '../exportRows/exportRows';
+import { writeSheet } from './writeSheet';
 
 const FORMATS = [...EXPORT_FORMATS];
 
-const NAME = 'familyflix-collection_08-10-2026';
-
 const BOM = String.fromCharCode(0xfeff);
 
-const OFF = { images: false, subtitles: false };
+const ALL = { images: true, subtitles: true };
 
-const track = (language: string, position: number): Subtitle => ({
-  id: `s${position}`,
-  path: `Die Hard (1988)/${language}.srt`,
-  language,
-  position,
+const text = (cell: unknown): string =>
+  cell === null || cell === undefined ? '' : String(cell);
+
+const AMELIE: Movie = makeMovie({
+  id: 'amelie',
+  title: 'Amélie',
+  year: 2001,
+  runtimeMinutes: 122,
+  rating: 7,
+  synopsis: '"Whatever," she said.',
+  videoPath: 'amelie-2001/amelie.mkv',
+  posterPath: 'amelie-2001/poster.jpg',
+  subtitles: [
+    {
+      id: 'a1',
+      path: 'amelie-2001/amelie.fr.srt',
+      language: 'French',
+      position: 0,
+    },
+    {
+      id: 'a2',
+      path: 'amelie-2001/amelie.en.srt',
+      language: 'English',
+      position: 1,
+    },
+  ],
 });
 
-function fullMovie(overrides: Partial<Movie> = {}): Movie {
-  return makeMovie({
-    id: 'm1',
-    title: 'Die Hard',
-    year: 1988,
-    runtimeMinutes: 132,
-    synopsis:
-      'A New York cop takes on a tower full of thieves on Christmas Eve.',
-    director: 'John McTiernan',
-    cast: ['Bruce Willis', 'Alan Rickman'],
-    rating: 8,
-    watched: true,
-    status: 'watched',
-    genres: [
-      { id: 'g1', name: 'Action' },
-      { id: 'g2', name: 'Thriller' },
-    ],
-    subtitles: [track('en', 0), track('de', 1)],
-    ...overrides,
+const TIDEWATER: SeriesDetail = ((): SeriesDetail => {
+  const detail = makeSeriesDetail([['watched', 'unwatched']], {
+    id: 'tidewater',
+    title: 'Tidewater',
+    year: 2018,
+    endYear: null,
+    posterPath: 'tidewater-2018/poster.jpg',
   });
-}
+  const stored = (episode: Episode): Episode => ({
+    ...episode,
+    videoPath: `tidewater-2018/e${episode.number}.mp4`,
+    stillPath: `tidewater-2018/still-${episode.number}.jpg`,
+  });
+  return {
+    ...detail,
+    seasons: detail.seasons.map((season) => ({
+      ...season,
+      episodes: season.episodes.map(stored),
+    })),
+  };
+})();
 
-/** The films' tables, as `exportRows` hands them to the writer. */
-const tablesOf = (movies: Movie[]) => exportRows(movies, [], OFF).tables;
-
-/** What the writer answered for one format, as `{ filename, bytes }`. */
-async function write(
-  movies: Movie[],
-  format: ExportFormat,
-  name = NAME
-): Promise<{ filename: string; bytes: Buffer }[]> {
-  return writeSheet(tablesOf(movies), format, name);
-}
-
-/** The Titles file — the one named after the export itself. */
-async function titlesFile(
-  movies: Movie[],
-  format: ExportFormat,
-  name = NAME
-): Promise<{ filename: string; bytes: Buffer }> {
-  const files = await write(movies, format, name);
-  const file = files.find((each) => each.filename === `${name}.${format}`);
-  if (file === undefined) {
-    throw new Error(
-      `no ${name}.${format} among ${files.map((f) => f.filename).join(', ')}`
-    );
-  }
-  return file;
-}
+/** The one table `exportRows` hands the writer: a film and a series. */
+const TABLE: ExportTable = exportRows([AMELIE], [TIDEWATER], ALL).table;
 
 async function open(
   bytes: Buffer,
@@ -99,204 +89,125 @@ async function open(
     await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
     return workbook;
   }
-  const text = bytes.toString('utf8').replace(/^\uFEFF/, '');
-  await workbook.csv.read(Readable.from([text]), {
+  const csv = bytes.toString('utf8').replace(/^﻿/, '');
+  await workbook.csv.read(Readable.from([csv]), {
     map: (value: string) => value,
   });
   return workbook;
 }
 
-/** The first worksheet as text cells, sixteen wide. */
-async function cells(bytes: Buffer, format: ExportFormat): Promise<string[][]> {
-  const workbook = await open(bytes, format);
+/** A worksheet as text cells, as wide as the Sheet columns. */
+function cellsOf(sheet: ExcelJS.Worksheet): string[][] {
   const rows: string[][] = [];
-  workbook.worksheets[0].eachRow({ includeEmpty: true }, (row) => {
+  sheet.eachRow({ includeEmpty: true }, (row) => {
     rows.push(
-      EXPORT_COLUMNS.map((_, index) => {
+      SHEET_COLUMNS.map((_, index) => {
         const value = row.getCell(index + 1).value;
-        return value === null || value === undefined ? '' : String(value);
+        if (typeof value === 'object' && value !== null && 'text' in value) {
+          return text(value.text);
+        }
+        return text(value);
       })
     );
   });
   return rows;
 }
 
-describe.each(FORMATS)('writeSheet — the Titles sheet (%s)', (format) => {
-  it('writes the sixteen-column header row first', async () => {
-    const { bytes } = await titlesFile([fullMovie()], format);
+describe.each(FORMATS)('writeSheet — the one table (%s)', (format) => {
+  it('writes the table row for row, every row type in one sheet', async () => {
+    const bytes = await writeSheet(TABLE, format);
 
-    const [header] = await cells(bytes, format);
-    expect(header).toEqual([...EXPORT_COLUMNS]);
-  });
-
-  it('writes one row per film, in the order the table holds', async () => {
-    const { bytes } = await titlesFile(
-      [
-        fullMovie({ id: 'm1', title: 'Zephyr' }),
-        fullMovie({ id: 'm2', title: 'Amélie' }),
-      ],
-      format
+    const workbook = await open(bytes, format);
+    expect(cellsOf(workbook.worksheets[0])).toEqual(
+      TABLE.map((row) => row.map(text))
     );
-
-    const rows = await cells(bytes, format);
-    expect(rows.slice(1).map((row) => row[1])).toEqual(['Amélie', 'Zephyr']);
+    expect(
+      cellsOf(workbook.worksheets[0])
+        .slice(1)
+        .map((row) => row[0])
+    ).toEqual(['Movie', 'Series', 'Season', 'Episode', 'Episode']);
   });
 
-  it('writes a header-only sheet for a library of none', async () => {
-    const { bytes } = await titlesFile([], format);
+  it('writes the header alone for a library of none', async () => {
+    const bytes = await writeSheet(exportRows([], [], ALL).table, format);
 
-    expect(await cells(bytes, format)).toEqual([[...EXPORT_COLUMNS]]);
+    const workbook = await open(bytes, format);
+    expect(cellsOf(workbook.worksheets[0])).toEqual([[...SHEET_COLUMNS]]);
   });
 });
 
 describe('writeSheet — as csv', () => {
-  it('names the file after the export', async () => {
-    const files = await write([fullMovie()], 'csv');
+  it('starts the one file with a UTF-8 BOM, once', async () => {
+    const csv = (await writeSheet(TABLE, 'csv')).toString('utf8');
 
-    expect(files.map((file) => file.filename)).toContain(`${NAME}.csv`);
+    expect(csv.startsWith(BOM)).toBe(true);
+    expect(csv.slice(1).startsWith(BOM)).toBe(false);
+    expect(csv.split(BOM)).toHaveLength(2);
   });
 
-  it('names the file after whatever name it is handed', async () => {
-    const files = await write(
-      [fullMovie()],
-      'csv',
-      'familyflix-collection_01-01-2027'
+  it('opens with the Sheet columns as its header line', async () => {
+    const csv = (await writeSheet(TABLE, 'csv')).toString('utf8');
+
+    expect(csv.slice(1).split(/\r?\n/)[0]).toBe(SHEET_COLUMNS.join(','));
+  });
+
+  it('keeps the subtitle paths in one cell, joined by |', async () => {
+    const csv = (await writeSheet(TABLE, 'csv')).toString('utf8');
+
+    expect(csv).toContain(
+      'Amélie (2001)/Subtitles/French.srt|Amélie (2001)/Subtitles/English.srt'
     );
-
-    expect(files.map((file) => file.filename)).toContain(
-      'familyflix-collection_01-01-2027.csv'
-    );
-  });
-
-  it('starts the file with a UTF-8 BOM', async () => {
-    const { bytes } = await titlesFile([fullMovie({ title: 'Amélie' })], 'csv');
-
-    expect(bytes.subarray(0, 3)).toEqual(Buffer.from([0xef, 0xbb, 0xbf]));
-  });
-
-  it('writes the BOM once, ahead of the header', async () => {
-    const { bytes } = await titlesFile([fullMovie()], 'csv');
-    const text = bytes.toString('utf8');
-
-    expect(text.slice(1)).not.toContain(BOM);
-    expect(text.slice(1).startsWith(EXPORT_COLUMNS.join(','))).toBe(true);
   });
 });
 
 describe('writeSheet — as xlsx', () => {
-  it('names the file after the export', async () => {
-    const files = await write([fullMovie()], 'xlsx');
-
-    expect(files.map((file) => file.filename)).toContain(`${NAME}.xlsx`);
-  });
-
-  it('writes a workbook — the zip an .xlsx is — with no BOM', async () => {
-    const { bytes } = await titlesFile([fullMovie()], 'xlsx');
+  it('writes a workbook, the zip an .xlsx is, with no BOM', async () => {
+    const bytes = await writeSheet(TABLE, 'xlsx');
 
     expect(bytes.subarray(0, 2).toString('latin1')).toBe('PK');
   });
 
-  it('names the first worksheet Titles', async () => {
-    const { bytes } = await titlesFile([fullMovie()], 'xlsx');
+  it('holds one worksheet, named Library', async () => {
+    const workbook = await open(await writeSheet(TABLE, 'xlsx'), 'xlsx');
 
-    const workbook = await open(bytes, 'xlsx');
-    expect(workbook.worksheets[0].name).toBe('Titles');
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Library']);
   });
 
   it('writes the year, runtime and rating as number cells', async () => {
-    const { bytes } = await titlesFile(
-      [fullMovie({ year: 1988, runtimeMinutes: 132, rating: 8 })],
-      'xlsx'
-    );
+    const workbook = await open(await writeSheet(TABLE, 'xlsx'), 'xlsx');
 
-    const row = (await open(bytes, 'xlsx')).worksheets[0].getRow(2);
-    const column = (name: string) =>
-      (EXPORT_COLUMNS as readonly string[]).indexOf(name) + 1;
-    expect(row.getCell(column('Year')).value).toBe(1988);
-    expect(row.getCell(column('Runtime')).value).toBe(132);
-    expect(row.getCell(column('Rating')).value).toBe(8);
+    const row = workbook.worksheets[0].getRow(2);
+    const column = (name: string): number =>
+      (SHEET_COLUMNS as readonly string[]).indexOf(name) + 1;
+    expect(row.getCell(column('Year')).value).toBe(2001);
+    expect(row.getCell(column('Runtime')).value).toBe(122);
+    expect(row.getCell(column('Rating')).value).toBe(7);
   });
 
   it('writes the header in the default font, with no widths and no frozen panes', async () => {
-    const { bytes } = await titlesFile([fullMovie()], 'xlsx');
+    const sheet = (await open(await writeSheet(TABLE, 'xlsx'), 'xlsx'))
+      .worksheets[0];
 
-    const sheet = (await open(bytes, 'xlsx')).worksheets[0];
     expect(sheet.getRow(1).getCell(1).font?.bold ?? false).toBe(false);
     expect(sheet.getColumn(1).width).toBeUndefined();
     expect((sheet.views ?? []).some((view) => view.state === 'frozen')).toBe(
       false
     );
   });
+
+  it('links a Poster and a Still cell to its path, the path as its text', async () => {
+    const sheet = (await open(await writeSheet(TABLE, 'xlsx'), 'xlsx'))
+      .worksheets[0];
+    const column = (name: string): number =>
+      (SHEET_COLUMNS as readonly string[]).indexOf(name) + 1;
+
+    expect(sheet.getRow(2).getCell(column('Poster')).value).toEqual({
+      text: 'Amélie (2001)/Images/poster.jpg',
+      hyperlink: 'Amélie (2001)/Images/poster.jpg',
+    });
+    expect(sheet.getRow(5).getCell(column('Still')).value).toEqual({
+      text: 'Tidewater (2018)/Season 01/Images/Stills/S01E01.jpg',
+      hyperlink: 'Tidewater (2018)/Season 01/Images/Stills/S01E01.jpg',
+    });
+  });
 });
-
-describe.each(FORMATS)(
-  'writeSheet — the round trip through the Sheet reader (%s)',
-  (format) => {
-    const LIBRARY: Movie[] = [
-      fullMovie({
-        id: 'm2',
-        title: 'Amélie',
-        year: 2001,
-        synopsis:
-          'A shy waitress decides to change the lives of those around her.',
-        director: 'Jean-Pierre Jeunet',
-        cast: ['Audrey Tautou'],
-        rating: 7,
-        genres: [
-          { id: 'g4', name: 'Romance' },
-          { id: 'g3', name: 'Comedy' },
-        ],
-        watched: false,
-        resumePositionSeconds: 1200,
-        status: 'in-progress',
-        subtitles: [track('fr', 0)],
-      }),
-      fullMovie({ id: 'm1' }),
-      fullMovie({
-        id: 'm3',
-        title: 'Northwind',
-        year: null,
-        synopsis: null,
-        director: null,
-        cast: [],
-        rating: null,
-        genres: [],
-        watched: false,
-        status: 'unwatched',
-        subtitles: [],
-      }),
-    ];
-
-    it('reads back one Sheet row per film, every field equal', async () => {
-      const { filename, bytes } = await titlesFile(LIBRARY, format);
-
-      const rows = await readSheet(bytes, filename);
-
-      expect(rows).toEqual(
-        LIBRARY.map((movie) => ({
-          title: movie.title,
-          year: movie.year,
-          endYear: movie.year,
-          genres: movie.genres.map((genre) => genre.name),
-          director: movie.director,
-          cast: movie.cast,
-          synopsis: movie.synopsis,
-          rating: movie.rating,
-          watched: movie.status === 'watched',
-        }))
-      );
-    });
-
-    it('survives the awkward titles — a diacritic, a comma and a quote', async () => {
-      const titles = ['"Whatever," she said', 'Amélie'];
-      const { filename, bytes } = await titlesFile(
-        titles.map((title, index) => fullMovie({ id: `m${index}`, title })),
-        format
-      );
-
-      const rows = await readSheet(bytes, filename);
-
-      expect(rows.map((row) => row.title)).toEqual(titles);
-    });
-  }
-);

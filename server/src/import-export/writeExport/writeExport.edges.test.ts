@@ -227,6 +227,7 @@ describe('writeExport — a stored file that can’t be read', () => {
       folder: join(destination, NAME),
       movieCount: 2,
       seriesCount: 0,
+      warnings: [],
     });
   });
 
@@ -238,14 +239,14 @@ describe('writeExport — a stored file that can’t be read', () => {
       series: [],
     });
 
-    const heat = join(destination, NAME, 'Heat (1995)');
+    const heat = join(destination, NAME, 'Heat (1995)', 'Images');
     expect(readdirSync(heat)).toEqual(['backdrop.png']);
     expect(readFileSync(join(heat, 'backdrop.png'), 'utf8')).toBe(
       'heat backdrop'
     );
     expect(
       readFileSync(
-        join(destination, NAME, 'Zephyr (2020)', 'poster.jpg'),
+        join(destination, NAME, 'Zephyr (2020)', 'Images', 'poster.jpg'),
         'utf8'
       )
     ).toBe('zephyr poster');
@@ -259,10 +260,13 @@ describe('writeExport — a stored file that can’t be read', () => {
       series: [],
     });
 
-    const sheet = readFileSync(join(destination, NAME, `${NAME}.csv`), 'utf8');
-    expect(sheet).not.toContain('Heat (1995)/poster.jpg');
-    expect(sheet).toContain('Heat (1995)/backdrop.png');
-    expect(sheet).toContain('Zephyr (2020)/poster.jpg');
+    const sheet = readFileSync(
+      join(destination, NAME, 'Meta', 'familyflix-library.csv'),
+      'utf8'
+    );
+    expect(sheet).not.toContain('Heat (1995)/Images/poster.jpg');
+    expect(sheet).toContain('Heat (1995)/Images/backdrop.png');
+    expect(sheet).toContain('Zephyr (2020)/Images/poster.jpg');
   });
 });
 
@@ -342,27 +346,26 @@ describe('writeExport — zero titles', () => {
       folder: join(destination, NAME),
       movieCount: 0,
       seriesCount: 0,
+      warnings: [],
     });
   });
 
-  it('writes both csv sheets holding their header row alone', async () => {
+  it('writes the one csv sheet in Meta holding its header row alone', async () => {
     const { media, destination } = sandbox();
 
     await writeExport(media, request(destination), { movies: [], series: [] });
 
     const folder = join(destination, NAME);
-    expect(readdirSync(folder).sort()).toEqual(
-      [`${NAME}-episodes.csv`, `${NAME}.csv`].sort()
-    );
-    const titles = csvLines(join(folder, `${NAME}.csv`));
-    const episodes = csvLines(join(folder, `${NAME}-episodes.csv`));
-    expect(titles).toHaveLength(1);
-    expect(titles[0]).toMatch(/^Type,Title,Year,/);
-    expect(episodes).toHaveLength(1);
-    expect(episodes[0]).toMatch(/^Series,Season,Episode,/);
+    expect(readdirSync(folder)).toEqual(['Meta']);
+    expect(readdirSync(join(folder, 'Meta'))).toEqual([
+      'familyflix-library.csv',
+    ]);
+    const lines = csvLines(join(folder, 'Meta', 'familyflix-library.csv'));
+    expect(lines).toHaveLength(1);
+    expect(lines[0]).toMatch(/^Type,Folder,Season,Episode,Title,/);
   });
 
-  it('writes the workbook’s two worksheets holding their header row alone', async () => {
+  it('writes the workbook’s one worksheet holding its header row alone', async () => {
     const { media, destination } = sandbox();
 
     await writeExport(media, request(destination, { format: 'xlsx' }), {
@@ -370,16 +373,15 @@ describe('writeExport — zero titles', () => {
       series: [],
     });
 
-    const folder = join(destination, NAME);
-    expect(readdirSync(folder)).toEqual([`${NAME}.xlsx`]);
+    const folder = join(destination, NAME, 'Meta');
+    expect(readdirSync(folder)).toEqual(['familyflix-library.xlsx']);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(
-      readFileSync(join(folder, `${NAME}.xlsx`)) as unknown as ArrayBuffer
+      readFileSync(
+        join(folder, 'familyflix-library.xlsx')
+      ) as unknown as ArrayBuffer
     );
-    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
-      'Titles',
-      'Episodes',
-    ]);
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Library']);
     for (const sheet of workbook.worksheets) {
       expect(sheet.actualRowCount).toBe(1);
     }

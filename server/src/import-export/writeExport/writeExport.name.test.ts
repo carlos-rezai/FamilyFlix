@@ -67,19 +67,17 @@ describe('writeExport — the folder and the sheet take the requested name', () 
     expect(readdirSync(destination)).toEqual(['Heat (1995) – kopia']);
   });
 
-  it('names both csv sheets after the requested name', async () => {
+  it('names the csv sheet familyflix-library, not after the requested name', async () => {
     const { media, destination } = sandbox();
 
     await writeExport(media, request(destination), CONTENT);
 
     expect(
-      readdirSync(join(destination, 'Heat (1995) – kopia')).sort()
-    ).toEqual(
-      ['Heat (1995) – kopia-episodes.csv', 'Heat (1995) – kopia.csv'].sort()
-    );
+      readdirSync(join(destination, 'Heat (1995) – kopia', 'Meta'))
+    ).toEqual(['familyflix-library.csv']);
   });
 
-  it('names the workbook after the requested name', async () => {
+  it('names the workbook familyflix-library, not after the requested name', async () => {
     const { media, destination } = sandbox();
 
     await writeExport(
@@ -88,8 +86,8 @@ describe('writeExport — the folder and the sheet take the requested name', () 
       CONTENT
     );
 
-    expect(readdirSync(join(destination, 'Family films'))).toEqual([
-      'Family films.xlsx',
+    expect(readdirSync(join(destination, 'Family films', 'Meta'))).toEqual([
+      'familyflix-library.xlsx',
     ]);
   });
 
@@ -104,7 +102,9 @@ describe('writeExport — the folder and the sheet take the requested name', () 
 
     expect(readdirSync(destination)).toEqual(['  Family films']);
     expect(
-      existsSync(join(destination, '  Family films', '  Family films.csv'))
+      existsSync(
+        join(destination, '  Family films', 'Meta', 'familyflix-library.csv')
+      )
     ).toBe(true);
   });
 });
@@ -125,9 +125,9 @@ describe('writeExport — a taken requested name', () => {
       folder: join(destination, 'Family films (1)'),
     });
     expect(readdirSync(join(destination, 'Family films'))).toEqual([]);
-    expect(readdirSync(join(destination, 'Family films (1)'))).toContain(
-      'Family films.csv'
-    );
+    expect(
+      readdirSync(join(destination, 'Family films (1)', 'Meta'))
+    ).toContain('familyflix-library.csv');
   });
 });
 

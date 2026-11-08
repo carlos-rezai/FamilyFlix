@@ -76,6 +76,7 @@ describe('writeExport — a valid destination', () => {
       folder: join(destination, NAME),
       movieCount: 2,
       seriesCount: 0,
+      warnings: [],
     });
   });
 
@@ -98,9 +99,9 @@ describe('writeExport — a valid destination', () => {
       series: [],
     });
 
-    const sheet = join(destination, NAME, `${NAME}.csv`);
+    const sheet = join(destination, NAME, 'Meta', 'familyflix-library.csv');
     expect(existsSync(sheet)).toBe(true);
-    const rows = await readSheet(readFileSync(sheet), `${NAME}.csv`);
+    const rows = await readSheet(readFileSync(sheet), 'familyflix-library.csv');
     expect(rows.map((row) => row.title)).toEqual(['Amélie', 'Zephyr']);
   });
 
@@ -112,9 +113,12 @@ describe('writeExport — a valid destination', () => {
       series: [],
     });
 
-    const sheet = join(destination, NAME, `${NAME}.xlsx`);
+    const sheet = join(destination, NAME, 'Meta', 'familyflix-library.xlsx');
     expect(existsSync(sheet)).toBe(true);
-    const rows = await readSheet(readFileSync(sheet), `${NAME}.xlsx`);
+    const rows = await readSheet(
+      readFileSync(sheet),
+      'familyflix-library.xlsx'
+    );
     expect(rows.map((row) => row.title)).toEqual(['Amélie', 'Zephyr']);
   });
 
@@ -126,9 +130,7 @@ describe('writeExport — a valid destination', () => {
       series: [],
     });
 
-    expect(readdirSync(join(destination, NAME)).sort()).toEqual(
-      [`${NAME}-episodes.csv`, `${NAME}.csv`].sort()
-    );
+    expect(readdirSync(join(destination, NAME))).toEqual(['Meta']);
   });
 });
 

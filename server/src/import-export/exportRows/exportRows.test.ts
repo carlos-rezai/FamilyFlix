@@ -1,309 +1,389 @@
 // @vitest-environment node
 //
-// 31 — Export options, Phase 1: "the tracer" (issue #276).
+// 58 — Folder layout, Phase 5: the one sheet (issue #538).
 //
-// `exportRows(movies, series, include)` — the deep module of the initiative:
-// the library in, the tables an **Export** is written from out. Every cell
-// rule lives here, moved out of the **Sheet writer**, and is spelled once.
-// Phase 1 is films only: the Titles table's sixteen columns, A–Z, with Seasons
-// and Episodes blank (a film has neither) and Poster and Backdrop blank
-// (Images arrives in Phase 3). Every column is written whatever the options.
+// `exportRows(movies, series, include)` answers one table, `table`: the
+// `SHEET_COLUMNS` header, then a row per Movie, Series, Season and Episode,
+// A to Z by **Folder key**, then season, then number. Every row carries its
+// `Type` and its `Folder`; a Season row adds `Season`, an Episode row `Season`
+// and `Episode`; a cell is blank where the type has no such field (log 58,
+// Q13). The count columns are gone; `Air date`, `Runtime`, `TMDB rating`,
+// `TMDB id` and `Favorite` are filled; resume positions, the Details state,
+// the Still source and Import mode are never written.
 //
-// The Titles table is read here as `tables.titles`: its first row is the
-// header, and each row after it one title. A cell is compared as text — `''`
-// for an empty one — so a test about a rule is not also a test about whether
-// a blank is `null` or `''`.
+// A cell is compared as text, `''` for an empty one.
 
 import { describe, expect, it } from 'vitest';
 
-import { EXPORT_COLUMNS, type Movie, type Subtitle } from '@/types';
+import {
+  ROW_TYPES,
+  SHEET_COLUMNS,
+  type Episode,
+  type Movie,
+  type SeriesDetail,
+} from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
+import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { exportRows } from './exportRows';
 
-/** The sixteen Titles columns, in the PRD's order. */
-const HEADER = [
-  'Type',
-  'Title',
-  'Year',
-  'Runtime',
-  'Genres',
-  'Director',
-  'Cast',
-  'Synopsis',
-  'Rating',
-  'Status',
-  'Favorite',
-  'Seasons',
-  'Episodes',
-  'Subtitles',
-  'Poster',
-  'Backdrop',
-];
-
 const OFF = { images: false, subtitles: false };
-const ON = { images: true, subtitles: true };
-
-/** A subtitle track at a position, for the order the Subtitles cell keeps. */
-const track = (language: string, position: number): Subtitle => ({
-  id: `s${position}`,
-  path: `Die Hard (1988)/${language}.srt`,
-  language,
-  position,
-});
-
-/** One film with every exported column populated. */
-function fullMovie(overrides: Partial<Movie> = {}): Movie {
-  return makeMovie({
-    id: 'm1',
-    title: 'Die Hard',
-    year: 1988,
-    runtimeMinutes: 132,
-    synopsis:
-      'A New York cop takes on a tower full of thieves on Christmas Eve.',
-    director: 'John McTiernan',
-    cast: ['Bruce Willis', 'Alan Rickman'],
-    rating: 8,
-    isFavorite: true,
-    watched: true,
-    status: 'watched',
-    videoPath: 'Die Hard (1988)/die-hard.mkv',
-    posterPath: 'Die Hard (1988)/poster.jpg',
-    backdropPath: 'Die Hard (1988)/backdrop.png',
-    genres: [
-      { id: 'g1', name: 'Action' },
-      { id: 'g2', name: 'Thriller' },
-    ],
-    subtitles: [track('en', 0), track('de', 1)],
-    ...overrides,
-  });
-}
 
 const text = (cell: unknown): string =>
   cell === null || cell === undefined ? '' : String(cell);
 
-/** The Titles table as text, header first. */
-function titles(movies: Movie[], include = OFF): string[][] {
-  const { tables } = exportRows(movies, [], include);
-  return tables.titles.map((row: readonly unknown[]) => row.map(text));
+/** The one table as text, header first. */
+function table(
+  movies: readonly Movie[],
+  series: readonly SeriesDetail[]
+): string[][] {
+  return exportRows(movies, series, OFF).table.map((row) => row.map(text));
 }
 
-/** The one film's row, by column name. */
-function rowOf(movie: Movie, include = OFF): Record<string, string> {
-  const [header, row] = titles([movie], include);
-  return Object.fromEntries(
-    header.map((name, index) => [name, row[index] ?? ''])
+/** Every row after the header, by column name. */
+function rows(
+  movies: readonly Movie[],
+  series: readonly SeriesDetail[]
+): Record<string, string>[] {
+  const [header = [], ...body] = table(movies, series);
+  return body.map((row) =>
+    Object.fromEntries(header.map((name, index) => [name, row[index] ?? '']))
   );
 }
 
-describe('exportRows — the Titles header', () => {
-  it('spells the sixteen columns once, in the shared types', () => {
-    expect([...EXPORT_COLUMNS]).toEqual(HEADER);
+/** A row's identity: its Type, Folder, Season and Episode cells. */
+const identity = (row: Record<string, string>): string =>
+  [row.Type, row.Folder, row.Season, row.Episode].join(' | ');
+
+/** _Heat_ (1995), every field the sheet carries filled. */
+const HEAT: Movie = makeMovie({
+  id: 'heat',
+  tmdbId: 949,
+  title: 'Heat',
+  year: 1995,
+  runtimeMinutes: 170,
+  synopsis: 'A thief and a detective.',
+  director: 'Michael Mann',
+  cast: ['Al Pacino', 'Robert De Niro'],
+  rating: 9,
+  tmdbScore: 7.9,
+  isFavorite: true,
+  status: 'in-progress',
+  watched: false,
+  resumePositionSeconds: 4321,
+  videoPath: 'heat-1995/Heat.1995.1080p.mkv',
+  genres: [
+    { id: 'g1', name: 'Crime' },
+    { id: 'g2', name: 'Thriller' },
+  ],
+});
+
+const AMELIE: Movie = makeMovie({
+  id: 'amelie',
+  title: 'Amelie',
+  year: 2001,
+  status: 'watched',
+  watched: true,
+  videoPath: 'amelie-2001/amelie.mp4',
+});
+
+const EXISTENZ: Movie = makeMovie({
+  id: 'existenz',
+  title: 'eXistenZ',
+  year: 1999,
+  videoPath: 'existenz-1999/existenz.mkv',
+});
+
+/** An episode with the fields an Episode row carries. */
+const dressed = (episode: Episode): Episode => ({
+  ...episode,
+  title: `Episode ${episode.season}x${episode.number}`,
+  airDate: `2022-0${episode.season}-1${episode.number}`,
+  runtimeMinutes: 50 + episode.number,
+  videoPath: `severance-2022/season-0${episode.season}/S0${episode.season}E0${episode.number}.mkv`,
+  resumePositionSeconds: episode.status === 'in-progress' ? 777 : 0,
+});
+
+/**
+ * _Severance_ (2022–): season 1 of two episodes, season 2 of one, each
+ * season's episodes handed over in reverse and the seasons too, so the order
+ * written is the sheet's own.
+ */
+const SEVERANCE: SeriesDetail = ((): SeriesDetail => {
+  const detail = makeSeriesDetail([['watched', 'in-progress'], ['unwatched']], {
+    id: 'severance',
+    tmdbId: 95396,
+    title: 'Severance',
+    year: 2022,
+    endYear: null,
+    creator: 'Dan Erickson',
+    cast: ['Adam Scott', 'Britt Lower'],
+    synopsis: 'Work and life, severed.',
+    rating: 8,
+    tmdbScore: 8.4,
+    isFavorite: true,
+    genres: [{ id: 'g3', name: 'Drama' }],
+  });
+  return {
+    ...detail,
+    seasons: [...detail.seasons].reverse().map((season) => ({
+      ...season,
+      episodes: [...season.episodes].reverse().map(dressed),
+    })),
+  };
+})();
+
+describe('the Sheet columns and Row types', () => {
+  it('spells the four row types once, in the shared types', () => {
+    expect([...ROW_TYPES]).toEqual(['Movie', 'Series', 'Season', 'Episode']);
   });
 
-  it('writes the sixteen-column header first', () => {
-    expect(titles([fullMovie()])[0]).toEqual(HEADER);
+  it('spells the twenty-two Sheet columns once, in order', () => {
+    expect([...SHEET_COLUMNS]).toEqual([
+      'Type',
+      'Folder',
+      'Season',
+      'Episode',
+      'Title',
+      'Year',
+      'Air date',
+      'Runtime',
+      'Genres',
+      'Director',
+      'Cast',
+      'Synopsis',
+      'Rating',
+      'TMDB rating',
+      'TMDB id',
+      'Status',
+      'Favorite',
+      'Video',
+      'Subtitles',
+      'Poster',
+      'Backdrop',
+      'Still',
+    ]);
+  });
+});
+
+describe('exportRows — one table', () => {
+  it('writes the Sheet columns as its header, whatever the options', () => {
+    for (const include of [
+      OFF,
+      { images: true, subtitles: true },
+      { images: true, subtitles: false },
+    ]) {
+      expect(exportRows([HEAT], [SEVERANCE], include).table[0]).toEqual([
+        ...SHEET_COLUMNS,
+      ]);
+    }
   });
 
   it('writes the header alone for a library of none', () => {
-    expect(titles([])).toEqual([HEADER]);
+    expect(table([], [])).toEqual([[...SHEET_COLUMNS]]);
   });
 
-  it('writes every column of every row, sixteen cells wide', () => {
-    const rows = titles([
-      fullMovie(),
-      fullMovie({ id: 'm2', title: 'Amélie' }),
-    ]);
+  it('writes every row as wide as the header', () => {
+    for (const row of table([HEAT, AMELIE], [SEVERANCE])) {
+      expect(row).toHaveLength(SHEET_COLUMNS.length);
+    }
+  });
 
-    expect(rows).toHaveLength(3);
-    rows.forEach((row) => expect(row).toHaveLength(HEADER.length));
+  it('writes a Movie, Series, Season and Episode row in one table', () => {
+    expect(new Set(rows([HEAT], [SEVERANCE]).map((row) => row.Type))).toEqual(
+      new Set(['Movie', 'Series', 'Season', 'Episode'])
+    );
   });
 });
 
 describe('exportRows — the order', () => {
-  it('sorts the films A–Z by title, whatever order they came in', () => {
-    const rows = titles([
-      fullMovie({ id: 'm1', title: 'Zephyr' }),
-      fullMovie({ id: 'm2', title: 'Backwater' }),
-      fullMovie({ id: 'm3', title: 'Meridian' }),
-    ]);
-
-    expect(rows.slice(1).map((row) => row[1])).toEqual([
-      'Backwater',
-      'Meridian',
-      'Zephyr',
+  it('runs A to Z by Folder key, then season, then number', () => {
+    expect(rows([HEAT, EXISTENZ, AMELIE], [SEVERANCE]).map(identity)).toEqual([
+      'Movie | Amelie (2001) |  | ',
+      'Movie | eXistenZ (1999) |  | ',
+      'Movie | Heat (1995) |  | ',
+      'Series | Severance (2022) |  | ',
+      'Season | Severance (2022) | 1 | ',
+      'Episode | Severance (2022) | 1 | 1',
+      'Episode | Severance (2022) | 1 | 2',
+      'Season | Severance (2022) | 2 | ',
+      'Episode | Severance (2022) | 2 | 1',
     ]);
   });
 
-  it('sorts without regard to case', () => {
-    const rows = titles([
-      fullMovie({ id: 'm1', title: 'Zephyr' }),
-      fullMovie({ id: 'm2', title: 'apple Grove' }),
-      fullMovie({ id: 'm3', title: 'Backwater' }),
-    ]);
+  it('sorts by the Folder key, not the title alone', () => {
+    const later = makeMovie({
+      id: 'heat-remake',
+      title: 'Heat',
+      year: 2030,
+      videoPath: 'heat-2030/heat.mkv',
+    });
 
-    expect(rows.slice(1).map((row) => row[1])).toEqual([
-      'apple Grove',
-      'Backwater',
-      'Zephyr',
+    expect(rows([later, HEAT], []).map((row) => row.Folder)).toEqual([
+      'Heat (1995)',
+      'Heat (2030)',
     ]);
   });
 });
 
-describe('exportRows — every film cell rule', () => {
-  it('writes every column of a fully populated film', () => {
-    expect(rowOf(fullMovie())).toEqual({
+describe('exportRows — a Movie row', () => {
+  it('fills every column a film has, and leaves the rest blank', () => {
+    const [heat] = rows([HEAT], []);
+
+    expect(heat).toEqual({
       Type: 'Movie',
-      Title: 'Die Hard',
-      Year: '1988',
-      Runtime: '132',
-      Genres: 'Action, Thriller',
-      Director: 'John McTiernan',
-      Cast: 'Bruce Willis, Alan Rickman',
-      Synopsis:
-        'A New York cop takes on a tower full of thieves on Christmas Eve.',
-      Rating: '8',
-      Status: 'Watched',
+      Folder: 'Heat (1995)',
+      Season: '',
+      Episode: '',
+      Title: 'Heat',
+      Year: '1995',
+      'Air date': '',
+      Runtime: '170',
+      Genres: 'Crime, Thriller',
+      Director: 'Michael Mann',
+      Cast: 'Al Pacino, Robert De Niro',
+      Synopsis: 'A thief and a detective.',
+      Rating: '9',
+      'TMDB rating': '7.9',
+      'TMDB id': '949',
+      Status: 'In progress',
       Favorite: 'Yes',
-      Seasons: '',
-      Episodes: '',
-      Subtitles: 'en, de',
+      Video: 'Heat (1995)/Heat.1995.1080p.mkv',
+      Subtitles: '',
       Poster: '',
       Backdrop: '',
+      Still: '',
     });
   });
 
-  it('types every film as Movie', () => {
-    expect(rowOf(fullMovie()).Type).toBe('Movie');
+  it('writes each watch state’s word under Status', () => {
+    const statuses = rows([HEAT, AMELIE, EXISTENZ], []).map((row) => [
+      row.Folder,
+      row.Status,
+    ]);
+
+    expect(statuses).toEqual([
+      ['Amelie (2001)', 'Watched'],
+      ['eXistenZ (1999)', 'Unwatched'],
+      ['Heat (1995)', 'In progress'],
+    ]);
   });
 
-  it('writes the title as stored', () => {
-    expect(rowOf(fullMovie({ title: '  Die.Hard  ' })).Title).toBe(
-      '  Die.Hard  '
-    );
-  });
+  it('leaves Favorite, TMDB rating and TMDB id blank when not held', () => {
+    const [amelie] = rows([AMELIE], []);
 
-  it('writes the runtime in minutes, and leaves an unknown one blank', () => {
-    expect(rowOf(fullMovie({ runtimeMinutes: 97 })).Runtime).toBe('97');
-    expect(rowOf(fullMovie({ runtimeMinutes: null })).Runtime).toBe('');
-  });
-
-  it('leaves a null year, director, synopsis and rating blank', () => {
-    const row = rowOf(
-      fullMovie({ year: null, director: null, synopsis: null, rating: null })
-    );
-
-    expect(row.Year).toBe('');
-    expect(row.Director).toBe('');
-    expect(row.Synopsis).toBe('');
-    expect(row.Rating).toBe('');
-  });
-
-  it('joins the genres with a comma and a space, in stored order', () => {
-    const row = rowOf(
-      fullMovie({
-        genres: [
-          { id: 'g2', name: 'Thriller' },
-          { id: 'g1', name: 'Action' },
-          { id: 'g3', name: 'Comedy' },
-        ],
-      })
-    );
-
-    expect(row.Genres).toBe('Thriller, Action, Comedy');
-    expect(rowOf(fullMovie({ genres: [] })).Genres).toBe('');
-  });
-
-  it('joins the cast with a comma and a space, in stored order', () => {
-    const row = rowOf(
-      fullMovie({ cast: ['Alan Rickman', 'Bruce Willis', 'Bonnie Bedelia'] })
-    );
-
-    expect(row.Cast).toBe('Alan Rickman, Bruce Willis, Bonnie Bedelia');
-    expect(rowOf(fullMovie({ cast: [] })).Cast).toBe('');
-  });
-
-  it('writes the synopsis as stored', () => {
-    expect(
-      rowOf(fullMovie({ synopsis: 'Short, and "quoted".' })).Synopsis
-    ).toBe('Short, and "quoted".');
-  });
-
-  it('writes the rating as the stored value', () => {
-    expect(rowOf(fullMovie({ rating: 10 })).Rating).toBe('10');
-    expect(rowOf(fullMovie({ rating: 0 })).Rating).toBe('0');
-    expect(rowOf(fullMovie({ rating: 7 })).Rating).toBe('7');
-  });
-
-  it.each([
-    ['watched', 'Watched'],
-    ['in-progress', 'In progress'],
-    ['unwatched', 'Unwatched'],
-  ] as const)('writes the %s state as “%s”', (status, cell) => {
-    const row = rowOf(
-      fullMovie({
-        status,
-        watched: status === 'watched',
-        resumePositionSeconds: status === 'in-progress' ? 600 : 0,
-      })
-    );
-
-    expect(row.Status).toBe(cell);
-  });
-
-  it('writes Favorite as Yes for a hearted film, and blank otherwise', () => {
-    expect(rowOf(fullMovie({ isFavorite: true })).Favorite).toBe('Yes');
-    expect(rowOf(fullMovie({ isFavorite: false })).Favorite).toBe('');
-  });
-
-  it('leaves Seasons and Episodes blank for a film', () => {
-    const row = rowOf(fullMovie());
-
-    expect(row.Seasons).toBe('');
-    expect(row.Episodes).toBe('');
-  });
-
-  it('joins the subtitle languages in track order, not stored order', () => {
-    const row = rowOf(
-      fullMovie({ subtitles: [track('fr', 2), track('en', 0), track('de', 1)] })
-    );
-
-    expect(row.Subtitles).toBe('en, de, fr');
-    expect(rowOf(fullMovie({ subtitles: [] })).Subtitles).toBe('');
+    expect([
+      amelie?.Favorite,
+      amelie?.['TMDB rating'],
+      amelie?.['TMDB id'],
+    ]).toEqual(['', '', '']);
   });
 });
 
-describe('exportRows — Poster and Backdrop', () => {
-  it('leaves Poster and Backdrop blank for a film with art', () => {
-    const row = rowOf(fullMovie());
+describe('exportRows — a Series row', () => {
+  it('fills a series’ columns, and leaves blank what its rows derive', () => {
+    const series = rows([], [SEVERANCE]).find((row) => row.Type === 'Series');
 
-    expect(row.Poster).toBe('');
-    expect(row.Backdrop).toBe('');
-  });
-
-  it('leaves Poster and Backdrop blank for a film with none', () => {
-    const row = rowOf(fullMovie({ posterPath: null, backdropPath: null }));
-
-    expect(row.Poster).toBe('');
-    expect(row.Backdrop).toBe('');
+    expect(series).toEqual({
+      Type: 'Series',
+      Folder: 'Severance (2022)',
+      Season: '',
+      Episode: '',
+      Title: 'Severance',
+      Year: '2022–',
+      'Air date': '',
+      Runtime: '',
+      Genres: 'Drama',
+      Director: 'Dan Erickson',
+      Cast: 'Adam Scott, Britt Lower',
+      Synopsis: 'Work and life, severed.',
+      Rating: '8',
+      'TMDB rating': '8.4',
+      'TMDB id': '95396',
+      Status: '',
+      Favorite: 'Yes',
+      Video: '',
+      Subtitles: '',
+      Poster: '',
+      Backdrop: '',
+      Still: '',
+    });
   });
 });
 
-describe('exportRows — every column whatever the options', () => {
-  it('writes the same sixteen-column header with every option on', () => {
-    expect(titles([fullMovie()], ON)[0]).toEqual(HEADER);
+describe('exportRows — a Season row', () => {
+  it('carries its Type, Folder and Season, and nothing else with no poster', () => {
+    const season = rows([], [SEVERANCE]).find(
+      (row) => row.Type === 'Season' && row.Season === '2'
+    );
+
+    expect(season).toEqual(
+      Object.fromEntries(
+        SHEET_COLUMNS.map((column) => [
+          column,
+          { Type: 'Season', Folder: 'Severance (2022)', Season: '2' }[
+            column as 'Type' | 'Folder' | 'Season'
+          ] ?? '',
+        ])
+      )
+    );
+  });
+});
+
+describe('exportRows — an Episode row', () => {
+  it('fills an episode’s columns, and leaves the rest blank', () => {
+    const episode = rows([], [SEVERANCE]).find(
+      (row) =>
+        row.Type === 'Episode' && row.Season === '1' && row.Episode === '2'
+    );
+
+    expect(episode).toEqual({
+      Type: 'Episode',
+      Folder: 'Severance (2022)',
+      Season: '1',
+      Episode: '2',
+      Title: 'Episode 1x2',
+      Year: '',
+      'Air date': '2022-01-12',
+      Runtime: '52',
+      Genres: '',
+      Director: '',
+      Cast: '',
+      Synopsis: '',
+      Rating: '',
+      'TMDB rating': '',
+      'TMDB id': '',
+      Status: 'In progress',
+      Favorite: '',
+      Video: 'Severance (2022)/Season 01/S01E02.mkv',
+      Subtitles: '',
+      Poster: '',
+      Backdrop: '',
+      Still: '',
+    });
+  });
+});
+
+describe('exportRows — what the sheet leaves out', () => {
+  it('has no count columns and no bookkeeping columns', () => {
+    const [header = []] = table([HEAT], [SEVERANCE]);
+
+    for (const gone of [
+      'Seasons',
+      'Episodes',
+      'Resume',
+      'Resume position',
+      'Details',
+      'Still source',
+      'Import mode',
+    ]) {
+      expect(header).not.toContain(gone);
+    }
   });
 
-  it('writes the same sixteen-column header with every option off', () => {
-    expect(titles([fullMovie()], OFF)[0]).toEqual(HEADER);
-  });
+  it('writes no resume position into any cell', () => {
+    const cells = table([HEAT], [SEVERANCE]).flat();
 
-  it('writes the subtitle languages with the subtitles option off', () => {
-    expect(rowOf(fullMovie(), OFF).Subtitles).toBe('en, de');
-  });
-
-  it('never writes the video path, in any cell', () => {
-    const cells = titles([fullMovie()], ON).flat().join('\n');
-
-    expect(cells).not.toContain('die-hard.mkv');
+    expect(cells).not.toContain('4321');
+    expect(cells).not.toContain('777');
   });
 });
