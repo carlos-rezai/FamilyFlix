@@ -93,8 +93,8 @@ interface PickedShow {
 /** Build _Harbor and Vine_ inside `parent`. */
 function buildShow(parent: string): PickedShow {
   const dir = join(parent, 'Harbor and Vine (2021)');
-  const seasonOne = join(dir, 'Season 1');
-  const seasonTwo = join(dir, 'Season 2');
+  const seasonOne = join(dir, 'Season 01');
+  const seasonTwo = join(dir, 'Season 02');
   mkdirSync(seasonOne, { recursive: true });
   mkdirSync(seasonTwo, { recursive: true });
   const show: PickedShow = {
@@ -294,19 +294,19 @@ describe('POST /api/series — Link', () => {
       [
         1,
         1,
-        'Harbor and Vine (2021)/Season 1/Harbor.and.Vine.S01E01.Pilot.mp4',
+        'Harbor and Vine (2021)/Season 01/Harbor.and.Vine.S01E01.Pilot.mp4',
         folderId,
       ],
       [
         1,
         2,
-        'Harbor and Vine (2021)/Season 1/Harbor.and.Vine.S01E02.Low.Tide.mp4',
+        'Harbor and Vine (2021)/Season 01/Harbor.and.Vine.S01E02.Low.Tide.mp4',
         folderId,
       ],
       [
         2,
         1,
-        'Harbor and Vine (2021)/Season 2/Harbor.and.Vine.S02E01.Spring.Tide.mp4',
+        'Harbor and Vine (2021)/Season 02/Harbor.and.Vine.S02E01.Spring.Tide.mp4',
         folderId,
       ],
     ]);
@@ -543,7 +543,7 @@ describe('POST /api/series — a failed linked save', () => {
       foundEpisode(1, 1, 'Pilot', show.pilot),
       foundEpisode(1, 2, 'Low Tide', show.lowTide, [
         {
-          path: join(show.dir, 'Season 1', 'Harbor.and.Vine.S01E02.Gone.srt'),
+          path: join(show.dir, 'Season 01', 'Harbor.and.Vine.S01E02.Gone.srt'),
           language: 'English',
         },
       ]),

@@ -6,8 +6,9 @@
 // series add — walked with `walkLibraryFolder`, grouped with `groupShows`, so
 // there is no second numbering rule — and answers a `ShowFolderRead`: its
 // episodes season by season (a **Season folder**'s number beating the
-// filename's), loose tagged episodes at its root, each episode's stem-matched
-// subtitles in their detected languages, and the **Title guess** by the
+// filename's), each episode's tracks from its `Subtitles/S01E01/` folder in
+// their detected languages (log 58, issue #536: loose tagged videos at its
+// root are Unplaced), and the **Title guess** by the
 // importer's own rule on the folder's name. A folder it cannot read is the
 // `unreadable` refusal; one holding no video is `empty`. `admitFolder`'s
 // precedent: a value, never a throw.
@@ -19,17 +20,18 @@
 // `walkLibraryFolder`'s prior art.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { readShowFolder, type ShowFolderContext } from './readShowFolder';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 
-/** A folder under `root`, holding the files named. */
+/** A folder under `root`, holding the files named, at paths inside it. */
 function folderWith(root: string, path: string, files: string[]): string {
   const dir = join(root, path);
   mkdirSync(dir, { recursive: true });
   for (const file of files) {
+    mkdirSync(dirname(join(dir, file)), { recursive: true });
     writeFileSync(join(dir, file), `${file} bytes`);
   }
   return dir;
@@ -54,8 +56,8 @@ async function readOf(dir: string, context: ShowFolderContext = noLibrary) {
 describe('readShowFolder — Season folders', () => {
   it('reads each Season folder’s episodes, season then episode order, titles off their tags', async () => {
     const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
-    folderWith(show, 'Season 2', ['Harbor.and.Vine.S02E01.Spring.Tide.mkv']);
-    folderWith(show, 'Season 1', [
+    folderWith(show, 'Season 02', ['Harbor.and.Vine.S02E01.Spring.Tide.mkv']);
+    folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E02.Low.Tide.mkv',
       'Harbor.and.Vine.S01E01.Pilot.mkv',
     ]);
@@ -74,19 +76,19 @@ describe('readShowFolder — Season folders', () => {
         1,
         1,
         'Pilot',
-        join(show, 'Season 1', 'Harbor.and.Vine.S01E01.Pilot.mkv'),
+        join(show, 'Season 01', 'Harbor.and.Vine.S01E01.Pilot.mkv'),
       ],
       [
         1,
         2,
         'Low Tide',
-        join(show, 'Season 1', 'Harbor.and.Vine.S01E02.Low.Tide.mkv'),
+        join(show, 'Season 01', 'Harbor.and.Vine.S01E02.Low.Tide.mkv'),
       ],
       [
         2,
         1,
         'Spring Tide',
-        join(show, 'Season 2', 'Harbor.and.Vine.S02E01.Spring.Tide.mkv'),
+        join(show, 'Season 02', 'Harbor.and.Vine.S02E01.Spring.Tide.mkv'),
       ],
     ]);
   });
@@ -94,7 +96,7 @@ describe('readShowFolder — Season folders', () => {
   it('lets a Season folder’s number beat the filename’s', async () => {
     const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
     // Misfiled under season 1's tag, in season 3's folder.
-    folderWith(show, 'Season 3', ['Harbor.and.Vine.S01E04.Harvest.mkv']);
+    folderWith(show, 'Season 03', ['Harbor.and.Vine.S01E04.Harvest.mkv']);
 
     const read = await readOf(show);
 
@@ -105,7 +107,7 @@ describe('readShowFolder — Season folders', () => {
 
   it('answers the picked folder itself as its absolute path', async () => {
     const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readOf(show);
 
@@ -114,12 +116,11 @@ describe('readShowFolder — Season folders', () => {
 });
 
 describe('readShowFolder — loose tagged episodes', () => {
-  it('reads tagged videos lying in the picked folder itself, seasons off their tags', async () => {
+  it('answers tagged videos lying in the picked folder itself as Unplaced', async () => {
     const show = folderWith(
       sandboxRoot('familyflix-show-read-'),
       'Lighthouse Keepers',
       [
-        'Lighthouse.Keepers.S02E01.Return.mkv',
         'Lighthouse.Keepers.S01E02.The.Storm.mkv',
         'Lighthouse.Keepers.S01E01.Arrival.mkv',
       ]
@@ -127,46 +128,35 @@ describe('readShowFolder — loose tagged episodes', () => {
 
     const read = await readOf(show);
 
-    expect(
-      read.episodes.map((episode) => [
-        episode.season,
-        episode.number,
-        episode.title,
-        episode.video,
-      ])
-    ).toEqual([
-      [1, 1, 'Arrival', join(show, 'Lighthouse.Keepers.S01E01.Arrival.mkv')],
-      [
-        1,
-        2,
-        'The Storm',
-        join(show, 'Lighthouse.Keepers.S01E02.The.Storm.mkv'),
-      ],
-      [2, 1, 'Return', join(show, 'Lighthouse.Keepers.S02E01.Return.mkv')],
+    expect(read.episodes).toEqual([]);
+    expect(read.unplaced.map((video) => video.video)).toEqual([
+      join(show, 'Lighthouse.Keepers.S01E01.Arrival.mkv'),
+      join(show, 'Lighthouse.Keepers.S01E02.The.Storm.mkv'),
     ]);
   });
 });
 
 describe('readShowFolder — subtitles', () => {
-  it('gives each episode the subtitles beginning with its stem, each in its detected language', async () => {
+  it('gives each episode the tracks of its Subtitles/S01E01/ folder, each in its detected language', async () => {
     const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
-    const season = folderWith(show, 'Season 1', [
+    const season = folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E01.Pilot.mkv',
-      'Harbor.and.Vine.S01E01.Pilot.en.srt',
-      'Harbor.and.Vine.S01E01.Pilot.pt.srt',
+      'Subtitles/S01E01/Harbor.and.Vine.S01E01.Pilot.en.srt',
+      'Subtitles/S01E01/Harbor.and.Vine.S01E01.Pilot.pt.srt',
       'Harbor.and.Vine.S01E02.Low.Tide.mkv',
     ]);
 
     const read = await readOf(show);
 
     const [pilot, lowTide] = read.episodes;
+    const tracks = join(season, 'Subtitles', 'S01E01');
     expect(pilot.subtitles).toEqual([
       {
-        path: join(season, 'Harbor.and.Vine.S01E01.Pilot.en.srt'),
+        path: join(tracks, 'Harbor.and.Vine.S01E01.Pilot.en.srt'),
         language: 'English',
       },
       {
-        path: join(season, 'Harbor.and.Vine.S01E01.Pilot.pt.srt'),
+        path: join(tracks, 'Harbor.and.Vine.S01E01.Pilot.pt.srt'),
         language: 'Portuguese',
       },
     ]);
@@ -180,7 +170,7 @@ describe('readShowFolder — the Title guess', () => {
       sandboxRoot('familyflix-show-read-'),
       'Harbor.and.Vine.2019'
     );
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readOf(show);
 
@@ -217,7 +207,7 @@ describe('readShowFolder — the refusals', () => {
       'Harbor and Vine',
       ['poster.jpg', 'notes.txt']
     );
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.en.srt']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.en.srt']);
 
     expect(await readShowFolder(show, noLibrary)).toEqual({
       kind: 'refused',
@@ -265,13 +255,13 @@ describe('readShowFolder — a folder read as a film', () => {
 });
 
 describe('readShowFolder — the stray subtitles', () => {
-  it('counts the subtitles that begin with no episode’s stem', async () => {
+  it('counts the tracks whose folder numbers no episode', async () => {
     const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
-    folderWith(show, 'Season 1', [
+    folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E01.Pilot.mkv',
-      'Harbor.and.Vine.S01E01.Pilot.en.srt',
-      'commentary.en.srt',
-      'notes.pt.srt',
+      'Subtitles/S01E01/Harbor.and.Vine.S01E01.Pilot.en.srt',
+      'Subtitles/S01E08/commentary.en.srt',
+      'Subtitles/S01E09/notes.pt.srt',
     ]);
 
     const read = await readOf(show);
@@ -282,9 +272,9 @@ describe('readShowFolder — the stray subtitles', () => {
 
   it('counts none when every subtitle has its episode', async () => {
     const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
-    folderWith(show, 'Season 1', [
+    folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E01.Pilot.mkv',
-      'Harbor.and.Vine.S01E01.Pilot.en.srt',
+      'Subtitles/S01E01/Harbor.and.Vine.S01E01.Pilot.en.srt',
     ]);
 
     const read = await readOf(show);
@@ -322,7 +312,7 @@ describe('readShowFolder — a held Show folder', () => {
   it('answers the held series’s id when the folder is its Show folder', async () => {
     const root = sandboxRoot('familyflix-show-read-');
     const show = join(root, 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readHeld(show, [
       {
@@ -337,7 +327,7 @@ describe('readShowFolder — a held Show folder', () => {
 
   it('still reads the held folder’s episodes', async () => {
     const show = join(sandboxRoot('familyflix-show-read-'), 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readHeld(show, [
       { seriesId: 'harbor-and-vine', path: show },
@@ -349,7 +339,7 @@ describe('readShowFolder — a held Show folder', () => {
   it('answers null when the folder is no held series’s Show folder', async () => {
     const root = sandboxRoot('familyflix-show-read-');
     const show = join(root, 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readHeld(show, [
       {
@@ -357,7 +347,7 @@ describe('readShowFolder — a held Show folder', () => {
         path: join(root, 'Lighthouse Keepers'),
       },
       // A season of the show is not the show.
-      { seriesId: 'harbor-season', path: join(show, 'Season 1') },
+      { seriesId: 'harbor-season', path: join(show, 'Season 01') },
     ]);
 
     expect(read.heldSeriesId).toBeNull();
@@ -375,7 +365,7 @@ describe('readShowFolder — its Library folder', () => {
   it('answers the id of the listed folder the show lies inside', async () => {
     const root = sandboxRoot('familyflix-show-read-');
     const show = join(root, 'Shows', 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readOf(show, listedAt(join(root, 'Shows')));
 
@@ -385,7 +375,7 @@ describe('readShowFolder — its Library folder', () => {
   it('answers null for a show outside every listed folder', async () => {
     const root = sandboxRoot('familyflix-show-read-');
     const show = join(root, 'Downloads', 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readOf(show, listedAt(join(root, 'Shows')));
 
@@ -395,7 +385,7 @@ describe('readShowFolder — its Library folder', () => {
   it('answers null for the Library folder itself', async () => {
     const root = sandboxRoot('familyflix-show-read-');
     const shows = join(root, 'Shows');
-    folderWith(shows, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(shows, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readOf(shows, listedAt(shows));
 

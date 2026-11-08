@@ -4,7 +4,6 @@ import { describe, expect, it } from 'vitest';
 import { readEpisodeTag } from './readEpisodeTag';
 import { readSeasonFolder } from '../readSeasonFolder/readSeasonFolder';
 import { episodeTag } from '../../../../server/src/media/episodeTag/episodeTag';
-import { seasonOf } from '../../../../server/src/import-export/groupShows/groupShows';
 import { ALL_SEASON_FOLDER_CASES } from '../../../../server/src/test-support/seasonFolderCases/seasonFolderCases';
 
 /**
@@ -81,27 +80,6 @@ const SHARED_EPISODE_WORDS: readonly (readonly [string, number | undefined])[] =
     ['Afl. 12.mkv', undefined],
   ];
 
-/**
- * 38 — Title editing (issue #311): the **Season folder**'s cases. The server's
- * `seasonOf` groups a scan into shows; the client's `readSeasonFolder` seeds
- * the **Numbering guess** off the same folder name.
- */
-const SHARED_SEASON_FOLDERS: readonly string[] = [
-  'Season 01',
-  'Season 1',
-  'season 12',
-  'Season02',
-  'S01',
-  's3',
-  'Season 00',
-  '  Season 4  ',
-  'Disc 2',
-  'Extras',
-  'Season',
-  'Series 2',
-  'The Night Ferry 2',
-];
-
 describe('the Episode tag — client and server agree', () => {
   it.each(SHARED_FILENAMES.map((name) => [name]))('%s', (filename) => {
     const server = episodeTag(filename);
@@ -159,23 +137,21 @@ describe('the Episode tag — client and server agree', () => {
   );
 });
 
-describe('the Season folder — client and server agree', () => {
-  it.each(SHARED_SEASON_FOLDERS.map((name) => [name]))('%s', (name) => {
-    expect(readSeasonFolder(name)).toBe(seasonOf(name));
-  });
-
+/**
+ * 58, Folder layout (issue #536): the server's `seasonOf` reads `Season NN`
+ * only, while the client's `readSeasonFolder` keeps log 51's wider rule until
+ * phase 4 (issue #537) narrows it too. Until then the client alone answers the
+ * wide table, and #537 pairs the two sides again.
+ */
+describe('the Season folder: the client reads the wide table', () => {
   /**
    * 51, Library audit (issue #447): the wider rule's one table, the same
-   * the two units' table tests read. Agreement is asserted on the table's own
-   * answer too, so two readings both wrong the same way still fail.
+   * the unit's table test reads.
    */
   it.each(ALL_SEASON_FOLDER_CASES.map(([name, season]) => [name, season]))(
-    '%s reads as season %s on both sides',
+    '%s reads as season %s',
     (name, season) => {
-      expect({
-        server: seasonOf(name),
-        client: readSeasonFolder(name),
-      }).toEqual({ server: season, client: season });
+      expect(readSeasonFolder(name)).toBe(season);
     }
   );
 });

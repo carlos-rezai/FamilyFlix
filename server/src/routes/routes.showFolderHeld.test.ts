@@ -105,7 +105,7 @@ describe('GET /api/show-folder — a held Show folder', () => {
   it('answers 200 with the held series’s id', async () => {
     const { baseUrl, shows, storage } = freshApi();
     const show = join(shows, 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
     const listed = storage.addLibraryFolder(shows);
     const series = storage.addSeries({ title: 'Harbor and Vine' });
     storage.setSourceFolder(series.id, listed.id, 'Harbor and Vine');
@@ -122,7 +122,7 @@ describe('GET /api/show-folder — a held Show folder', () => {
   it('answers null for a folder no held series came from', async () => {
     const { baseUrl, shows, storage } = freshApi();
     const show = join(shows, 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
     folderWith(shows, 'Lighthouse Keepers', [
       'Lighthouse.Keepers.S01E01.Arrival.mkv',
     ]);
@@ -145,7 +145,7 @@ describe('GET /api/show-folder: a Show folder with a held episode', () => {
   it('answers the series one of its videos plays for, with no folder on record', async () => {
     const { baseUrl, shows, storage } = freshApi();
     const show = join(shows, 'Harbour and Vine');
-    folderWith(show, 'Season 1', [
+    folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E01.Pilot.mkv',
       'Harbor.and.Vine.S01E02.Low.Tide.mkv',
     ]);
@@ -154,7 +154,8 @@ describe('GET /api/show-folder: a Show folder with a held episode', () => {
       {
         season: 1,
         number: 1,
-        videoPath: 'Harbour and Vine/Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
+        videoPath:
+          'Harbour and Vine/Season 01/Harbor.and.Vine.S01E01.Pilot.mkv',
         videoFolderId: listed.id,
       },
     ]);

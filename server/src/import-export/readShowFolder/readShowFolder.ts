@@ -8,7 +8,11 @@ import {
   isVideoFilename,
 } from '../../media/fileKinds/fileKinds';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
-import type { FolderScan } from '../../media/readTitleFolder/readTitleFolder';
+import {
+  isSeasonFolder,
+  readSeasonFolder,
+  type FolderScan,
+} from '../../media/readTitleFolder/readTitleFolder';
 import type { StoredLibraryFolder } from '../../library';
 import type { HeldTitle } from '../../library/holding/holding';
 import { groupShows, showFolderOf } from '../groupShows/groupShows';
@@ -58,13 +62,16 @@ const folderScan = (dir: string, entries: Dirent[]): FolderScan => {
 /**
  * The folders holding videos under a picked folder: the folder itself when
  * videos lie loose in it, then every folder beneath it holding a video, a
- * folder holding one not descended.
+ * folder holding one not descended. A **Season folder** is read as the scan
+ * reads it, its tracks from `Subtitles/S01E01/`.
  */
 async function scansUnder(dir: string): Promise<FolderScan[]> {
   const scans: FolderScan[] = [];
   const visit = async (at: string, root: boolean): Promise<void> => {
     const entries = await readdir(at, { withFileTypes: true });
-    const scan = folderScan(at, entries);
+    const scan = isSeasonFolder(basename(at))
+      ? await readSeasonFolder(at)
+      : folderScan(at, entries);
     if (scan.videos.length > 0) {
       scans.push(scan);
       if (!root) {
@@ -89,9 +96,9 @@ async function scansUnder(dir: string): Promise<FolderScan[]> {
  * Read one absolute folder picked on the series add as a **Show folder
  * read**: walked by `scansUnder`, grouped with `groupShows` — there
  * is no second numbering rule — so a **Season folder**'s number beats the
- * filename's, loose tagged videos are numbered off their tags, and each
- * episode keeps its stem-matched subtitles. A folder read as a film answers
- * its videos as **Unplaced**. The **Title guess** is the importer's own rule
+ * filename's, and each episode keeps the tracks of its `Subtitles/S01E01/`
+ * folder. A folder read as a film, loose tagged videos included, answers its
+ * videos as **Unplaced**. The **Title guess** is the importer's own rule
  * on the folder's name. A picked **Season folder** reads only its own videos
  * but stands for its Show folder (`showFolderOf`): titled by the show's
  * name, held-checked as the show, each path answered inside the show.

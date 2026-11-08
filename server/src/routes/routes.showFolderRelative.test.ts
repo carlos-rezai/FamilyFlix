@@ -94,8 +94,8 @@ describe('GET /api/show-folder: paths inside the show', () => {
   it('answers each episode with its path relative to the Show folder', async () => {
     const { baseUrl, shows } = freshApi();
     const show = join(shows, 'De Luizenmoeder');
-    folderWith(show, 'Seizoen 1', ['Aflevering 1.mp4']);
-    folderWith(show, 'Seizoen 2', ['Aflevering 1.mp4']);
+    folderWith(show, 'Season 01', ['Aflevering 1.mp4']);
+    folderWith(show, 'Season 02', ['Aflevering 1.mp4']);
 
     const response = await readFolder(baseUrl, show);
 
@@ -105,8 +105,8 @@ describe('GET /api/show-folder: paths inside the show', () => {
       unplaced: { relativePath: string }[];
     };
     expect(read.episodes.map((episode) => episode.relativePath)).toEqual([
-      'Seizoen 1/Aflevering 1.mp4',
-      'Seizoen 2/Aflevering 1.mp4',
+      'Season 01/Aflevering 1.mp4',
+      'Season 02/Aflevering 1.mp4',
     ]);
     expect(read.unplaced).toEqual([]);
   });

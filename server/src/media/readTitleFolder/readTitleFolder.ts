@@ -8,6 +8,7 @@ import {
   isSubtitleFilename,
   isVideoFilename,
 } from '../fileKinds/fileKinds';
+import { episodeTag, spellEpisodeTag } from '../episodeTag/episodeTag';
 import { folderKeyOf, type FolderKey } from '../folderKeyOf/folderKeyOf';
 
 /** One subtitle file a scan found, and the language its name says. */
@@ -43,15 +44,30 @@ export interface FilmFolderScan extends FilmScan {
   key: FolderKey;
 }
 
-/** One **Season folder** of a series: its videos and the tracks beside them. */
-export type SeasonFolderScan = FolderScan;
+/**
+ * One **Season folder** of a series: its number (`0` the specials), its
+ * videos loose in name order, its **Season poster** from `Images/`, its
+ * **Stills** from `Images/Stills/` by the **Episode tag** their names carry,
+ * and each episode's tracks from `Subtitles/S01E01/`.
+ */
+export interface SeasonFolderScan extends FolderScan {
+  number: number;
+  poster: string | null;
+  /** Each Still by the tag it carries, spelled `S01E01`. */
+  stills: Record<string, string>;
+}
 
-/** A series as its **Title folder** holds it: its **Season folders**. */
+/**
+ * A series as its **Title folder** holds it: its own **Poster** and
+ * **Backdrop** from `Images/`, and its **Season folders** in number order.
+ */
 export interface SeriesFolderScan {
   kind: 'series';
   dir: string;
   name: string;
   key: FolderKey;
+  poster: string | null;
+  backdrop: string | null;
   seasons: SeasonFolderScan[];
 }
 
@@ -71,12 +87,27 @@ export interface LeftOutFolder {
 /** What one folder in a Library folder's root reads as. */
 export type TitleFolderScan = FilmFolderScan | SeriesFolderScan | LeftOutFolder;
 
-/** A **Season folder**'s name: `Season` and its number, case folded. */
-const SEASON_FOLDER = /^season ?\d+$/i;
+/**
+ * A **Season folder**'s name: `Season NN`, two digits or more, case folded;
+ * `Season 00` the specials.
+ */
+const SEASON_FOLDER = /^season (\d{2,})$/i;
+
+/** The season a folder's name says, or `null` for no **Season folder**. */
+export const seasonNumberOf = (name: string): number | null => {
+  const found = SEASON_FOLDER.exec(name);
+  return found === null ? null : Number(found[1]);
+};
 
 /** Whether a folder's name is a **Season folder**'s. */
 export const isSeasonFolder = (name: string): boolean =>
-  SEASON_FOLDER.test(name);
+  seasonNumberOf(name) !== null;
+
+/** A name read as an **Episode tag**'s folder or Still: the tag, spelled. */
+const tagOf = (name: string): string | null => {
+  const tag = episodeTag(name);
+  return tag === null ? null : spellEpisodeTag(tag.season, tag.episode);
+};
 
 /** The name before the extension, lowercased. */
 const stem = (filename: string): string =>
@@ -116,6 +147,55 @@ const imageByRole = (
 };
 
 /**
+ * Read one **Season folder**: its videos loose in name order, its **Season
+ * poster** by role from `Images/`, each **Still** in `Images/Stills/` by the
+ * **Episode tag** its name carries (a name carrying none is passed), and the
+ * tracks of each `Subtitles/` folder named by a tag (a track anywhere else is
+ * passed).
+ */
+export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
+  const name = basename(dir);
+  const videos = filesIn(await entriesOf(dir))
+    .filter(isVideoFilename)
+    .map((file) => join(dir, file));
+
+  const imagesDir = join(dir, 'Images');
+  const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
+
+  const stillsDir = join(imagesDir, 'Stills');
+  const stills: Record<string, string> = {};
+  for (const file of filesIn(await entriesOf(stillsDir))) {
+    const tag = tagOf(file);
+    if (isImageFilename(file) && tag !== null && !(tag in stills)) {
+      stills[tag] = join(stillsDir, file);
+    }
+  }
+
+  const subtitlesDir = join(dir, 'Subtitles');
+  const subtitles: SubtitleFound[] = [];
+  const tagFolders = (await entriesOf(subtitlesDir))
+    .filter((entry) => entry.isDirectory() && tagOf(entry.name) !== null)
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+  for (const folder of tagFolders) {
+    const tracksDir = join(subtitlesDir, folder);
+    subtitles.push(
+      ...subtitlesIn(tracksDir, filesIn(await entriesOf(tracksDir)))
+    );
+  }
+
+  return {
+    dir,
+    name,
+    number: seasonNumberOf(name) as number,
+    videos,
+    subtitles,
+    poster: imageByRole(imagesDir, images, 'poster'),
+    stills,
+  };
+}
+
+/**
  * Read one **Title folder** by the **Folder layout**. One loose video or more
  * and no **Season folder** is a film: its art read by role from `Images/` (a
  * stem, case folded, ending in `poster` or `backdrop`, the first by name
@@ -146,23 +226,20 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     return { kind: 'left-out', dir, name, reason: 'empty' };
   }
 
+  const imagesDir = join(dir, 'Images');
+  const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
+  const poster = imageByRole(imagesDir, images, 'poster');
+  const backdrop = imageByRole(imagesDir, images, 'backdrop');
+
   if (seasons.length > 0) {
     const scans: SeasonFolderScan[] = [];
     for (const season of seasons) {
-      const seasonDir = join(dir, season);
-      const files = filesIn(await entriesOf(seasonDir));
-      scans.push({
-        dir: seasonDir,
-        name: season,
-        videos: files.filter(isVideoFilename).map((f) => join(seasonDir, f)),
-        subtitles: subtitlesIn(seasonDir, files),
-      });
+      scans.push(await readSeasonFolder(join(dir, season)));
     }
-    return { kind: 'series', dir, name, key, seasons: scans };
+    scans.sort((a, b) => a.number - b.number);
+    return { kind: 'series', dir, name, key, poster, backdrop, seasons: scans };
   }
 
-  const imagesDir = join(dir, 'Images');
-  const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
   const subtitlesDir = join(dir, 'Subtitles');
   return {
     kind: 'film',
@@ -170,8 +247,8 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     name,
     key,
     videos,
-    poster: imageByRole(imagesDir, images, 'poster'),
-    backdrop: imageByRole(imagesDir, images, 'backdrop'),
+    poster,
+    backdrop,
     subtitles: subtitlesIn(
       subtitlesDir,
       filesIn(await entriesOf(subtitlesDir))

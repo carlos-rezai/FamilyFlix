@@ -183,8 +183,8 @@ const LINKED_EPISODES = {
     'Harbor & Vine (2021)/Season 01/Harbor.and.Vine.S01E02.The.Night.Market.mp4',
   ],
   Tidewater: [
-    'Tidewater (2018)/Tidewater.S01E01.Low.Water.mp4',
-    'Tidewater (2018)/Tidewater.S01E02.The.Crossing.mp4',
+    'Tidewater (2018)/Season 01/Tidewater.S01E01.Low.Water.mp4',
+    'Tidewater (2018)/Season 01/Tidewater.S01E02.The.Crossing.mp4',
   ],
 } as const;
 
@@ -345,7 +345,7 @@ describe('createImporter.start — the sheet start under an Import mode', () => 
 describe('createImporter — a held show gains an episode on a re-run', () => {
   /** A third Tidewater episode on disk, beside the two the fixture holds. */
   function addThirdEpisode(box: Sandbox): void {
-    const tidewater = join(box.shows.path, 'Tidewater (2018)');
+    const tidewater = join(box.shows.path, 'Tidewater (2018)', 'Season 01');
     copyFileSync(
       join(tidewater, 'Tidewater.S01E02.The.Crossing.mp4'),
       join(tidewater, 'Tidewater.S01E03.High.Water.mp4')
@@ -420,7 +420,7 @@ describe('createImporter — a held show gains an episode on a re-run', () => {
 
     expect(episodesOf(box.storage, 'Tidewater')[2]).toMatchObject({
       videoFolderId: box.shows.id,
-      videoPath: 'Tidewater (2018)/Tidewater.S01E03.High.Water.mp4',
+      videoPath: 'Tidewater (2018)/Season 01/Tidewater.S01E03.High.Water.mp4',
     });
   });
 });

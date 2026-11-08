@@ -1,9 +1,10 @@
-import { basename, dirname, extname } from 'node:path';
+import { basename, dirname } from 'node:path';
 
-import { episodeTag } from '../../media/episodeTag/episodeTag';
-import type {
-  FolderScan,
-  SubtitleFound,
+import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
+import {
+  seasonNumberOf,
+  type FolderScan,
+  type SubtitleFound,
 } from '../../media/readTitleFolder/readTitleFolder';
 
 /** One episode video of a show, numbered. */
@@ -13,13 +14,13 @@ export interface ShowEpisode {
   title: string | null;
   /** The video, absolute, where the scan found it. */
   video: string;
-  /** The subtitles whose names begin with the video's stem, in scan order. */
+  /** The tracks of its own `Subtitles/S01E01/` folder, in scan order. */
   subtitles: SubtitleFound[];
 }
 
 /**
- * A **Show folder** — the parent of one or more **Season folders**, or a
- * folder of loose tagged videos — and every episode found in it in season,
+ * A series' **Title folder**, the parent of one or more **Season folders**,
+ * and every episode found in it in season,
  * then episode order.
  */
 export interface ShowScan {
@@ -33,7 +34,7 @@ export interface ShowScan {
    * number — **Unplaced**, absolute, in scan order. Never episodes.
    */
   unplaced: string[];
-  /** The subtitles whose names begin with no video's stem, absolute. */
+  /** The tracks whose tag folder numbers no placed episode, absolute. */
   straySubtitles: string[];
 }
 
@@ -44,31 +45,13 @@ export interface GroupedScans<T extends FolderScan = FolderScan> {
 }
 
 /**
- * A **Season folder**'s name, its number in the first group that matched:
- * `Season N`, `Season 0N` or `Seizoen N`, or `SNN` anywhere in a release name,
- * standing alone between separators (so never `S01E01`), or `Specials`.
- */
-const SEASON_FOLDER =
-  /^(?:season|seizoen)\s*(\d{1,3})(?=$|[\s._\-[(])|(?:^|[\s._-])s(\d{1,3})(?=$|[\s._\-[(])|^(specials)$/i;
-
-/**
  * The season a folder's name says, or `null` for a name that is no **Season
- * folder**. A name opening with `Season`, `Seizoen` or `S` and a number, in
- * either case, says that number, whatever follows a separator after it, so the
- * year in `Season 1 (2008)` is never read; a release name holding a standalone
- * `SNN` not followed by `E` and a digit says `NN`, its parent then the **Show
- * folder**; `Specials` and `Season 0` say season 0. An **Episode tag** such as
- * `S01E01` is never a Season folder. The client's `readSeasonFolder` mirrors
- * the rule; the drift guard beside its `readEpisodeTag` runs both over one
- * table.
+ * folder**: `Season NN`, two digits or more, case folded, `Season 00` the
+ * specials. `Season 1`, `Seizoen 1`, `S01`, `Specials` and a name with
+ * anything after the number are no Season folder (log 58; log 51's wider rule
+ * is retired). `readTitleFolder`'s own rule, so a scan and a group agree.
  */
-export const seasonOf = (name: string): number | null => {
-  const found = SEASON_FOLDER.exec(name.trim());
-  if (found === null) {
-    return null;
-  }
-  return found[3] === undefined ? Number(found[1] ?? found[2]) : 0;
-};
+export const seasonOf = seasonNumberOf;
 
 /**
  * The **Show folder** a folder of episode videos belongs to: a **Season
@@ -77,44 +60,18 @@ export const seasonOf = (name: string): number | null => {
 export const showFolderOf = (dir: string): string =>
   seasonOf(basename(dir)) === null ? dir : dirname(dir);
 
-/** A file's name without its extension, lower-cased for the stem rule. */
-const stemOf = (path: string): string => {
-  const name = basename(path);
-  return name.slice(0, name.length - extname(name).length).toLowerCase();
-};
-
-/**
- * The video a subtitle belongs to: the one whose stem its name begins with —
- * the longest such stem, so `Pilot.Extended.srt` goes to `Pilot.Extended`
- * rather than to `Pilot` — or `null` for a subtitle beginning with none.
- */
-export const videoOf = (subtitle: string, videos: string[]): string | null => {
-  const name = basename(subtitle).toLowerCase();
-  let best: string | null = null;
-  for (const video of videos) {
-    const stem = stemOf(video);
-    if (
-      name.startsWith(stem) &&
-      (best === null || stem.length > stemOf(best).length)
-    ) {
-      best = video;
-    }
-  }
-  return best;
-};
-
 /**
  * Group the **Source folders** the walk answered into shows and films.
  *
- * A scan named as a **Season folder** belongs to its parent, the **Show
- * folder**, and its season is the folder's, which wins over the tag's. A scan
- * whose own videos carry an **Episode tag** is itself a Show folder, its
- * seasons off the tags. Either way the episode number and title come off the
- * tag — a multi-episode file's first number — and each episode takes the
- * subtitles beside it whose names begin with its video's stem; a subtitle
- * beginning with no stem is a stray. A video with no tag, or a second one
- * claiming a number already taken in the show, is **Unplaced**. Every other
- * scan is a film and passes through by identity, in the order it came.
+ * A scan named as a **Season folder** belongs to its parent, the series'
+ * **Title folder**, and its season is the folder's, which wins over the tag's.
+ * The episode number and title come off the **Episode tag** (a multi-episode
+ * file's first number), or the **Episode word** under the folder's season.
+ * Each episode takes the tracks of its own `Subtitles/S01E01/` folder; a
+ * track whose folder numbers no placed episode is a stray. A video no rule
+ * numbers, or a second one claiming a number already taken in the show, is
+ * **Unplaced**. Every other scan, a folder of loose tagged videos included,
+ * is a film and passes through by identity, in the order it came.
  */
 export function groupShows<T extends FolderScan>(scans: T[]): GroupedScans<T> {
   const shows = new Map<string, ShowScan>();
@@ -124,15 +81,12 @@ export function groupShows<T extends FolderScan>(scans: T[]): GroupedScans<T> {
 
   for (const scan of scans) {
     const folderSeason = seasonOf(scan.name);
-    const loose =
-      folderSeason === null &&
-      scan.videos.some((video) => episodeTag(basename(video)) !== null);
-    if (folderSeason === null && !loose) {
+    if (folderSeason === null) {
       films.push(scan);
       continue;
     }
 
-    const dir = showFolderOf(scan.dir);
+    const dir = dirname(scan.dir);
     let show = shows.get(dir);
     if (show === undefined) {
       show = {
@@ -147,14 +101,14 @@ export function groupShows<T extends FolderScan>(scans: T[]): GroupedScans<T> {
     }
     const numbers = taken.get(show) as Set<string>;
 
+    /** This scan's placed episodes, by their tag spelled `S01E01`. */
     const placed = new Map<string, ShowEpisode>();
     for (const video of scan.videos) {
-      // The season is known here — the folder's, or 1 at a Show folder's
-      // root — so the Episode word is read too; it never made the show.
-      const tag = episodeTag(basename(video), folderSeason ?? 1);
-      const season = folderSeason ?? tag?.season ?? null;
+      // The season is the folder's, so the Episode word is read too.
+      const tag = episodeTag(basename(video), folderSeason);
+      const season = folderSeason;
       const number = `${season}:${tag?.episode}`;
-      if (tag === null || season === null || numbers.has(number)) {
+      if (tag === null || numbers.has(number)) {
         show.unplaced.push(video);
         continue;
       }
@@ -166,18 +120,20 @@ export function groupShows<T extends FolderScan>(scans: T[]): GroupedScans<T> {
         video,
         subtitles: [],
       };
-      placed.set(video, episode);
+      placed.set(spellEpisodeTag(season, tag.episode), episode);
       show.episodes.push(episode);
     }
 
     for (const subtitle of scan.subtitles) {
-      const video = videoOf(subtitle.path, scan.videos);
-      if (video === null) {
+      const folder = episodeTag(basename(dirname(subtitle.path)));
+      const episode =
+        folder === null
+          ? undefined
+          : placed.get(spellEpisodeTag(folder.season, folder.episode));
+      if (episode === undefined) {
         show.straySubtitles.push(subtitle.path);
       } else {
-        // A subtitle of an unplaced video goes nowhere: its video is already
-        // a Problem, and the file comes in with it once it is renamed.
-        placed.get(video)?.subtitles.push(subtitle);
+        episode.subtitles.push(subtitle);
       }
     }
   }

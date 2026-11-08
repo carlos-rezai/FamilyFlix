@@ -61,7 +61,7 @@ describe('readShowFolder: a held episode video', () => {
   it('answers the series one episode video plays for, with no folder on record', async () => {
     const shows = join(sandboxRoot('familyflix-show-held-video-'), 'Shows');
     const show = join(shows, 'Harbour and Vine');
-    folderWith(show, 'Season 1', [
+    folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E01.Pilot.mkv',
       'Harbor.and.Vine.S01E02.Low.Tide.mkv',
     ]);
@@ -69,7 +69,7 @@ describe('readShowFolder: a held episode video', () => {
     const read = await readOf(
       show,
       heldBy(shows, {
-        'Harbour and Vine/Season 1/Harbor.and.Vine.S01E02.Low.Tide.mkv': {
+        'Harbour and Vine/Season 01/Harbor.and.Vine.S01E02.Low.Tide.mkv': {
           kind: 'series',
           id: 'harbor-and-vine',
         },
@@ -83,20 +83,20 @@ describe('readShowFolder: a held episode video', () => {
   it('asks each video by its path relative to the Library folder, with forward slashes', async () => {
     const shows = join(sandboxRoot('familyflix-show-held-video-'), 'Shows');
     const show = join(shows, 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
     const asked: string[] = [];
 
     await readOf(show, heldBy(shows, {}, asked));
 
     expect(asked).toContain(
-      'Harbor and Vine/Season 1/Harbor.and.Vine.S01E01.Pilot.mkv'
+      'Harbor and Vine/Season 01/Harbor.and.Vine.S01E01.Pilot.mkv'
     );
   });
 
   it('answers null when no series holds any of its videos', async () => {
     const shows = join(sandboxRoot('familyflix-show-held-video-'), 'Shows');
     const show = join(shows, 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const read = await readOf(
       show,

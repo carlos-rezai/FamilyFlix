@@ -6,8 +6,8 @@
 // picked **Show folder**, spelled with forward slashes whatever the machine's
 // own separator is: a numbered episode as its `relativePath`, an **Unplaced**
 // video as its entry's `relativePath` in `unplaced`. Two seasons'
-// `Aflevering 1.mp4` then read `Seizoen 1/Aflevering 1.mp4` and
-// `Seizoen 2/Aflevering 1.mp4`, where their names alone read alike.
+// `Aflevering 1.mp4` then read `Season 01/Aflevering 1.mp4` and
+// `Season 02/Aflevering 1.mp4`, where their names alone read alike.
 //
 // Against real trees under `sandboxRoot`, `readShowFolder.test.ts`'s prior art.
 
@@ -50,8 +50,8 @@ describe('readShowFolder: each video’s path inside the show', () => {
       sandboxRoot('familyflix-show-relative-'),
       'De Luizenmoeder'
     );
-    folderWith(show, 'Seizoen 1', ['Aflevering 1.mp4']);
-    folderWith(show, 'Seizoen 2', ['Aflevering 1.mp4']);
+    folderWith(show, 'Season 01', ['Aflevering 1.mp4']);
+    folderWith(show, 'Season 02', ['Aflevering 1.mp4']);
 
     const read = await readOf(show);
 
@@ -59,17 +59,17 @@ describe('readShowFolder: each video’s path inside the show', () => {
       read.episodes.map((episode) => [episode.video, episode.relativePath])
     ).toEqual([
       [
-        join(show, 'Seizoen 1', 'Aflevering 1.mp4'),
-        'Seizoen 1/Aflevering 1.mp4',
+        join(show, 'Season 01', 'Aflevering 1.mp4'),
+        'Season 01/Aflevering 1.mp4',
       ],
       [
-        join(show, 'Seizoen 2', 'Aflevering 1.mp4'),
-        'Seizoen 2/Aflevering 1.mp4',
+        join(show, 'Season 02', 'Aflevering 1.mp4'),
+        'Season 02/Aflevering 1.mp4',
       ],
     ]);
   });
 
-  it('answers an episode lying in the picked folder itself by its name alone', async () => {
+  it('answers a video lying in the picked folder itself, Unplaced, by its name alone', async () => {
     const show = folderWith(
       sandboxRoot('familyflix-show-relative-'),
       'Harbor and Vine',
@@ -78,7 +78,7 @@ describe('readShowFolder: each video’s path inside the show', () => {
 
     const read = await readOf(show);
 
-    expect(read.episodes.map((episode) => episode.relativePath)).toEqual([
+    expect(read.unplaced.map((video) => video.relativePath)).toEqual([
       'Harbor.and.Vine.S01E01.Pilot.mkv',
     ]);
   });

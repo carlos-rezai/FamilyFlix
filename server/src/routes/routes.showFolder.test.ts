@@ -111,11 +111,13 @@ describe('GET /api/show-folder', () => {
   it('answers 200 with the Show folder read', async () => {
     const { baseUrl, shows } = freshApi();
     const show = join(shows, 'Harbor.and.Vine.2019');
-    const seasonOne = folderWith(show, 'Season 1', [
+    const seasonOne = folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E01.Pilot.mkv',
+    ]);
+    const tracks = folderWith(seasonOne, 'Subtitles/S01E01', [
       'Harbor.and.Vine.S01E01.Pilot.pt.srt',
     ]);
-    const seasonTwo = folderWith(show, 'Season 2', [
+    const seasonTwo = folderWith(show, 'Season 02', [
       'Harbor.and.Vine.S01E07.Spring.Tide.mkv',
     ]);
 
@@ -131,10 +133,10 @@ describe('GET /api/show-folder', () => {
         number: 1,
         title: 'Pilot',
         video: join(seasonOne, 'Harbor.and.Vine.S01E01.Pilot.mkv'),
-        relativePath: 'Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
+        relativePath: 'Season 01/Harbor.and.Vine.S01E01.Pilot.mkv',
         subtitles: [
           {
-            path: join(seasonOne, 'Harbor.and.Vine.S01E01.Pilot.pt.srt'),
+            path: join(tracks, 'Harbor.and.Vine.S01E01.Pilot.pt.srt'),
             language: 'Portuguese',
           },
         ],
@@ -144,7 +146,7 @@ describe('GET /api/show-folder', () => {
         number: 7,
         title: 'Spring Tide',
         video: join(seasonTwo, 'Harbor.and.Vine.S01E07.Spring.Tide.mkv'),
-        relativePath: 'Season 2/Harbor.and.Vine.S01E07.Spring.Tide.mkv',
+        relativePath: 'Season 02/Harbor.and.Vine.S01E07.Spring.Tide.mkv',
         subtitles: [],
       },
     ]);
@@ -154,7 +156,7 @@ describe('GET /api/show-folder', () => {
     const { baseUrl, shows, storage } = freshApi();
     const listed = storage.addLibraryFolder(shows);
     const show = join(shows, 'Harbor and Vine');
-    folderWith(show, 'Season 1', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
+    folderWith(show, 'Season 01', ['Harbor.and.Vine.S01E01.Pilot.mkv']);
 
     const response = await readFolder(baseUrl, show);
 

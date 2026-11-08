@@ -173,15 +173,15 @@ describe('a keep-files Delete leaves its videos out', () => {
 
   it('records every episode video of a linked series', async () => {
     const api = await freshApi();
-    place(api.library, 'Tidewater (2018)/Tidewater.S01E01.mkv');
-    place(api.library, 'Tidewater (2018)/Tidewater.S01E02.mkv');
+    place(api.library, 'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv');
+    place(api.library, 'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv');
     await scanToReview(api, 'link');
 
     await remove(api, `series/${await seriesId(api, 'Tidewater')}`);
 
     expect(leftOut(api)).toEqual([
-      'Tidewater (2018)/Tidewater.S01E01.mkv',
-      'Tidewater (2018)/Tidewater.S01E02.mkv',
+      'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv',
+      'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv',
     ]);
   });
 
@@ -218,15 +218,15 @@ describe('a copied title’s Delete leaves its original out', () => {
 
   it('records a copied series’ Source files, and the next scan does not copy it back', async () => {
     const api = await freshApi();
-    place(api.library, 'Tidewater (2018)/Tidewater.S01E01.mkv');
-    place(api.library, 'Tidewater (2018)/Tidewater.S01E02.mkv');
+    place(api.library, 'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv');
+    place(api.library, 'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv');
     await scanToReview(api, 'copy');
 
     await remove(api, `series/${await seriesId(api, 'Tidewater')}`);
 
     expect(leftOut(api)).toEqual([
-      'Tidewater (2018)/Tidewater.S01E01.mkv',
-      'Tidewater (2018)/Tidewater.S01E02.mkv',
+      'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv',
+      'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv',
     ]);
     await scanToReview(api, 'copy');
     expect((await titles(api)).series).toEqual([]);

@@ -77,9 +77,9 @@ function place(root: string, relative: string): string {
 
 const COCO = 'Coco (2017)/Coco.mp4';
 const HEAT = 'Heat (1995)/Heat.mp4';
-const PILOT = 'Tidewater (2018)/Tidewater.S01E01.mp4';
-const SECOND = 'Tidewater (2018)/Tidewater.S01E02.mp4';
-const THIRD = 'Tidewater (2018)/Tidewater.S01E03.mp4';
+const PILOT = 'Tidewater (2018)/Season 01/Tidewater.S01E01.mp4';
+const SECOND = 'Tidewater (2018)/Season 01/Tidewater.S01E02.mp4';
+const THIRD = 'Tidewater (2018)/Season 01/Tidewater.S01E03.mp4';
 
 /** A fresh library behind the router, one Library folder listed. */
 async function freshApi() {

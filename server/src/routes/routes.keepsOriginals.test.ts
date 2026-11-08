@@ -217,8 +217,8 @@ describe.each(QUERIES)('%s keeps every original', (_name, query) => {
 
   it('deletes a linked series, its episodes and the poster beside them byte-identical, and a scan does not bring it back', async () => {
     const api = await freshApi();
-    original(api, 'Tidewater (2018)/Tidewater.S01E01.mkv');
-    original(api, 'Tidewater (2018)/Tidewater.S01E02.mkv');
+    original(api, 'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv');
+    original(api, 'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv');
     original(api, 'Heat (1995)/Heat.mkv');
     await scanToReview(api, 'link');
     original(api, 'Tidewater (2018)/poster.jpg');
@@ -232,8 +232,8 @@ describe.each(QUERIES)('%s keeps every original', (_name, query) => {
     expect(response.status).toBe(204);
     expectUntouched(api, before);
     expect(leftOut(api)).toEqual([
-      'Tidewater (2018)/Tidewater.S01E01.mkv',
-      'Tidewater (2018)/Tidewater.S01E02.mkv',
+      'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv',
+      'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv',
     ]);
     await scanToReview(api, 'link');
     expect((await titles(api)).series).toEqual([]);
@@ -320,8 +320,8 @@ describe('an edit keeps every original', () => {
 
   it('removes a linked episode in the Series edit job, its file byte-identical where it lies', async () => {
     const api = await freshApi();
-    original(api, 'Tidewater (2018)/Tidewater.S01E01.mkv');
-    original(api, 'Tidewater (2018)/Tidewater.S01E02.mkv');
+    original(api, 'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv');
+    original(api, 'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv');
     await scanToReview(api, 'link');
     const id = await idOf(api, 'series', 'Tidewater');
     const series = api.storage.getSeries(id);
@@ -350,7 +350,9 @@ describe('an edit keeps every original', () => {
 
     expect(response.status).toBe(200);
     expect(api.storage.listEpisodes(id).map((e) => e.id)).toEqual([first.id]);
-    expect(second.videoPath).toBe('Tidewater (2018)/Tidewater.S01E02.mkv');
+    expect(second.videoPath).toBe(
+      'Tidewater (2018)/Season 01/Tidewater.S01E02.mkv'
+    );
     expectUntouched(api, before);
   });
 });
@@ -384,7 +386,7 @@ describe('Factory reset keeps every original', () => {
     const api = await freshApi();
     original(api, 'Coco (2017)/Coco.mkv');
     original(api, 'Coco (2017)/Images/poster.jpg');
-    original(api, 'Tidewater (2018)/Tidewater.S01E01.mkv');
+    original(api, 'Tidewater (2018)/Season 01/Tidewater.S01E01.mkv');
     await scanToReview(api, 'link');
     original(api, 'Heat (1995)/Heat.mkv');
     await scanToReview(api, 'copy');

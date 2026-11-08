@@ -339,12 +339,16 @@ describe('createImporter.resolve — a film Resolve’s Found file follows the r
 
 // --- A Series Resolve --------------------------------------------------------
 
-const STRAY = 'Tidewater (2018)/Behind the Scenes.mp4';
+const STRAY = 'Tidewater (2018)/Season 01/Behind the Scenes.mp4';
 
 /** A stray with no number beside Tidewater's two episodes: `unplaced`. */
 async function unplacedTidewater(mode: ImportMode) {
   const box = sandbox('shows');
-  placeVideo(box, 'Tidewater (2018)/Tidewater.S01E01.Low.Water.mp4', STRAY);
+  placeVideo(
+    box,
+    'Tidewater (2018)/Season 01/Tidewater.S01E01.Low.Water.mp4',
+    STRAY
+  );
   const problem = await inReview(box, mode, 'unplaced');
   const form = {
     title: 'Tidewater',
@@ -448,12 +452,12 @@ async function unplacedNewShow() {
   const box = sandbox('shows');
   placeVideo(
     box,
-    'Tidewater (2018)/Tidewater.S01E01.Low.Water.mp4',
+    'Tidewater (2018)/Season 01/Tidewater.S01E01.Low.Water.mp4',
     `${NEW_SHOW}/Bonus One.mp4`
   );
   placeVideo(
     box,
-    'Tidewater (2018)/Tidewater.S01E01.Low.Water.mp4',
+    'Tidewater (2018)/Season 01/Tidewater.S01E01.Low.Water.mp4',
     `${NEW_SHOW}/Bonus One.en.srt`
   );
   const run = await box.importer.start(box.sheet, false, 'link');

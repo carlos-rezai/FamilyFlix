@@ -312,7 +312,7 @@ describe('createImporter.scan — a rescan', () => {
     const box = sandbox();
     const folders = listBoth(box);
     await scanOnce(box.importer, [folders.films, folders.shows]);
-    const tidewater = join(box.shows, 'Tidewater (2018)');
+    const tidewater = join(box.shows, 'Tidewater (2018)', 'Season 01');
     copyFileSync(
       join(tidewater, 'Tidewater.S01E02.The.Crossing.mp4'),
       join(tidewater, 'Tidewater.S01E03.High.Water.mp4')
@@ -494,8 +494,8 @@ describe('createImporter.scan — the Source file', () => {
         'Season 01/Harbor.and.Vine.S01E02.The.Night.Market.mp4',
       ],
       Tidewater: [
-        'Tidewater.S01E01.Low.Water.mp4',
-        'Tidewater.S01E02.The.Crossing.mp4',
+        'Season 01/Tidewater.S01E01.Low.Water.mp4',
+        'Season 01/Tidewater.S01E02.The.Crossing.mp4',
       ],
     });
   });

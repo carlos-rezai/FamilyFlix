@@ -48,8 +48,10 @@ const HARBOR_PILOT =
   'Harbor & Vine (2021)/Season 01/Harbor.and.Vine.S01E01.Pilot.mp4';
 const HARBOR_SECOND =
   'Harbor & Vine (2021)/Season 01/Harbor.and.Vine.S01E02.The.Night.Market.mp4';
-const TIDEWATER_FIRST = 'Tidewater (2018)/Tidewater.S01E01.Low.Water.mp4';
-const TIDEWATER_SECOND = 'Tidewater (2018)/Tidewater.S01E02.The.Crossing.mp4';
+const TIDEWATER_FIRST =
+  'Tidewater (2018)/Season 01/Tidewater.S01E01.Low.Water.mp4';
+const TIDEWATER_SECOND =
+  'Tidewater (2018)/Season 01/Tidewater.S01E02.The.Crossing.mp4';
 
 interface Sandbox {
   storage: LibraryStorage;

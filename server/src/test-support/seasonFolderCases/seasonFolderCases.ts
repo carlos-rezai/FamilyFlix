@@ -1,10 +1,10 @@
 /**
  * 51, Library audit (issue #447): the **Season folder**'s one table.
  *
- * The server's `seasonOf` groups a scan into shows; the client's
- * `readSeasonFolder` seeds the **Numbering guess** off the same folder name.
- * Both units' table tests read these cases, and the drift guard runs both
- * readings over every name in them, so the two rules cannot drift apart.
+ * The client's `readSeasonFolder` seeds the **Numbering guess** off a folder
+ * name; its table test and the drift guard read these cases. The server's
+ * `seasonOf` reads `Season NN` only since log 58 (issue #536), so only the
+ * client reads this wide table until phase 4 (issue #537) narrows it too.
  *
  * Each group is one rule of the wider reading (log 51 Q11), a name and the
  * season it says, `null` for a name that is no Season folder.
