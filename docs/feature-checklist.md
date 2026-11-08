@@ -356,44 +356,58 @@ subfolders the scan never opens: a `Subtitles/` folder beside the video, a
 folder per episode inside it, and the art apart in its own folder. The scan
 reads only the files lying directly in a Source folder, so those subtitles
 were never found, and an Export's own `subtitles/` folder did not come back
-in either. Agreed in outline on 2026-11-08, to be settled in a grill-me:
+in either. Settled in a grill-me on 2026-11-08 (design log 58, handoff
+`docs/handoff/handoff-folder-layout/`):
 
 41. 🔜 **Folder layout**: every title folder in a Library folder has one
-    layout, which the scan reads, a Sync and an Export write, and nothing
-    else is read. The current layout (art and subtitles loose beside the
-    video, stem-matched to an episode) is no longer read: FamilyFlix is
-    before v1.0.0, and converting an existing library is left to a separate
-    tool, as step 40's tidy was.
+    layout, which the scan reads, the Layout fill and an Export write, and
+    nothing else is read. The old shapes (genre shelves, Collection folders,
+    loose shows, art and subtitles loose beside the video) are no longer
+    read: FamilyFlix is before v1.0.0, a title already held from one keeps
+    playing, and converting an existing library is left to a separate tool,
+    as step 40's tidy was.
     - **Title folders** sit directly in a Library folder's root, named
       `Title (Year)` always, a series by its first year (`Severance (2022)`).
-      No Collection folders and no genre shelves: four Star Wars films are
-      four folders in the root, and two films sharing a title differ by year.
-    - **A film**: its video loose, its subtitles loose in `Subtitles/`, its
-      poster and backdrop loose in `Images/`, its Stills in `Images/Stills/`.
+      Four Star Wars films are four folders in the root, and two films
+      sharing a title differ by year. A folder holding one video loose is a
+      film; one holding Season folders and no loose video is a series.
+    - **A film**: its one video loose (a second is a Problem; extras go in
+      an `Extras/` folder, which is not read), its subtitles loose in
+      `Subtitles/`, its poster and backdrop loose in `Images/`. A film has
+      no Stills.
     - **A series**: `Images/` at its root for its own poster and backdrop;
-      one `Season 01` folder per season holding its episode videos, an
-      `Images/` with the Season poster loose and the episodes' Stills in
-      `Images/Stills/`, and a `Subtitles/` with one `S01E01` folder per
-      episode holding its tracks.
+      one `Season 01` folder per season (`Season 00` the specials) holding
+      its episode videos, numbered by their Episode tags, an `Images/` with
+      the Season poster loose and the episodes' Stills in `Images/Stills/`,
+      and a `Subtitles/` with one `S01E01` folder per episode holding its
+      tracks.
     - **Images by role**: a file is the poster or backdrop when its name ends
       in `poster` or `backdrop` (`moviea-2012-poster.jpg`), so names may
-      carry the title and year.
-    - **One sheet**: a single table, one row per Movie, Series, Season and
-      Episode under a `Type` column, a cell blank where it does not apply.
-      It replaces the Titles and Episodes sheets in CSV and xlsx alike, and
-      Bulk import reads all of it, episodes included.
-    - **`Meta/`**: each Library folder's root carries that sheet in `Meta/`,
-      owned by FamilyFlix and rewritten after every link, import and Sync, so
-      the folder can rebuild its library offline. This is the one place
-      FamilyFlix replaces a file inside a Library folder. The Sync's
-      _Metadata sheet_ Write target goes; the sheet is no longer a choice.
-    - **Sync** writes into the layout what isn't there: the poster and
-      backdrop, Season posters and Stills.
-    - **Export**: an Export folder is the same layout less the videos, so
-      the scan reads an export back whole; its sheet is the one sheet, its
-      image and subtitle cells relative paths into the layout, Season
-      posters included.
+      carry the title and year. A subtitle's language is read off its name.
+    - **One sheet**: a single table of 22 columns, one row per Movie,
+      Series, Season and Episode, each with its `Type` and its `Folder` (the
+      title folder's name, which a row is matched by), a cell blank where it
+      does not apply; image, subtitle and video cells are relative paths into
+      the layout. It replaces the Titles and Episodes sheets in CSV and xlsx
+      alike, and Bulk import reads all of it, episodes included.
+    - **`Meta/`**: each Library folder's root carries that sheet as
+      `Meta/familyflix-library.csv`, owned by FamilyFlix and rewritten a few
+      seconds after any change to one of its cells, held while a review is
+      open, and never touched by a Factory reset. A scan reads it, so the
+      folder rebuilds its library offline, ratings, hearts and Status
+      included. This is the one place FamilyFlix replaces a file inside a
+      Library folder.
+    - **Layout fill**: after any save or Sync, FamilyFlix writes into the
+      title folder each poster, backdrop, Season poster, Still and subtitle
+      it holds whose place is empty, never replacing a file, and never a
+      frame still. The Sync's two Write target toggles go: neither is a
+      choice any more.
+    - **Export**: an Export folder is the same layout less the videos, its
+      sheet `Meta/familyflix-library` in the chosen format, so its folders
+      copied over a Library folder of videos scan back whole.
+    - **Left out**: a root entry that isn't in the layout is one Warning line
+      in the scan's log, never a Problem.
     - **Unchanged**: the Managed media directory keeps its own internal
       layout; the layout is for Library folders and Export folders only.
-      The dev fixture (`createImporter/fixture/`) and `db:seed-series` move
-      to the new layout with it.
+      The dev fixtures (`createImporter/fixture/` and `seriesFixture/`) move
+      to the new layout; `db:seed-series` writes no folders, so it stays.
