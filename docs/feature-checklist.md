@@ -70,6 +70,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Intro animation: the FF mark opens FamilyFlix       | ✅ Done    |
 | Linux build: FamilyFlix on SteamOS, as an AppImage  | ✅ Done    |
 | Tidy into folders: each loose video its own folder  | ❌ Dropped |
+| Folder layout: one shape to scan, sync and export   | 🔜 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -349,3 +350,50 @@ the folder the walk expects; built, it was dropped for a tool of its own:
     folder of bare files into the shape the walk expects, and FamilyFlix goes
     back to never moving a file it doesn't own. The walk's rule stands: a
     video lying loose at a Library folder's top level is not read.
+
+Step 41 came out of the family's folders carrying their subtitles and art in
+subfolders the scan never opens: a `Subtitles/` folder beside the video, a
+folder per episode inside it, and the art apart in its own folder. The scan
+reads only the files lying directly in a Source folder, so those subtitles
+were never found, and an Export's own `subtitles/` folder did not come back
+in either. Agreed in outline on 2026-11-08, to be settled in a grill-me:
+
+41. 🔜 **Folder layout**: every title folder in a Library folder has one
+    layout, which the scan reads, a Sync and an Export write, and nothing
+    else is read. The current layout (art and subtitles loose beside the
+    video, stem-matched to an episode) is no longer read: FamilyFlix is
+    before v1.0.0, and converting an existing library is left to a separate
+    tool, as step 40's tidy was.
+    - **Title folders** sit directly in a Library folder's root, named
+      `Title (Year)` always, a series by its first year (`Severance (2022)`).
+      No Collection folders and no genre shelves: four Star Wars films are
+      four folders in the root, and two films sharing a title differ by year.
+    - **A film**: its video loose, its subtitles loose in `Subtitles/`, its
+      poster and backdrop loose in `Images/`, its Stills in `Images/Stills/`.
+    - **A series**: `Images/` at its root for its own poster and backdrop;
+      one `Season 01` folder per season holding its episode videos, an
+      `Images/` with the Season poster loose and the episodes' Stills in
+      `Images/Stills/`, and a `Subtitles/` with one `S01E01` folder per
+      episode holding its tracks.
+    - **Images by role**: a file is the poster or backdrop when its name ends
+      in `poster` or `backdrop` (`moviea-2012-poster.jpg`), so names may
+      carry the title and year.
+    - **One sheet**: a single table, one row per Movie, Series, Season and
+      Episode under a `Type` column, a cell blank where it does not apply.
+      It replaces the Titles and Episodes sheets in CSV and xlsx alike, and
+      Bulk import reads all of it, episodes included.
+    - **`Meta/`**: each Library folder's root carries that sheet in `Meta/`,
+      owned by FamilyFlix and rewritten after every link, import and Sync, so
+      the folder can rebuild its library offline. This is the one place
+      FamilyFlix replaces a file inside a Library folder. The Sync's
+      _Metadata sheet_ Write target goes; the sheet is no longer a choice.
+    - **Sync** writes into the layout what isn't there: the poster and
+      backdrop, Season posters and Stills.
+    - **Export**: an Export folder is the same layout less the videos, so
+      the scan reads an export back whole; its sheet is the one sheet, its
+      image and subtitle cells relative paths into the layout, Season
+      posters included.
+    - **Unchanged**: the Managed media directory keeps its own internal
+      layout; the layout is for Library folders and Export folders only.
+      The dev fixture (`createImporter/fixture/`) and `db:seed-series` move
+      to the new layout with it.
