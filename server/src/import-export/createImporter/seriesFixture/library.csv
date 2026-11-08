@@ -1,3 +1,9 @@
-Title,Year,Genre,Director,Actors,Description,Rating,Watched
-Harbor & Vine,2021,Drama / Family,Mara Quinn,"Lena Ortiz, Tom Adeyemi",Three generations keep a harbourside restaurant afloat.,8,
-Tidewater,2018,Drama / Family,Ines Duarte,"Rui Matos, Clara Bento",A ferry crew keeps an island connected through one hard winter.,7,
+Type,Folder,Season,Episode,Title,Year,Air date,Runtime,Genres,Director,Cast,Synopsis,Rating,TMDB rating,TMDB id,Status,Favorite,Video,Subtitles,Poster,Backdrop,Still
+Series,Harbor & Vine (2021),,,Harbor & Vine,2021,,,"Drama, Family",Mara Quinn,"Lena Ortiz, Tom Adeyemi",Three generations keep a harbourside restaurant afloat.,8,,,,,,,,,
+Season,Harbor & Vine (2021),1,,,,,,,,,,,,,,,,,,,
+Episode,Harbor & Vine (2021),1,1,Pilot,,2021-03-04,,,,,,,,,Unwatched,,Harbor & Vine (2021)/Season 01/Harbor.and.Vine.S01E01.Pilot.mp4,Harbor & Vine (2021)/Season 01/Subtitles/S01E01/Harbor.and.Vine.en.srt,,,
+Episode,Harbor & Vine (2021),1,2,The Night Market,,2021-03-11,,,,,,,,,Unwatched,,Harbor & Vine (2021)/Season 01/Harbor.and.Vine.S01E02.The.Night.Market.mp4,,,,
+Series,Tidewater (2018),,,Tidewater,2018,,,"Drama, Family",Ines Duarte,"Rui Matos, Clara Bento",A ferry crew keeps an island connected through one hard winter.,7,,,,,,,,,
+Season,Tidewater (2018),1,,,,,,,,,,,,,,,,,Tidewater (2018)/Season 01/Images/poster.jpg,,
+Episode,Tidewater (2018),1,1,Low Water,,2018-10-02,,,,,,,,,Unwatched,,Tidewater (2018)/Season 01/Tidewater.S01E01.Low.Water.mp4,Tidewater (2018)/Season 01/Subtitles/S01E01/Tidewater.en.srt,,,Tidewater (2018)/Season 01/Images/Stills/S01E01.jpg
+Episode,Tidewater (2018),1,2,The Crossing,,2018-10-09,,,,,,,,,Unwatched,,Tidewater (2018)/Season 01/Tidewater.S01E02.The.Crossing.mp4,,,,

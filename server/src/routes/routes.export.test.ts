@@ -423,6 +423,15 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
   }
 }
 
+/**
+ * The fixture's Amélie folder respelled as the **Folder key** an Export
+ * writes for her, `Amélie (2001)`: the fixture's folder drops the accent, and
+ * a sheet matches its folders by key, exactly (issue #539).
+ */
+function keyedAsExported(root: string): void {
+  renameSync(join(root, 'Amelie (2001)'), join(root, 'Amélie (2001)'));
+}
+
 /** The library the importer fills from its fixture, exported to a folder; the sheet's path. */
 async function exportedFixture(
   api: ReturnType<typeof freshApi>,
@@ -440,6 +449,7 @@ async function exportedFixture(
   });
   expect(response.status).toBe(201);
   const { folder: written } = (await response.json()) as ExportResult;
+  keyedAsExported(api.root);
   return join(written, 'Meta', `familyflix-library.${format}`);
 }
 
@@ -522,11 +532,9 @@ describe.each(FORMATS)(
         { year: 1989, genres: 'Action, Thriller, Crime' }
       );
 
+      // The Folder cell still keys Die Hard (1988): the edit is the Year cell.
       const second = freshApi();
-      renameSync(
-        join(second.root, 'Die Hard (1988)'),
-        join(second.root, 'Die Hard (1989)')
-      );
+      keyedAsExported(second.root);
       const sheetPath = join(second.scratch, `edited.${format}`);
       writeFileSync(sheetPath, edited);
       expect(
@@ -567,11 +575,9 @@ describe.each(FORMATS)(
         { year: 1989, genres: 'Action, Thriller, Crime' }
       );
 
+      // The Folder cell still keys Die Hard (1988): the edit is the Year cell.
       const second = freshApi();
-      renameSync(
-        join(second.root, 'Die Hard (1988)'),
-        join(second.root, 'Die Hard (1989)')
-      );
+      keyedAsExported(second.root);
       const sheetPath = join(second.scratch, `edited.${format}`);
       writeFileSync(sheetPath, edited);
       expect(

@@ -61,12 +61,15 @@ function freshApi({
   const media = join(dir, 'media');
   mkdirSync(media);
   const { root, sheet } = libraryFixture(dir);
-  const second = join(root, 'Die-Hard (1988)');
-  mkdirSync(second);
+  // Die Hard's Folder key again, in a second Library folder.
+  const more = join(dir, 'more');
+  const second = join(more, 'Die Hard (1988)');
+  mkdirSync(second, { recursive: true });
   for (const video of secondVideos) {
     writeFileSync(join(second, video), '');
   }
   storage.addLibraryFolder(root);
+  storage.addLibraryFolder(more);
 
   const mediaDomain = createMedia(media);
   const playback = createPlayback(media, fixedSlot(null), () => null);
@@ -172,7 +175,7 @@ describe('GET /api/import/current — an ambiguous Problem’s candidates', () =
     ).toEqual(
       [
         { path: fixtureFolder, name: 'Die Hard (1988)', videos: 1 },
-        { path: second, name: 'Die-Hard (1988)', videos: 1 },
+        { path: second, name: 'Die Hard (1988)', videos: 1 },
       ].sort((a, b) => a.path.localeCompare(b.path))
     );
   });

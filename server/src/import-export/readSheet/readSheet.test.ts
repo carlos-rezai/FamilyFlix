@@ -56,19 +56,11 @@ describe('readSheet — the two formats', () => {
       'library.csv'
     );
 
-    expect(rows[0]).toEqual({
-      title: 'Die Hard',
-      year: 1988,
-      endYear: 1988,
-      genres: ['Action', 'Thriller'],
-      director: 'John McTiernan',
-      cast: ['Bruce Willis', 'Alan Rickman'],
-      synopsis:
-        'A New York cop takes on a tower full of thieves on Christmas Eve.',
-      rating: 8,
-      watched: true,
-    });
-    expect(rows[1]).toEqual({
+    // The one sheet since issue #539: A to Z by Folder key, every field the
+    // round trip in `readSheet.oneSheet.test.ts` checks besides these.
+    expect(rows[0]).toMatchObject({
+      type: 'Movie',
+      folder: 'Amelie (2001)',
       title: 'Amélie',
       year: 2001,
       endYear: 2001,
@@ -79,6 +71,20 @@ describe('readSheet — the two formats', () => {
         'A shy waitress in Montmartre decides to change the lives of those around her.',
       rating: 7,
       watched: false,
+    });
+    expect(rows[1]).toMatchObject({
+      type: 'Movie',
+      folder: 'Die Hard (1988)',
+      title: 'Die Hard',
+      year: 1988,
+      endYear: 1988,
+      genres: ['Action', 'Thriller'],
+      director: 'John McTiernan',
+      cast: ['Bruce Willis', 'Alan Rickman'],
+      synopsis:
+        'A New York cop takes on a tower full of thieves on Christmas Eve.',
+      rating: 8,
+      watched: true,
     });
   });
 
@@ -99,8 +105,10 @@ describe('readSheet — finding the columns', () => {
   it('imports a Title/Year/Genre-only sheet — the real one — fully', async () => {
     const rows = await oneRow('Title,Year,Genre', 'Die Hard,1988,Action');
 
-    expect(rows).toEqual([
+    expect(rows).toMatchObject([
       {
+        type: 'Movie',
+        folder: 'Die Hard (1988)',
         title: 'Die Hard',
         year: 1988,
         endYear: 1988,
@@ -350,8 +358,10 @@ describe('readSheet — a CSV that begins with a BOM', () => {
       'library.csv'
     );
 
-    expect(rows).toEqual([
+    expect(rows).toMatchObject([
       {
+        type: 'Movie',
+        folder: 'Die Hard (1988)',
         title: 'Die Hard',
         year: 1988,
         endYear: 1988,

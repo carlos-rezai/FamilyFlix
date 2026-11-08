@@ -99,10 +99,16 @@ const dieHard = (storage: LibraryStorage): Movie | undefined =>
     .listMovies({ sort: 'a-z' })
     .find((movie) => movie.title === 'Die Hard');
 
-/** Die Hard answered by the fixture's folder and a second one, run to review. */
+/**
+ * Die Hard answered by the fixture's folder and a second one of the same
+ * **Folder key** in a second Library folder, run to review.
+ */
 async function twoAnswers(secondVideos: string[] = ['Die Hard.mp4']) {
   const box = sandbox();
-  const second = folderUnder(box.root, 'Die-Hard (1988)', secondVideos);
+  const more = join(box.root, '..', 'more');
+  mkdirSync(more);
+  const second = folderUnder(more, 'Die Hard (1988)', secondVideos);
+  box.storage.addLibraryFolder(more);
   await box.importer.start(box.sheet);
   const run = await untilReview(box.importer);
   return { ...box, second, run, problem: ambiguousOf(run) };
@@ -118,7 +124,7 @@ describe('createImporter — an ambiguous Problem’s Candidate folders', () => 
     expect(byPath).toEqual(
       [
         { path: fixtureFolder, name: 'Die Hard (1988)', videos: 1 },
-        { path: second, name: 'Die-Hard (1988)', videos: 1 },
+        { path: second, name: 'Die Hard (1988)', videos: 1 },
       ].sort((a, b) => a.path.localeCompare(b.path))
     );
   });
@@ -131,21 +137,7 @@ describe('createImporter — an ambiguous Problem’s Candidate folders', () => 
 
     expect(
       problem.candidates?.find((candidate) => candidate.path === second)
-    ).toEqual({ path: second, name: 'Die-Hard (1988)', videos: 2 });
-  });
-
-  it('names the one folder of a near-name match', async () => {
-    const box = sandbox();
-    const aliens = folderUnder(box.root, 'Aliens (1986)', ['Aliens.mp4']);
-    const sheet = join(box.root, '..', 'near.csv');
-    writeFileSync(sheet, 'Title,Year,Genre\nAlien,1979,Horror\n', 'utf8');
-    await box.importer.start(sheet);
-
-    const problem = ambiguousOf(await untilReview(box.importer));
-
-    expect(problem.candidates).toEqual([
-      { path: aliens, name: 'Aliens (1986)', videos: 1 },
-    ]);
+    ).toEqual({ path: second, name: 'Die Hard (1988)', videos: 2 });
   });
 
   it('carries candidates on the ambiguous Problem alone', async () => {

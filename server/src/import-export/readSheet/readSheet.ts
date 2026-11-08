@@ -2,7 +2,9 @@ import ExcelJS from 'exceljs';
 import { extname } from 'node:path';
 import { Readable } from 'node:stream';
 
+import { ROW_TYPES, type RowType } from '@/types';
 import { yearSpan } from '../../library/series/yearSpan/yearSpan';
+import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
 
 /**
  * One row of the maintainer's spreadsheet, as the **Sheet reader** answers it:
@@ -14,6 +16,18 @@ import { yearSpan } from '../../library/series/yearSpan/yearSpan';
  * the same "absent reads back as nothing" the library's own rows keep.
  */
 export interface SheetRow {
+  /** Its **Row type**: `Movie` for a blank cell or a sheet with no Type column. */
+  type: RowType;
+  /**
+   * Its **Folder key**: the Folder cell, or `Title (Year)` spelled from the
+   * row's Title and first year when the cell is blank or the column absent.
+   */
+  folder: string;
+  /** A Season or Episode row's season number. */
+  season: number | null;
+  /** An Episode row's number within its season. */
+  episode: number | null;
+  /** The title; empty for a Season row, which has none. */
   title: string;
   year: number | null;
   /** The last year of a run: `year` itself for a lone year, `null` for an open range or no year. */
@@ -24,10 +38,40 @@ export interface SheetRow {
   synopsis: string | null;
   rating: number | null;
   watched: boolean;
+  /** An Episode row's air date, `YYYY-MM-DD`. */
+  airDate: string | null;
+  /** Minutes. */
+  runtime: number | null;
+  tmdbScore: number | null;
+  tmdbId: number | null;
+  favorite: boolean;
+  /**
+   * The path cells, as the sheet spells them: relative, forward slashes,
+   * several tracks split on `|`. The matcher resolves them.
+   */
+  video: string | null;
+  subtitles: string[];
+  poster: string | null;
+  backdrop: string | null;
+  still: string | null;
 }
 
 /** The columns the reader knows, each under every header the maintainer may spell it by. */
 type Column =
+  | 'type'
+  | 'folder'
+  | 'season'
+  | 'episode'
+  | 'airDate'
+  | 'runtime'
+  | 'tmdbScore'
+  | 'tmdbId'
+  | 'favorite'
+  | 'video'
+  | 'subtitles'
+  | 'poster'
+  | 'backdrop'
+  | 'still'
   | 'title'
   | 'year'
   | 'genres'
@@ -54,6 +98,21 @@ const SYNONYMS: Record<Column, string[]> = {
   // `status` is the header the **Sheet writer** puts over the watch state, so
   // an untouched **Export file** reads back as the library it came from.
   watched: ['watched', 'status'],
+  // The rest are the one sheet's own **Sheet columns**, as `exportRows` writes them.
+  type: ['type'],
+  folder: ['folder'],
+  season: ['season'],
+  episode: ['episode'],
+  airDate: ['air date'],
+  runtime: ['runtime'],
+  tmdbScore: ['tmdb rating'],
+  tmdbId: ['tmdb id'],
+  favorite: ['favorite'],
+  video: ['video'],
+  subtitles: ['subtitles'],
+  poster: ['poster'],
+  backdrop: ['backdrop'],
+  still: ['still'],
 };
 
 /** What separates one genre from the next inside a cell — a comma, a slash or a semicolon. */
@@ -69,6 +128,15 @@ const CAST_SEPARATORS = /,/;
  * not listed here.
  */
 const WATCHED = new Set(['yes', 'true', '1', '✓', 'watched']);
+
+/** The cell values that say a title is a favourite, case folded. */
+const FAVORITE = new Set(['yes', 'true', '1', '✓', 'favorite']);
+
+/** What separates one path from the next inside a path cell. */
+const PATH_SEPARATOR = '|';
+
+/** The row types that name a title, and so are skipped without one. */
+const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
 
 /** The rating column's own scale — the same ten the library stores. */
 const MAX_RATING = 10;
@@ -146,12 +214,34 @@ function cellRating(text: string): number | null {
 }
 
 /** A cell split on separators, each piece trimmed, the empty ones dropped. */
-function cellList(text: string, separators: RegExp): string[] {
+function cellList(text: string, separators: RegExp | string): string[] {
   return text
     .split(separators)
     .map((piece) => piece.trim())
     .filter((piece) => piece !== '');
 }
+
+/** A whole number in a cell, or `null`. */
+function cellWhole(text: string): number | null {
+  const value = cellNumber(text);
+  return value === null || !Number.isInteger(value) ? null : value;
+}
+
+/** A cell's **Row type**, case folded; blank or unknown reads as a Movie. */
+function cellType(text: string): RowType {
+  const folded = text.toLowerCase();
+  return ROW_TYPES.find((type) => type.toLowerCase() === folded) ?? 'Movie';
+}
+
+/** A date cell as `YYYY-MM-DD`, or `null` for anything not shaped as one. */
+function cellDate(text: string): string | null {
+  const found = /^(\d{4}-\d{2}-\d{2})/.exec(text);
+  return found === null ? null : found[1];
+}
+
+/** A **Folder key** spelled from a title and its first year: `Title (Year)`. */
+const spelledKey = (title: string, year: number | null): string =>
+  year === null ? title : spellFolderKey(title, year);
 
 /** Text, or `null` for an empty cell. */
 const cellOptional = (text: string): string | null =>
@@ -200,7 +290,7 @@ async function openWorkbook(
  * is matched through the synonym table case-insensitively. Only a title column
  * is required — a sheet with none is the one refusal the reader makes, and it
  * is the sheet field's `400` upstream. A column it does not recognise is
- * ignored; a row with a blank title is skipped, and `onBlankTitle` is told
+ * ignored; a Movie or Series row with a blank title is skipped, and `onBlankTitle` is told
  * its row number so the skip can be a **Log line** rather than silence.
  */
 export async function readSheet(
@@ -243,20 +333,36 @@ export async function readSheet(
     if (number === 1) {
       return;
     }
+    const type = cellType(read(row, 'type'));
     const title = read(row, 'title');
-    if (title === '') {
+    if (title === '' && TITLED.has(type)) {
       onBlankTitle(number);
       return;
     }
+    const span = yearSpan(read(row, 'year')) ?? { year: null, endYear: null };
     rows.push({
+      type,
+      folder: read(row, 'folder') || spelledKey(title, span.year),
+      season: cellWhole(read(row, 'season')),
+      episode: cellWhole(read(row, 'episode')),
       title,
-      ...(yearSpan(read(row, 'year')) ?? { year: null, endYear: null }),
+      ...span,
       genres: cellList(read(row, 'genres'), GENRE_SEPARATORS),
       director: cellOptional(read(row, 'director')),
       cast: cellList(read(row, 'cast'), CAST_SEPARATORS),
       synopsis: cellOptional(read(row, 'synopsis')),
       rating: cellRating(read(row, 'rating')),
       watched: WATCHED.has(read(row, 'watched').toLowerCase()),
+      airDate: cellDate(read(row, 'airDate')),
+      runtime: cellWhole(read(row, 'runtime')),
+      tmdbScore: cellNumber(read(row, 'tmdbScore')),
+      tmdbId: cellWhole(read(row, 'tmdbId')),
+      favorite: FAVORITE.has(read(row, 'favorite').toLowerCase()),
+      video: cellOptional(read(row, 'video')),
+      subtitles: cellList(read(row, 'subtitles'), PATH_SEPARATOR),
+      poster: cellOptional(read(row, 'poster')),
+      backdrop: cellOptional(read(row, 'backdrop')),
+      still: cellOptional(read(row, 'still')),
     });
   });
 

@@ -616,7 +616,7 @@ describe('createImporter — cancel', () => {
   });
 
   it('keeps every movie added before the cancel', async () => {
-    const hold = heldCopy('Amelie.mp4');
+    const hold = heldCopy('Die.Hard.1988.1080p.mp4');
     const { storage, importer, root, sheet } = sandbox({ media: hold.seam });
     await importer.start(sheet);
     await hold.reached;
@@ -625,14 +625,12 @@ describe('createImporter — cancel', () => {
     hold.release();
     await cancelled;
 
-    expect(Object.keys(byTitle(storage))).toEqual(['Die Hard']);
-    expect(byTitle(storage)['Die Hard'].videoPath).toBe(
-      'die-hard-1988/Die.Hard.1988.1080p.mp4'
-    );
+    expect(Object.keys(byTitle(storage))).toEqual(['Amélie']);
+    expect(byTitle(storage)['Amélie'].videoPath).toBe('amelie-2001/Amelie.mp4');
   });
 
   it('aborts the in-flight copy and leaves no reserved folder behind for it', async () => {
-    const hold = heldCopy('Amelie.mp4');
+    const hold = heldCopy('Die.Hard.1988.1080p.mp4');
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
@@ -645,14 +643,14 @@ describe('createImporter — cancel', () => {
     hold.release();
     await cancelled;
 
-    expect(folders(media)).toEqual(['die-hard-1988']);
-    expect(byTitle(storage)['Amélie']).toBeUndefined();
+    expect(folders(media)).toEqual(['amelie-2001']);
+    expect(byTitle(storage)['Die Hard']).toBeUndefined();
   });
 
   it('does not go on to the next match once cancelled', async () => {
-    // Held on Die Hard's video, the first copy of the run: nothing has been
+    // Held on Amélie's video, the first copy of the run: nothing has been
     // added yet, and nothing may be added after the cancel either.
-    const hold = heldCopy('Die.Hard.1988.1080p.mp4');
+    const hold = heldCopy('Amelie.mp4');
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
@@ -662,7 +660,7 @@ describe('createImporter — cancel', () => {
     const cancelled = importer.cancel();
     hold.release();
     await cancelled;
-    // Room for a run that wrongly went on to reach Amélie.
+    // Room for a run that wrongly went on to reach Die Hard.
     await new Promise((resolve) => setTimeout(resolve, 200));
 
     expect(Object.keys(byTitle(storage))).toEqual([]);
@@ -869,7 +867,7 @@ function lanternKeeper(
   const sheet = join(root, '..', 'three.csv');
   writeFileSync(
     sheet,
-    'Title,Year,Genre\nDie Hard,1988,Action\nAmélie,2001,Comedy\nThe Lantern Keeper,2019,Drama\n',
+    'Title,Year,Genre,Folder\nDie Hard,1988,Action\nAmélie,2001,Comedy,Amelie (2001)\nThe Lantern Keeper,2019,Drama\n',
     'utf8'
   );
   return { sheet, folder };
@@ -945,8 +943,8 @@ describe('createImporter — the Activity log', () => {
     expect(imported).toHaveLength(2);
     expect(imported.map((line) => line.kind)).toEqual(['success', 'success']);
     expect(imported.map((line) => line.text)).toEqual([
-      expect.stringMatching(/^✓ Imported\s+Die Hard$/),
       expect.stringMatching(/^✓ Imported\s+Amélie$/),
+      expect.stringMatching(/^✓ Imported\s+Die Hard$/),
     ]);
   });
 
@@ -1014,7 +1012,7 @@ describe('createImporter — the lines for what is skipped', () => {
     const sheet = join(root, '..', 'blank.csv');
     writeFileSync(
       sheet,
-      'Title,Year\nDie Hard,1988\n,2001\nAmélie,2001\n',
+      'Title,Year,Folder\nDie Hard,1988\n,2001\nAmélie,2001,Amelie (2001)\n',
       'utf8'
     );
 
@@ -1037,7 +1035,7 @@ describe('createImporter — the lines for what is skipped', () => {
     // `Kung-fu` on both rows, `Wuxia` on one: one line each, not three.
     writeFileSync(
       sheet,
-      'Title,Year,Genre\nDie Hard,1988,Action / Kung-fu\nAmélie,2001,Kung-fu; Wuxia\n',
+      'Title,Year,Genre,Folder\nDie Hard,1988,Action / Kung-fu\nAmélie,2001,Kung-fu; Wuxia,Amelie (2001)\n',
       'utf8'
     );
 
@@ -1196,15 +1194,18 @@ const REASON = {
 function sheetOf(
   root: string,
   rows: string,
-  header = 'Title,Year,Genre'
+  header = 'Title,Year,Genre,Folder'
 ): string {
   const sheet = join(root, '..', 'sheet.csv');
   writeFileSync(sheet, `${header}\n${rows}`, 'utf8');
   return sheet;
 }
 
-/** The fixture's two rows, as a sheet a test can add a row to. */
-const FIXTURE_ROWS = 'Die Hard,1988,Action\nAmélie,2001,Comedy\n';
+/**
+ * The fixture's two rows, as a sheet a test can add a row to: Amélie keyed by
+ * its folder in the last column, the rest spelling `Title (Year)`.
+ */
+const FIXTURE_ROWS = 'Die Hard,1988,Action\nAmélie,2001,Comedy,Amelie (2001)\n';
 
 /**
  * A **Source folder** under the root holding the video files it names — empty
@@ -1296,7 +1297,11 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
 
   it('files ambiguous for a row two folders answer to, and imports neither', async () => {
     const { storage, importer, media, root, sheet } = sandbox();
-    folderUnder(root, 'Die-Hard (1988)', ['Die Hard.mp4']);
+    // The same Folder key in a second Library folder.
+    const more = join(root, '..', 'more');
+    mkdirSync(more);
+    folderUnder(more, 'Die Hard (1988)', ['Die Hard.mp4']);
+    storage.addLibraryFolder(more);
 
     await importer.start(sheet);
     const run = await untilReview(importer);
@@ -1315,7 +1320,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
     expect(folders(media)).toEqual(['amelie-2001']);
   });
 
-  it('files ambiguous, with the near-name reason, for a folder whose name only starts with the row’s', async () => {
+  it('files no-folder, never a near-name guess, for a folder whose name only starts with the row’s', async () => {
     const { storage, importer, root } = sandbox();
     folderUnder(root, 'Aliens (1986)', ['Aliens.mp4']);
     const sheet = sheetOf(root, `${FIXTURE_ROWS}Alien,1979,Horror\n`);
@@ -1323,15 +1328,11 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
     await importer.start(sheet);
     const run = await untilReview(importer);
 
-    expect(run.problems).toEqual([
-      {
-        id: expect.any(String),
-        kind: 'ambiguous',
-        title: 'Alien',
-        reason: REASON.nearName,
-        // Since #334: the Candidate folders the Folder picker draws.
-        candidates: expect.any(Array),
-      },
+    expect(
+      run.problems.map((problem) => [problem.kind, problem.title])
+    ).toEqual([
+      ['no-folder', 'Alien'],
+      ['no-row', 'Aliens (1986)'],
     ]);
     expect(byTitle(storage)['Alien']).toBeUndefined();
   });
@@ -1348,9 +1349,9 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
     await importer.start(sheet);
     const run = await untilReview(importer);
 
-    expect(run.problems).toHaveLength(3);
+    expect(run.problems).toHaveLength(4);
     const ids = run.problems.map((problem) => problem.id);
-    expect(new Set(ids).size).toBe(3);
+    expect(new Set(ids).size).toBe(4);
     for (const id of ids) {
       expect(id).not.toBe('');
     }
@@ -1481,7 +1482,10 @@ describe('createImporter — a copy that fails partway', () => {
 describe('createImporter — a genre-less row', () => {
   it('imports it and files missing-meta with its movieId', async () => {
     const { storage, importer, root } = sandbox();
-    const sheet = sheetOf(root, 'Die Hard,1988,Action\nAmélie,2001,\n');
+    const sheet = sheetOf(
+      root,
+      'Die Hard,1988,Action\nAmélie,2001,,Amelie (2001)\n'
+    );
 
     await importer.start(sheet);
     const run = await untilReview(importer);
@@ -1505,7 +1509,11 @@ describe('createImporter — a genre-less row', () => {
 
   it('files it for every row when the sheet has no genre column at all', async () => {
     const { storage, importer, root } = sandbox();
-    const sheet = sheetOf(root, 'Die Hard,1988\nAmélie,2001\n', 'Title,Year');
+    const sheet = sheetOf(
+      root,
+      'Die Hard,1988\nAmélie,2001,Amelie (2001)\n',
+      'Title,Year,Folder'
+    );
 
     await importer.start(sheet);
     const run = await untilReview(importer);
@@ -1545,7 +1553,10 @@ describe('createImporter — the complete line counts the problems', () => {
 
   it('counts the soft kind too — it is listed, so it is counted', async () => {
     const { importer, root } = sandbox();
-    const sheet = sheetOf(root, 'Die Hard,1988,Action\nAmélie,2001,\n');
+    const sheet = sheetOf(
+      root,
+      'Die Hard,1988,Action\nAmélie,2001,,Amelie (2001)\n'
+    );
 
     await importer.start(sheet);
     const run = await untilReview(importer);
@@ -1815,8 +1826,12 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
   });
 
   it('names every candidate folder of an ambiguous problem', async () => {
-    const { importer, root, sheet } = sandbox();
-    const second = folderUnder(root, 'Die-Hard (1988)', ['Die Hard.mp4']);
+    const { storage, importer, root, sheet } = sandbox();
+    // The same Folder key in a second Library folder.
+    const more = join(root, '..', 'more');
+    mkdirSync(more);
+    const second = folderUnder(more, 'Die Hard (1988)', ['Die Hard.mp4']);
+    storage.addLibraryFolder(more);
     await importer.start(sheet);
     const [problem] = ofKind(await untilReview(importer), 'ambiguous');
 
@@ -2134,18 +2149,21 @@ const QUOTED = 'Zoë\'s "Lantern" Keeper';
 const ACCENTED = "Ça, c'est Noël à Zürich";
 
 /**
- * Story 96: the copy holds for any film in the collection. The **Title key**
- * folds quotes, diacritics and punctuation away for the match, and the row
- * keeps the title exactly as the sheet spelt it — the family reads the sheet's
- * spelling, not the folder's. A folder cannot carry a double quote on Windows,
- * so the quoted title's folder spells the name without them, which is the case
- * the match exists for.
+ * Story 96: the copy holds for any film in the collection. The row's Folder
+ * cell names the folder (issue #539: matched by **Folder key**, never by a
+ * fuzzy title), and the row keeps the title exactly as the sheet spelt it:
+ * the family reads the sheet's spelling, not the folder's. A folder cannot
+ * carry a double quote on Windows, so the quoted title's folder spells the
+ * name without them.
  */
 describe('createImporter — the awkward titles match and import', () => {
   it('imports a title with quotes in it, kept whole on the row', async () => {
     const { storage, importer, media, root } = sandbox();
     filmUnder(root, "Zoë's Lantern Keeper (2020)", 'Zoe.mp4');
-    const sheet = sheetOf(root, `${FIXTURE_ROWS}${cell(QUOTED)},2020,Drama\n`);
+    const sheet = sheetOf(
+      root,
+      `${FIXTURE_ROWS}${cell(QUOTED)},2020,Drama,Zoë's Lantern Keeper (2020)\n`
+    );
 
     await importer.start(sheet);
     const run = await untilReview(importer);
@@ -2160,12 +2178,12 @@ describe('createImporter — the awkward titles match and import', () => {
     expect(texts(run)).toContain(`✓ Imported   ${QUOTED}`);
   });
 
-  it('imports a title with diacritics, matched to a folder spelt without them', async () => {
+  it('imports a title with diacritics, keyed to a folder spelt without them', async () => {
     const { storage, importer, media, root } = sandbox();
     filmUnder(root, "Ca c'est Noel a Zurich (2019)", 'Noel.mp4');
     const sheet = sheetOf(
       root,
-      `${FIXTURE_ROWS}${cell(ACCENTED)},2019,Comedy\n`
+      `${FIXTURE_ROWS}${cell(ACCENTED)},2019,Comedy,Ca c'est Noel a Zurich (2019)\n`
     );
 
     await importer.start(sheet);
@@ -2325,10 +2343,15 @@ describe('createImporter — two matches with the same title and year', () => {
 
   it('suffixes the second of two resolves with the same title and year, as the form does', async () => {
     const { storage, importer, media, root } = sandbox();
-    // Two rows for Heat and two folders for it: each row sees both, so each
-    // is `ambiguous`, and the maintainer resolves one onto each folder.
+    // Two rows for Heat and two folders for it, in two Library folders: each
+    // row sees both, so each is `ambiguous`, and the maintainer resolves one
+    // onto each folder.
     const first = filmUnder(root, 'Heat (1995)', 'Heat.mp4');
-    const second = filmUnder(root, 'Heat. (1995)', 'Heat.1995.1080p.mp4');
+    const more = join(root, '..', 'more');
+    const second = join(more, 'Heat (1995)');
+    mkdirSync(second, { recursive: true });
+    cpSync(join(first, 'Heat.mp4'), join(second, 'Heat.1995.1080p.mp4'));
+    storage.addLibraryFolder(more);
     const sheet = sheetOf(
       root,
       `${FIXTURE_ROWS}Heat,1995,Action\nHeat,1995,Action\n`
@@ -2376,7 +2399,7 @@ describe('createImporter — a source folder named with unsafe characters', () =
     filmUnder(root, UNSAFE, 'The.Lantern.Keeper.mp4');
     const sheet = sheetOf(
       root,
-      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama\n`
+      `${FIXTURE_ROWS}The Lantern Keeper,2019,Drama,${UNSAFE}\n`
     );
 
     await importer.start(sheet);
@@ -2483,7 +2506,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     sheet: string;
     restarted: Importer;
   }> {
-    const hold = heldCopy('Amelie.mp4');
+    const hold = heldCopy('Die.Hard.1988.1080p.mp4');
     const { storage, importer, media, root, sheet } = sandbox({
       media: hold.seam,
     });
@@ -2509,36 +2532,36 @@ describe('createImporter — the importer restarting mid-run', () => {
     const { storage, media, restarted } = await interrupted();
 
     expect(restarted.current()).toBeNull();
-    const dieHard = byTitle(storage)['Die Hard'];
-    expect(dieHard).toMatchObject({
-      title: 'Die Hard',
-      year: 1988,
-      videoPath: 'die-hard-1988/Die.Hard.1988.1080p.mp4',
+    const amelie = byTitle(storage)['Amélie'];
+    expect(amelie).toMatchObject({
+      title: 'Amélie',
+      year: 2001,
+      videoPath: 'amelie-2001/Amelie.mp4',
     });
-    expect(existsSync(join(media, dieHard.videoPath))).toBe(true);
-    expect(byTitle(storage)['Amélie']).toBeUndefined();
+    expect(existsSync(join(media, amelie.videoPath))).toBe(true);
+    expect(byTitle(storage)['Die Hard']).toBeUndefined();
   });
 
   it('can start again over the same sheet: the added film is skipped, the rest imported', async () => {
     const { storage, media, root, sheet, restarted } = await interrupted();
-    const before = byTitle(storage)['Die Hard'];
+    const before = byTitle(storage)['Amélie'];
 
     await restarted.start(sheet);
     const run = await untilReview(restarted);
 
     expect(run.problems).toEqual([]);
-    expect(texts(run)).toContain('· Already in library Die Hard (1988)');
+    expect(texts(run)).toContain('· Already in library Amélie (2001)');
     expect(
       linesMatching(run, /^✓ Imported\s/).map((line) => line.text)
-    ).toEqual(['✓ Imported   Amélie']);
+    ).toEqual(['✓ Imported   Die Hard']);
     const after = byTitle(storage);
     expect(Object.keys(after).sort()).toEqual(['Amélie', 'Die Hard']);
-    expect(after['Die Hard'].id).toBe(before.id);
+    expect(after['Amélie'].id).toBe(before.id);
     // The interrupted run's reserved folder is still on disk, so the re-run
     // takes the next name rather than writing over it.
-    expect(existsSync(join(media, after['Amélie'].videoPath))).toBe(true);
-    expect(readFileSync(join(media, after['Amélie'].videoPath))).toEqual(
-      readFileSync(join(root, 'Amelie (2001)', 'Amelie.mp4'))
+    expect(existsSync(join(media, after['Die Hard'].videoPath))).toBe(true);
+    expect(readFileSync(join(media, after['Die Hard'].videoPath))).toEqual(
+      readFileSync(join(root, 'Die Hard (1988)', 'Die.Hard.1988.1080p.mp4'))
     );
   });
 });

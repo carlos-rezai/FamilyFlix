@@ -1,6 +1,7 @@
+import { dirname, join } from 'node:path';
+
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
 import type { SheetRow } from '../readSheet/readSheet';
-import { titleKey, yearInName } from '../titleKey/titleKey';
 
 /** A **Match**: one **Sheet row** and the one **Source folder** that is its film. */
 export interface Match {
@@ -46,30 +47,46 @@ export const MATCH_REASON = {
   manyVideos: 'Two videos. Pick the film.',
 } as const;
 
-/** Whether a row and a folder agree on the year, when both carry one. */
-const yearsAgree = (row: SheetRow, folder: FilmScan): boolean => {
-  const folderYear = yearInName(folder.name);
-  return row.year === null || folderYear === null || row.year === folderYear;
-};
+/** A **Folder key** as the matcher compares it: case folded. */
+const folded = (key: string): string => key.toLowerCase();
+
+/** A path cell, relative with forward slashes, resolved against `base`. */
+const resolved = (base: string, cell: string): string =>
+  join(base, ...cell.split('/'));
+
+/**
+ * A matched row with its path cells resolved against the Library folder
+ * holding its Title folder: the parent of the folder's `dir`.
+ */
+function resolvedRow(row: SheetRow, folder: FilmScan): SheetRow {
+  const base = dirname(folder.dir);
+  const one = (cell: string | null): string | null =>
+    cell === null ? null : resolved(base, cell);
+  return {
+    ...row,
+    video: one(row.video),
+    subtitles: row.subtitles.map((cell) => resolved(base, cell)),
+    poster: one(row.poster),
+    backdrop: one(row.backdrop),
+    still: one(row.still),
+  };
+}
 
 /**
  * The matcher, pure: **Sheet rows** × folder scans → what can be imported
  * without a human looking, and what cannot.
  *
- * A **Match** is exactly one key-equal **Source folder** whose year agrees
- * when both carry one, holding exactly one video. Anything short of that is a
- * verdict rather than a guess: two or more such folders are `ambiguous` with
- * the first reason; none, but one or more whose key starts with the row's —
- * `Aliens` for `Alien`, or the same key under a year that disagrees — are
- * `ambiguous` with the second; none at all is `no-folder`; and the one folder
- * holding no video, or more than one, is `no-video` with its own two reasons.
- * A folder no row claimed, by match or as a candidate, is `unclaimed`.
+ * A **Match** is the one **Title folder** whose name is the row's **Folder
+ * key**, exactly and case folded, holding exactly one video: never a fuzzy
+ * title, never the row's Title. Anything short of that is a verdict rather
+ * than a guess: two or more such folders (in two Library folders, or names
+ * differing only by case) are `ambiguous`; none is `no-folder`; and the one
+ * folder holding no video, or more than one, is `no-video` with its own two
+ * reasons. A matched row's path cells come back resolved against the Library
+ * folder its key matched in. A folder no row claimed, by match or as a
+ * candidate, is `unclaimed`.
  */
 export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
-  const keyed = folders.map((folder) => ({
-    folder,
-    key: titleKey(folder.name),
-  }));
   const claimed = new Set<FilmScan>();
 
   const matched: Match[] = [];
@@ -87,26 +104,15 @@ export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
   };
 
   for (const row of rows) {
-    const key = titleKey(row.title);
-    const keyEqual = keyed
-      .filter((entry) => entry.key === key)
-      .map((entry) => entry.folder);
-    const exact = keyEqual.filter((folder) => yearsAgree(row, folder));
+    const key = folded(row.folder);
+    const exact = folders.filter((folder) => folded(folder.name) === key);
 
     if (exact.length > 1) {
-      problem(row, 'ambiguous', MATCH_REASON.twoFolders, keyEqual);
+      problem(row, 'ambiguous', MATCH_REASON.twoFolders, exact);
       continue;
     }
-
     if (exact.length === 0) {
-      const near = keyed
-        .filter((entry) => entry.key.startsWith(key))
-        .map((entry) => entry.folder);
-      if (near.length === 0) {
-        problem(row, 'no-folder', MATCH_REASON.noFolder, []);
-      } else {
-        problem(row, 'ambiguous', MATCH_REASON.nearName, near);
-      }
+      problem(row, 'no-folder', MATCH_REASON.noFolder, []);
       continue;
     }
 
@@ -120,7 +126,7 @@ export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
       continue;
     }
 
-    matched.push({ row, folder });
+    matched.push({ row: resolvedRow(row, folder), folder });
     claimed.add(folder);
   }
 

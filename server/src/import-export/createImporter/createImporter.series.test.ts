@@ -768,14 +768,19 @@ describe('createImporter — unplaced episodes', () => {
   });
 });
 
-describe('createImporter — two Show folders with one Title key', () => {
+describe('createImporter — two Show folders with one Folder key', () => {
   it('files the row as ambiguous and imports neither', async () => {
     const { storage, importer, root, sheet } = looseSandbox({
       [SEASON_01]: ['Lighthouse.Keepers.S01E01.First.Light.mp4'],
-      [join('Lighthouse-Keepers (2019)', 'Season 01')]: [
-        'Lighthouse.Keepers.S01E01.First.Light.mp4',
-      ],
     });
+    // The same show's folder in a second Library folder.
+    const more = join(root, '..', 'more');
+    mkdirSync(join(more, SEASON_01), { recursive: true });
+    cpSync(
+      HEADER,
+      join(more, SEASON_01, 'Lighthouse.Keepers.S01E01.First.Light.mp4')
+    );
+    storage.addLibraryFolder(more);
 
     await importer.start(sheet);
     const run = await untilReview(importer);

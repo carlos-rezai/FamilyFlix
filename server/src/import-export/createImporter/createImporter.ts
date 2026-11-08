@@ -539,6 +539,8 @@ interface ShowMatch {
   show: ShowScan;
   held: HeldSeries | null;
   episodes: ShowEpisode[];
+  /** The sheet's Episode rows for the show, by its **Folder key**: none for an unnamed show. */
+  sheetEpisodes: SheetRow[];
   /**
    * The show's one `unplaced` **Problem**, once filed: the run names the
    * series on it when it creates one, so _Resolve_ joins it.
@@ -626,6 +628,10 @@ interface HeldSeries {
 const guessedRow = (name: string): SheetRow => {
   const key = folderKeyOf(name);
   return {
+    type: 'Movie',
+    folder: name,
+    season: null,
+    episode: null,
     title: key?.title ?? titleGuess(name),
     year: key?.year ?? yearInName(name),
     endYear: null,
@@ -635,6 +641,16 @@ const guessedRow = (name: string): SheetRow => {
     synopsis: null,
     rating: null,
     watched: false,
+    airDate: null,
+    runtime: null,
+    tmdbScore: null,
+    tmdbId: null,
+    favorite: false,
+    video: null,
+    subtitles: [],
+    poster: null,
+    backdrop: null,
+    still: null,
   };
 };
 
@@ -1168,6 +1184,15 @@ export function createImporter({
         }
         signal.throwIfAborted();
         const runtime = derivedRuntime(playback, video);
+        const sheetEpisode = match.sheetEpisodes.find(
+          (entry) =>
+            entry.season === episode.season && entry.episode === episode.episode
+        );
+        const title =
+          sheetEpisode !== undefined && sheetEpisode.title !== ''
+            ? sheetEpisode.title
+            : episode.title;
+        const airDate = sheetEpisode?.airDate ?? null;
 
         if (series === null) {
           const genres = knownGenres(row.genres, genreNames, current);
@@ -1193,7 +1218,8 @@ export function createImporter({
           number: episode.episode,
           ...video,
           sourceFile: sourceFileOf(show.dir, episode.video),
-          ...(episode.title === null ? {} : { title: episode.title }),
+          ...(title === null ? {} : { title }),
+          ...(airDate === null ? {} : { airDate }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
           ...(subtitles.length === 0 ? {} : { subtitles }),
         });
@@ -1301,12 +1327,14 @@ export function createImporter({
   const showMatch = (
     row: SheetRow,
     show: ShowScan,
-    held: HeldSeries | null
+    held: HeldSeries | null,
+    sheetEpisodes: SheetRow[] = []
   ): ShowMatch => {
     return {
       row,
       show,
       held,
+      sheetEpisodes,
       episodes:
         held === null
           ? show.episodes
@@ -1913,7 +1941,18 @@ export function createImporter({
       }
     }
 
-    const verdicts = matchRows(rows, [...films, ...showOf.keys()]);
+    // A Movie or Series row names a Title folder; a Season or Episode row is
+    // read with the series its Folder key names, never matched on its own.
+    const titleRows = rows.filter(
+      (row) => row.type === 'Movie' || row.type === 'Series'
+    );
+    const episodeRowsOf = (key: string): SheetRow[] =>
+      rows.filter(
+        (row) =>
+          row.type === 'Episode' &&
+          row.folder.toLowerCase() === key.toLowerCase()
+      );
+    const verdicts = matchRows(titleRows, [...films, ...showOf.keys()]);
     const matched: Placed<Match>[] = [];
     const matchedShows: Placed<ShowMatch>[] = [];
     const foundAgain: Placed<FoundAgain>[] = [];
@@ -1927,7 +1966,8 @@ export function createImporter({
         const joined = showMatch(
           match.row,
           show,
-          heldShow(held, seriesByKey, libraryFolder, show, match.row)
+          heldShow(held, seriesByKey, libraryFolder, show, match.row),
+          episodeRowsOf(match.row.folder)
         );
         if (joined.held !== null) {
           joined.updated = fillHeld(

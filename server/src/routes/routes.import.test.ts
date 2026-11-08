@@ -1161,7 +1161,8 @@ describe('a fresh API over the library of an interrupted run', () => {
     root: string;
     sheet: string;
   }> {
-    const { seam, reached } = heldCopy('Amelie.mp4');
+    // The fixture sheet runs Amélie, then Die Hard: held on Die Hard's copy.
+    const { seam, reached } = heldCopy('Die.Hard.1988.1080p.mp4');
     const before = freshApi({ seam });
     const started = await postImport(before.baseUrl, {
       sheetPath: before.sheet,
@@ -1192,13 +1193,13 @@ describe('a fresh API over the library of an interrupted run', () => {
     const { baseUrl, storage } = await interrupted();
 
     const movies = storage.listMovies({ sort: 'a-z' });
-    expect(movies.map((movie) => movie.title)).toEqual(['Die Hard']);
+    expect(movies.map((movie) => movie.title)).toEqual(['Amélie']);
 
-    const dieHard = storage
+    const amelie = storage
       .listMovies({ sort: 'a-z' })
-      .find((movie) => movie.title === 'Die Hard') as Movie;
-    const detail = await fetch(`${baseUrl}/api/movies/${dieHard.id}`);
-    const poster = await fetch(`${baseUrl}/api/images/${dieHard.posterPath}`);
+      .find((movie) => movie.title === 'Amélie') as Movie;
+    const detail = await fetch(`${baseUrl}/api/movies/${amelie.id}`);
+    const poster = await fetch(`${baseUrl}/api/images/${amelie.posterPath}`);
     expect(detail.status).toBe(200);
     expect(poster.status).toBe(200);
   });

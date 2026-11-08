@@ -166,12 +166,19 @@ const DIE_HARD = 'Die Hard (1988)/Die.Hard.1988.1080p.mp4';
 
 // --- The Folder picker -------------------------------------------------------
 
-/** Die Hard answered by the fixture's folder and a second one: `ambiguous`. */
+/**
+ * Die Hard answered by the fixture's folder and a second one of the same
+ * **Folder key** in a second Library folder: `ambiguous`.
+ */
 async function ambiguousDieHard(mode: ImportMode) {
   const box = sandbox('films');
-  placeVideo(box, DIE_HARD, 'Die-Hard (1988)/Die Hard.mp4');
+  const more = join(box.folder.path, '..', 'more');
+  const second = join(more, 'Die Hard (1988)');
+  mkdirSync(second, { recursive: true });
+  copyFileSync(join(box.folder.path, DIE_HARD), join(second, 'Die Hard.mp4'));
+  const moreFolder = box.storage.addLibraryFolder(more);
   const problem = await inReview(box, mode, 'ambiguous');
-  return { ...box, problem, second: join(box.folder.path, 'Die-Hard (1988)') };
+  return { ...box, problem, second, moreFolder };
 }
 
 describe('createImporter.pick — the Folder picker follows the run’s mode', () => {
@@ -182,8 +189,8 @@ describe('createImporter.pick — the Folder picker follows the run’s mode', (
 
     expect(outcome).toEqual({ kind: 'imported' });
     expect(movieTitled(box.storage, 'Die Hard')).toMatchObject({
-      videoFolderId: box.folder.id,
-      videoPath: 'Die-Hard (1988)/Die Hard.mp4',
+      videoFolderId: box.moreFolder.id,
+      videoPath: 'Die Hard (1988)/Die Hard.mp4',
     });
     expect(existsSync(join(box.media, 'Die Hard (1988)'))).toBe(false);
     expect(plays(box.playback, movieTitled(box.storage, 'Die Hard'))).toBe(

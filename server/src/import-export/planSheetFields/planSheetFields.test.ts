@@ -34,6 +34,20 @@ const BARE: HeldValues = {
 
 /** A row that names the title and nothing else. */
 const BLANK_ROW: SheetRow = {
+  type: 'Movie',
+  folder: 'Die Hard',
+  season: null,
+  episode: null,
+  airDate: null,
+  runtime: null,
+  tmdbScore: null,
+  tmdbId: null,
+  favorite: false,
+  video: null,
+  subtitles: [],
+  poster: null,
+  backdrop: null,
+  still: null,
   title: 'Die Hard',
   year: null,
   endYear: null,
