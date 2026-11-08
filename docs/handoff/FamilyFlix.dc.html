@@ -320,7 +320,7 @@
             's1-2-1':{watched:true},'s1-2-2':{watched:true},'s1-2-3':{watched:true},'s1-2-4':{watched:false,progress:45},
             's2-1-1':{watched:true},'s2-1-2':{watched:true},'s3-1-1':{watched:false,progress:22}},
           tmdbKey:'', tmdbConnected:false, tmdbTesting:false, online:true, lastSync:null, enrichedCount:8,
-          enStep:'setup', enScope:'missing', enFieldsOff:[], enWriteSheet:true, enWritePosters:true,
+          enStep:'setup', enScope:'missing', enFieldsOff:[],
           enDone:0, enTotal:0, enCurrent:'', enLog:[], enStartTime:null, enMatched:0, enPending:[], enReturn:'settings', enSingleTitle:null, enKind:'all', enSeriesId:null, enSeasonPicks:{},
           impEnrich:false,
           snackbars:[], updateAvailable:true, updateVersion:'1.1.0', currentVersion:'1.0.0', updating:false, checking:false, lastChecked:null,
@@ -729,8 +729,6 @@
           setTimeout(()=>{ this.setState({tmdbTesting:false,tmdbConnected:true}); this.pushSnack({variant:'success',message:'Connected to TMDB.',duration:4000,dismissible:true}); }, 1100); }
         toggleEnrichField(f){ this.setState(s=>({enFieldsOff: s.enFieldsOff.includes(f) ? s.enFieldsOff.filter(x=>x!==f) : [...s.enFieldsOff,f]})); }
         setEnrichScope(v){ this.setState({enScope:v}); }
-        toggleEnrichSheet(){ this.setState(s=>({enWriteSheet:!s.enWriteSheet})); }
-        toggleEnrichPosters(){ this.setState(s=>({enWritePosters:!s.enWritePosters})); }
         toggleImpEnrich(){ this.setState(s=>({impEnrich:!s.impEnrich})); }
         enrichTarget(){ const s=this.state; return s.enScope==='single'?1:s.enScope==='all'?this.rawMovies.length:s.enScope==='added'?3:12; }
         startEnrich(){ if(!this.state.tmdbConnected){ this.goSettings(); this.pushSnack({variant:'info',message:'Add your TMDB key here first.',duration:4500,dismissible:true}); return; }
@@ -1341,7 +1339,8 @@
                     cardStyle:{flex:'0 0 auto',width:'132px',textAlign:'left',padding:'10px',background:picked===i?'var(--color-accent-soft)':'var(--color-surface-2)',border:'1px solid '+(picked===i?'var(--color-accent)':'var(--color-border-soft)'),boxShadow:picked===i?'0 0 0 2px var(--color-accent)':'none',borderRadius:'var(--radius-md)',cursor:'pointer'},
                     posterStyle:{display:'block',width:'100%',height:'160px',borderRadius:'8px',background:c.bg}})),
                 }; }):[];
-              const targets = ['your library', s.enWriteSheet?'the sheet in your collection root':null, s.enWritePosters?'a poster.jpg in each movie folder':null].filter(Boolean);
+              // log 58: no Write target toggles; the Layout fill and the Library sheet always run.
+              const targets = ['your library', 'each title folder', 'the sheet in Meta'];
               return {
                 setup:s.enStep==='setup', running:s.enStep==='running', review:s.enStep==='review',
                 onBack:()=>this.backFromEnrich(), onCancel:()=>this.cancelEnrich(), onRetry:()=>this.retryOnline(),
@@ -1351,12 +1350,8 @@
                 keyBadgeStyle:{flex:'0 0 auto',fontFamily:'var(--font-sans)',fontSize:'12px',fontWeight:'600',padding:'5px 12px',borderRadius:'var(--radius-pill)',color:s.tmdbConnected?'var(--color-watched)':'var(--color-text-faint)',background:s.tmdbConnected?'rgba(138,154,107,.16)':'var(--color-surface-3)',border:'1px solid '+(s.tmdbConnected?'rgba(138,154,107,.3)':'var(--color-border)')},
                 scopes:scopeDefs.map(([v,label,desc])=>({label,desc,onSelect:()=>this.setEnrichScope(v),cardStyle:scopeCard(s.enScope===v),dotStyle:scopeDot(s.enScope===v)})),
                 fields:this.enrichFieldDefs.map(f=>({label:f,on:!s.enFieldsOff.includes(f),toggle:()=>this.toggleEnrichField(f)})),
-                writeSheet:s.enWriteSheet, onToggleSheet:()=>this.toggleEnrichSheet(),
-                writePosters:s.enWritePosters, onTogglePosters:()=>this.toggleEnrichPosters(),
-                writesToSource:s.enWriteSheet||s.enWritePosters,
-                // One library folder: the two paths under it. Several: one line each, in each folder.
-                sheetPath:s.libraryFolders.length>1?'familyflix-metadata.csv in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||'E:\\Movies')+'\\familyflix-metadata.csv',
-                posterPathExample:s.libraryFolders.length>1?'<movie folder>\\poster.jpg in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||'E:\\Movies')+'\\<movie folder>\\poster.jpg',
+                // One library folder: its title folders' Images. Several: one line for all.
+                layoutPath:s.libraryFolders.length>1?'<title folder>\\Images in each library folder':((s.libraryFolders[0]&&s.libraryFolders[0].path)||'E:\\Movies')+'\\<title folder>\\Images',
                 startLabel:s.enSingleTitle?'Fetch details':'Start sync',
                 startVariant:ready?'primary':'secondary',
                 startDisabled:!ready,

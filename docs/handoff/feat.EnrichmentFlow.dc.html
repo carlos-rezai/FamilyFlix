@@ -408,6 +408,8 @@
                   <div
                     style="height: 1px; background: var(--color-border-soft)"
                   ></div>
+                  <!-- log 58: the Write target toggles are gone. The Layout fill and the
+                       Library sheet are not a choice, so the row is marked Always. -->
                   <div
                     style="
                       display: flex;
@@ -433,103 +435,10 @@
                         viewBox="0 0 24 24"
                         fill="none"
                       >
-                        <rect
-                          x="4"
-                          y="3"
-                          width="16"
-                          height="18"
-                          rx="2"
-                          stroke="currentColor"
-                          stroke-width="1.7"
-                        />
                         <path
-                          d="M4 9h16M4 15h16M10 3v18"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                        /></svg
-                    ></span>
-                    <div style="flex: 1; min-width: 0">
-                      <div
-                        style="
-                          font-family: var(--font-sans);
-                          font-size: 15px;
-                          font-weight: 600;
-                          color: var(--color-text);
-                        "
-                      >
-                        Metadata sheet in the collection root
-                      </div>
-                      <div
-                        style="
-                          font-family: var(--font-mono);
-                          font-size: 12px;
-                          color: var(--color-text-faint);
-                          margin-top: 3px;
-                          overflow: hidden;
-                          text-overflow: ellipsis;
-                          white-space: nowrap;
-                        "
-                      >
-                        <!-- One library folder: its path. Several: familyflix-metadata.csv in each library folder -->
-                        {{ en.sheetPath }}
-                      </div>
-                    </div>
-                    <dc-import
-                      name="prim.Toggle"
-                      checked="{{ en.writeSheet }}"
-                      on-toggle="{{ en.onToggleSheet }}"
-                      hint-size="46px,26px"
-                    ></dc-import>
-                  </div>
-                  <div
-                    style="height: 1px; background: var(--color-border-soft)"
-                  ></div>
-                  <div
-                    style="
-                      display: flex;
-                      align-items: center;
-                      gap: 14px;
-                      padding: 16px 18px;
-                    "
-                  >
-                    <span
-                      style="
-                        flex: 0 0 auto;
-                        display: grid;
-                        place-items: center;
-                        width: 38px;
-                        height: 38px;
-                        border-radius: 9px;
-                        background: var(--color-surface-3);
-                        color: var(--color-text-dim);
-                      "
-                      ><svg
-                        width="19"
-                        height="19"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <rect
-                          x="3"
-                          y="4"
-                          width="18"
-                          height="16"
-                          rx="2"
+                          d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"
                           stroke="currentColor"
                           stroke-width="1.7"
-                        />
-                        <circle
-                          cx="8.5"
-                          cy="9.5"
-                          r="1.7"
-                          stroke="currentColor"
-                          stroke-width="1.5"
-                        />
-                        <path
-                          d="M4 17l5-4 4 3 3-2 4 3"
-                          stroke="currentColor"
-                          stroke-width="1.7"
-                          stroke-linecap="round"
                           stroke-linejoin="round"
                         /></svg
                     ></span>
@@ -542,7 +451,7 @@
                           color: var(--color-text);
                         "
                       >
-                        Posters into each movie folder
+                        Your library folders
                       </div>
                       <div
                         style="
@@ -555,44 +464,54 @@
                           white-space: nowrap;
                         "
                       >
-                        <!-- One library folder: its path. Several: <movie folder>\poster.jpg in each library folder -->
-                        {{ en.posterPathExample }}
+                        <!-- One library folder: its path. Several: "<title folder>\Images in each library folder" -->
+                        {{ en.layoutPath }}
                       </div>
                     </div>
-                    <dc-import
-                      name="prim.Toggle"
-                      checked="{{ en.writePosters }}"
-                      on-toggle="{{ en.onTogglePosters }}"
-                      hint-size="46px,26px"
-                    ></dc-import>
-                  </div>
-                </div>
-                <sc-if
-                  value="{{ en.writesToSource }}"
-                  hint-placeholder-val="{{ true }}"
-                >
-                  <div
-                    style="
-                      font-family: var(--font-sans);
-                      font-size: 13px;
-                      color: var(--color-text-faint);
-                      margin: 10px 0 0 2px;
-                      line-height: 1.5;
-                      text-wrap: pretty;
-                    "
-                  >
-                    FamilyFlix will write into your movie folders. Existing
-                    files are never replaced: a new
                     <span
                       style="
-                        font-family: var(--font-mono);
-                        color: var(--color-text-dim);
+                        font-family: var(--font-sans);
+                        font-size: 12px;
+                        font-weight: 600;
+                        color: var(--color-text-faint);
+                        background: var(--color-surface-3);
+                        border: 1px solid var(--color-border);
+                        padding: 4px 11px;
+                        border-radius: var(--radius-pill);
                       "
-                      >poster.jpg</span
+                      >Always</span
                     >
-                    is only written where there isn’t one.
                   </div>
-                </sc-if>
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin: 10px 0 0 2px;
+                    line-height: 1.5;
+                    text-wrap: pretty;
+                  "
+                >
+                  Art goes into each title folder's
+                  <span
+                    style="
+                      font-family: var(--font-mono);
+                      color: var(--color-text-dim);
+                    "
+                    >Images</span
+                  >
+                  folder, only where there isn’t one already: nothing of yours
+                  is ever replaced. The sheet in
+                  <span
+                    style="
+                      font-family: var(--font-mono);
+                      color: var(--color-text-dim);
+                    "
+                    >Meta</span
+                  >
+                  is FamilyFlix’s own and is kept up to date.
+                </div>
               </div>
 
               <div
