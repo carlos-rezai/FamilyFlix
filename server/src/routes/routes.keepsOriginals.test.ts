@@ -356,10 +356,10 @@ describe('an edit keeps every original', () => {
 });
 
 describe('Clear details keeps every original', () => {
-  it('removes only FamilyFlix’s copy of the art, the poster beside the video byte-identical', async () => {
+  it('removes only FamilyFlix’s copy of the art, the poster in its Images folder byte-identical', async () => {
     const api = await freshApi();
     original(api, 'Coco (2017)/Coco.mkv');
-    original(api, 'Coco (2017)/poster.jpg');
+    original(api, 'Coco (2017)/Images/poster.jpg');
     await scanToReview(api, 'link');
     const id = await idOf(api, 'movies', 'Coco');
     const managedPoster = api.storage.getMovie(id)?.posterPath ?? null;
@@ -383,7 +383,7 @@ describe('Factory reset keeps every original', () => {
   it('empties only the Managed media directory, every Library folder file byte-identical', async () => {
     const api = await freshApi();
     original(api, 'Coco (2017)/Coco.mkv');
-    original(api, 'Coco (2017)/poster.jpg');
+    original(api, 'Coco (2017)/Images/poster.jpg');
     original(api, 'Tidewater (2018)/Tidewater.S01E01.mkv');
     await scanToReview(api, 'link');
     original(api, 'Heat (1995)/Heat.mkv');

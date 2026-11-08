@@ -48,7 +48,7 @@ afterEach(async () => {
   }
 });
 
-const DIE_HARD = 'Die.Hard.1988.1080p/Die.Hard.1988.1080p.mp4';
+const DIE_HARD = 'Die Hard (1988)/Die.Hard.1988.1080p.mp4';
 const IRONWOOD = 'Ironwood (2018)';
 const QUARRY = 'Quarry Lane (2004)';
 

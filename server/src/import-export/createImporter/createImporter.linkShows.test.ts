@@ -279,11 +279,11 @@ describe('createImporter.start — the sheet start under an Import mode', () => 
     const films = filmsByTitle(box.storage);
     expect(films['Amélie']).toMatchObject({
       videoFolderId: box.films.id,
-      videoPath: 'Drama/Amelie (2001)/Amelie.mp4',
+      videoPath: 'Amelie (2001)/Amelie.mp4',
     });
     expect(films['Die Hard']).toMatchObject({
       videoFolderId: box.films.id,
-      videoPath: 'Die.Hard.1988.1080p/Die.Hard.1988.1080p.mp4',
+      videoPath: 'Die Hard (1988)/Die.Hard.1988.1080p.mp4',
     });
     expect(filesUnder(box.media).filter(isVideo)).toEqual([]);
   });

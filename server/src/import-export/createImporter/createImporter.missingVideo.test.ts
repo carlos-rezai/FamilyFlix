@@ -51,7 +51,9 @@ import type { ImportRun } from '@/types';
 afterEach(closeTracked);
 
 const GUARDIANS = 'Guardians of the Galaxy';
-const FOUND_VIDEO = `${GUARDIANS}/${GUARDIANS}.mp4`;
+/** The found film's **Title folder**. */
+const FOLDER = `${GUARDIANS} (2014)`;
+const FOUND_VIDEO = `${FOLDER}/${GUARDIANS}.mp4`;
 /** The household's dead copy: _Vol. 2_, mistitled, its file gone. */
 const DEAD_COPY = 'guardians-of-the-galaxy/Guardians of the Galaxy Vol. 2.mp4';
 
@@ -76,10 +78,10 @@ function sandbox(): Sandbox {
   mkdirSync(media);
   mkdirSync(join(dir, 'films'));
   const { root, sheet } = libraryFixture(join(dir, 'films'), 'library.csv');
-  mkdirSync(join(root, GUARDIANS));
+  mkdirSync(join(root, FOLDER));
   copyFileSync(
-    join(root, 'Drama', 'Amelie (2001)', 'Amelie.mp4'),
-    join(root, GUARDIANS, `${GUARDIANS}.mp4`)
+    join(root, 'Amelie (2001)', 'Amelie.mp4'),
+    join(root, FOLDER, `${GUARDIANS}.mp4`)
   );
 
   const dbPath = join(dir, 'familyflix.db');
@@ -202,6 +204,7 @@ describe('createImporter.scan: a held film on an unreadable Library folder', () 
     const held = box.storage.addMovie(
       newMovie({
         title: GUARDIANS,
+        year: 2014,
         videoPath: FOUND_VIDEO,
         videoFolderId: offline.id,
       })
@@ -227,7 +230,7 @@ describe('createImporter.start: a sheet row with no folder found', () => {
   it('still fills a held film whose video is missing', async () => {
     const box = sandbox();
     // The fixture's Die Hard folder is gone, so its row finds no folder.
-    rmSync(join(box.films.path, 'Die.Hard.1988.1080p'), {
+    rmSync(join(box.films.path, 'Die Hard (1988)'), {
       recursive: true,
       force: true,
     });

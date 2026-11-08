@@ -48,7 +48,7 @@ import type { ImportRun } from '@/types';
 // remove a sandbox holding an open database file.
 afterEach(closeTracked);
 
-const DIE_HARD = 'Die.Hard.1988.1080p/Die.Hard.1988.1080p.mp4';
+const DIE_HARD = 'Die Hard (1988)/Die.Hard.1988.1080p.mp4';
 const HARBOR_PILOT =
   'Harbor & Vine (2021)/Season 01/Harbor.and.Vine.S01E01.Pilot.mp4';
 const HARBOR_SECOND =
@@ -209,7 +209,7 @@ describe('createImporter.scan: a renamed title with no folder on record', () => 
 
     expect(recordedFolder(box.storage, id)).toEqual({
       folderId: box.films.id,
-      sourceFolder: 'Die.Hard.1988.1080p',
+      sourceFolder: 'Die Hard (1988)',
     });
   });
 
@@ -300,7 +300,7 @@ describe('createImporter.scan: a double an older library holds', () => {
       [first.id, second.id].map((id) => recordedFolder(reopened.storage, id))
     ).toContainEqual({
       folderId: box.films.id,
-      sourceFolder: 'Die.Hard.1988.1080p',
+      sourceFolder: 'Die Hard (1988)',
     });
   });
 });

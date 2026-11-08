@@ -1,15 +1,15 @@
 // @vitest-environment node
 //
-// 51, Library audit, Phase 4: "season folders read as real shows name them"
-// (issue #447).
+// 58, Folder layout, Phase 2: "one film in the layout" (issue #535), over
+// the four shapes log 51 Phase 4 (issue #447) once read as Season folders.
 //
-// The importer's **Folder scan** over the four **Season folder** shapes the
-// sandbox walk found read as films or as shows of the wrong name: a Dutch
+// The importer's **Folder scan** reads a Library folder by the **Folder
+// layout**, whose Season folder is `Season` and its number: a Dutch
 // `Seizoen 1`, a `Season 1 (2008)` with its year, a release-named
-// `Release.Show.S01.1080p.WEB-DL` and a `Specials` folder. Each sits under its
-// own **Show folder** in one **Library folder**, and the scan makes four
-// **Series**, each titled off its Show folder, with its episodes in the
-// season the folder says, and no films.
+// `Release.Show.S01.1080p.WEB-DL` and a `Specials` folder are none. Each sits
+// alone under its own **Title folder** in one **Library folder**, which holds
+// no video or Season folder and is one **Layout warning**: no series, no
+// film, no Problem.
 //
 // Composed as the series suite is: a real `freshStorage`, a real `Media` over
 // a sandbox managed directory and the absent **Playback component**. The
@@ -32,24 +32,24 @@ import type { ImportRun } from '@/types';
 /** The four shapes: each Show folder, its Season folder and its videos. */
 const SHOWS: readonly (readonly [string, string, readonly string[]])[] = [
   [
-    'Seizoen Show',
+    'Seizoen Show (2010)',
     'Seizoen 1',
     ['Seizoen.Show.S01E01.mp4', 'Seizoen.Show.S01E02.mp4'],
   ],
-  ['Year Show', 'Season 1 (2008)', ['Year.Show.S01E01.mp4']],
+  ['Year Show (2008)', 'Season 1 (2008)', ['Year.Show.S01E01.mp4']],
   [
-    'Release Show',
+    'Release Show (2011)',
     'Release.Show.S01.1080p.WEB-DL',
     ['Release.Show.S01E01.1080p.WEB-DL.mp4'],
   ],
-  ['Specials Show', 'Specials', ['Specials.Show.S00E01.Christmas.mp4']],
+  ['Specials Show (2012)', 'Specials', ['Specials.Show.S00E01.Christmas.mp4']],
 ];
 
 /** The fixture's film header, an `mvhd` saying 132 minutes. */
 const HEADER = join(
   LIBRARY_FIXTURE,
   'root',
-  'Die.Hard.1988.1080p',
+  'Die Hard (1988)',
   'Die.Hard.1988.1080p.mp4'
 );
 
@@ -97,45 +97,33 @@ async function untilReview(importer: Importer): Promise<ImportRun> {
   }
 }
 
-describe('createImporter.scan: the four Season folder shapes', () => {
-  it('makes four series, no films', async () => {
+describe('createImporter.scan: the four shapes the layout does not read', () => {
+  it('makes no series and no film, and files no Problem', async () => {
     const { storage, importer, folder } = sandbox();
 
     await importer.scan([folder]);
-    await untilReview(importer);
+    const run = await untilReview(importer);
 
     expect(storage.listMovies({ sort: 'a-z' })).toEqual([]);
-    expect(
-      storage
-        .getSeriesHome()
-        .series.map((show) => show.title)
-        .sort()
-    ).toEqual(['Release Show', 'Seizoen Show', 'Specials Show', 'Year Show']);
+    expect(storage.getSeriesHome().series).toEqual([]);
+    expect(run.problems).toEqual([]);
   });
 
-  it('gives each series its episodes in the season its folder says', async () => {
-    const { storage, importer, folder } = sandbox();
+  it('logs one Layout warning for each Title folder', async () => {
+    const { importer, folder } = sandbox();
 
     await importer.scan([folder]);
-    await untilReview(importer);
+    const run = await untilReview(importer);
 
-    const seasons = Object.fromEntries(
-      storage.getSeriesHome().series.map((show) => [
-        show.title,
-        storage
-          .listEpisodes(show.id)
-          .map((episode) => [episode.season, episode.number])
-          .sort((a, b) => a[0] - b[0] || a[1] - b[1]),
-      ])
+    expect(
+      run.log
+        .filter((line) => line.kind === 'warning')
+        .map((line) => line.text)
+        .sort()
+    ).toEqual(
+      SHOWS.map(
+        ([show]) => `⚠ ${show} holds no video or Season folder, left out`
+      ).sort()
     );
-    expect(seasons).toEqual({
-      'Seizoen Show': [
-        [1, 1],
-        [1, 2],
-      ],
-      'Year Show': [[1, 1]],
-      'Release Show': [[1, 1]],
-      'Specials Show': [[0, 1]],
-    });
   });
 });

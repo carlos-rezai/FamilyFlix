@@ -210,7 +210,7 @@ describe('createImporter.start — a sheet over two listed folders', () => {
     const movies = rows(box.db, 'movies');
     expect(movies['Die Hard']).toMatchObject({
       library_folder_id: folders.films.id,
-      source_folder: 'Die.Hard.1988.1080p',
+      source_folder: 'Die Hard (1988)',
     });
     const series = rows(box.db, 'series');
     expect(series['Tidewater']).toMatchObject({
@@ -352,7 +352,7 @@ describe('createImporter.start — Already in library', () => {
         .get(held.id)
     ).toEqual({
       library_folder_id: folders.films.id,
-      source_folder: 'Die.Hard.1988.1080p',
+      source_folder: 'Die Hard (1988)',
     });
     // Held bare, it takes the row's Sheet fills (issue #332) rather than
     // the Already in library line.

@@ -149,11 +149,11 @@ describe('createImporter.scan — a Link scan', () => {
     const films = byTitle(box.storage);
     expect(films['Amelie']).toMatchObject({
       videoFolderId: box.folder.id,
-      videoPath: 'Drama/Amelie (2001)/Amelie.mp4',
+      videoPath: 'Amelie (2001)/Amelie.mp4',
     });
     expect(films['Die Hard']).toMatchObject({
       videoFolderId: box.folder.id,
-      videoPath: 'Die.Hard.1988.1080p/Die.Hard.1988.1080p.mp4',
+      videoPath: 'Die Hard (1988)/Die.Hard.1988.1080p.mp4',
     });
   });
 
@@ -183,7 +183,7 @@ describe('createImporter.scan — a Link scan', () => {
     await scanOnce(box, 'link');
 
     const amelie = byTitle(box.storage)['Amelie'];
-    expect(amelie.posterPath).toBe('amelie-2001/cover.png');
+    expect(amelie.posterPath).toBe('amelie-2001/poster.png');
     expect(amelie.backdropPath).toBe('amelie-2001/backdrop.png');
     expect(amelie.subtitles.map((track) => track.path)).toEqual([
       'amelie-2001/Amelie.srt',
@@ -191,7 +191,7 @@ describe('createImporter.scan — a Link scan', () => {
     expect(filesUnder(join(box.media, 'amelie-2001'))).toEqual([
       'Amelie.srt',
       'backdrop.png',
-      'cover.png',
+      'poster.png',
     ]);
   });
 
@@ -214,7 +214,7 @@ describe('createImporter.scan — a Link scan', () => {
 
     const amelie = byTitle(box.storage)['Amelie'];
     expect(amelie.videoFolderId).toBe(box.folder.id);
-    expect(sourceFolderOf(box.db, amelie.id)).toBe('Drama/Amelie (2001)');
+    expect(sourceFolderOf(box.db, amelie.id)).toBe('Amelie (2001)');
   });
 
   it('plays: the linked video opens where it lies', async () => {
@@ -233,7 +233,7 @@ describe('createImporter.scan — a Link scan', () => {
       relative(realpathSync(box.folder.path), realpathSync(file))
         .split(sep)
         .join('/')
-    ).toBe('Drama/Amelie (2001)/Amelie.mp4');
+    ).toBe('Amelie (2001)/Amelie.mp4');
   });
 });
 
@@ -266,10 +266,10 @@ describe('createImporter.scan — a Copy scan', () => {
 
     expect(run.mode).toBe('copy');
     const amelie = byTitle(box.storage)['Amelie'];
-    expect(amelie.posterPath).toBe('amelie-2001/cover.png');
+    expect(amelie.posterPath).toBe('amelie-2001/poster.png');
     expect(amelie.backdropPath).toBe('amelie-2001/backdrop.png');
     expect(amelie.runtimeMinutes).toBe(122);
-    expect(sourceFolderOf(box.db, amelie.id)).toBe('Drama/Amelie (2001)');
+    expect(sourceFolderOf(box.db, amelie.id)).toBe('Amelie (2001)');
   });
 });
 
@@ -321,7 +321,7 @@ describe('createImporter.scan — a re-run in the other mode', () => {
 describe('createImporter.scan — a cancelled Link run', () => {
   it('rolls back the folder it reserved for the title in flight', async () => {
     // Under Link the first copy of Amélie's is her poster, not her video.
-    const hold = heldCopy('cover.png');
+    const hold = heldCopy('poster.png');
     const box = sandbox({ media: hold.seam });
     await box.importer.scan([box.folder], false, 'link');
     await hold.reached;

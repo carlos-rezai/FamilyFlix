@@ -61,7 +61,7 @@ function freshApi({
   const media = join(dir, 'media');
   mkdirSync(media);
   const { root, sheet } = libraryFixture(dir);
-  const second = join(root, 'Die Hard (1988)');
+  const second = join(root, 'Die-Hard (1988)');
   mkdirSync(second);
   for (const video of secondVideos) {
     writeFileSync(join(second, video), '');
@@ -97,7 +97,7 @@ function freshApi({
     baseUrl: `http://127.0.0.1:${port}`,
     sheet,
     root,
-    fixtureFolder: join(root, 'Die.Hard.1988.1080p'),
+    fixtureFolder: join(root, 'Die Hard (1988)'),
     second,
   };
 }
@@ -171,8 +171,8 @@ describe('GET /api/import/current — an ambiguous Problem’s candidates', () =
       )
     ).toEqual(
       [
-        { path: fixtureFolder, name: 'Die.Hard.1988.1080p', videos: 1 },
-        { path: second, name: 'Die Hard (1988)', videos: 1 },
+        { path: fixtureFolder, name: 'Die Hard (1988)', videos: 1 },
+        { path: second, name: 'Die-Hard (1988)', videos: 1 },
       ].sort((a, b) => a.path.localeCompare(b.path))
     );
   });

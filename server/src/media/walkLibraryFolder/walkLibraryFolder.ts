@@ -4,66 +4,124 @@ import { join } from 'node:path';
 
 import { isVideoFilename } from '../fileKinds/fileKinds';
 import {
-  scanMovieFolder,
-  type MovieFolderScan,
-} from '../scanMovieFolder/scanMovieFolder';
+  readTitleFolder,
+  type FilmFolderScan,
+  type LeftOutReason,
+  type SeriesFolderScan,
+  type TitleFolderScan,
+} from '../readTitleFolder/readTitleFolder';
+
+/** A **Title folder** the walk read: a film or a series. */
+export type WalkedTitle = FilmFolderScan | SeriesFolderScan;
 
 /**
- * Walk a **Library folder** for its **Source folders**, in the order they are
- * found: a folder holding a video file is a Source folder and is not descended
- * — an `Extras/` inside a film's own folder is not a second film on the shelf
- * — and one holding none is descended, so `Drama/Amelie (2001)` is reached
- * through `Drama/`.
+ * What a walk of one **Library folder** answers: the **Title folders** read,
+ * each **Layout warning**'s text, and the `Meta/` sheet's path, or `null`.
+ */
+export interface LayoutWalk {
+  titles: WalkedTitle[];
+  warnings: string[];
+  sheet: string | null;
+}
+
+/** The folder holding a Library folder's own sheet, and an Export's. */
+const META = 'Meta';
+
+/** The **Library sheet**, under `Meta/`. */
+const SHEET = 'familyflix-library.csv';
+
+/** A **Layout warning**'s text for a root folder left out. */
+const WARNING: Record<LeftOutReason, (name: string) => string> = {
+  'no-key': (name) => `⚠ ${name} isn't named Title (Year), left out`,
+  empty: (name) => `⚠ ${name} holds no video or Season folder, left out`,
+  mixed: (name) => `⚠ ${name} holds loose videos and Season folders, left out`,
+};
+
+/** A system folder: a dot or dollar name, or `System Volume Information`. */
+const isSystemFolder = (name: string): boolean =>
+  name.startsWith('.') ||
+  name.startsWith('$') ||
+  name === 'System Volume Information';
+
+/** Whether a folder holds a `Meta/` folder: an **Export folder**. */
+async function holdsMeta(dir: string): Promise<boolean> {
+  try {
+    const entries = await readdir(dir, { withFileTypes: true });
+    return entries.some((entry) => entry.isDirectory() && entry.name === META);
+  } catch {
+    return false;
+  }
+}
+
+/** The root's `Meta/` sheet, or `null` when there is none. */
+async function sheetIn(root: string): Promise<string | null> {
+  try {
+    const entries = await readdir(join(root, META), { withFileTypes: true });
+    return entries.some((entry) => entry.isFile() && entry.name === SHEET)
+      ? join(root, META, SHEET)
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Walk a **Library folder** by the **Folder layout**: only the root's entries
+ * are read, each folder by `readTitleFolder`. A folder left out of the layout
+ * is one **Layout warning**, and the root's loose videos one line for the
+ * whole folder. `Meta/`, an **Export folder** (a folder holding `Meta/`) and
+ * system folders pass in silence; nothing inside a Title folder warns.
  *
- * The root itself is a shelf, never a film: it is always descended, so a
- * video lying loose beside the folders is not the whole library.
- *
- * What a video file is, is the scanner's fixed extension list, asked here only
- * to decide whether to descend; the folder's full scan is the scanner's.
- * `onFound` is told of each Source folder as it is found, which is what lets
- * a run count "Found N movies so far" while the walk is still going.
- *
- * A folder under the root that cannot be read — permissions, most often — is
- * told to `onUnreadable` and skipped, so one locked directory never ends the
- * walk. The root itself is not skipped: a root that cannot be read is the
- * caller's to refuse.
+ * `onFound` is told of each Title folder as it is read. A Title folder that
+ * cannot be read is told to `onUnreadable` and skipped; the root itself is
+ * the caller's to refuse.
  */
 export async function walkLibraryFolder(
   root: string,
-  onFound: (scan: MovieFolderScan) => void = () => undefined,
+  onFound: (title: WalkedTitle) => void = () => undefined,
   onUnreadable: (dir: string) => void = () => undefined
-): Promise<MovieFolderScan[]> {
-  const scans: MovieFolderScan[] = [];
+): Promise<LayoutWalk> {
+  const entries: Dirent[] = await readdir(root, { withFileTypes: true });
+  const titles: WalkedTitle[] = [];
+  const warnings: string[] = [];
 
-  const descend = async (dir: string): Promise<void> => {
-    for (const entry of await readdir(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        await visit(join(dir, entry.name));
-      }
+  for (const entry of entries) {
+    if (!entry.isDirectory()) {
+      continue;
     }
-  };
-
-  const visit = async (dir: string): Promise<void> => {
-    let entries: Dirent[];
+    const dir = join(root, entry.name);
+    if (
+      entry.name === META ||
+      isSystemFolder(entry.name) ||
+      (await holdsMeta(dir))
+    ) {
+      continue;
+    }
+    let scan: TitleFolderScan;
     try {
-      entries = await readdir(dir, { withFileTypes: true });
+      scan = await readTitleFolder(dir);
     } catch {
       onUnreadable(dir);
-      return;
+      continue;
     }
-    const holdsVideo = entries.some(
-      (entry) => entry.isFile() && isVideoFilename(entry.name)
+    if (scan.kind === 'left-out') {
+      warnings.push(WARNING[scan.reason](scan.name));
+      continue;
+    }
+    titles.push(scan);
+    onFound(scan);
+  }
+
+  const loose = entries.filter(
+    (entry) => entry.isFile() && isVideoFilename(entry.name)
+  ).length;
+  if (loose > 0) {
+    warnings.push(
+      loose === 1
+        ? `⚠ 1 video lies loose at the top of ${root}, left out`
+        : `⚠ ${loose} videos lie loose at the top of ${root}, left out`
     );
+  }
 
-    if (holdsVideo) {
-      const scan = await scanMovieFolder(dir);
-      scans.push(scan);
-      onFound(scan);
-      return;
-    }
-    await descend(dir);
-  };
-
-  await descend(root);
-  return scans;
+  return { titles, warnings, sheet: await sheetIn(root) };
 }

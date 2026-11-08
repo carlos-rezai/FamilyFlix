@@ -12,8 +12,8 @@
 //
 // The fixture is real and checked in beside this file, because it is also what
 // fills a dev library once the seed goes: `library.xlsx` / `library.csv` are the
-// same two rows, and `root/` holds `Die.Hard.1988.1080p` beside a `Drama/`
-// folder that has to be descended to reach `Amelie (2001)`. The videos are MP4
+// same two rows, and `root/` holds the two **Title folders** `Die Hard (1988)`
+// and `Amelie (2001)`, each with its `Images/` and `Subtitles/`. The videos are MP4
 // headers alone — an `mvhd` saying how long each film is, which is all the
 // runtime derivation reads on a machine with no FFmpeg — and nothing a player
 // could show.
@@ -241,7 +241,7 @@ describe('createImporter — the fixture becomes two movies', () => {
     const dieHard = byTitle(storage)['Die Hard'];
     expect(dieHard.videoPath).toBe('die-hard-1988/Die.Hard.1988.1080p.mp4');
     expect(dieHard.posterPath).toBe('die-hard-1988/poster.jpg');
-    expect(dieHard.backdropPath).toBe('die-hard-1988/fanart.jpg');
+    expect(dieHard.backdropPath).toBe('die-hard-1988/backdrop.jpg');
     expect(
       [...dieHard.subtitles]
         .sort((a, b) => a.position - b.position)
@@ -259,13 +259,18 @@ describe('createImporter — the fixture becomes two movies', () => {
       ...dieHard.subtitles.map((track) => track.path),
     ]) {
       const name = String(stored).split('/')[1];
+      const under = name.endsWith('.srt')
+        ? 'Subtitles'
+        : name.endsWith('.jpg')
+          ? 'Images'
+          : '';
       expect(readFileSync(join(media, String(stored)))).toEqual(
-        readFileSync(join(root, 'Die.Hard.1988.1080p', name))
+        readFileSync(join(root, 'Die Hard (1988)', under, name))
       );
     }
   });
 
-  it('reaches a film in a descended folder and takes its named poster and backdrop', async () => {
+  it('takes Amélie’s poster and backdrop from its Images folder', async () => {
     const { storage, importer, root, sheet } = sandbox();
 
     await importer.start(sheet);
@@ -273,7 +278,7 @@ describe('createImporter — the fixture becomes two movies', () => {
 
     const amelie = byTitle(storage)['Amélie'];
     expect(amelie.videoPath).toBe('amelie-2001/Amelie.mp4');
-    expect(amelie.posterPath).toBe('amelie-2001/cover.png');
+    expect(amelie.posterPath).toBe('amelie-2001/poster.png');
     expect(amelie.backdropPath).toBe('amelie-2001/backdrop.png');
     expect(
       amelie.subtitles.map((track) => [track.path, track.language])
@@ -394,7 +399,7 @@ describe('createImporter — the snapshot', () => {
     expect(importer.current()?.id).toBe(started.id);
   });
 
-  it('counts the run out: three folders found, two matched, two of two done', async () => {
+  it('counts the run out: two folders found, two matched, two of two done', async () => {
     const { importer, root, sheet } = sandbox();
 
     await importer.start(sheet);
@@ -402,7 +407,7 @@ describe('createImporter — the snapshot', () => {
 
     expect(run).toMatchObject({
       phase: 'review',
-      found: 3,
+      found: 2,
       matched: 2,
       total: 2,
       done: 2,
@@ -480,7 +485,7 @@ describe('createImporter — the snapshot', () => {
     // every row matched: the phase is importing, and `found` and `total` are
     // already the numbers review will show.
     expect(seen.length).toBeGreaterThan(0);
-    expect(seen[0]).toMatchObject({ phase: 'importing', found: 3, total: 2 });
+    expect(seen[0]).toMatchObject({ phase: 'importing', found: 2, total: 2 });
   });
 });
 
@@ -716,7 +721,7 @@ describe('createImporter — a row already in the library', () => {
     // Skipped rows are counted as neither: nothing to import, nothing to fix.
     expect(run).toMatchObject({
       phase: 'review',
-      found: 3,
+      found: 2,
       matched: 0,
       total: 0,
       done: 0,
@@ -845,13 +850,21 @@ function lanternKeeper(
 ): { sheet: string; folder: string } {
   const folder = join(root, 'The Lantern Keeper (2019)');
   mkdirSync(folder);
-  const amelie = join(root, 'Drama', 'Amelie (2001)');
+  const amelie = join(root, 'Amelie (2001)');
   cpSync(join(amelie, 'Amelie.mp4'), join(folder, 'The.Lantern.Keeper.mp4'));
   if (poster) {
-    cpSync(join(amelie, 'cover.png'), join(folder, 'poster.png'));
+    mkdirSync(join(folder, 'Images'));
+    cpSync(
+      join(amelie, 'Images', 'poster.png'),
+      join(folder, 'Images', 'poster.png')
+    );
   }
   if (subtitle) {
-    cpSync(join(amelie, 'Amelie.srt'), join(folder, 'The.Lantern.Keeper.srt'));
+    mkdirSync(join(folder, 'Subtitles'));
+    cpSync(
+      join(amelie, 'Subtitles', 'Amelie.srt'),
+      join(folder, 'Subtitles', 'The.Lantern.Keeper.srt')
+    );
   }
   const sheet = join(root, '..', 'three.csv');
   writeFileSync(
@@ -1283,7 +1296,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
 
   it('files ambiguous for a row two folders answer to, and imports neither', async () => {
     const { storage, importer, media, root, sheet } = sandbox();
-    folderUnder(root, 'Die Hard (1988)', ['Die Hard.mp4']);
+    folderUnder(root, 'Die-Hard (1988)', ['Die Hard.mp4']);
 
     await importer.start(sheet);
     const run = await untilReview(importer);
@@ -1376,7 +1389,7 @@ describe('createImporter — the matcher’s verdicts become problems', () => {
 describe('createImporter — a matched folder holding two videos', () => {
   it('files no-video with the more-than-one reason, and imports nothing from it', async () => {
     const { storage, importer, media, root, sheet } = sandbox();
-    const dieHard = join(root, 'Die.Hard.1988.1080p');
+    const dieHard = join(root, 'Die Hard (1988)');
     cpSync(
       join(dieHard, 'Die.Hard.1988.1080p.mp4'),
       join(dieHard, 'Die.Hard.1988.1080p.mkv')
@@ -1678,7 +1691,7 @@ async function failedDieHard(): Promise<
   await box.importer.start(box.sheet);
   const run = await untilReview(box.importer);
   const [problem] = ofKind(run, 'failed');
-  return { ...box, problem, dieHard: join(box.root, 'Die.Hard.1988.1080p') };
+  return { ...box, problem, dieHard: join(box.root, 'Die Hard (1988)') };
 }
 
 /** The fixture's Die Hard, as the form sends it back with every slot found. */
@@ -1693,14 +1706,18 @@ function dieHardForm(dieHard: string): ResolveForm {
     cast: ['Bruce Willis', 'Alan Rickman'],
     genres: ['Action', 'Thriller'],
     video: { found: join(dieHard, 'Die.Hard.1988.1080p.mp4') },
-    poster: { found: join(dieHard, 'poster.jpg') },
+    poster: { found: join(dieHard, 'Images', 'poster.jpg') },
     subtitles: [
       {
-        file: { found: join(dieHard, 'Die.Hard.1988.1080p.en.srt') },
+        file: {
+          found: join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.en.srt'),
+        },
         language: 'English',
       },
       {
-        file: { found: join(dieHard, 'Die.Hard.1988.1080p.pt.srt') },
+        file: {
+          found: join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.pt.srt'),
+        },
         language: 'Portuguese',
       },
     ],
@@ -1731,15 +1748,15 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       folder: dieHard,
       files: {
         video: join(dieHard, 'Die.Hard.1988.1080p.mp4'),
-        poster: join(dieHard, 'poster.jpg'),
-        backdrop: join(dieHard, 'fanart.jpg'),
+        poster: join(dieHard, 'Images', 'poster.jpg'),
+        backdrop: join(dieHard, 'Images', 'backdrop.jpg'),
         subtitles: [
           {
-            path: join(dieHard, 'Die.Hard.1988.1080p.en.srt'),
+            path: join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.en.srt'),
             language: 'English',
           },
           {
-            path: join(dieHard, 'Die.Hard.1988.1080p.pt.srt'),
+            path: join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.pt.srt'),
             language: 'Portuguese',
           },
         ],
@@ -1750,7 +1767,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
 
   it('leaves the video slot of a no-video problem empty, and fills the rest from the folder', async () => {
     const { importer, root, sheet } = sandbox();
-    const dieHard = join(root, 'Die.Hard.1988.1080p');
+    const dieHard = join(root, 'Die Hard (1988)');
     cpSync(
       join(dieHard, 'Die.Hard.1988.1080p.mp4'),
       join(dieHard, 'Die.Hard.1988.1080p.mkv')
@@ -1771,7 +1788,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       join(dieHard, 'Die.Hard.1988.1080p.mkv'),
       join(dieHard, 'Die.Hard.1988.1080p.mp4'),
     ]);
-    expect(detail?.files.poster).toBe(join(dieHard, 'poster.jpg'));
+    expect(detail?.files.poster).toBe(join(dieHard, 'Images', 'poster.jpg'));
     expect(detail?.files.subtitles).toHaveLength(2);
     expect(detail?.row.title).toBe('Die Hard');
   });
@@ -1785,7 +1802,7 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
         'EBUSY: resource busy or locked'
       ),
     });
-    const dieHard = join(root, 'Die.Hard.1988.1080p');
+    const dieHard = join(root, 'Die Hard (1988)');
     await importer.start(sheet);
     const [problem] = ofKind(await untilReview(importer), 'failed');
 
@@ -1799,14 +1816,14 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
 
   it('names every candidate folder of an ambiguous problem', async () => {
     const { importer, root, sheet } = sandbox();
-    const second = folderUnder(root, 'Die Hard (1988)', ['Die Hard.mp4']);
+    const second = folderUnder(root, 'Die-Hard (1988)', ['Die Hard.mp4']);
     await importer.start(sheet);
     const [problem] = ofKind(await untilReview(importer), 'ambiguous');
 
     const detail = importer.problem(problem.id);
 
     expect(detail?.candidates?.map((folder) => folder.path).sort()).toEqual(
-      [join(root, 'Die.Hard.1988.1080p'), second].sort()
+      [join(root, 'Die Hard (1988)'), second].sort()
     );
     expect(detail?.candidates).toEqual(problem.candidates);
     expect(detail?.row).toMatchObject({ title: 'Die Hard', year: 1988 });
@@ -1855,44 +1872,44 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
   });
 
   // A `no-row` **Problem** is a folder the sheet forgot: there is no **Sheet
-  // row** to prefill from, so the detail offers the one title the folder can
-  // suggest — its name with the **Title key**'s tail forms dropped, the way
-  // `titleGuess` reads it — beside the folder's own **Found files**. The
-  // snapshot's row keeps naming the folder as it is on disk; the guess is for
-  // the title field.
+  // row** to prefill from, so the detail offers the title its **Folder key**
+  // spells, beside the folder's own **Found files**. The snapshot's row keeps
+  // naming the folder as it is on disk; the title is for the title field.
   describe('a no-row opening', () => {
-    it('guesses the title from the folder name, with the tail forms dropped', async () => {
+    it('takes the title off the Folder key', async () => {
       const { importer, root, sheet } = sandbox();
-      folderUnder(root, 'Harbor.Lights.2019', ['Harbor.Lights.2019.mp4']);
+      folderUnder(root, 'Harbor Lights (2019)', ['Harbor.Lights.2019.mp4']);
       await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
       const detail = importer.problem(problem.id);
 
-      // Story 84: a film the sheet forgot is one title away from imported — and
-      // that title is already typed, not `Harbor.Lights.2019`.
+      // Story 84: a film the sheet forgot is one title away from imported, and
+      // that title is already typed.
       expect(detail?.row).toEqual({ title: 'Harbor Lights', genres: [] });
     });
 
     it('keeps the review row naming the folder as it is on disk', async () => {
       const { importer, root, sheet } = sandbox();
-      folderUnder(root, 'Harbor.Lights.2019', ['Harbor.Lights.2019.mp4']);
+      folderUnder(root, 'Harbor Lights (2019)', ['Harbor.Lights.2019.mp4']);
       await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
       const detail = importer.problem(problem.id);
 
-      expect(problem.title).toBe('Harbor.Lights.2019');
-      expect(detail?.title).toBe('Harbor.Lights.2019');
+      expect(problem.title).toBe('Harbor Lights (2019)');
+      expect(detail?.title).toBe('Harbor Lights (2019)');
     });
 
-    it('answers the folder’s own files beside the guess', async () => {
+    it('answers the folder’s own files beside the title', async () => {
       const { importer, root, sheet } = sandbox();
-      const folder = folderUnder(root, 'Harbor.Lights.2019', [
+      const folder = folderUnder(root, 'Harbor Lights (2019)', [
         'Harbor.Lights.2019.mp4',
       ]);
-      writeFileSync(join(folder, 'poster.jpg'), '');
-      writeFileSync(join(folder, 'Harbor.Lights.2019.en.srt'), '');
+      mkdirSync(join(folder, 'Images'));
+      mkdirSync(join(folder, 'Subtitles'));
+      writeFileSync(join(folder, 'Images', 'poster.jpg'), '');
+      writeFileSync(join(folder, 'Subtitles', 'Harbor.Lights.2019.en.srt'), '');
       await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
@@ -1904,23 +1921,23 @@ describe('createImporter — problem: the detail Resolve prefills from', () => {
       expect(detail?.files).toEqual({
         video: join(folder, 'Harbor.Lights.2019.mp4'),
         videos: [join(folder, 'Harbor.Lights.2019.mp4')],
-        poster: join(folder, 'poster.jpg'),
+        poster: join(folder, 'Images', 'poster.jpg'),
         subtitles: [
           {
-            path: join(folder, 'Harbor.Lights.2019.en.srt'),
+            path: join(folder, 'Subtitles', 'Harbor.Lights.2019.en.srt'),
             language: 'English',
           },
         ],
       });
     });
 
-    it('guesses from a name that carries no tail by leaving it as it is', async () => {
+    it('keeps the dots of a title as its Folder key spells it', async () => {
       const { importer, root, sheet } = sandbox();
-      folderUnder(root, 'Ironwood', ['Ironwood.mp4']);
+      folderUnder(root, 'Mr. Ironwood (2018)', ['Ironwood.mp4']);
       await importer.start(sheet);
       const [problem] = ofKind(await untilReview(importer), 'no-row');
 
-      expect(importer.problem(problem.id)?.row.title).toBe('Ironwood');
+      expect(importer.problem(problem.id)?.row.title).toBe('Mr. Ironwood');
     });
   });
 });
@@ -2046,7 +2063,7 @@ describe('createImporter — resolve: Save & continue', () => {
     const { importer, root } = sandbox();
 
     await expect(
-      importer.resolve('p1', dieHardForm(join(root, 'Die.Hard.1988.1080p')))
+      importer.resolve('p1', dieHardForm(join(root, 'Die Hard (1988)')))
     ).rejects.toBeInstanceOf(ProblemNotFoundError);
   });
 
@@ -2096,10 +2113,16 @@ function filmUnder(
 ): string {
   const folder = join(root, name);
   mkdirSync(folder);
-  const amelie = join(root, 'Drama', 'Amelie (2001)');
+  const amelie = join(root, 'Amelie (2001)');
   cpSync(join(amelie, 'Amelie.mp4'), join(folder, video));
+  if (subtitles.length > 0) {
+    mkdirSync(join(folder, 'Subtitles'));
+  }
   for (const subtitle of subtitles) {
-    cpSync(join(amelie, 'Amelie.srt'), join(folder, subtitle));
+    cpSync(
+      join(amelie, 'Subtitles', 'Amelie.srt'),
+      join(folder, 'Subtitles', subtitle)
+    );
   }
   return folder;
 }
@@ -2179,7 +2202,7 @@ describe('createImporter — the awkward titles match and import', () => {
     );
     expect(folders(media)).toContain(folder);
     expect(readFileSync(join(media, movie.videoPath))).toEqual(
-      readFileSync(join(root, 'Drama', 'Amelie (2001)', 'Amelie.mp4'))
+      readFileSync(join(root, 'Amelie (2001)', 'Amelie.mp4'))
     );
   });
 });
@@ -2268,7 +2291,7 @@ describe('createImporter — two matches with the same title and year', () => {
     const depths = join(root, 'どん底 (1957)');
     mkdirSync(depths);
     cpSync(
-      join(root, 'Die.Hard.1988.1080p', 'Die.Hard.1988.1080p.mp4'),
+      join(root, 'Die Hard (1988)', 'Die.Hard.1988.1080p.mp4'),
       join(depths, 'Depths.mp4')
     );
     const sheet = sheetOf(
@@ -2305,7 +2328,7 @@ describe('createImporter — two matches with the same title and year', () => {
     // Two rows for Heat and two folders for it: each row sees both, so each
     // is `ambiguous`, and the maintainer resolves one onto each folder.
     const first = filmUnder(root, 'Heat (1995)', 'Heat.mp4');
-    const second = filmUnder(root, 'Heat 1995 1080p', 'Heat.1995.1080p.mp4');
+    const second = filmUnder(root, 'Heat. (1995)', 'Heat.1995.1080p.mp4');
     const sheet = sheetOf(
       root,
       `${FIXTURE_ROWS}Heat,1995,Action\nHeat,1995,Action\n`
@@ -2515,7 +2538,7 @@ describe('createImporter — the importer restarting mid-run', () => {
     // takes the next name rather than writing over it.
     expect(existsSync(join(media, after['Amélie'].videoPath))).toBe(true);
     expect(readFileSync(join(media, after['Amélie'].videoPath))).toEqual(
-      readFileSync(join(root, 'Drama', 'Amelie (2001)', 'Amelie.mp4'))
+      readFileSync(join(root, 'Amelie (2001)', 'Amelie.mp4'))
     );
   });
 });

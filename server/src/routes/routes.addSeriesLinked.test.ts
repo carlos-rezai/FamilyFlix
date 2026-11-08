@@ -92,7 +92,7 @@ interface PickedShow {
 
 /** Build _Harbor and Vine_ inside `parent`. */
 function buildShow(parent: string): PickedShow {
-  const dir = join(parent, 'Harbor and Vine');
+  const dir = join(parent, 'Harbor and Vine (2021)');
   const seasonOne = join(dir, 'Season 1');
   const seasonTwo = join(dir, 'Season 2');
   mkdirSync(seasonOne, { recursive: true });
@@ -294,19 +294,19 @@ describe('POST /api/series — Link', () => {
       [
         1,
         1,
-        'Harbor and Vine/Season 1/Harbor.and.Vine.S01E01.Pilot.mp4',
+        'Harbor and Vine (2021)/Season 1/Harbor.and.Vine.S01E01.Pilot.mp4',
         folderId,
       ],
       [
         1,
         2,
-        'Harbor and Vine/Season 1/Harbor.and.Vine.S01E02.Low.Tide.mp4',
+        'Harbor and Vine (2021)/Season 1/Harbor.and.Vine.S01E02.Low.Tide.mp4',
         folderId,
       ],
       [
         2,
         1,
-        'Harbor and Vine/Season 2/Harbor.and.Vine.S02E01.Spring.Tide.mp4',
+        'Harbor and Vine (2021)/Season 2/Harbor.and.Vine.S02E01.Spring.Tide.mp4',
         folderId,
       ],
     ]);
@@ -407,7 +407,7 @@ describe('POST /api/series — Copy', () => {
     }
     expect(storage.titleSource(series.id)).toMatchObject({
       folderId,
-      sourceFolder: 'Harbor and Vine',
+      sourceFolder: 'Harbor and Vine (2021)',
     });
   });
 });
@@ -426,7 +426,7 @@ describe('POST /api/series — the Show folder', () => {
     const series = (await response.json()) as Series;
     expect(storage.titleSource(series.id)).toMatchObject({
       folderId,
-      sourceFolder: 'Harbor and Vine',
+      sourceFolder: 'Harbor and Vine (2021)',
     });
   });
 
@@ -455,7 +455,7 @@ describe('POST /api/series — the Show folder', () => {
     expect(storage.titleSource(outsideSeries.id)).toBeNull();
     expect(storage.titleSource(insideSeries.id)).toMatchObject({
       folderId,
-      sourceFolder: 'Harbor and Vine',
+      sourceFolder: 'Harbor and Vine (2021)',
     });
   });
 

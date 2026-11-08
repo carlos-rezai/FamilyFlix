@@ -166,11 +166,11 @@ describe('createImporter — an added title carries its Source folder', () => {
 
     const folders = sourceFolders(db, 'movies');
     expect(resolvedUnder(root, folders['Die Hard'])).toBe(
-      join(root, 'Die.Hard.1988.1080p')
+      join(root, 'Die Hard (1988)')
     );
     // A folder the walk had to descend to reach keeps the part in between.
     expect(resolvedUnder(root, folders['Amélie'])).toBe(
-      join(root, 'Drama', 'Amelie (2001)')
+      join(root, 'Amelie (2001)')
     );
   });
 
@@ -226,7 +226,7 @@ describe('createImporter — an Already-in-library title carries its Source fold
       .prepare('SELECT source_folder FROM movies WHERE id = ?')
       .get(held.id) as { source_folder: string | null };
     expect(resolvedUnder(root, row.source_folder)).toBe(
-      join(root, 'Die.Hard.1988.1080p')
+      join(root, 'Die Hard (1988)')
     );
     expect(
       storage.listMovies({ sort: 'a-z' }).filter((m) => m.title === 'Die Hard')

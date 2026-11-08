@@ -51,9 +51,11 @@ import type { ImportMode, ImportRun } from '@/types';
 afterEach(closeTracked);
 
 const STAR_WARS = 'Star Wars';
+/** The **Title folder** the found video lies in, walked before `Star Wars (1977)`. */
+const FOLDER = 'Last Jedi (2017)';
 const FILE_NAME = 'The Last Jedi (2017).mp4';
 /** The found video, relative to the films folder. */
-const FOUND_VIDEO = `${STAR_WARS}/${FILE_NAME}`;
+const FOUND_VIDEO = `${FOLDER}/${FILE_NAME}`;
 /** The household's dead copy: its file's name, its Media folder gone. */
 const DEAD_COPY = `star-wars/${FILE_NAME}`;
 
@@ -68,7 +70,7 @@ interface Sandbox {
 }
 
 /**
- * The fixture in a listed films folder, with a `Star Wars` Source folder
+ * The fixture in a listed films folder, with a `Last Jedi (2017)` Title folder
  * beside it holding the real `The Last Jedi (2017).mp4`.
  */
 function sandbox(): Sandbox {
@@ -77,10 +79,10 @@ function sandbox(): Sandbox {
   mkdirSync(media);
   mkdirSync(join(dir, 'films'));
   const { root } = libraryFixture(join(dir, 'films'), 'library.csv');
-  mkdirSync(join(root, STAR_WARS));
+  mkdirSync(join(root, FOLDER));
   copyFileSync(
-    join(root, 'Drama', 'Amelie (2001)', 'Amelie.mp4'),
-    join(root, STAR_WARS, FILE_NAME)
+    join(root, 'Amelie (2001)', 'Amelie.mp4'),
+    join(root, FOLDER, FILE_NAME)
   );
 
   const dbPath = join(dir, 'familyflix.db');
@@ -140,12 +142,12 @@ const videoOf = (db: SqliteDatabase, id: string): VideoRow =>
     .prepare('SELECT video_path, video_folder_id FROM movies WHERE id = ?')
     .get(id) as VideoRow;
 
-/** Every film recorded at the `Star Wars` Source folder, by id. */
+/** Every film recorded at the found Source folder, by id. */
 const filmsFromStarWars = (db: SqliteDatabase): string[] =>
   (
     db
       .prepare('SELECT id FROM movies WHERE source_folder = ? ORDER BY id')
-      .all(STAR_WARS) as { id: string }[]
+      .all(FOLDER) as { id: string }[]
   ).map((row) => row.id);
 
 /** The run's `✓ Updated` lines that name `video`. */
@@ -191,7 +193,7 @@ describe("createImporter.scan: a dead copy with the found file's name", () => {
     });
     expect(box.storage.titleSource(id)).toMatchObject({
       folderId: box.films.id,
-      sourceFolder: STAR_WARS,
+      sourceFolder: FOLDER,
     });
   });
 
@@ -269,7 +271,7 @@ describe("createImporter.scan: a dead copy with the found file's name", () => {
 describe('createImporter.scan: a film whose folder is on record and whose video is gone', () => {
   it('takes the video found in that folder', async () => {
     const box = sandbox();
-    const gone = `${STAR_WARS}/Star Wars (1977).mp4`;
+    const gone = `${FOLDER}/Star Wars (1977).mp4`;
     const held = box.storage.addMovie(
       newMovie({
         title: STAR_WARS,
@@ -278,7 +280,7 @@ describe('createImporter.scan: a film whose folder is on record and whose video 
         videoFolderId: box.films.id,
       })
     );
-    box.storage.setSourceFolder(held.id, box.films.id, STAR_WARS);
+    box.storage.setSourceFolder(held.id, box.films.id, FOLDER);
     expect(
       box.playback.videoFile({ videoPath: gone, videoFolderId: box.films.id })
     ).toEqual({ kind: 'missing' });
@@ -298,10 +300,10 @@ describe('createImporter.scan: two missing films of one file name', () => {
   it('leaves both alone, while a film whose file name is its own is found again', async () => {
     const box = sandbox();
     // A second found video, whose name only one missing film's file carries.
-    mkdirSync(join(box.films.path, 'Rogue One'));
+    mkdirSync(join(box.films.path, 'Rogue One (2016)'));
     copyFileSync(
-      join(box.films.path, STAR_WARS, FILE_NAME),
-      join(box.films.path, 'Rogue One', 'Rogue One (2016).mp4')
+      join(box.films.path, FOLDER, FILE_NAME),
+      join(box.films.path, 'Rogue One (2016)', 'Rogue One (2016).mp4')
     );
     const rogue = box.storage.addMovie(
       newMovie({
@@ -332,7 +334,7 @@ describe('createImporter.scan: two missing films of one file name', () => {
       video_folder_id: null,
     });
     expect(videoOf(box.db, rogue.id)).toEqual({
-      video_path: 'Rogue One/Rogue One (2016).mp4',
+      video_path: 'Rogue One (2016)/Rogue One (2016).mp4',
       video_folder_id: box.films.id,
     });
     expect(videoUpdates(run)).toHaveLength(1);
@@ -348,7 +350,7 @@ describe('createImporter.scan: a second folder keying to a film found again earl
     const keyed = `${STAR_WARS} (1977)`;
     mkdirSync(join(box.films.path, keyed));
     copyFileSync(
-      join(box.films.path, STAR_WARS, FILE_NAME),
+      join(box.films.path, FOLDER, FILE_NAME),
       join(box.films.path, keyed, 'A New Hope.mp4')
     );
 

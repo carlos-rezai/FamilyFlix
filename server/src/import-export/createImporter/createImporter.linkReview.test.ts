@@ -162,16 +162,16 @@ function placeVideo(box: Sandbox, from: string, to: string): void {
   copyFileSync(join(box.folder.path, from), join(box.folder.path, to));
 }
 
-const DIE_HARD = 'Die.Hard.1988.1080p/Die.Hard.1988.1080p.mp4';
+const DIE_HARD = 'Die Hard (1988)/Die.Hard.1988.1080p.mp4';
 
 // --- The Folder picker -------------------------------------------------------
 
 /** Die Hard answered by the fixture's folder and a second one: `ambiguous`. */
 async function ambiguousDieHard(mode: ImportMode) {
   const box = sandbox('films');
-  placeVideo(box, DIE_HARD, 'Die Hard (1988)/Die Hard.mp4');
+  placeVideo(box, DIE_HARD, 'Die-Hard (1988)/Die Hard.mp4');
   const problem = await inReview(box, mode, 'ambiguous');
-  return { ...box, problem, second: join(box.folder.path, 'Die Hard (1988)') };
+  return { ...box, problem, second: join(box.folder.path, 'Die-Hard (1988)') };
 }
 
 describe('createImporter.pick — the Folder picker follows the run’s mode', () => {
@@ -183,7 +183,7 @@ describe('createImporter.pick — the Folder picker follows the run’s mode', (
     expect(outcome).toEqual({ kind: 'imported' });
     expect(movieTitled(box.storage, 'Die Hard')).toMatchObject({
       videoFolderId: box.folder.id,
-      videoPath: 'Die Hard (1988)/Die Hard.mp4',
+      videoPath: 'Die-Hard (1988)/Die Hard.mp4',
     });
     expect(existsSync(join(box.media, 'Die Hard (1988)'))).toBe(false);
     expect(plays(box.playback, movieTitled(box.storage, 'Die Hard'))).toBe(
@@ -206,7 +206,7 @@ describe('createImporter.pick — the Folder picker follows the run’s mode', (
 
 // --- Import as ---------------------------------------------------------------
 
-const IRONWOOD = 'Ironwood.2018.1080p';
+const IRONWOOD = 'Ironwood (2018)';
 
 /** A folder no sheet row names, beside the fixture: `no-row`. */
 async function noRowIronwood(mode: ImportMode) {
@@ -249,9 +249,9 @@ describe('createImporter.importGuessed — Import as follows the run’s mode', 
 /** Die Hard's folder holding a second video: `no-video`, for the form. */
 async function twoVideoDieHard(mode: ImportMode) {
   const box = sandbox('films');
-  placeVideo(box, DIE_HARD, 'Die.Hard.1988.1080p/Die.Hard.1988.1080p.mkv');
+  placeVideo(box, DIE_HARD, 'Die Hard (1988)/Die.Hard.1988.1080p.mkv');
   const problem = await inReview(box, mode, 'no-video');
-  const dieHard = join(box.folder.path, 'Die.Hard.1988.1080p');
+  const dieHard = join(box.folder.path, 'Die Hard (1988)');
   const form = {
     title: 'Die Hard',
     year: 1988,
@@ -261,10 +261,12 @@ async function twoVideoDieHard(mode: ImportMode) {
     cast: [],
     genres: [],
     video: { found: join(dieHard, 'Die.Hard.1988.1080p.mp4') },
-    poster: { found: join(dieHard, 'poster.jpg') },
+    poster: { found: join(dieHard, 'Images', 'poster.jpg') },
     subtitles: [
       {
-        file: { found: join(dieHard, 'Die.Hard.1988.1080p.en.srt') },
+        file: {
+          found: join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.en.srt'),
+        },
         language: 'English',
       },
     ],

@@ -95,7 +95,7 @@ interface Layout {
   heat: string;
   /** `Films/Heat (1995)/Heat.1995.srt`: a file of no video kind. */
   heatTrack: string;
-  /** `Films/Star Wars/`: a Collection folder of three films. */
+  /** `Films/Star Wars/`: a folder of three films, not named Title (Year). */
   jedi: string;
   /** `Downloads/Lantern.2020.mp4`: under no listed folder. */
   lantern: string;
@@ -336,8 +336,8 @@ describe('POST /api/movies — the Source folder', () => {
     });
   });
 
-  it('records a Collection folder film’s Source file too', async () => {
-    const { storage, baseUrl, folderId, files } = freshApi();
+  it('records nothing for a film in a folder not named Title (Year)', async () => {
+    const { storage, baseUrl, files } = freshApi();
 
     const response = await postMovie(baseUrl, [
       ['mode', 'link'],
@@ -347,11 +347,7 @@ describe('POST /api/movies — the Source folder', () => {
 
     expect(response.status).toBe(201);
     const movie = (await response.json()) as Movie;
-    expect(storage.titleSource(movie.id)).toEqual({
-      folderId,
-      sourceFolder: 'Star Wars',
-      sourceFile: 'Return.of.the.Jedi.1983.mp4',
-    });
+    expect(storage.titleSource(movie.id)).toBeNull();
   });
 
   it('records nothing for a video under no listed folder', async () => {
@@ -392,34 +388,6 @@ describe('POST /api/movies — a Folder scan after a linked add', () => {
         .listMovies({ sort: 'a-z' })
         .filter((movie) => movie.title === 'Heat')
     ).toHaveLength(1);
-  });
-
-  it('still imports a Collection folder’s other films after one is added', async () => {
-    const { storage, baseUrl, files } = freshApi();
-    const added = await postMovie(baseUrl, [
-      ['mode', 'link'],
-      ...fieldsOf('Return of the Jedi', '1983'),
-      ['videoPath', files.jedi],
-    ]);
-    expect(added.status).toBe(201);
-
-    const run = await scanOnce(baseUrl);
-
-    expect(run.log.map((line) => line.text)).toContainEqual(
-      expect.stringMatching(/Already in library Return of the Jedi/)
-    );
-    const titles = storage
-      .listMovies({ sort: 'a-z' })
-      .map((movie) => movie.title);
-    expect(titles.filter((title) => title === 'Return of the Jedi')).toEqual([
-      'Return of the Jedi',
-    ]);
-    expect(titles).toEqual(
-      expect.arrayContaining([
-        'Star Wars A New Hope',
-        'The Empire Strikes Back',
-      ])
-    );
   });
 });
 

@@ -24,7 +24,7 @@ import {
   type SeasonFolderCase,
 } from '../../test-support/seasonFolderCases/seasonFolderCases';
 import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
-import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
+import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
 
 const ROOT = join('/', 'library');
 
@@ -37,7 +37,7 @@ function scan(
   segments: string[],
   videos: string[],
   subtitles: string[] = []
-): MovieFolderScan {
+): FilmScan {
   const dir = join(ROOT, ...segments);
   return {
     dir,
@@ -45,7 +45,6 @@ function scan(
     videos: videos.map((video) => join(dir, video)),
     poster: null,
     backdrop: null,
-    images: [],
     subtitles: subtitles.map((file) => ({
       path: join(dir, file),
       language: detectSubtitleLanguage(file),

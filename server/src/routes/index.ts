@@ -1581,8 +1581,7 @@ export function createApiRouter(
     // a listed folder, so a later Folder scan reads the film as held.
     let source: FilmSource | null = null;
     try {
-      source =
-        found === undefined ? null : await placeFilmFolder(folders, found);
+      source = found === undefined ? null : placeFilmFolder(folders, found);
     } catch {
       rollback();
       res.status(400).json({ error: 'The video path cannot be read.' });

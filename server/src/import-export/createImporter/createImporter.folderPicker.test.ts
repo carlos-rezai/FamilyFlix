@@ -58,7 +58,7 @@ function sandbox(): Sandbox {
     media,
     root,
     sheet,
-    fixtureFolder: join(root, 'Die.Hard.1988.1080p'),
+    fixtureFolder: join(root, 'Die Hard (1988)'),
   };
 }
 
@@ -102,7 +102,7 @@ const dieHard = (storage: LibraryStorage): Movie | undefined =>
 /** Die Hard answered by the fixture's folder and a second one, run to review. */
 async function twoAnswers(secondVideos: string[] = ['Die Hard.mp4']) {
   const box = sandbox();
-  const second = folderUnder(box.root, 'Die Hard (1988)', secondVideos);
+  const second = folderUnder(box.root, 'Die-Hard (1988)', secondVideos);
   await box.importer.start(box.sheet);
   const run = await untilReview(box.importer);
   return { ...box, second, run, problem: ambiguousOf(run) };
@@ -117,8 +117,8 @@ describe('createImporter — an ambiguous Problem’s Candidate folders', () => 
     );
     expect(byPath).toEqual(
       [
-        { path: fixtureFolder, name: 'Die.Hard.1988.1080p', videos: 1 },
-        { path: second, name: 'Die Hard (1988)', videos: 1 },
+        { path: fixtureFolder, name: 'Die Hard (1988)', videos: 1 },
+        { path: second, name: 'Die-Hard (1988)', videos: 1 },
       ].sort((a, b) => a.path.localeCompare(b.path))
     );
   });
@@ -131,7 +131,7 @@ describe('createImporter — an ambiguous Problem’s Candidate folders', () => 
 
     expect(
       problem.candidates?.find((candidate) => candidate.path === second)
-    ).toEqual({ path: second, name: 'Die Hard (1988)', videos: 2 });
+    ).toEqual({ path: second, name: 'Die-Hard (1988)', videos: 2 });
   });
 
   it('names the one folder of a near-name match', async () => {

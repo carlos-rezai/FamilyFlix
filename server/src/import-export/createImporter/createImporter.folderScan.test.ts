@@ -220,11 +220,11 @@ describe('createImporter.scan — a first scan', () => {
     const movies = rows(box.db, 'movies');
     expect(movies['Die Hard']).toMatchObject({
       library_folder_id: folders.films.id,
-      source_folder: 'Die.Hard.1988.1080p',
+      source_folder: 'Die Hard (1988)',
     });
     expect(movies['Amelie']).toMatchObject({
       library_folder_id: folders.films.id,
-      source_folder: join('Drama', 'Amelie (2001)'),
+      source_folder: 'Amelie (2001)',
     });
   });
 
@@ -391,7 +391,7 @@ describe('createImporter.scan — a title already held by title key and year', (
       .get(held.id);
     expect(row).toEqual({
       library_folder_id: folders.films.id,
-      source_folder: 'Die.Hard.1988.1080p',
+      source_folder: 'Die Hard (1988)',
     });
     expect(
       box.storage

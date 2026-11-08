@@ -44,7 +44,7 @@ const HEAD = 'Title,Year,Genre,Director,Actors,Description,Rating,Watched';
 const HEADER = join(
   LIBRARY_FIXTURE,
   'root',
-  'Die.Hard.1988.1080p',
+  'Die Hard (1988)',
   'Die.Hard.1988.1080p.mp4'
 );
 
@@ -94,8 +94,8 @@ function sandbox(
 
   const root = join(dir, 'root');
   cpSync(
-    join(LIBRARY_FIXTURE, 'root', 'Die.Hard.1988.1080p'),
-    join(root, 'Die.Hard.1988.1080p'),
+    join(LIBRARY_FIXTURE, 'root', 'Die Hard (1988)'),
+    join(root, 'Die Hard (1988)'),
     { recursive: true }
   );
   const season = join(root, SHOW, 'Season 01');
@@ -291,7 +291,7 @@ describe('createImporter — at most one Problem per kind per source', () => {
     for (const show of SHOWS) {
       for (let season = 1; season <= SEASONS; season += 1) {
         const ss = String(season).padStart(2, '0');
-        const at = join(root, show, `Season ${ss}`);
+        const at = join(root, `${show} (2020)`, `Season ${ss}`);
         mkdirSync(at, { recursive: true });
         for (let episode = 1; episode <= EPISODES_PER_SEASON; episode += 1) {
           const ee = String(episode).padStart(2, '0');

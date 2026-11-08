@@ -2,9 +2,9 @@ import { basename, dirname, extname } from 'node:path';
 
 import { episodeTag } from '../../media/episodeTag/episodeTag';
 import type {
-  MovieFolderScan,
+  FolderScan,
   SubtitleFound,
-} from '../../media/scanMovieFolder/scanMovieFolder';
+} from '../../media/readTitleFolder/readTitleFolder';
 
 /** One episode video of a show, numbered. */
 export interface ShowEpisode {
@@ -38,9 +38,9 @@ export interface ShowScan {
 }
 
 /** What {@link groupShows} answers: the shows, and every other scan as a film. */
-export interface GroupedScans {
+export interface GroupedScans<T extends FolderScan = FolderScan> {
   shows: ShowScan[];
-  films: MovieFolderScan[];
+  films: T[];
 }
 
 /**
@@ -116,9 +116,9 @@ export const videoOf = (subtitle: string, videos: string[]): string | null => {
  * claiming a number already taken in the show, is **Unplaced**. Every other
  * scan is a film and passes through by identity, in the order it came.
  */
-export function groupShows(scans: MovieFolderScan[]): GroupedScans {
+export function groupShows<T extends FolderScan>(scans: T[]): GroupedScans<T> {
   const shows = new Map<string, ShowScan>();
-  const films: MovieFolderScan[] = [];
+  const films: T[] = [];
   /** The numbers each show has placed, as `season:episode`. */
   const taken = new Map<ShowScan, Set<string>>();
 

@@ -54,22 +54,22 @@ afterEach(closeTracked);
 const HEADER = join(
   LIBRARY_FIXTURE,
   'root',
-  'Die.Hard.1988.1080p',
+  'Die Hard (1988)',
   'Die.Hard.1988.1080p.mp4'
 );
 
-/** Ten films, each its own folder, named as a release folder is. */
+/** Ten films, each its own **Title folder**. */
 const FILMS = [
-  'Copper.Canyon.2001',
-  'Silent.Orchard.2003',
-  'Paper.Harbor.2005',
-  'Glass.Meadow.2007',
-  'Iron.Lantern.2009',
-  'Velvet.Station.2011',
-  'Amber.Coast.2013',
-  'Hollow.Ridge.2015',
-  'Winter.Parade.2017',
-  'Northern.Bells.2019',
+  'Copper Canyon (2001)',
+  'Silent Orchard (2003)',
+  'Paper Harbor (2005)',
+  'Glass Meadow (2007)',
+  'Iron Lantern (2009)',
+  'Velvet Station (2011)',
+  'Amber Coast (2013)',
+  'Hollow Ridge (2015)',
+  'Winter Parade (2017)',
+  'Northern Bells (2019)',
 ];
 
 /** Five shows, each a Show folder of two Season folders. */
@@ -256,10 +256,11 @@ describe('createImporter.scan: run.found counts the folders walked', () => {
   }
 
   /**
-   * A film at the root, a film on a `Drama/` shelf, a show of two Season
-   * folders and a film whose one video was deleted earlier and left out:
-   * seven folders by the found line's rule (the film folders, the shelf, the
-   * Show folder and its Season folders), the left-out film's among them.
+   * A film at the root, a film on a `Drama/` shelf (left out of the layout,
+   * so not walked), a show of two Season folders and a film whose one video
+   * was deleted earlier and left out: five folders by the found line's rule
+   * (the film folders, the Show folder and its Season folders), the left-out
+   * film's among them.
    */
   function shelvedLibrary(): Sandbox {
     const box = sandbox();
@@ -284,12 +285,12 @@ describe('createImporter.scan: run.found counts the folders walked', () => {
     expect(run.found).toBe(foldersInFoundLine(run));
   });
 
-  it('counts every shelf and Source folder, left-out videos still in', async () => {
+  it('counts every Title and Season folder, left-out videos still in', async () => {
     const box = shelvedLibrary();
 
     const run = await scanOnce(box.importer, [box.folder]);
 
-    expect(foldersInFoundLine(run)).toBe(7);
-    expect(run.found).toBe(7);
+    expect(foldersInFoundLine(run)).toBe(5);
+    expect(run.found).toBe(5);
   });
 });

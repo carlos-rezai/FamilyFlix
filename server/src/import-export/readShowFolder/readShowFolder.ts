@@ -1,13 +1,14 @@
+import type { Dirent } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { basename, relative } from 'node:path';
+import { basename, join, relative } from 'node:path';
 
-import { isVideoFilename } from '../../media/fileKinds/fileKinds';
-import { readableFolder } from '../../media/readableFolder/readableFolder';
+import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
 import {
-  scanMovieFolder,
-  type MovieFolderScan,
-} from '../../media/scanMovieFolder/scanMovieFolder';
-import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
+  isSubtitleFilename,
+  isVideoFilename,
+} from '../../media/fileKinds/fileKinds';
+import { readableFolder } from '../../media/readableFolder/readableFolder';
+import type { FolderScan } from '../../media/readTitleFolder/readTitleFolder';
 import type { StoredLibraryFolder } from '../../library';
 import type { HeldTitle } from '../../library/holding/holding';
 import { groupShows, showFolderOf } from '../groupShows/groupShows';
@@ -37,23 +38,56 @@ export interface ShowFolderContext {
   titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
 
+/** One folder's own videos and subtitles, the files directly inside it. */
+const folderScan = (dir: string, entries: Dirent[]): FolderScan => {
+  const files = entries
+    .filter((entry) => entry.isFile())
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+  return {
+    dir,
+    name: basename(dir),
+    videos: files.filter(isVideoFilename).map((file) => join(dir, file)),
+    subtitles: files.filter(isSubtitleFilename).map((file) => ({
+      path: join(dir, file),
+      language: detectSubtitleLanguage(file),
+    })),
+  };
+};
+
 /**
- * The **Source folders** under a picked folder: the folder itself when
- * videos lie loose in it — `walkLibraryFolder` treats its root as a shelf —
- * then every one the walk finds beneath it.
+ * The folders holding videos under a picked folder: the folder itself when
+ * videos lie loose in it, then every folder beneath it holding a video, a
+ * folder holding one not descended.
  */
-async function scansUnder(dir: string): Promise<MovieFolderScan[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const loose = entries.some(
-    (entry) => entry.isFile() && isVideoFilename(entry.name)
-  );
-  const own = loose ? [await scanMovieFolder(dir)] : [];
-  return [...own, ...(await walkLibraryFolder(dir))];
+async function scansUnder(dir: string): Promise<FolderScan[]> {
+  const scans: FolderScan[] = [];
+  const visit = async (at: string, root: boolean): Promise<void> => {
+    const entries = await readdir(at, { withFileTypes: true });
+    const scan = folderScan(at, entries);
+    if (scan.videos.length > 0) {
+      scans.push(scan);
+      if (!root) {
+        return;
+      }
+    }
+    for (const entry of entries) {
+      if (entry.isDirectory()) {
+        try {
+          await visit(join(at, entry.name), false);
+        } catch {
+          // A folder under the pick that cannot be read is passed over.
+        }
+      }
+    }
+  };
+  await visit(dir, true);
+  return scans;
 }
 
 /**
  * Read one absolute folder picked on the series add as a **Show folder
- * read**: walked with `walkLibraryFolder`, grouped with `groupShows` — there
+ * read**: walked by `scansUnder`, grouped with `groupShows` — there
  * is no second numbering rule — so a **Season folder**'s number beats the
  * filename's, loose tagged videos are numbered off their tags, and each
  * episode keeps its stem-matched subtitles. A folder read as a film answers
@@ -81,7 +115,7 @@ export async function readShowFolder(
   if ((await readableFolder(dir)) !== 'readable') {
     return { kind: 'refused', refusal: 'unreadable' };
   }
-  let scans: MovieFolderScan[];
+  let scans: FolderScan[];
   try {
     scans = await scansUnder(dir);
   } catch {

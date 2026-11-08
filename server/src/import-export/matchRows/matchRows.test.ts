@@ -41,7 +41,7 @@ function row(title: string, year: number | null = null): SheetRow {
 /**
  * A **Source folder** as the scanner answers it, holding one video and nothing
  * else — its name is the whole of what the matcher reads. Built untyped so the
- * scan carries exactly what `scanMovieFolder` will answer, whatever else the
+ * scan carries exactly what the walk will answer, whatever else the
  * scanner learns to report.
  */
 function folder(name: string, videos: string[] = [`${name}.mkv`]) {
@@ -52,7 +52,6 @@ function folder(name: string, videos: string[] = [`${name}.mkv`]) {
     videos: videos.map((video) => `${dir}/${video}`),
     poster: null,
     backdrop: null,
-    images: [],
     subtitles: [],
   };
 }

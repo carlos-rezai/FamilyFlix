@@ -1,11 +1,11 @@
-import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
+import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
 import type { SheetRow } from '../readSheet/readSheet';
 import { titleKey, yearInName } from '../titleKey/titleKey';
 
 /** A **Match**: one **Sheet row** and the one **Source folder** that is its film. */
 export interface Match {
   row: SheetRow;
-  folder: MovieFolderScan;
+  folder: FilmScan;
 }
 
 /** The three verdicts the matcher gives a row it cannot settle. */
@@ -21,7 +21,7 @@ export interface MatchProblem {
   kind: MatchProblemKind;
   reason: string;
   row: SheetRow;
-  candidates: MovieFolderScan[];
+  candidates: FilmScan[];
 }
 
 /** What the matcher answers. */
@@ -34,7 +34,7 @@ export interface MatchResult {
    * The folders no row claimed — neither a match nor any row's candidate —
    * in the folders' order. The run's `no-row`.
    */
-  unclaimed: MovieFolderScan[];
+  unclaimed: FilmScan[];
 }
 
 /** The five reason strings the matcher fixes, verbatim from the prototype. */
@@ -47,7 +47,7 @@ export const MATCH_REASON = {
 } as const;
 
 /** Whether a row and a folder agree on the year, when both carry one. */
-const yearsAgree = (row: SheetRow, folder: MovieFolderScan): boolean => {
+const yearsAgree = (row: SheetRow, folder: FilmScan): boolean => {
   const folderYear = yearInName(folder.name);
   return row.year === null || folderYear === null || row.year === folderYear;
 };
@@ -65,15 +65,12 @@ const yearsAgree = (row: SheetRow, folder: MovieFolderScan): boolean => {
  * holding no video, or more than one, is `no-video` with its own two reasons.
  * A folder no row claimed, by match or as a candidate, is `unclaimed`.
  */
-export function matchRows(
-  rows: SheetRow[],
-  folders: MovieFolderScan[]
-): MatchResult {
+export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
   const keyed = folders.map((folder) => ({
     folder,
     key: titleKey(folder.name),
   }));
-  const claimed = new Set<MovieFolderScan>();
+  const claimed = new Set<FilmScan>();
 
   const matched: Match[] = [];
   const problems: MatchProblem[] = [];
@@ -81,7 +78,7 @@ export function matchRows(
     row: SheetRow,
     kind: MatchProblemKind,
     reason: string,
-    candidates: MovieFolderScan[]
+    candidates: FilmScan[]
   ): void => {
     problems.push({ kind, reason, row, candidates });
     for (const folder of candidates) {

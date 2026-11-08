@@ -10,8 +10,12 @@ import type {
 } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
-import type { MovieFolderScan } from '../../media/scanMovieFolder/scanMovieFolder';
-import { walkLibraryFolder } from '../../media/walkLibraryFolder/walkLibraryFolder';
+import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
+import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
+import {
+  walkLibraryFolder,
+  type WalkedTitle,
+} from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
@@ -26,7 +30,6 @@ import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { filmSourceOf, sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
 import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
-import { splitCollections } from '../splitCollections/splitCollections';
 import { heldSeriesValues, heldValues } from '../heldValues/heldValues';
 import {
   chosenSheetFill,
@@ -361,8 +364,8 @@ const problemOf = (
  */
 interface ProblemSource {
   row: SheetRow | null;
-  folder: MovieFolderScan | null;
-  candidates: MovieFolderScan[];
+  folder: FilmScan | null;
+  candidates: FilmScan[];
 }
 
 /** A **Sheet row** as the detail carries it: the columns it has, and no nulls. */
@@ -386,7 +389,7 @@ const inNameOrder = (paths: string[]): string[] =>
  * exactly one: two is the `no-video` verdict, and the detail guesses no more
  * than the run did — the maintainer picks, on the **Found-file choice**.
  */
-const filesOf = (scan: MovieFolderScan): ImportProblemDetail['files'] => ({
+const filesOf = (scan: FilmScan): ImportProblemDetail['files'] => ({
   ...(scan.videos.length === 1 ? { video: scan.videos[0] } : {}),
   videos: inNameOrder(scan.videos),
   ...(scan.poster === null ? {} : { poster: scan.poster }),
@@ -401,8 +404,8 @@ const filesOf = (scan: MovieFolderScan): ImportProblemDetail['files'] => ({
  * weighed.
  */
 const candidateFolders = (
-  scans: MovieFolderScan[],
-  wholeOf: (scan: MovieFolderScan) => MovieFolderScan
+  scans: FilmScan[],
+  wholeOf: (scan: FilmScan) => FilmScan
 ): CandidateFolder[] => [
   ...new Map(
     scans.map((scan) => {
@@ -514,7 +517,7 @@ const failedShowReason = (n: number, first: string): string =>
  * files only those — so the **Match rule** a film is held to is the one a
  * show is held to.
  */
-const asMatchable = (show: ShowScan): MovieFolderScan => ({
+const asMatchable = (show: ShowScan): FilmScan => ({
   dir: show.dir,
   name: show.name,
   videos: [
@@ -523,7 +526,6 @@ const asMatchable = (show: ShowScan): MovieFolderScan => ({
   ].slice(0, 1),
   poster: null,
   backdrop: null,
-  images: [],
   subtitles: [],
 });
 
@@ -591,7 +593,7 @@ interface FoundAgain {
 /** One listed **Library folder** as the walk found it: its films and its shows. */
 interface WalkedFolder {
   folder: StoredLibraryFolder;
-  films: MovieFolderScan[];
+  films: FilmScan[];
   shows: ShowScan[];
 }
 
@@ -621,17 +623,20 @@ interface HeldSeries {
  * every title of a **Folder scan**: its title guessed from the folder's name,
  * its year the one the name carries, and nothing else.
  */
-const guessedRow = (name: string): SheetRow => ({
-  title: titleGuess(name),
-  year: yearInName(name),
-  endYear: null,
-  genres: [],
-  director: null,
-  cast: [],
-  synopsis: null,
-  rating: null,
-  watched: false,
-});
+const guessedRow = (name: string): SheetRow => {
+  const key = folderKeyOf(name);
+  return {
+    title: key?.title ?? titleGuess(name),
+    year: key?.year ?? yearInName(name),
+    endYear: null,
+    genres: [],
+    director: null,
+    cast: [],
+    synopsis: null,
+    rating: null,
+    watched: false,
+  };
+};
 
 /**
  * Whether `path` lies strictly under `folder` — not the folder itself, not a
@@ -644,6 +649,19 @@ const isUnder = (folder: string, path: string): boolean => {
 };
 
 /**
+ * A **Title folder** the walk read, as the scans the run groups: a film's
+ * one, a series' one per **Season folder**, each with no art of its own.
+ */
+const scansOf = (title: WalkedTitle): FilmScan[] =>
+  title.kind === 'film'
+    ? [title]
+    : title.seasons.map((season) => ({
+        ...season,
+        poster: null,
+        backdrop: null,
+      }));
+
+/**
  * Add to `folders` every folder a scan went through: its **Source folder** and
  * every shelf between it and its Library folder — `Drama/` counts, the
  * Library folder does not.
@@ -651,7 +669,7 @@ const isUnder = (folder: string, path: string): boolean => {
 function addFoldersUnder(
   folders: Set<string>,
   listed: string,
-  scan: MovieFolderScan
+  scan: FilmScan
 ): void {
   for (let dir = scan.dir; isUnder(listed, dir); dir = dirname(dir)) {
     folders.add(dir);
@@ -719,9 +737,9 @@ export function createImporter({
    * Each film **Source folder** the walk found, by its path, before a
    * **Collection folder** was split: what a **Candidate folder** is, whole.
    */
-  const wholeFolders = new Map<string, MovieFolderScan>();
+  const wholeFolders = new Map<string, FilmScan>();
   /** A scan's folder as the walk found it — the scan itself, unless split. */
-  const wholeOf = (scan: MovieFolderScan): MovieFolderScan =>
+  const wholeOf = (scan: FilmScan): FilmScan =>
     wholeFolders.get(scan.dir) ?? scan;
   /** The cancel of the run that is going, and the run itself, to be awaited. */
   let stop: AbortController = new AbortController();
@@ -1388,7 +1406,7 @@ export function createImporter({
   const foundAgainOf = (
     missing: Map<string, Movie>,
     heldId: string,
-    scan: MovieFolderScan
+    scan: FilmScan
   ): FoundAgain | null => {
     const movie = missing.get(heldId);
     if (movie === undefined) {
@@ -1436,7 +1454,7 @@ export function createImporter({
     id: string,
     row: SheetRow,
     named: boolean,
-    scan: MovieFolderScan,
+    scan: FilmScan,
     libraryFolder: StoredLibraryFolder
   ): Promise<ReviewOutcome> => {
     const at = current.problems.findIndex((problem) => problem.id === id);
@@ -1616,19 +1634,25 @@ export function createImporter({
         log(current, `⚠ Can't reach ${folder.path}, skipped`, 'warning');
         continue;
       }
-      let scans: MovieFolderScan[] = [];
+      let scans: FilmScan[] = [];
       try {
-        scans = await walkLibraryFolder(
+        const walk = await walkLibraryFolder(
           folder.path,
-          (scan) => {
-            addFoldersUnder(walkedFolders, folder.path, scan);
+          (title) => {
+            for (const scan of scansOf(title)) {
+              addFoldersUnder(walkedFolders, folder.path, scan);
+            }
             current.found = walkedFolders.size;
-            current.currentItem = scan.dir;
+            current.currentItem = title.dir;
           },
           (dir) => {
             log(current, `⚠ Could not read ${dir}, skipped`, 'warning');
           }
         );
+        for (const warning of walk.warnings) {
+          log(current, warning, 'warning');
+        }
+        scans = walk.titles.flatMap(scansOf);
         read.push(folder);
       } catch {
         // A folder that stopped being readable mid-walk: what was found is
@@ -1648,7 +1672,7 @@ export function createImporter({
       for (const film of grouped.films) {
         wholeFolders.set(film.dir, film);
       }
-      const films = splitCollections(grouped.films);
+      const films = grouped.films;
       // Titles, not folders: every film and every show grouped, held or new.
       found += films.length + grouped.shows.length;
       walked.push({ folder, films, shows: grouped.shows });
@@ -1676,14 +1700,14 @@ export function createImporter({
    */
   const withoutLeftOut = (
     folder: StoredLibraryFolder,
-    scans: MovieFolderScan[]
-  ): { scans: MovieFolderScan[]; skipped: number } => {
+    scans: FilmScan[]
+  ): { scans: FilmScan[]; skipped: number } => {
     const out = storage.leftOut(folder.id);
     if (out.size === 0) {
       return { scans, skipped: 0 };
     }
     let skipped = 0;
-    const kept: MovieFolderScan[] = [];
+    const kept: FilmScan[] = [];
     for (const scan of scans) {
       const videos = scan.videos.filter(
         (video) => !out.has(spellLinkedVideo(folder.path, video))
@@ -1710,7 +1734,7 @@ export function createImporter({
     filmsByKey: Map<string, Movie>,
     missing: Map<string, Movie>,
     folder: StoredLibraryFolder,
-    scan: MovieFolderScan,
+    scan: FilmScan,
     row: SheetRow
   ): string | null => {
     const source = filmSourceOf(folder, scan);
@@ -1824,7 +1848,7 @@ export function createImporter({
   const linkHeld = (
     heldId: string,
     folder: StoredLibraryFolder,
-    scan: MovieFolderScan
+    scan: FilmScan
   ): void => {
     const source = filmSourceOf(folder, scan);
     storage.setSourceFolder(
@@ -1840,7 +1864,7 @@ export function createImporter({
     current: ImportRun,
     heldId: string,
     folder: StoredLibraryFolder,
-    scan: MovieFolderScan,
+    scan: FilmScan,
     row: SheetRow
   ): void => {
     linkHeld(heldId, folder, scan);
@@ -1874,9 +1898,9 @@ export function createImporter({
 
     // A show is matched by the film's own rule, over a scan standing for it —
     // and told apart again once matched. Every scan remembers its folder.
-    const folderOf = new Map<MovieFolderScan, StoredLibraryFolder>();
-    const showOf = new Map<MovieFolderScan, ShowScan>();
-    const films: MovieFolderScan[] = [];
+    const folderOf = new Map<FilmScan, StoredLibraryFolder>();
+    const showOf = new Map<FilmScan, ShowScan>();
+    const films: FilmScan[] = [];
     for (const { folder, films: found, shows } of walked) {
       for (const scan of found) {
         folderOf.set(scan, folder);
@@ -2300,13 +2324,13 @@ export function createImporter({
       const { folder } = source;
       return {
         ...listed,
-        // A folder no row claimed has only its name to offer as a title, and
-        // the guess is that name with the tail forms dropped, so the title
-        // is already typed, as "Harbor Lights", not as the folder spells it.
-        // The snapshot's row keeps naming the folder as it is.
+        // A folder no row claimed has only its name to offer as a title: its
+        // **Folder key**'s title, else that name with the tail forms dropped,
+        // so the title is already typed, as "Harbor Lights". The snapshot's
+        // row keeps naming the folder as it is.
         row:
           source.row === null
-            ? { title: titleGuess(listed.title), genres: [] }
+            ? { title: guessedRow(listed.title).title, genres: [] }
             : rowDetail(source.row),
         ...(folder === null ? {} : { folder: folder.dir }),
         files:

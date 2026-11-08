@@ -494,7 +494,7 @@ describe.each(FORMATS)(
 
       expect(run).toMatchObject({
         phase: 'review',
-        found: 3,
+        found: 2,
         matched: 0,
         total: 0,
         done: 0,
@@ -521,8 +521,8 @@ describe.each(FORMATS)(
 
       const second = freshApi();
       renameSync(
-        join(second.root, 'Die.Hard.1988.1080p'),
-        join(second.root, 'Die Hard')
+        join(second.root, 'Die Hard (1988)'),
+        join(second.root, 'Die Hard (1989)')
       );
       const sheetPath = join(second.scratch, `edited.${format}`);
       writeFileSync(sheetPath, edited);
@@ -566,8 +566,8 @@ describe.each(FORMATS)(
 
       const second = freshApi();
       renameSync(
-        join(second.root, 'Die.Hard.1988.1080p'),
-        join(second.root, 'Die Hard')
+        join(second.root, 'Die Hard (1988)'),
+        join(second.root, 'Die Hard (1989)')
       );
       const sheetPath = join(second.scratch, `edited.${format}`);
       writeFileSync(sheetPath, edited);

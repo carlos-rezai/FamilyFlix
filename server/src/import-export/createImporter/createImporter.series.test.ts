@@ -40,7 +40,7 @@ import {
   readdirSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createImporter, type Importer } from './createImporter';
@@ -76,7 +76,7 @@ const SHEET = [
 const HEADER = join(
   LIBRARY_FIXTURE,
   'root',
-  'Die.Hard.1988.1080p',
+  'Die Hard (1988)',
   'Die.Hard.1988.1080p.mp4'
 );
 
@@ -99,8 +99,8 @@ function sandbox({
 
   const root = join(dir, 'root');
   cpSync(
-    join(LIBRARY_FIXTURE, 'root', 'Die.Hard.1988.1080p'),
-    join(root, 'Die.Hard.1988.1080p'),
+    join(LIBRARY_FIXTURE, 'root', 'Die Hard (1988)'),
+    join(root, 'Die Hard (1988)'),
     { recursive: true }
   );
   for (const [season, videos] of Object.entries(EPISODES)) {
@@ -473,14 +473,15 @@ function looseSandbox(layout: Record<string, string[]>): {
 
   const root = join(dir, 'root');
   cpSync(
-    join(LIBRARY_FIXTURE, 'root', 'Die.Hard.1988.1080p'),
-    join(root, 'Die.Hard.1988.1080p'),
+    join(LIBRARY_FIXTURE, 'root', 'Die Hard (1988)'),
+    join(root, 'Die Hard (1988)'),
     { recursive: true }
   );
   for (const [folder, files] of Object.entries(layout)) {
     const at = join(root, folder);
     mkdirSync(at, { recursive: true });
     for (const file of files) {
+      mkdirSync(dirname(join(at, file)), { recursive: true });
       if (file.endsWith('.srt')) {
         writeFileSync(join(at, file), '1\n00:00:01,000 --> 00:00:02,000\nHi\n');
       } else {
@@ -505,8 +506,8 @@ function looseSandbox(layout: Record<string, string[]>): {
 const LOOSE = {
   [SHOW]: [
     'Lighthouse.Keepers.S01E01.First.Light.mp4',
-    'Lighthouse.Keepers.S01E01.First.Light.en.srt',
-    'Lighthouse.Keepers.S01E01.First.Light.pt.srt',
+    'Subtitles/Lighthouse.Keepers.S01E01.First.Light.en.srt',
+    'Subtitles/Lighthouse.Keepers.S01E01.First.Light.pt.srt',
     'Lighthouse.Keepers.S01E02.The.Storm.mp4',
     'Lighthouse.Keepers.S02E01E02.Spring.Tide.mp4',
   ],
@@ -625,7 +626,7 @@ describe('createImporter — episode subtitles', () => {
 
   it('logs a subtitle that matches no episode as a Warning line, not a Problem', async () => {
     const { storage, importer, root, sheet } = looseSandbox({
-      [SHOW]: [...LOOSE[SHOW], 'Directors.Commentary.en.srt'],
+      [SHOW]: [...LOOSE[SHOW], 'Subtitles/Directors.Commentary.en.srt'],
     });
 
     await importer.start(sheet);
@@ -770,7 +771,7 @@ describe('createImporter — two Show folders with one Title key', () => {
   it('files the row as ambiguous and imports neither', async () => {
     const { storage, importer, root, sheet } = looseSandbox({
       [SHOW]: ['Lighthouse.Keepers.S01E01.First.Light.mp4'],
-      [join('TV', SHOW, 'Season 01')]: [
+      [join('Lighthouse-Keepers (2019)', 'Season 01')]: [
         'Lighthouse.Keepers.S01E01.First.Light.mp4',
       ],
     });
@@ -825,6 +826,7 @@ function layOut(root: string, layout: Record<string, string[]>): void {
     const at = join(root, folder);
     mkdirSync(at, { recursive: true });
     for (const file of files) {
+      mkdirSync(dirname(join(at, file)), { recursive: true });
       if (file.endsWith('.srt')) {
         writeFileSync(join(at, file), '1\n00:00:01,000 --> 00:00:02,000\nHi\n');
       } else {
@@ -857,8 +859,8 @@ function rerunSandbox(
 
   const root = join(dir, 'root');
   cpSync(
-    join(LIBRARY_FIXTURE, 'root', 'Die.Hard.1988.1080p'),
-    join(root, 'Die.Hard.1988.1080p'),
+    join(LIBRARY_FIXTURE, 'root', 'Die Hard (1988)'),
+    join(root, 'Die Hard (1988)'),
     { recursive: true }
   );
   layOut(root, layout);

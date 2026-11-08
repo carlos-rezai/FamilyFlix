@@ -1,25 +1,21 @@
-import { dirname, relative, sep } from 'node:path';
+import { basename, dirname, relative, sep } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
-import {
-  scanMovieFolder,
-  type MovieFolderScan,
-} from '../../media/scanMovieFolder/scanMovieFolder';
-import { splitCollections } from '../splitCollections/splitCollections';
+import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
 
 /** Where a found film lies, as `setSourceFolder` records it. */
 export interface FilmSource {
   folderId: string;
-  /** The film's folder, relative to its listed **Library folder**. */
+  /** The film's **Title folder**, its **Folder key**. */
   sourceFolder: string;
-  /** Its **Source file**, set only when the folder is a **Collection folder**. */
-  sourceFile: string | null;
+  /** A film's **Source file**, never set. */
+  sourceFile: null;
 }
 
 /**
  * A video's **Source file**: its path relative to its **Source folder**
- * `dir`, with forward slashes whatever the platform spells — the one spelling
+ * `dir`, with forward slashes whatever the platform spells, the one spelling
  * the scan, the **Series Resolve** and the add all record.
  */
 export const sourceFileOf = (dir: string, video: string): string =>
@@ -27,39 +23,38 @@ export const sourceFileOf = (dir: string, video: string): string =>
 
 /**
  * A film's **Source folder** under its listed **Library folder** `folder`, as
- * the importer records it: the scan's folder relative to it and, for a
- * **Collection folder** film, its one video's **Source file**.
+ * the importer records it: its **Title folder** relative to it, and no
+ * **Source file**.
  */
 export const filmSourceOf = (
   folder: StoredLibraryFolder,
-  scan: MovieFolderScan
+  scan: { dir: string }
 ): FilmSource => ({
   folderId: folder.id,
   sourceFolder: relative(folder.path, scan.dir),
-  sourceFile:
-    scan.collection === true ? sourceFileOf(scan.dir, scan.videos[0]) : null,
+  sourceFile: null,
 });
 
 /**
- * The **Source folder** a found film video says, placed under its listed
- * **Library folder** by {@link filmSourceOf} over its folder's scan, split as
- * `splitCollections` reads a **Collection folder** — so a later **Folder
- * scan** reads the film as **Already in library** and the collection's other
- * films still come in. `null` when the video lies under no listed folder.
- * Read in both modes.
+ * The **Source folder** a found film video says: a **Title folder** lying
+ * directly in its listed **Library folder**, placed at its **Folder key**,
+ * so a later **Folder scan** reads the film as **Already in library**.
+ * `null` for a video anywhere else: under a folder not named `Title (Year)`,
+ * in a Title folder deeper than the root, loose in the root, or under no
+ * listed folder. Read in both modes.
  */
-export async function placeFilmFolder(
+export function placeFilmFolder(
   folders: readonly StoredLibraryFolder[],
   video: string
-): Promise<FilmSource | null> {
+): FilmSource | null {
   const listed = listedFolderOf(folders, video);
-  if (listed === null) {
+  const dir = dirname(video);
+  if (
+    listed === null ||
+    relative(listed.path, dirname(dir)) !== '' ||
+    folderKeyOf(basename(dir)) === null
+  ) {
     return null;
   }
-  const films = splitCollections([await scanMovieFolder(dirname(video))]);
-  const film =
-    films.find((each) =>
-      each.videos.some((path) => relative(path, video) === '')
-    ) ?? films[0];
-  return filmSourceOf(listed, film);
+  return filmSourceOf(listed, { dir });
 }

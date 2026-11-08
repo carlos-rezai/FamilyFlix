@@ -29,8 +29,8 @@ import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type { LibraryStorage } from '../../library';
 import type { ImportProblem, ImportRun, Movie } from '@/types';
 
-/** The folder the sheet forgot, named the way a release folder is. */
-const IRONWOOD = 'Ironwood.2018.1080p';
+/** The folder the sheet forgot, a **Title folder**. */
+const IRONWOOD = 'Ironwood (2018)';
 
 interface Sandbox {
   storage: LibraryStorage;
@@ -129,7 +129,7 @@ describe('createImporter — a no-row Problem’s guess', () => {
     expect(problem.guess).toBe('Ironwood (2018)');
   });
 
-  it.each([IRONWOOD, 'Ironwood (2018)', 'The Quiet Hours'])(
+  it.each([IRONWOOD, 'Mr. Quiet Hours (2019)'])(
     'matches what a Folder scan names %s',
     async (name) => {
       const { problem } = await inReview(name);

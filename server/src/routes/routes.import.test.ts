@@ -218,7 +218,7 @@ describe('POST /api/import — starting a run', () => {
 
     expect(run).toMatchObject({
       phase: 'review',
-      found: 3,
+      found: 2,
       matched: 2,
       total: 2,
       done: 2,
@@ -466,7 +466,7 @@ describe('GET /api/import/current', () => {
     expect(run.id).toBe(started.id);
     expect(run).toMatchObject({
       phase: 'review',
-      found: 3,
+      found: 2,
       total: 2,
       done: 2,
       matched: 2,
@@ -596,11 +596,11 @@ describe('POST /api/movies — bytes only', () => {
     // from: anyone who can reach it could name any file on the machine.
     body.append(
       'video',
-      join(root, 'Die.Hard.1988.1080p', 'Die.Hard.1988.1080p.mp4')
+      join(root, 'Die Hard (1988)', 'Die.Hard.1988.1080p.mp4')
     );
     body.append(
       'videoPath',
-      join(root, 'Die.Hard.1988.1080p', 'Die.Hard.1988.1080p.mp4')
+      join(root, 'Die Hard (1988)', 'Die.Hard.1988.1080p.mp4')
     );
 
     const response = await fetch(`${baseUrl}/api/movies`, {
@@ -800,7 +800,7 @@ async function failedDieHardApi(): Promise<
   if (problem === undefined) {
     throw new Error(`no failed problem: ${JSON.stringify(run.problems)}`);
   }
-  return { ...api, problem, dieHard: join(api.root, 'Die.Hard.1988.1080p') };
+  return { ...api, problem, dieHard: join(api.root, 'Die Hard (1988)') };
 }
 
 /** The fields of the form, as `movieFormData` sends them for the fixture's Die Hard. */
@@ -850,15 +850,15 @@ describe('GET /api/import/current/problems/:id', () => {
       folder: dieHard,
       files: {
         video: join(dieHard, 'Die.Hard.1988.1080p.mp4'),
-        poster: join(dieHard, 'poster.jpg'),
-        backdrop: join(dieHard, 'fanart.jpg'),
+        poster: join(dieHard, 'Images', 'poster.jpg'),
+        backdrop: join(dieHard, 'Images', 'backdrop.jpg'),
         subtitles: [
           {
-            path: join(dieHard, 'Die.Hard.1988.1080p.en.srt'),
+            path: join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.en.srt'),
             language: 'English',
           },
           {
-            path: join(dieHard, 'Die.Hard.1988.1080p.pt.srt'),
+            path: join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.pt.srt'),
             language: 'Portuguese',
           },
         ],
@@ -919,9 +919,9 @@ describe('GET /api/import/current/problems/:id', () => {
   });
 
   describe('a no-row problem', () => {
-    it('answers the title guessed from the folder name beside the folder’s files', async () => {
+    it('answers the title off the Folder key beside the folder’s files', async () => {
       const { baseUrl, root, sheet } = freshApi();
-      unlistedFolder(root, 'Harbor.Lights.2019');
+      unlistedFolder(root, 'Harbor Lights (2019)');
       await postImport(baseUrl, { sheetPath: sheet });
       const run = await untilReview(baseUrl);
       const [problem] = run.problems.filter(({ kind }) => kind === 'no-row');
@@ -935,11 +935,11 @@ describe('GET /api/import/current/problems/:id', () => {
       expect(detail.candidates).toBeUndefined();
       expect(detail).toMatchObject({
         kind: 'no-row',
-        title: 'Harbor.Lights.2019',
+        title: 'Harbor Lights (2019)',
         row: { title: 'Harbor Lights', genres: [] },
-        folder: join(root, 'Harbor.Lights.2019'),
+        folder: join(root, 'Harbor Lights (2019)'),
         files: {
-          video: join(root, 'Harbor.Lights.2019', 'Ironwood.mp4'),
+          video: join(root, 'Harbor Lights (2019)', 'Ironwood.mp4'),
           subtitles: [],
         },
       });
@@ -954,11 +954,17 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
     const response = await postResolve(baseUrl, problem.id, [
       ...dieHardFields(),
       ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
-      ['posterPath', join(dieHard, 'poster.jpg')],
+      ['posterPath', join(dieHard, 'Images', 'poster.jpg')],
       ['subtitleLanguage', 'English'],
-      ['subtitlePath', join(dieHard, 'Die.Hard.1988.1080p.en.srt')],
+      [
+        'subtitlePath',
+        join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.en.srt'),
+      ],
       ['subtitleLanguage', 'Portuguese'],
-      ['subtitlePath', join(dieHard, 'Die.Hard.1988.1080p.pt.srt')],
+      [
+        'subtitlePath',
+        join(dieHard, 'Subtitles', 'Die.Hard.1988.1080p.pt.srt'),
+      ],
     ]);
 
     expect(response.status).toBe(201);
@@ -1114,10 +1120,7 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
 
     const response = await postResolve(baseUrl, 'p1', [
       ...dieHardFields(),
-      [
-        'videoPath',
-        join(root, 'Die.Hard.1988.1080p', 'Die.Hard.1988.1080p.mp4'),
-      ],
+      ['videoPath', join(root, 'Die Hard (1988)', 'Die.Hard.1988.1080p.mp4')],
     ]);
 
     // The route's own 404, with a reason — not Express's page for a route

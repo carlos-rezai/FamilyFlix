@@ -67,7 +67,7 @@ const SHEET = [
 const HEADER = join(
   LIBRARY_FIXTURE,
   'root',
-  'Die.Hard.1988.1080p',
+  'Die Hard (1988)',
   'Die.Hard.1988.1080p.mp4'
 );
 
@@ -95,8 +95,8 @@ function freshApi(episodes: string[]): {
 
   const root = join(dir, 'root');
   cpSync(
-    join(LIBRARY_FIXTURE, 'root', 'Die.Hard.1988.1080p'),
-    join(root, 'Die.Hard.1988.1080p'),
+    join(LIBRARY_FIXTURE, 'root', 'Die Hard (1988)'),
+    join(root, 'Die Hard (1988)'),
     { recursive: true }
   );
   const season = join(root, SHOW, SEASON);
