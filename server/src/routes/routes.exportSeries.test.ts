@@ -286,8 +286,6 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
 describe.each(FORMATS)(
   'POST /api/export (%s) — an untouched export of series re-imported adds nothing',
   (format) => {
-    // Reading the Season and Episode rows back as such is issue 539's; until
-    // then an Episode row is an unmatched row, a Problem, and never a film.
     it('holds the same series and episodes, and adds no film', async () => {
       const api = freshApi();
       expect((await postImport(api.baseUrl, api.sheet, api.root)).status).toBe(
@@ -326,7 +324,7 @@ describe.each(FORMATS)(
       );
       const run = await untilReview(api.baseUrl);
 
-      expect(run).toMatchObject({ total: 0, done: 0 });
+      expect(run).toMatchObject({ total: 0, done: 0, problems: [] });
       expect(api.storage.seriesInScope('all')).toEqual(series);
       expect(series.map((held) => api.storage.listEpisodes(held.id))).toEqual(
         episodes
