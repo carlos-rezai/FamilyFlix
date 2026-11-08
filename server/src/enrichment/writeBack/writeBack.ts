@@ -13,7 +13,10 @@ import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
 import type { LogLine, Movie } from '@/types';
-import { exportRows } from '../../import-export/exportRows/exportRows';
+import {
+  exportRows,
+  type ExportTable,
+} from '../../import-export/exportRows/exportRows';
 import { writeSheet } from '../../import-export/writeSheet/writeSheet';
 import { writableFolder } from '../../media/writableFolder/writableFolder';
 
@@ -179,17 +182,51 @@ async function poster(
   }
 }
 
+/** The sixteen columns of a Metadata sheet, in their order. */
+const METADATA_COLUMNS = [
+  'Type',
+  'Title',
+  'Year',
+  'Runtime',
+  'Genres',
+  'Director',
+  'Cast',
+  'Synopsis',
+  'Rating',
+  'Status',
+  'Favorite',
+  'Seasons',
+  'Episodes',
+  'Subtitles',
+  'Poster',
+  'Backdrop',
+] as const;
+
+/**
+ * The Export's one table laid out under {@link METADATA_COLUMNS}: each cell
+ * taken from the column of the same name, blank where the one sheet has none.
+ */
+function metadataTable(table: ExportTable): ExportTable {
+  const [header = [], ...body] = table;
+  const at = METADATA_COLUMNS.map((column) => header.indexOf(column));
+  return [
+    [...METADATA_COLUMNS],
+    ...body.map((row) => at.map((index) => (index < 0 ? null : row[index]))),
+  ];
+}
+
 async function sheet(root: string, movies: Movie[]): Promise<SheetOutcome> {
   const target = join(root, SHEET_NAME);
   try {
-    // The **Export**'s Titles table over this folder's films, its image
-    // cells blank: nothing travels beside a Metadata sheet.
-    const { tables } = exportRows(movies, [], {
+    // The **Export**'s one table over this folder's films, its image cells
+    // blank (nothing travels beside a Metadata sheet), laid out under the
+    // sixteen columns a Metadata sheet has always carried.
+    const { table } = exportRows(movies, [], {
       images: false,
       subtitles: false,
     });
-    const [file] = await writeSheet(tables, 'csv', SHEET_STEM);
-    await writeFile(target, file.bytes, { flag: 'wx' });
+    const bytes = await writeSheet(metadataTable(table), 'csv');
+    await writeFile(target, bytes, { flag: 'wx' });
     return {
       kind: 'written',
       line: { text: `↓ ${SHEET_NAME}  →  ${target}`, kind: 'scan' },

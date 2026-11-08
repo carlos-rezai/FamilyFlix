@@ -10,9 +10,9 @@ import {
   Toggle,
 } from '@/primitives';
 import {
-  EXPORT_COLUMNS,
   EXPORT_FORMATS,
   EXPORT_NAME_PREFIX,
+  SHEET_COLUMNS,
   type ExportFormat,
 } from '@/types';
 import { useExport } from '../useExport/useExport';
@@ -86,7 +86,7 @@ const folderNameOf = (path: string): string =>
  * heading with the titles count at its right end, then a mono field with the
  * folder glyph holding the **Export name**, and a name refusal under it;
  * _Include_, the _Images_ row and its Toggle, on every open, then the
- * _Subtitles_ row, off; _Columns included_ over the sixteen **Export
+ * _Subtitles_ row, off; _Columns included_ over the **Sheet
  * columns** as pills — a list, not controls; _Export as CSV_ / _Export as
  * Excel_ beside _Cancel_. Then **Export ready**, swapped inside the same card
  * as the one **Bare modal** so the pop-in runs once: the tick, the heading,
@@ -224,7 +224,8 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
             <IncludeText>
               <IncludeTitle>Images</IncludeTitle>
               <IncludeDesc>
-                Posters, backdrops and episode stills, in a folder per title.
+                Posters, backdrops, season posters and stills, in each title
+                folder&apos;s Images, as your library folders hold them.
               </IncludeDesc>
             </IncludeText>
             <Toggle
@@ -238,7 +239,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
             <IncludeText>
               <IncludeTitle>Subtitles</IncludeTitle>
               <IncludeDesc>
-                Every subtitle file, beside its title&apos;s images.
+                Every subtitle file, in each title folder&apos;s Subtitles.
               </IncludeDesc>
             </IncludeText>
             <Toggle
@@ -253,7 +254,7 @@ export function ExportModal({ open, onClose }: ExportModalProps) {
       <div>
         <SectionLabel>Columns included</SectionLabel>
         <Columns>
-          {EXPORT_COLUMNS.map((column) => (
+          {SHEET_COLUMNS.map((column) => (
             <ColumnPill key={column}>{column}</ColumnPill>
           ))}
         </Columns>

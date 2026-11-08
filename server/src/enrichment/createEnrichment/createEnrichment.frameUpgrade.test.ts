@@ -25,8 +25,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   ENRICH_FIELDS,
-  EXPORT_COLUMNS,
-  EXPORT_EPISODE_COLUMNS,
+  SHEET_COLUMNS,
   type EnrichField,
   type EnrichScope,
 } from '@/types';
@@ -423,7 +422,7 @@ describe('createEnrichment: the Sync gap once every episode holds a still', () =
 });
 
 describe('an Export of a show holding a frame', () => {
-  it('carries the frame under stills/, named in the Still cell, sixteen and nine columns', async () => {
+  it('carries the frame under Images/Stills/, named in the Still cell of the one sheet', async () => {
     const { enrichment, storage, root, addShow } = world();
     const { id } = await addShow();
 
@@ -460,22 +459,21 @@ describe('an Export of a show holding a frame', () => {
           line.split(',').map((cell) => cell.replace(/^"|"$/g, ''))
         );
 
-    const titles = rows(`${name}.csv`);
-    expect(titles[0]).toEqual([...EXPORT_COLUMNS]);
-
-    const episodes = rows(`${name}-episodes.csv`);
-    expect(episodes[0]).toEqual([...EXPORT_EPISODE_COLUMNS]);
-    const stillAt = EXPORT_EPISODE_COLUMNS.indexOf('Still');
-    const e01 = episodes.find((cells) => cells[1] === '1' && cells[2] === '1');
+    const sheet = rows('Meta/familyflix-library.csv');
+    expect(sheet[0]).toEqual([...SHEET_COLUMNS]);
+    const stillAt = SHEET_COLUMNS.indexOf('Still');
+    const e01 = sheet.find(
+      (cells) => cells[0] === 'Episode' && cells[2] === '1' && cells[3] === '1'
+    );
     const cell = e01?.[stillAt] ?? '';
-    expect(cell).toMatch(/\/stills\/S01E01\.jpg$/);
+    expect(cell).toMatch(/\/Season 01\/Images\/Stills\/S01E01\.jpg$/);
     expect(readFileSync(join(folder, ...cell.split('/')), 'utf8')).toBe(
       FRAME_BYTES
     );
 
     const titleFolder = cell.split('/')[0] ?? '';
-    expect(readdirSync(join(folder, titleFolder, 'stills'))).toContain(
-      'S01E01.jpg'
-    );
+    expect(
+      readdirSync(join(folder, titleFolder, 'Season 01', 'Images', 'Stills'))
+    ).toContain('S01E01.jpg');
   });
 });

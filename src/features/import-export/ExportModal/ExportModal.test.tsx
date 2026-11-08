@@ -10,7 +10,7 @@ import { ThemeProvider } from 'styled-components';
 
 import { ExportModal } from './ExportModal';
 import { theme } from '@/styles/theme';
-import type { ExportResult, ExportSummary } from '@/types';
+import { SHEET_COLUMNS, type ExportResult, type ExportSummary } from '@/types';
 import {
   createdResponse,
   okResponse,
@@ -32,7 +32,7 @@ import {
  * 4. **Folder name** (log 36): the heading with `N titles` / `1 title` in
  *    accent — dropped while the summary is `null` — over a mono `TextField`
  *    with the folder glyph holding the **Export name**;
- * 5. **Columns included**: the sixteen pills;
+ * 5. **Columns included**: a pill per Sheet column;
  * 6. _Export as CSV / Excel_, _Exporting…_ and disabled in flight, and
  *    _Cancel_.
  *
@@ -84,24 +84,8 @@ const WRITTEN: ExportResult = {
   seriesCount: 1,
 };
 
-const COLUMNS = [
-  'Type',
-  'Title',
-  'Year',
-  'Runtime',
-  'Genres',
-  'Director',
-  'Cast',
-  'Synopsis',
-  'Rating',
-  'Status',
-  'Favorite',
-  'Seasons',
-  'Episodes',
-  'Subtitles',
-  'Poster',
-  'Backdrop',
-];
+/** The pills under _Columns included_: the sheet's own columns, in order. */
+const COLUMNS = [...SHEET_COLUMNS];
 
 const isPost = (init?: RequestInit) => init?.method === 'POST';
 
@@ -284,7 +268,7 @@ describe('ExportModal — the idle face, top to bottom', () => {
     expect(exportButton('CSV')).toBeDefined();
   });
 
-  it('lists the sixteen columns as pills under Columns included', () => {
+  it('lists the Sheet columns as pills under Columns included', () => {
     serve();
 
     renderDialog();

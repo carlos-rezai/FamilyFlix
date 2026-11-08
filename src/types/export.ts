@@ -1,7 +1,7 @@
 /**
  * The **Export** contracts both build targets read: the two **Export
- * formats** the dialog offers and the route answers, the sixteen **Export
- * columns** of the Titles table, the **Export name**'s prefix, the **Export
+ * formats** the dialog offers and the route answers, the **Row types** and
+ * **Sheet columns** of the one sheet, the **Export name**'s prefix, the **Export
  * summary** `GET /api/export` answers and the `POST`'s request and result.
  * See `docs/PRDs/14-export.md` and `docs/PRDs/31-export-options.md`.
  */
@@ -19,52 +19,47 @@ export const EXPORT_FORMATS = ['csv', 'xlsx'] as const;
 export type ExportFormat = (typeof EXPORT_FORMATS)[number];
 
 /**
- * The sixteen columns of an **Export**'s Titles table, in the PRD's order —
- * spelled once, for the header row `exportRows` puts first and the pills the
- * dialog lists under _Columns included_. Log 14's eight keep their relative
- * order and their cell rules.
+ * The four **Row types** of the one sheet, in the order a title's rows run:
+ * a film's one row, or a series' row, then each season's, then its episodes'.
  */
-export const EXPORT_COLUMNS = [
+export const ROW_TYPES = ['Movie', 'Series', 'Season', 'Episode'] as const;
+
+/** One of the types in {@link ROW_TYPES}. */
+export type RowType = (typeof ROW_TYPES)[number];
+
+/**
+ * The twenty-two **Sheet columns** of the one sheet, in order: every row type
+ * in one table, a cell blank where its type has no such field (log 58, Q13).
+ * Spelled once, for the header row `exportRows` puts first and the pills the
+ * dialog lists under _Columns included_.
+ */
+export const SHEET_COLUMNS = [
   'Type',
+  'Folder',
+  'Season',
+  'Episode',
   'Title',
   'Year',
+  'Air date',
   'Runtime',
   'Genres',
   'Director',
   'Cast',
   'Synopsis',
   'Rating',
+  'TMDB rating',
+  'TMDB id',
   'Status',
   'Favorite',
-  'Seasons',
-  'Episodes',
+  'Video',
   'Subtitles',
   'Poster',
   'Backdrop',
-] as const;
-
-/** One of the columns in {@link EXPORT_COLUMNS}. */
-export type ExportColumn = (typeof EXPORT_COLUMNS)[number];
-
-/**
- * The nine columns of an **Export**'s Episodes table, in the PRD's order —
- * one row per episode, beside the Titles table: the second worksheet in xlsx,
- * `<name>-episodes.csv` in csv.
- */
-export const EXPORT_EPISODE_COLUMNS = [
-  'Series',
-  'Season',
-  'Episode',
-  'Title',
-  'Air date',
-  'Runtime',
-  'Status',
-  'Subtitles',
   'Still',
 ] as const;
 
-/** One of the columns in {@link EXPORT_EPISODE_COLUMNS}. */
-export type ExportEpisodeColumn = (typeof EXPORT_EPISODE_COLUMNS)[number];
+/** One of the columns in {@link SHEET_COLUMNS}. */
+export type SheetColumn = (typeof SHEET_COLUMNS)[number];
 
 /** What every **Export name** begins with, ahead of `_DD-MM-YYYY`. */
 export const EXPORT_NAME_PREFIX = 'familyflix-collection';

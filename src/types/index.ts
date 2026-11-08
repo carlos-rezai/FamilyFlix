@@ -18,8 +18,8 @@
 export { MOVIE_SORTS, DEFAULT_MOVIE_SORT, LIBRARY_TABS } from './browse';
 export {
   EXPORT_FORMATS,
-  EXPORT_COLUMNS,
-  EXPORT_EPISODE_COLUMNS,
+  SHEET_COLUMNS,
+  ROW_TYPES,
   EXPORT_NAME_PREFIX,
   EXPORT_FIELDS,
 } from './export';
@@ -117,8 +117,8 @@ export type {
 } from './import';
 export type {
   ExportFormat,
-  ExportColumn,
-  ExportEpisodeColumn,
+  SheetColumn,
+  RowType,
   ExportSummary,
   ExportField,
   StartExport,

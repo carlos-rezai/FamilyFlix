@@ -118,7 +118,7 @@ const postExport = (baseUrl: string, destination: string, name: unknown) =>
   });
 
 describe('POST /api/export — the requested name', () => {
-  it('makes the Export folder and its sheet under the name posted', async () => {
+  it('makes the Export folder under the name posted, its sheet in Meta', async () => {
     const { baseUrl, destination } = freshApi();
 
     const response = await postExport(baseUrl, destination, 'Family films');
@@ -127,9 +127,9 @@ describe('POST /api/export — the requested name', () => {
     expect(await response.json()).toMatchObject({
       folder: join(destination, 'Family films'),
     });
-    expect(readdirSync(join(destination, 'Family films'))).toContain(
-      'Family films.csv'
-    );
+    expect(readdirSync(join(destination, 'Family films', 'Meta'))).toEqual([
+      'familyflix-library.csv',
+    ]);
   });
 });
 

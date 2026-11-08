@@ -6,9 +6,9 @@
 // `:memory:` library, `routes.export.test.ts`'s seam. The route reads
 // each series' detail over the full series list and hands it to the writer:
 //
-// - an export of a library holding _Heat_ and _Severance_ lists both in one
-//   A–Z Titles sheet, and its Episodes table holds _Severance_'s episodes in
-//   order — the second worksheet in xlsx, `<name>-episodes.csv` in csv;
+// - an export of a library holding _Heat_ and _Severance_ lists both in the
+//   one sheet, `Meta/familyflix-library.<csv|xlsx>`, A to Z by Folder key,
+//   _Severance_'s Season and Episode rows after its Series row, in order;
 // - the `201` counts the series in `seriesCount`;
 // - the round trip, with series rows and their synopses among the titles: an
 //   untouched export of the importer's series fixture, fed back to Bulk import
@@ -35,11 +35,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { seriesFixture } from '../test-support/seriesFixture/seriesFixture';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import {
-  EXPORT_COLUMNS,
-  EXPORT_EPISODE_COLUMNS,
-  EXPORT_FORMATS,
-} from '@/types';
+import { SHEET_COLUMNS, EXPORT_FORMATS } from '@/types';
 import type { ExportFormat, ExportResult, ImportRun } from '@/types';
 
 const FORMATS = [...EXPORT_FORMATS];
@@ -185,72 +181,62 @@ async function csvSheet(path: string): Promise<ExcelJS.Worksheet> {
   return workbook.worksheets[0];
 }
 
-const SEVERANCE_IN_ORDER = [
-  ['Severance', '1', '1'],
-  ['Severance', '1', '2'],
-  ['Severance', '2', '1'],
+/** The one sheet's Type, Folder, Season and Episode cells, header dropped. */
+const identities = (sheet: ExcelJS.Worksheet): string[][] =>
+  cellsOf(sheet, SHEET_COLUMNS.length)
+    .slice(1)
+    .map((row) => row.slice(0, 4));
+
+const HEAT_AND_SEVERANCE_IN_ORDER = [
+  ['Movie', 'Heat (1995)', '', ''],
+  ['Series', 'Severance (2022)', '', ''],
+  ['Season', 'Severance (2022)', '1', ''],
+  ['Episode', 'Severance (2022)', '1', '1'],
+  ['Episode', 'Severance (2022)', '1', '2'],
+  ['Season', 'Severance (2022)', '2', ''],
+  ['Episode', 'Severance (2022)', '2', '1'],
 ];
 
 describe('POST /api/export — series and episodes', () => {
-  it('lists Heat and Severance in one A–Z sheet, and Severance’s episodes in order (xlsx)', async () => {
+  it('lists Heat and Severance in the one sheet, every row type in order (xlsx)', async () => {
     const api = freshApi();
     addHeatAndSeverance(api.storage);
 
-    const { result, name } = await exported(api, 'xlsx');
+    const { result } = await exported(api, 'xlsx');
 
     expect(result).toMatchObject({ movieCount: 1, seriesCount: 1 });
-    expect(readdirSync(result.folder)).toEqual([`${name}.xlsx`]);
+    expect(readdirSync(join(result.folder, 'Meta'))).toEqual([
+      'familyflix-library.xlsx',
+    ]);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(
       readFileSync(
-        join(result.folder, `${name}.xlsx`)
+        join(result.folder, 'Meta', 'familyflix-library.xlsx')
       ) as unknown as ArrayBuffer
     );
-    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
-      'Titles',
-      'Episodes',
+    expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Library']);
+    expect(cellsOf(workbook.worksheets[0], SHEET_COLUMNS.length)[0]).toEqual([
+      ...SHEET_COLUMNS,
     ]);
-    const titles = cellsOf(workbook.worksheets[0], EXPORT_COLUMNS.length);
-    expect(titles.slice(1).map((row) => [row[0], row[1]])).toEqual([
-      ['Movie', 'Heat'],
-      ['Series', 'Severance'],
-    ]);
-    const episodes = cellsOf(
-      workbook.worksheets[1],
-      EXPORT_EPISODE_COLUMNS.length
-    );
-    expect(episodes[0]).toEqual([...EXPORT_EPISODE_COLUMNS]);
-    expect(episodes.slice(1).map((row) => row.slice(0, 3))).toEqual(
-      SEVERANCE_IN_ORDER
+    expect(identities(workbook.worksheets[0])).toEqual(
+      HEAT_AND_SEVERANCE_IN_ORDER
     );
   });
 
-  it('lists Heat and Severance in one A–Z sheet, and Severance’s episodes in a second file (csv)', async () => {
+  it('lists Heat and Severance in the one sheet, every row type in order (csv)', async () => {
     const api = freshApi();
     addHeatAndSeverance(api.storage);
 
-    const { result, name } = await exported(api, 'csv');
+    const { result } = await exported(api, 'csv');
 
     expect(result).toMatchObject({ movieCount: 1, seriesCount: 1 });
-    expect(readdirSync(result.folder).sort()).toEqual(
-      [`${name}-episodes.csv`, `${name}.csv`].sort()
-    );
-    const titles = cellsOf(
-      await csvSheet(join(result.folder, `${name}.csv`)),
-      EXPORT_COLUMNS.length
-    );
-    expect(titles.slice(1).map((row) => [row[0], row[1]])).toEqual([
-      ['Movie', 'Heat'],
-      ['Series', 'Severance'],
+    expect(readdirSync(join(result.folder, 'Meta'))).toEqual([
+      'familyflix-library.csv',
     ]);
-    const episodes = cellsOf(
-      await csvSheet(join(result.folder, `${name}-episodes.csv`)),
-      EXPORT_EPISODE_COLUMNS.length
+    const sheet = await csvSheet(
+      join(result.folder, 'Meta', 'familyflix-library.csv')
     );
-    expect(episodes[0]).toEqual([...EXPORT_EPISODE_COLUMNS]);
-    expect(episodes.slice(1).map((row) => row.slice(0, 3))).toEqual(
-      SEVERANCE_IN_ORDER
-    );
+    expect(identities(sheet)).toEqual(HEAT_AND_SEVERANCE_IN_ORDER);
   });
 });
 
@@ -300,7 +286,9 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
 describe.each(FORMATS)(
   'POST /api/export (%s) — an untouched export of series re-imported adds nothing',
   (format) => {
-    it('holds the same series and episodes, and reads no episode as a film', async () => {
+    // Reading the Season and Episode rows back as such is issue 539's; until
+    // then an Episode row is an unmatched row, a Problem, and never a film.
+    it('holds the same series and episodes, and adds no film', async () => {
       const api = freshApi();
       expect((await postImport(api.baseUrl, api.sheet, api.root)).status).toBe(
         201
@@ -318,27 +306,27 @@ describe.each(FORMATS)(
 
       const { result, name } = await exported(api, format);
       expect(result.seriesCount).toBe(2);
-      const sheetPath = join(result.folder, `${name}.${format}`);
+      const sheetPath = join(
+        result.folder,
+        'Meta',
+        `familyflix-library.${format}`
+      );
       const exportedRows = await readSheet(readFileSync(sheetPath), sheetPath);
-      expect(exportedRows).toEqual([
-        expect.objectContaining({
-          title: 'Harbor & Vine',
-          synopsis: 'Three generations keep a harbourside restaurant afloat.',
-        }),
-        expect.objectContaining({ title: 'Tidewater' }),
-      ]);
-      expect(
-        (
-          await postImport(
-            api.baseUrl,
-            join(result.folder, `${name}.${format}`),
-            api.root
-          )
-        ).status
-      ).toBe(201);
+      expect(exportedRows).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            title: 'Harbor & Vine',
+            synopsis: 'Three generations keep a harbourside restaurant afloat.',
+          }),
+          expect.objectContaining({ title: 'Tidewater' }),
+        ])
+      );
+      expect((await postImport(api.baseUrl, sheetPath, api.root)).status).toBe(
+        201
+      );
       const run = await untilReview(api.baseUrl);
 
-      expect(run).toMatchObject({ total: 0, done: 0, problems: [] });
+      expect(run).toMatchObject({ total: 0, done: 0 });
       expect(api.storage.seriesInScope('all')).toEqual(series);
       expect(series.map((held) => api.storage.listEpisodes(held.id))).toEqual(
         episodes

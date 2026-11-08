@@ -57,7 +57,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
-import { EXPORT_COLUMNS, EXPORT_FORMATS } from '@/types';
+import { EXPORT_FORMATS, SHEET_COLUMNS } from '@/types';
 import type {
   ExportFormat,
   ExportResult,
@@ -315,8 +315,11 @@ describe('POST /api/export — written', () => {
     ).json()) as ExportResult;
 
     expect(readdirSync(destination)).toEqual([NAME]);
-    const sheet = join(result.folder, `${NAME}.xlsx`);
-    const rows = await readSheet(readFileSync(sheet), `${NAME}.xlsx`);
+    const sheet = join(result.folder, 'Meta', 'familyflix-library.xlsx');
+    const rows = await readSheet(
+      readFileSync(sheet),
+      'familyflix-library.xlsx'
+    );
     expect(rows.map((row) => row.title)).toEqual(
       expect.arrayContaining(['Backwater', 'Meridian', 'Zephyr'])
     );
@@ -437,7 +440,7 @@ async function exportedFixture(
   });
   expect(response.status).toBe(201);
   const { folder: written } = (await response.json()) as ExportResult;
-  return join(written, `${NAME}.${format}`);
+  return join(written, 'Meta', `familyflix-library.${format}`);
 }
 
 async function withRowEdited(
@@ -709,25 +712,25 @@ async function exportedSheet(
   });
   expect(response.status).toBe(201);
   const { folder: written } = (await response.json()) as ExportResult;
-  return readFileSync(join(written, `${NAME}.${format}`));
+  return readFileSync(join(written, 'Meta', `familyflix-library.${format}`));
 }
 
 describe.each(FORMATS)(
   'POST /api/export (%s) — the awkward title',
   (format) => {
-    const filename = `${NAME}.${format}`;
+    const filename = `familyflix-library.${format}`;
 
-    it('reads back every awkward cell identically, A–Z, the quote first', async () => {
+    it('reads back every awkward cell identically, A–Z by Folder key, which drops the quote', async () => {
       const api = freshApi();
       addAwkwardLibrary(api.storage);
 
       const rows = await readSheet(await exportedSheet(api, format), filename);
 
       expect(rows.map((row) => row.title)).toEqual([
-        '"Whatever," she said',
         'Amélie',
+        '"Whatever," she said',
       ]);
-      expect(rows[0]).toMatchObject({
+      expect(rows[1]).toMatchObject({
         title: '"Whatever," she said',
         year: 2015,
         genres: ['Drama'],
@@ -736,7 +739,7 @@ describe.each(FORMATS)(
         rating: null,
         watched: false,
       });
-      expect(rows[1]).toMatchObject({
+      expect(rows[0]).toMatchObject({
         title: 'Amélie',
         year: 2001,
         genres: ['Romance', 'Comedy'],
@@ -768,7 +771,7 @@ describe('POST /api/export (csv) — the BOM through the route and the reader', 
 
     const rows = await readSheet(
       await exportedSheet(api, 'csv'),
-      `${NAME}.csv`
+      'familyflix-library.csv'
     );
 
     expect(rows).toHaveLength(2);
@@ -803,11 +806,15 @@ describe.each(FORMATS)(
       expect(response.status).toBe(201);
       const result = (await response.json()) as ExportResult;
       expect(result).toMatchObject({ movieCount: 0, seriesCount: 0 });
-      const bytes = readFileSync(join(result.folder, `${NAME}.${format}`));
-      expect(await readSheet(bytes, `${NAME}.${format}`)).toEqual([]);
+      const bytes = readFileSync(
+        join(result.folder, 'Meta', `familyflix-library.${format}`)
+      );
+      expect(await readSheet(bytes, `familyflix-library.${format}`)).toEqual(
+        []
+      );
     });
 
-    it('is the header row alone — the sixteen names, nothing under them', async () => {
+    it('is the header row alone: the Sheet columns, nothing under them', async () => {
       const api = freshApi();
 
       const bytes = await exportedSheet(api, format);
@@ -823,7 +830,7 @@ describe.each(FORMATS)(
       }
       const [sheet] = workbook.worksheets;
       expect(sheet.rowCount).toBe(1);
-      expect(sheet.getRow(1).values).toEqual([undefined, ...EXPORT_COLUMNS]);
+      expect(sheet.getRow(1).values).toEqual([undefined, ...SHEET_COLUMNS]);
     });
   }
 );

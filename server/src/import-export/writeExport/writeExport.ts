@@ -4,7 +4,7 @@ import { dirname, join } from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import type { Movie, SeriesDetail, StartExport } from '@/types';
+import type { Movie, SeriesDetail, SheetColumn, StartExport } from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { writableFolder } from '../../media/writableFolder/writableFolder';
@@ -43,9 +43,33 @@ export type ExportRefusal =
  * refusals are worded through `FOLDER_REFUSALS`.
  */
 export type ExportOutcome =
-  | { kind: 'written'; folder: string; movieCount: number; seriesCount: number }
+  | {
+      kind: 'written';
+      folder: string;
+      movieCount: number;
+      seriesCount: number;
+      /** One line per Folder-key clash the Export numbered apart. */
+      warnings: string[];
+    }
   | { kind: 'refused'; refusal: ExportRefusal }
   | { kind: 'failed'; reason: string };
+
+/** The folder inside the **Export folder** the sheet is written to. */
+const META_FOLDER = 'Meta';
+
+/** The sheet's name, its format's extension to follow, whatever the Export name. */
+const SHEET_STEM = 'familyflix-library';
+
+/** What separates one path from the next inside a path cell. */
+const PATH_SEPARATOR = '|';
+
+/** The columns whose cells name files the File plan holds. */
+const PATH_COLUMNS: ReadonlySet<string> = new Set<SheetColumn>([
+  'Subtitles',
+  'Poster',
+  'Backdrop',
+  'Still',
+]);
 
 /** How many numbered names are tried before a taken name is given up on. */
 const MAX_NUMBERED = 999;
@@ -96,16 +120,32 @@ const UNREADABLE: ReadonlySet<string> = new Set([
   'ENOTDIR',
 ]);
 
-/** A table with every cell holding a skipped file's planned path blanked. */
-const blanked = (
+/**
+ * A table with every skipped file's planned path taken out of its path cell,
+ * a cell left with none blank.
+ */
+function blanked(
   table: ExportTable,
   skipped: ReadonlySet<string>
-): ExportTable =>
-  table.map((row) =>
-    row.map((cell) =>
-      typeof cell === 'string' && skipped.has(cell) ? null : cell
-    )
+): ExportTable {
+  const [header = []] = table;
+  return table.map((row, index) =>
+    index === 0
+      ? row
+      : row.map((cell, column) => {
+          if (
+            typeof cell !== 'string' ||
+            !PATH_COLUMNS.has(String(header[column]))
+          ) {
+            return cell;
+          }
+          const kept = cell
+            .split(PATH_SEPARATOR)
+            .filter((path) => !skipped.has(path));
+          return kept.length === 0 ? null : kept.join(PATH_SEPARATOR);
+        })
   );
+}
 
 /**
  * Pipe each planned file out of managed storage into the **Export folder** —
@@ -155,7 +195,8 @@ const reasonOf = (error: unknown): string =>
  * **Export folder** under the requested name inside it exclusively, copy
  * each file the **File plan** names into it — piped out of
  * `Media.readStored`, the only way a stored file is read, one that cannot be
- * read skipped and its cell blanked — then write the sheet last. Anything
+ * read skipped and its cell blanked, then write the one sheet last, as
+ * `Meta/familyflix-library.<csv|xlsx>` whatever the Export name. Anything
  * else that fails takes the folder back out, best-effort, and answers
  * `failed` with the error's reason.
  */
@@ -174,24 +215,25 @@ export async function writeExport(
   let folder: string | null = null;
   try {
     folder = await makeFolder(request.destination, name);
-    const { tables, files } = exportRows(
+    const { table, files, warnings } = exportRows(
       content.movies,
       content.series,
       request
     );
     const skipped = await copyPlanned(media, folder, files);
-    const settled = {
-      titles: blanked(tables.titles, skipped),
-      episodes: blanked(tables.episodes, skipped),
-    };
-    for (const file of await writeSheet(settled, request.format, name)) {
-      await writeFile(join(folder, file.filename), file.bytes, { flag: 'wx' });
-    }
+    const bytes = await writeSheet(blanked(table, skipped), request.format);
+    await mkdir(join(folder, META_FOLDER));
+    await writeFile(
+      join(folder, META_FOLDER, `${SHEET_STEM}.${request.format}`),
+      bytes,
+      { flag: 'wx' }
+    );
     return {
       kind: 'written',
       folder,
       movieCount: content.movies.length,
       seriesCount: content.series.length,
+      warnings,
     };
   } catch (error) {
     if (folder !== null) {
