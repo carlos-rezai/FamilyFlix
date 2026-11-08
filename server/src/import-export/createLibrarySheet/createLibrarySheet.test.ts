@@ -283,3 +283,73 @@ describe('createLibrarySheet: a Factory reset', () => {
     expect(readFileSync(sheetOf(pathA)).equals(before)).toBe(true);
   });
 });
+
+// Log 58, Phase 8: "the scan reads Meta/" (issue #541). While a run's review
+// holds a folder's sheet values, `hold` keeps that folder's sheet as it is;
+// `release` rewrites it from the library, so a difference the family skipped
+// becomes the family's value in the sheet.
+describe('createLibrarySheet: hold and release', () => {
+  it('writes nothing to a held folder however long it waits, flush included', async () => {
+    const { storage, sheet, a, pathA, heat } = world();
+    sheet.touch([a.id]);
+    await sheet.flush();
+    const before = readFileSync(sheetOf(pathA));
+
+    sheet.hold(a.id);
+    storage.setRating(heat.id, 4);
+    sheet.touch([a.id]);
+    await vi.advanceTimersByTimeAsync(LIBRARY_SHEET_DELAY_MS * 10);
+    await sheet.flush();
+
+    expect(readFileSync(sheetOf(pathA)).equals(before)).toBe(true);
+  });
+
+  it('rewrites a released folder from the library', async () => {
+    const { storage, sheet, a, pathA, heat } = world();
+    sheet.touch([a.id]);
+    await sheet.flush();
+
+    sheet.hold(a.id);
+    storage.setRating(heat.id, 4);
+    sheet.touch([a.id]);
+    await sheet.flush();
+    sheet.release(a.id);
+    await vi.advanceTimersByTimeAsync(LIBRARY_SHEET_DELAY_MS * 2);
+    await sheet.flush();
+
+    const rows = await readSheet(
+      readFileSync(sheetOf(pathA)),
+      'familyflix-library.csv'
+    );
+    expect(rows.find((row) => row.title === 'Heat')?.rating).toBe(4);
+  });
+
+  it('rewrites a released folder from the library even with no touch while held', async () => {
+    const { storage, sheet, a, pathA, heat } = world();
+    sheet.touch([a.id]);
+    await sheet.flush();
+    // The sheet on disk says otherwise, as a sheet a run read would.
+    storage.setRating(heat.id, 4);
+    sheet.touch([a.id]);
+    await sheet.flush();
+    const fromLibrary = readFileSync(sheetOf(pathA));
+    writeFileSync(sheetOf(pathA), 'Type,Folder,Title\n');
+
+    sheet.hold(a.id);
+    sheet.release(a.id);
+    await vi.advanceTimersByTimeAsync(LIBRARY_SHEET_DELAY_MS * 2);
+    await sheet.flush();
+
+    expect(readFileSync(sheetOf(pathA)).equals(fromLibrary)).toBe(true);
+  });
+
+  it('keeps writing a folder that is not held while another is', async () => {
+    const { sheet, a, b, pathB } = world();
+
+    sheet.hold(a.id);
+    sheet.touch([a.id, b.id]);
+    await sheet.flush();
+
+    expect(await titlesIn(pathB)).toEqual(['Ronin']);
+  });
+});
