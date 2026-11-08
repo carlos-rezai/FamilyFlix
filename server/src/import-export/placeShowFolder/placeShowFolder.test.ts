@@ -1,12 +1,16 @@
 // @vitest-environment node
 //
-// 48 — Add a show folder, refactor (issue #421): where a found show lies.
+// 48 — Add a show folder, refactor (issue #421): where a found show lies;
+// narrowed by 58, Folder layout, Phase 3: "one series in the layout" (issue
+// #536).
 //
-// `placeShowFolder(folders, video)` answers the **Show folder** a found
-// episode video says — `groupShows`' own `showFolderOf`, so the add and a scan
-// agree: a Season folder's parent, else the video's folder — placed under its
-// listed **Library folder**, as the folder's id and the show's path relative
-// to it. A show under no listed folder answers `null`.
+// `placeShowFolder(folders, video)` answers where a found episode video lies
+// in the **Folder layout**: its series' **Title folder**, the parent of the
+// `Season NN` folder holding it, placed under its listed **Library folder** as
+// the folder's id and the **Folder key**, and the episode's **Source file**,
+// its path inside the Title folder with forward slashes. A video in no Season
+// folder, a loose tagged one at a show's root included, or under no listed
+// folder answers `null`.
 //
 // Pure over paths under a fixed root; nothing touches the disk.
 
@@ -26,35 +30,88 @@ const shows: StoredLibraryFolder = {
 };
 
 describe('placeShowFolder', () => {
-  it('places a video in a Season folder at the folder above it', () => {
-    const video = join(root, 'Shows', 'Harbor and Vine', 'Season 02', 'e.mkv');
-
-    expect(placeShowFolder([shows], video)).toEqual({
-      folderId: 'shows',
-      sourceFolder: 'Harbor and Vine',
-    });
-  });
-
-  it('places a loose tagged video at its own folder', () => {
+  it('places an episode at its Title folder, its Source file Season NN/<video>', () => {
     const video = join(
       root,
       'Shows',
-      'Harbor and Vine',
-      'Harbor.and.Vine.S01E01.Pilot.mkv'
+      'Harbor & Vine (2021)',
+      'Season 02',
+      'Harbor.and.Vine.S02E01.mkv'
     );
 
     expect(placeShowFolder([shows], video)).toEqual({
       folderId: 'shows',
-      sourceFolder: 'Harbor and Vine',
+      sourceFolder: 'Harbor & Vine (2021)',
+      sourceFile: 'Season 02/Harbor.and.Vine.S02E01.mkv',
     });
+  });
+
+  it('places a specials episode at Season 00/<video>', () => {
+    const video = join(
+      root,
+      'Shows',
+      'Harbor & Vine (2021)',
+      'Season 00',
+      'Christmas.mkv'
+    );
+
+    expect(placeShowFolder([shows], video)).toMatchObject({
+      sourceFolder: 'Harbor & Vine (2021)',
+      sourceFile: 'Season 00/Christmas.mkv',
+    });
+  });
+
+  it('answers null for a loose tagged video at a show’s root', () => {
+    const video = join(
+      root,
+      'Shows',
+      'Harbor & Vine (2021)',
+      'Harbor.and.Vine.S01E01.Pilot.mkv'
+    );
+
+    expect(placeShowFolder([shows], video)).toBeNull();
+  });
+
+  it.each([['Season 1'], ['Seizoen 1'], ['S01'], ['Specials']])(
+    'answers null for a video in a folder named %s',
+    (season) => {
+      const video = join(
+        root,
+        'Shows',
+        'Harbor & Vine (2021)',
+        season,
+        'e.mkv'
+      );
+
+      expect(placeShowFolder([shows], video)).toBeNull();
+    }
+  );
+
+  it('answers null for a show folder not named Title (Year)', () => {
+    const video = join(root, 'Shows', 'Harbor & Vine', 'Season 01', 'e.mkv');
+
+    expect(placeShowFolder([shows], video)).toBeNull();
+  });
+
+  it('answers null for a Title folder deeper than the root', () => {
+    const video = join(
+      root,
+      'Shows',
+      'Drama',
+      'Harbor & Vine (2021)',
+      'Season 01',
+      'e.mkv'
+    );
+
+    expect(placeShowFolder([shows], video)).toBeNull();
   });
 
   it('answers null for a show under no listed folder', () => {
     const video = join(
       root,
       'Downloads',
-      'Harbor and Vine',
-      'Season 1',
+      'Harbor & Vine (2021)',
+      'Season 01',
       'e.mkv'
     );
 

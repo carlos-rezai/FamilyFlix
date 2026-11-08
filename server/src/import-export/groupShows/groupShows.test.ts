@@ -1,16 +1,17 @@
 // @vitest-environment node
 //
 // 22 — Series (TV), Phase 1: "a Season-folder show imports as one series"
-// (issue #189).
+// (issue #189); narrowed by 58, Folder layout, Phase 3: "one series in the
+// layout" (issue #536).
 //
-// `groupShows`, pure over the scans the walk already answers: a **Source
-// folder** named as a **Season folder** — `Season 01`, `Season 1`, `S01` —
-// belongs to its parent, the **Show folder**, and every episode video in it is
-// numbered: the season from the folder's name, the episode and the title from
-// the **Episode tag**. Every other scan is a film and passes through exactly
-// as it came, by identity and in order — which is what keeps the movie import
-// untouched. `walkLibraryFolder` is not asked to change: the Season folder is
-// the Source folder it already yields, because that is where the videos are.
+// `groupShows`, pure over the scans the walk already answers: a scan named as
+// a **Season folder**, `Season NN` and nothing else, belongs to its parent,
+// the series' **Title folder**, and every episode video in it is numbered: the
+// season from the folder's name, the episode and the title from the **Episode
+// tag**. Every other scan is a film and passes through exactly as it came, by
+// identity and in order. The loose-show branch is retired: a folder of loose
+// tagged videos is no show. Each episode takes the tracks of its own
+// `Subtitles/S01E01/` folder.
 //
 // Table tests in the style of `matchRows`: a scan is built by name under a
 // fixed root, and nothing touches the disk.
@@ -19,10 +20,6 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { groupShows, seasonOf, showFolderOf } from './groupShows';
-import {
-  SEASON_FOLDER_CASES,
-  type SeasonFolderCase,
-} from '../../test-support/seasonFolderCases/seasonFolderCases';
 import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
 
@@ -30,8 +27,8 @@ const ROOT = join('/', 'library');
 
 /**
  * A scan of the folder at `segments` under the root, holding `videos` and
- * `subtitles` — each subtitle with the language its name says, as the real
- * scan reads it.
+ * `subtitles` at paths relative to it, each subtitle with the language its
+ * name says, as the real scan reads it.
  */
 function scan(
   segments: string[],
@@ -52,8 +49,8 @@ function scan(
   };
 }
 
-describe('groupShows — Season folders under their Show folder', () => {
-  it.each([['Season 01'], ['Season 1'], ['S01']])(
+describe('groupShows — Season folders under their Title folder', () => {
+  it.each([['Season 01'], ['season 01'], ['SEASON 01']])(
     'reads %s as a Season folder and its parent as the show',
     (seasonName) => {
       const season = scan(
@@ -123,6 +120,21 @@ describe('groupShows — Season folders under their Show folder', () => {
     ]);
   });
 
+  it('numbers a Season 00 folder’s episodes in season 0, the specials', () => {
+    const specials = scan(
+      ['Harbor & Vine (2021)', 'Season 00'],
+      ['Harbor.and.Vine.S00E01.Christmas.mkv']
+    );
+
+    const { shows, films } = groupShows([specials]);
+
+    expect(films).toEqual([]);
+    expect(shows[0]).toMatchObject({
+      name: 'Harbor & Vine (2021)',
+      episodes: [{ season: 0, episode: 1, title: 'Christmas' }],
+    });
+  });
+
   it('lets the Season folder’s number win over the tag’s', () => {
     const season = scan(
       ['Harbor & Vine (2021)', 'Season 03'],
@@ -134,13 +146,24 @@ describe('groupShows — Season folders under their Show folder', () => {
     expect(show.episodes[0]).toMatchObject({ season: 3, episode: 5 });
   });
 
+  it('gives a multi-episode file its first number, under the folder’s season', () => {
+    const season = scan(
+      ['Harbor & Vine (2021)', 'Season 02'],
+      ['Harbor.and.Vine.S01E05E06.Double.Shift.mp4']
+    );
+
+    const [show] = groupShows([season]).shows;
+
+    expect(show.episodes[0]).toMatchObject({ season: 2, episode: 5 });
+  });
+
   it('keeps two shows with Season folders of the same name apart', () => {
     const harbor = scan(
       ['Harbor & Vine (2021)', 'Season 01'],
       ['Harbor.and.Vine.S01E01.Pilot.mp4']
     );
     const keepers = scan(
-      ['TV', 'Lighthouse Keepers', 'Season 01'],
+      ['Lighthouse Keepers (2019)', 'Season 01'],
       ['Lighthouse.Keepers.S01E01.First.Light.mp4']
     );
 
@@ -148,15 +171,37 @@ describe('groupShows — Season folders under their Show folder', () => {
 
     expect(shows.map((show) => show.name)).toEqual([
       'Harbor & Vine (2021)',
-      'Lighthouse Keepers',
+      'Lighthouse Keepers (2019)',
     ]);
-    expect(shows[1].dir).toBe(join(ROOT, 'TV', 'Lighthouse Keepers'));
+    expect(shows[1].dir).toBe(join(ROOT, 'Lighthouse Keepers (2019)'));
+  });
+});
+
+describe('groupShows — only Season NN is a Season folder', () => {
+  it.each([
+    ['Season 1'],
+    ['Seizoen 1'],
+    ['Seizoen 01'],
+    ['S01'],
+    ['Specials'],
+    ['Season 01 (2008)'],
+    ['Release.Show.S01.1080p.WEB-DL'],
+  ])('passes a scan named %s through as a film, not a show', (name) => {
+    const folder = scan(
+      ['Harbor & Vine (2021)', name],
+      ['Harbor.and.Vine.S01E01.Pilot.mp4']
+    );
+
+    const { shows, films } = groupShows([folder]);
+
+    expect(shows).toEqual([]);
+    expect(films).toEqual([folder]);
   });
 });
 
 describe('groupShows — every other scan is a film', () => {
   it('passes a film through by identity', () => {
-    const dieHard = scan(['Die.Hard.1988.1080p'], ['Die.Hard.1988.1080p.mp4']);
+    const dieHard = scan(['Die Hard (1988)'], ['Die.Hard.1988.1080p.mp4']);
 
     const { shows, films } = groupShows([dieHard]);
 
@@ -166,12 +211,12 @@ describe('groupShows — every other scan is a film', () => {
   });
 
   it('passes the films through in the order they came, beside a show', () => {
-    const dieHard = scan(['Die.Hard.1988.1080p'], ['Die.Hard.1988.1080p.mp4']);
+    const dieHard = scan(['Die Hard (1988)'], ['Die.Hard.1988.1080p.mp4']);
     const season = scan(
       ['Harbor & Vine (2021)', 'Season 01'],
       ['Harbor.and.Vine.S01E01.Pilot.mp4']
     );
-    const amelie = scan(['Drama', 'Amelie (2001)'], ['Amelie.mp4']);
+    const amelie = scan(['Amelie (2001)'], ['Amelie.mp4']);
 
     const { shows, films } = groupShows([dieHard, season, amelie]);
 
@@ -186,6 +231,7 @@ describe('groupShows — every other scan is a film', () => {
     ['The Four Seasons (1981)'],
     ['S1m0ne (2002)'],
     ['Summer (2019)'],
+    ['E12 (2014)'],
   ])('reads %s as a film, not a Season folder', (name) => {
     const film = scan([name], ['film.mp4']);
 
@@ -200,18 +246,13 @@ describe('groupShows — every other scan is a film', () => {
   });
 });
 
-// 22 — Series (TV), Phase 7: "loose episodes, subtitles and the unplaced
-// problem" (issue #197).
-//
-// The scanner's second shape: a **Source folder** whose own videos carry an
-// **Episode tag** is itself a **Show folder**, its seasons off the tags. An
-// episode's subtitles are the ones whose names begin with its video's stem; a
-// subtitle beginning with no stem is a stray, for a **Warning line**. A video
-// no rule can number, or a second one claiming a number already taken, is
-// **Unplaced** — listed on the show, never an episode.
-
-describe('groupShows — loose episodes', () => {
-  it('reads a folder of tagged videos as a show of its own', () => {
+/**
+ * The loose-show branch, retired: a Title folder whose own videos carry an
+ * **Episode tag** is no show. It passes through as a film, its second video
+ * the film's _more than one video_ Problem, never a series.
+ */
+describe('groupShows — loose tagged videos are no show', () => {
+  it('passes a folder of loose tagged videos through as a film', () => {
     const loose = scan(
       ['Lighthouse Keepers (2019)'],
       [
@@ -222,64 +263,11 @@ describe('groupShows — loose episodes', () => {
 
     const { shows, films } = groupShows([loose]);
 
-    expect(films).toEqual([]);
-    expect(shows).toHaveLength(1);
-    expect(shows[0]).toMatchObject({
-      dir: join(ROOT, 'Lighthouse Keepers (2019)'),
-      name: 'Lighthouse Keepers (2019)',
-    });
+    expect(shows).toEqual([]);
+    expect(films).toEqual([loose]);
   });
 
-  it('numbers loose episodes off their tags, the season included, in order', () => {
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
-      [
-        'Lighthouse.Keepers.S02E01.Spring.Tide.mp4',
-        'Lighthouse Keepers 1x02 The Storm.mp4',
-        'Lighthouse.Keepers.S01E01.First.Light.mp4',
-      ]
-    );
-
-    const [show] = groupShows([loose]).shows;
-
-    expect(
-      show.episodes.map((episode) => [
-        episode.season,
-        episode.episode,
-        episode.title,
-        episode.video,
-      ])
-    ).toEqual([
-      [1, 1, 'First Light', loose.videos[2]],
-      [1, 2, 'The Storm', loose.videos[1]],
-      [2, 1, 'Spring Tide', loose.videos[0]],
-    ]);
-  });
-
-  it('gives a multi-episode file its first number', () => {
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
-      ['Lighthouse.Keepers.S01E03E04.The.Long.Night.mp4']
-    );
-
-    const [show] = groupShows([loose]).shows;
-
-    expect(show.episodes).toHaveLength(1);
-    expect(show.episodes[0]).toMatchObject({ season: 1, episode: 3 });
-  });
-
-  it('gives a multi-episode file in a Season folder its first number, under the folder’s season', () => {
-    const season = scan(
-      ['Harbor & Vine (2021)', 'Season 02'],
-      ['Harbor.and.Vine.S01E05E06.Double.Shift.mp4']
-    );
-
-    const [show] = groupShows([season]).shows;
-
-    expect(show.episodes[0]).toMatchObject({ season: 2, episode: 5 });
-  });
-
-  it('keeps a loose show and a Season-folder show apart', () => {
+  it('passes a loose tagged video through as a film beside a Season-folder show', () => {
     const loose = scan(
       ['Lighthouse Keepers (2019)'],
       ['Lighthouse.Keepers.S01E01.First.Light.mp4']
@@ -289,90 +277,84 @@ describe('groupShows — loose episodes', () => {
       ['Harbor.and.Vine.S01E01.Pilot.mp4']
     );
 
-    const { shows } = groupShows([loose, season]);
+    const { shows, films } = groupShows([loose, season]);
 
-    expect(shows.map((show) => show.name).sort()).toEqual([
-      'Harbor & Vine (2021)',
-      'Lighthouse Keepers (2019)',
-    ]);
+    expect(shows.map((show) => show.name)).toEqual(['Harbor & Vine (2021)']);
+    expect(films).toEqual([loose]);
   });
 });
 
-describe('groupShows — episode subtitles', () => {
-  it('gives each episode the subtitles whose names begin with its video’s stem, each with its language', () => {
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
-      [
-        'Lighthouse.Keepers.S01E01.First.Light.mp4',
-        'Lighthouse.Keepers.S01E02.The.Storm.mp4',
-      ],
-      [
-        'Lighthouse.Keepers.S01E01.First.Light.en.srt',
-        'Lighthouse.Keepers.S01E01.First.Light.pt.srt',
-        'Lighthouse.Keepers.S01E02.The.Storm.srt',
-      ]
-    );
-
-    const [show] = groupShows([loose]).shows;
-
-    expect(show.episodes[0].subtitles).toEqual([
-      {
-        path: join(loose.dir, 'Lighthouse.Keepers.S01E01.First.Light.en.srt'),
-        language: 'English',
-      },
-      {
-        path: join(loose.dir, 'Lighthouse.Keepers.S01E01.First.Light.pt.srt'),
-        language: 'Portuguese',
-      },
-    ]);
-    expect(show.episodes[1].subtitles).toEqual([
-      {
-        path: join(loose.dir, 'Lighthouse.Keepers.S01E02.The.Storm.srt'),
-        language: 'English',
-      },
-    ]);
-  });
-
-  it('attaches subtitles by stem inside a Season folder too', () => {
+/**
+ * Each episode's tracks lie in its own `Subtitles/S01E01/` folder inside the
+ * Season folder: a track lands on the episode its folder's tag numbers, and a
+ * track whose folder numbers no placed episode is a stray.
+ */
+describe('groupShows — episode tracks by their S01E01 folder', () => {
+  it('gives each episode the tracks of its own tag folder, each with its language', () => {
     const season = scan(
       ['Harbor & Vine (2021)', 'Season 01'],
-      ['Harbor.and.Vine.S01E01.Pilot.mp4'],
-      ['Harbor.and.Vine.S01E01.Pilot.es.srt']
+      ['Harbor.and.Vine.S01E01.Pilot.mp4', 'Harbor.and.Vine.S01E02.mp4'],
+      [
+        join('Subtitles', 'S01E01', 'anything.en.srt'),
+        join('Subtitles', 'S01E01', 'anything.pt.srt'),
+        join('Subtitles', 'S01E02', 'other name.srt'),
+      ]
     );
 
     const [show] = groupShows([season]).shows;
 
+    const tracks = join(season.dir, 'Subtitles');
     expect(show.episodes[0].subtitles).toEqual([
+      { path: join(tracks, 'S01E01', 'anything.en.srt'), language: 'English' },
       {
-        path: join(season.dir, 'Harbor.and.Vine.S01E01.Pilot.es.srt'),
-        language: 'Spanish',
+        path: join(tracks, 'S01E01', 'anything.pt.srt'),
+        language: 'Portuguese',
       },
+    ]);
+    expect(show.episodes[1].subtitles).toEqual([
+      { path: join(tracks, 'S01E02', 'other name.srt'), language: 'English' },
+    ]);
+    expect(show.straySubtitles).toEqual([]);
+  });
+
+  it('lands tracks on the right season when two Season folders share a tag number', () => {
+    const first = scan(
+      ['Harbor & Vine (2021)', 'Season 01'],
+      ['Harbor.and.Vine.S01E01.mp4'],
+      [join('Subtitles', 'S01E01', 'one.en.srt')]
+    );
+    const second = scan(
+      ['Harbor & Vine (2021)', 'Season 02'],
+      ['Harbor.and.Vine.S02E01.mp4'],
+      [join('Subtitles', 'S02E01', 'two.en.srt')]
+    );
+
+    const [show] = groupShows([first, second]).shows;
+
+    expect(
+      show.episodes.map((episode) => [
+        episode.season,
+        episode.subtitles.map((track) => track.path),
+      ])
+    ).toEqual([
+      [1, [join(first.dir, 'Subtitles', 'S01E01', 'one.en.srt')]],
+      [2, [join(second.dir, 'Subtitles', 'S02E01', 'two.en.srt')]],
     ]);
   });
 
-  it('lists a subtitle that begins with no stem as a stray, on no episode', () => {
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
-      ['Lighthouse.Keepers.S01E01.First.Light.mp4'],
-      ['Commentary.en.srt']
+  it('lists a track whose folder numbers no placed episode as a stray', () => {
+    const season = scan(
+      ['Harbor & Vine (2021)', 'Season 01'],
+      ['Harbor.and.Vine.S01E01.Pilot.mp4'],
+      [join('Subtitles', 'S01E09', 'lost.en.srt')]
     );
 
-    const [show] = groupShows([loose]).shows;
+    const [show] = groupShows([season]).shows;
 
     expect(show.episodes[0].subtitles).toEqual([]);
-    expect(show.straySubtitles).toEqual([join(loose.dir, 'Commentary.en.srt')]);
-  });
-
-  it('lists no strays when every subtitle has its episode', () => {
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
-      ['Lighthouse.Keepers.S01E01.First.Light.mp4'],
-      ['Lighthouse.Keepers.S01E01.First.Light.srt']
-    );
-
-    const [show] = groupShows([loose]).shows;
-
-    expect(show.straySubtitles).toEqual([]);
+    expect(show.straySubtitles).toEqual([
+      join(season.dir, 'Subtitles', 'S01E09', 'lost.en.srt'),
+    ]);
   });
 });
 
@@ -391,57 +373,41 @@ describe('groupShows — unplaced videos', () => {
     expect(show.unplaced).toEqual([season.videos[1]]);
   });
 
-  it('lists a video with no tag beside loose episodes as unplaced', () => {
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
-      ['Lighthouse.Keepers.S01E01.First.Light.mp4', 'Trailer.mp4']
+  it('places the first file to claim a number and lists the second as unplaced', () => {
+    const season = scan(
+      ['Harbor & Vine (2021)', 'Season 01'],
+      ['Harbor.and.Vine.S01E02.Storm.Copy.mp4', 'Harbor.and.Vine.S01E02.mp4']
     );
 
-    const [show] = groupShows([loose]).shows;
+    const [show] = groupShows([season]).shows;
 
-    expect(show.episodes).toHaveLength(1);
-    expect(show.unplaced).toEqual([loose.videos[1]]);
+    expect(show.episodes.map((episode) => episode.video)).toEqual([
+      season.videos[0],
+    ]);
+    expect(show.unplaced).toEqual([season.videos[1]]);
   });
 
-  it('places the first file to claim a number and lists the second as unplaced', () => {
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
+  it('counts a number as taken where the folder decides the season', () => {
+    const season = scan(
+      ['Harbor & Vine (2021)', 'Season 01'],
       [
-        'Lighthouse.Keepers.S01E02.Storm.Copy.mp4',
-        'Lighthouse.Keepers.S01E02.The.Storm.mp4',
+        'Harbor.and.Vine.S01E01.Pilot.mp4',
+        'Harbor.and.Vine.S03E01.Pilot.Again.mp4',
       ]
     );
 
-    const [show] = groupShows([loose]).shows;
+    const [show] = groupShows([season]).shows;
 
     expect(show.episodes.map((episode) => episode.video)).toEqual([
-      loose.videos[0],
+      season.videos[0],
     ]);
-    expect(show.unplaced).toEqual([loose.videos[1]]);
-  });
-
-  it('counts a number as taken across Season folders, where the folder decides the season', () => {
-    const first = scan(
-      ['Harbor & Vine (2021)', 'Season 01'],
-      ['Harbor.and.Vine.S01E01.Pilot.mp4']
-    );
-    const misfiled = scan(
-      ['Harbor & Vine (2021)', 'S01'],
-      ['Harbor.and.Vine.S03E01.Pilot.Again.mp4']
-    );
-
-    const [show] = groupShows([first, misfiled]).shows;
-
-    expect(show.episodes.map((episode) => episode.video)).toEqual([
-      first.videos[0],
-    ]);
-    expect(show.unplaced).toEqual([misfiled.videos[0]]);
+    expect(show.unplaced).toEqual([season.videos[1]]);
   });
 
   it('keeps a show whose every video is unplaced, with no episodes', () => {
     const season = scan(
       ['Harbor & Vine (2021)', 'Season 01'],
-      ['Episode One.mp4', 'Episode Two.mp4']
+      ['Opening Night.mp4', 'The Long Goodbye.mp4']
     );
 
     const { shows, films } = groupShows([season]);
@@ -464,89 +430,31 @@ describe('groupShows — unplaced videos', () => {
   });
 });
 
-describe('groupShows — films pass through the loose rule unchanged', () => {
-  it('passes a film holding a trailer beside its video through by identity', () => {
-    const film = scan(
-      ['Die.Hard.1988.1080p'],
-      ['Die.Hard.1988.1080p.mp4', 'trailer.mp4'],
-      ['Die.Hard.1988.1080p.en.srt']
-    );
-
-    const { shows, films } = groupShows([film]);
-
-    expect(shows).toEqual([]);
-    expect(films).toHaveLength(1);
-    expect(films[0]).toBe(film);
-  });
-
-  it('passes films through by identity and in order beside a loose show', () => {
-    const dieHard = scan(['Die.Hard.1988.1080p'], ['Die.Hard.1988.1080p.mp4']);
-    const loose = scan(
-      ['Lighthouse Keepers (2019)'],
-      ['Lighthouse.Keepers.S01E01.First.Light.mp4']
-    );
-    const amelie = scan(['Drama', 'Amelie (2001)'], ['Amelie.mp4']);
-
-    const { shows, films } = groupShows([dieHard, loose, amelie]);
-
-    expect(shows).toHaveLength(1);
-    expect(films).toHaveLength(2);
-    expect(films[0]).toBe(dieHard);
-    expect(films[1]).toBe(amelie);
-  });
-
-  it.each([['Blade Runner 2049 (2017)'], ['1917 (2019)'], ['Se7en (1995)']])(
-    'reads %s, whose videos carry no tag, as a film',
-    (name) => {
-      const film = scan([name], [`${name}.mp4`]);
-
-      const { shows, films } = groupShows([film]);
-
-      expect(shows).toEqual([]);
-      expect(films).toEqual([film]);
-    }
-  );
-});
-
-// 38 — Title editing, Phase 6: "the Episode word" (issue #309).
+// 38 — Title editing, Phase 6: "the Episode word" (issue #309), and 51,
+// Library audit, Phase 5 (issue #448): the Dutch word.
 //
-// The **Episode word** — `Episode 12`, `Ep 12`, `Ep.12`, `E12` — numbers a
-// video where the season is already known: inside a **Season folder**, under
-// the folder's season, and at a **Show folder**'s root as season 1. It never
-// makes a folder a show on its own strength.
+// The **Episode word** — `Episode 12`, `Ep 12`, `Ep.12`, `E12`, `Aflevering
+// 12`, `Afl. 12` — numbers a video inside a **Season folder**, under the
+// folder's season.
 
 describe('groupShows — the Episode word', () => {
-  it.each([['Episode 12.mkv'], ['Ep 12.mkv'], ['Ep.12.mkv'], ['E12.mkv']])(
-    'numbers %s inside a Season folder, under the folder’s season',
-    (filename) => {
-      const season = scan(['Harbor & Vine (2021)', 'Season 02'], [filename]);
+  it.each([
+    ['Episode 12.mkv'],
+    ['Ep 12.mkv'],
+    ['Ep.12.mkv'],
+    ['E12.mkv'],
+    ['Aflevering 12.mkv'],
+    ['Afl. 12.mkv'],
+  ])('numbers %s inside a Season folder, under the folder’s season', (file) => {
+    const season = scan(['Harbor & Vine (2021)', 'Season 02'], [file]);
 
-      const [show] = groupShows([season]).shows;
+    const [show] = groupShows([season]).shows;
 
-      expect(show.episodes).toMatchObject([
-        { season: 2, episode: 12, video: season.videos[0] },
-      ]);
-      expect(show.unplaced).toEqual([]);
-    }
-  );
-
-  it.each([['Episode 12.mkv'], ['Ep 12.mkv'], ['Ep.12.mkv'], ['E12.mkv']])(
-    'numbers %s at a Show folder’s root as season 1',
-    (filename) => {
-      const loose = scan(
-        ['Lighthouse Keepers (2019)'],
-        ['Lighthouse.Keepers.S01E01.First.Light.mp4', filename]
-      );
-
-      const [show] = groupShows([loose]).shows;
-
-      expect(show.episodes).toMatchObject([
-        { season: 1, episode: 1, video: loose.videos[0] },
-        { season: 1, episode: 12, video: loose.videos[1] },
-      ]);
-      expect(show.unplaced).toEqual([]);
-    }
-  );
+    expect(show.episodes).toMatchObject([
+      { season: 2, episode: 12, video: season.videos[0] },
+    ]);
+    expect(show.unplaced).toEqual([]);
+  });
 
   it('reads the title after the word', () => {
     const season = scan(
@@ -563,18 +471,9 @@ describe('groupShows — the Episode word', () => {
     });
   });
 
-  it('keeps a film called E12 a film', () => {
-    const film = scan(['E12 (2014)'], ['E12.mkv']);
-
-    const { shows, films } = groupShows([film]);
-
-    expect(shows).toEqual([]);
-    expect(films).toEqual([film]);
-  });
-
   it('never groups a folder of Episode-word files alone as a show', () => {
     const folder = scan(
-      ['Lighthouse Keepers'],
+      ['Lighthouse Keepers (2019)'],
       ['Episode 01.mkv', 'Episode 02.mkv']
     );
 
@@ -586,136 +485,57 @@ describe('groupShows — the Episode word', () => {
 });
 
 /**
- * 51, Library audit (issue #447): the wider **Season folder** rule, over the
- * one table the client's `readSeasonFolder` and the drift guard read. Each
- * group is one rule, asserted whole.
+ * 58, Folder layout (issue #536): `seasonOf` reads `Season NN` only, two
+ * digits or more, case folded, `Season 00` the specials. The wider rule of
+ * log 51 is retired.
  */
-describe('seasonOf: the wider Season folder rule', () => {
-  const readAll = (cases: readonly SeasonFolderCase[]) =>
-    cases.map(([name]) => [name, seasonOf(name)]);
-  const expected = (cases: readonly SeasonFolderCase[]) =>
-    cases.map(([name, season]) => [name, season]);
-
-  it('reads every spelling, Season, Seizoen and S, in either case', () => {
-    const cases = SEASON_FOLDER_CASES.spellings;
-    expect(readAll(cases)).toEqual(expected(cases));
+describe('seasonOf: Season NN only', () => {
+  it.each([
+    ['Season 01', 1],
+    ['season 01', 1],
+    ['SEASON 02', 2],
+    ['Season 12', 12],
+    ['Season 100', 100],
+    ['Season 00', 0],
+    ['season 00', 0],
+  ])('reads %s as season %s', (name, season) => {
+    expect(seasonOf(name)).toBe(season);
   });
 
-  it('reads a spelling with trailing text, never the year as the number', () => {
-    const cases = SEASON_FOLDER_CASES.trailing;
-    expect(readAll(cases)).toEqual(expected(cases));
-  });
-
-  it('reads a release name holding a standalone S01', () => {
-    const cases = SEASON_FOLDER_CASES.release;
-    expect(readAll(cases)).toEqual(expected(cases));
-  });
-
-  it('refuses an episode tag such as S01E01', () => {
-    const cases = SEASON_FOLDER_CASES.episodes;
-    expect(readAll(cases)).toEqual(expected(cases));
-  });
-
-  it('reads Specials and Season 0 as season 0', () => {
-    const cases = SEASON_FOLDER_CASES.specials;
-    expect(readAll(cases)).toEqual(expected(cases));
-  });
-
-  it('reads a film folder as no Season folder', () => {
-    const cases = SEASON_FOLDER_CASES.others;
-    expect(readAll(cases)).toEqual(expected(cases));
+  it.each([
+    ['Season 1'],
+    ['Season 0'],
+    ['Season01'],
+    ['Seizoen 1'],
+    ['Seizoen 01'],
+    ['S01'],
+    ['s01'],
+    ['Specials'],
+    ['Season 01 (2008)'],
+    ['Season 02 - The Return'],
+    ['Release.Show.S01.1080p.WEB-DL'],
+    ['S01E01'],
+    ['Seasons of Love (2005)'],
+    ['Season'],
+    ['Extras'],
+  ])('reads %s as no Season folder', (name) => {
+    expect(seasonOf(name)).toBeNull();
   });
 });
 
-describe('groupShows: the wider Season folder rule', () => {
-  it('puts a release-named Season folder under its parent, the Show folder', () => {
-    const release = scan(
-      ['Release Show', 'Release.Show.S01.1080p.WEB-DL'],
-      ['Release.Show.S01E01.1080p.WEB-DL.mkv']
+describe('showFolderOf', () => {
+  it('answers a Season folder’s parent, the Title folder', () => {
+    expect(showFolderOf(join(ROOT, 'Harbor & Vine (2021)', 'Season 01'))).toBe(
+      join(ROOT, 'Harbor & Vine (2021)')
     );
-
-    expect(showFolderOf(release.dir)).toBe(join(ROOT, 'Release Show'));
-    const { shows, films } = groupShows([release]);
-    expect(films).toEqual([]);
-    expect(shows).toHaveLength(1);
-    expect(shows[0]).toMatchObject({
-      dir: join(ROOT, 'Release Show'),
-      name: 'Release Show',
-      episodes: [{ season: 1, episode: 1 }],
-    });
   });
 
-  it('reads the season off the folder, not the year after it', () => {
-    const season = scan(['Year Show', 'Season 1 (2008)'], ['Episode 3.mkv']);
+  it.each([['Season 1'], ['S01'], ['Specials']])(
+    'answers a folder named %s itself, no Season folder',
+    (name) => {
+      const dir = join(ROOT, 'Harbor & Vine (2021)', name);
 
-    const { shows, films } = groupShows([season]);
-
-    expect(films).toEqual([]);
-    expect(shows).toHaveLength(1);
-    expect(shows[0]).toMatchObject({
-      name: 'Year Show',
-      episodes: [{ season: 1, episode: 3 }],
-    });
-  });
-
-  it('numbers a Specials folder’s episodes in season 0', () => {
-    const specials = scan(
-      ['Specials Show', 'Specials'],
-      ['Specials.Show.S00E01.Christmas.mkv']
-    );
-
-    const { shows, films } = groupShows([specials]);
-
-    expect(films).toEqual([]);
-    expect(shows).toHaveLength(1);
-    expect(shows[0]).toMatchObject({
-      name: 'Specials Show',
-      episodes: [{ season: 0, episode: 1 }],
-    });
-  });
-
-  it('never reads an S01E01 folder as a Season folder of its parent', () => {
-    const episode = scan(
-      ['Shows', 'Harbor.and.Vine.S01E01.1080p'],
-      ['Harbor.and.Vine.S01E01.1080p.mkv']
-    );
-
-    expect(showFolderOf(episode.dir)).toBe(episode.dir);
-  });
-});
-
-/**
- * 51, Library audit, Phase 5 (issue #448): the Dutch **Episode word**. A
- * scanned `Seizoen 1/Aflevering 3.mp4` lands as S1 E3, not **Unplaced**.
- */
-describe('groupShows: the Dutch Episode word', () => {
-  it('places a scanned Dutch season’s episodes by number', () => {
-    const season = scan(
-      ['De Vuurtorenwachters', 'Seizoen 1'],
-      ['Aflevering 1.mp4', 'Aflevering 2.mp4', 'Aflevering 3.mp4']
-    );
-
-    const { shows, films } = groupShows([season]);
-
-    expect(films).toEqual([]);
-    expect(shows).toHaveLength(1);
-    expect(shows[0].name).toBe('De Vuurtorenwachters');
-    expect(shows[0].episodes).toMatchObject([
-      { season: 1, episode: 1, video: season.videos[0] },
-      { season: 1, episode: 2, video: season.videos[1] },
-      { season: 1, episode: 3, video: season.videos[2] },
-    ]);
-    expect(shows[0].unplaced).toEqual([]);
-  });
-
-  it('numbers an Afl. video inside a Seizoen folder under its season', () => {
-    const season = scan(['De Vuurtorenwachters', 'Seizoen 2'], ['Afl. 12.mkv']);
-
-    const [show] = groupShows([season]).shows;
-
-    expect(show.episodes).toMatchObject([
-      { season: 2, episode: 12, video: season.videos[0] },
-    ]);
-    expect(show.unplaced).toEqual([]);
-  });
+      expect(showFolderOf(dir)).toBe(dir);
+    }
+  );
 });
