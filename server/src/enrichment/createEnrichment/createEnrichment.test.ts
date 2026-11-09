@@ -135,8 +135,6 @@ function startSingle(
     scope: 'single',
     movieId,
     fields,
-    writeSheet: false,
-    writePosters: false,
   });
 }
 

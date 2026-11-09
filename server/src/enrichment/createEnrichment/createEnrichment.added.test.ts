@@ -155,8 +155,6 @@ async function syncAdded(enrichment: Enrichment): Promise<EnrichmentRun> {
     scope: 'added',
     since: SINCE,
     fields: [...ENRICH_FIELDS],
-    writeSheet: false,
-    writePosters: false,
   } as StartEnrichment;
   await enrichment.start(options);
   return reviewed(enrichment);

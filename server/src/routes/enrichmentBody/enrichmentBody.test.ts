@@ -21,8 +21,6 @@ import {
 const LIBRARY: StartEnrichment = {
   scope: 'all',
   fields: [...ENRICH_FIELDS],
-  writeSheet: true,
-  writePosters: false,
 };
 
 describe('startEnrichmentBody: what it reads', () => {
@@ -58,8 +56,6 @@ describe('startEnrichmentBody: what it reads', () => {
     expect(read.ok && Object.keys(read.value).sort()).toEqual([
       'fields',
       'scope',
-      'writePosters',
-      'writeSheet',
     ]);
   });
 });
@@ -110,16 +106,6 @@ describe('startEnrichmentBody: each refusal keeps its sentence', () => {
       'an unknown field',
       { ...LIBRARY, fields: ['synopsis', 'trailer'] },
       'Unknown field',
-    ],
-    [
-      'a missing writeSheet',
-      { ...LIBRARY, writeSheet: undefined },
-      'writeSheet and writePosters are booleans',
-    ],
-    [
-      'a string writePosters',
-      { ...LIBRARY, writePosters: 'true' },
-      'writeSheet and writePosters are booleans',
     ],
   ])('refuses %s', (_name, body, error) => {
     expect(startEnrichmentBody(body)).toEqual({ ok: false, error });

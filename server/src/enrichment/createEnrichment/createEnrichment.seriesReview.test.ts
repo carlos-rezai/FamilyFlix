@@ -144,8 +144,6 @@ async function sync(
   await enrichment.start({
     scope,
     fields: ALL_FIELDS,
-    writeSheet: false,
-    writePosters: false,
   });
   return reviewed(enrichment);
 }

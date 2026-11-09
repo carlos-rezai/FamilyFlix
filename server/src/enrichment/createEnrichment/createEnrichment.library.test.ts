@@ -150,8 +150,6 @@ function startSync(
   return enrichment.start({
     scope,
     fields,
-    writeSheet: false,
-    writePosters: false,
   });
 }
 

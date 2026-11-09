@@ -15,8 +15,8 @@ export type BodyRead<T> = { ok: true; value: T } | { ok: false; error: string };
 /**
  * `POST /api/enrichment`'s body → the **Sync**'s options: a known scope, a
  * movie or series id — exactly one — for `single` and only for `single`,
- * a `since` for `added` and only for `added`, known fields, and the two
- * **Write target** booleans. The refusals are checked in that order, so a body
+ * a `since` for `added` and only for `added`, and known fields; the retired
+ * **Write target** switches an old client still sends are dropped. The refusals are checked in that order, so a body
  * wrong in two ways earns the first sentence. Whether the library holds the
  * movie is the domain's to say.
  */
@@ -24,8 +24,10 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
   if (typeof body !== 'object' || body === null) {
     return { ok: false, error: 'Body must be an object' };
   }
-  const { scope, movieId, seriesId, since, fields, writeSheet, writePosters } =
-    body as Record<string, unknown>;
+  const { scope, movieId, seriesId, since, fields } = body as Record<
+    string,
+    unknown
+  >;
   if (!ENRICH_SCOPES.includes(scope as EnrichScope)) {
     return { ok: false, error: 'Unknown scope' };
   }
@@ -58,9 +60,6 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
   ) {
     return { ok: false, error: 'Unknown field' };
   }
-  if (typeof writeSheet !== 'boolean' || typeof writePosters !== 'boolean') {
-    return { ok: false, error: 'writeSheet and writePosters are booleans' };
-  }
   return {
     ok: true,
     value: {
@@ -69,8 +68,6 @@ export function startEnrichmentBody(body: unknown): BodyRead<StartEnrichment> {
       ...(typeof seriesId === 'string' ? { seriesId } : {}),
       ...(typeof since === 'string' ? { since } : {}),
       fields: fields as EnrichField[],
-      writeSheet,
-      writePosters,
     },
   };
 }

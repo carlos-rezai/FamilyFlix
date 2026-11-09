@@ -196,6 +196,4 @@ export interface StartEnrichment {
   /** An `added` Sync names the moment its window opens, and only it does. */
   since?: string;
   fields: EnrichField[];
-  writeSheet: boolean;
-  writePosters: boolean;
 }

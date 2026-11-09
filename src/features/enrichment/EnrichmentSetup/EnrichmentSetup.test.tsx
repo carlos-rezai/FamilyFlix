@@ -18,7 +18,7 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
  * only its pixels moved down from `EnrichmentFlow`'s suites: the banners by
  * summary, the scope cards by scope — _Just this movie_ in place of the two —
  * the chips, the notes, _Where it is saved_ over no, one and several **Library
- * folders** (issue #271), the source note, and Start's label, variant and estimate. What the
+ * folders** (issue #271; its rows in the layout suite since 58), the source note, and Start's label, variant and estimate. What the
  * organism decides — which scope, what Start sends, where Back goes — stays in
  * its own suites.
  */
@@ -33,15 +33,8 @@ const READY: EnrichmentSummary = {
   libraryFolders: [],
 };
 
-const ROOT = String.raw`E:\Movies`;
-const ARCHIVE = String.raw`F:\Archive`;
-const SHEET = 'Metadata sheet in the collection root';
-const POSTERS = 'Posters into each movie folder';
-
 function renderSetup(props: Partial<EnrichmentSetupProps> = {}) {
   const handlers = {
-    onToggleSheet: vi.fn(),
-    onTogglePosters: vi.fn(),
     onChooseScope: vi.fn<EnrichmentSetupProps['onChooseScope']>(),
     onToggleField: vi.fn<(field: EnrichField) => void>(),
     onStart: vi.fn(),
@@ -55,8 +48,6 @@ function renderSetup(props: Partial<EnrichmentSetupProps> = {}) {
         summary={READY}
         title={null}
         fields={ENRICH_FIELDS}
-        writeSheet
-        writePosters
         letGo={null}
         {...handlers}
         {...props}
@@ -280,7 +271,7 @@ describe('EnrichmentSetup — Where it is saved', () => {
     expect(style.borderRadius).toBe('12px');
   });
 
-  it('draws Your library alone, Required, with no Library folder', () => {
+  it('draws Your library, Required, with no switch', () => {
     renderSetup();
 
     const saved = within(savedCard());
@@ -290,84 +281,6 @@ describe('EnrichmentSetup — Where it is saved', () => {
     ).toBeDefined();
     expect(saved.getByText('Required')).toBeDefined();
     expect(saved.queryAllByRole('switch')).toHaveLength(0);
-    expect(savedCard().querySelectorAll('svg')).toHaveLength(1);
-  });
-
-  it('draws the two Write targets under one Library folder, their paths off it', () => {
-    renderSetup({ summary: { ...READY, libraryFolders: [ROOT] } });
-
-    const saved = within(savedCard());
-    expect(saved.getByText(`${ROOT}\\familyflix-metadata.csv`)).toBeDefined();
-    expect(
-      saved.getByText(`${ROOT}\\<movie folder>\\poster.jpg`)
-    ).toBeDefined();
-  });
-
-  // Issue #271: several Library folders — the lines say where without naming
-  // any one folder.
-  it('draws the two Write targets in each of several Library folders', () => {
-    renderSetup({ summary: { ...READY, libraryFolders: [ROOT, ARCHIVE] } });
-
-    const saved = within(savedCard());
-    expect(
-      saved.getByText('familyflix-metadata.csv in each library folder')
-    ).toBeDefined();
-    expect(
-      saved.getByText(
-        String.raw`<movie folder>\poster.jpg in each library folder`
-      )
-    ).toBeDefined();
-    expect(saved.getAllByRole('switch')).toHaveLength(2);
-    expect(saved.queryByText(`${ROOT}\\familyflix-metadata.csv`)).toBeNull();
-    expect(saved.queryByText(`${ARCHIVE}\\familyflix-metadata.csv`)).toBeNull();
-  });
-
-  it('draws each target’s switch as it is given', () => {
-    renderSetup({
-      summary: { ...READY, libraryFolders: [ROOT] },
-      writeSheet: true,
-      writePosters: false,
-    });
-
-    expect(
-      screen.getByRole('switch', { name: SHEET }).getAttribute('aria-checked')
-    ).toBe('true');
-    expect(
-      screen.getByRole('switch', { name: POSTERS }).getAttribute('aria-checked')
-    ).toBe('false');
-  });
-
-  it('reports each switch', () => {
-    const { onToggleSheet, onTogglePosters } = renderSetup({
-      summary: { ...READY, libraryFolders: [ROOT] },
-    });
-
-    fireEvent.click(screen.getByRole('switch', { name: SHEET }));
-    fireEvent.click(screen.getByRole('switch', { name: POSTERS }));
-
-    expect(onToggleSheet).toHaveBeenCalledTimes(1);
-    expect(onTogglePosters).toHaveBeenCalledTimes(1);
-  });
-
-  it('says it writes into the movie folders while either target is on', () => {
-    renderSetup({
-      summary: { ...READY, libraryFolders: [ROOT] },
-      writeSheet: false,
-      writePosters: true,
-    });
-
-    expect(
-      screen.getByText(/FamilyFlix will write into your movie folders\./)
-    ).toBeDefined();
-  });
-
-  it('says nothing of the folders with both targets off', () => {
-    renderSetup({
-      summary: { ...READY, libraryFolders: [ROOT] },
-      writeSheet: false,
-      writePosters: false,
-    });
-    expect(screen.queryByText(/will write into your movie folders/)).toBeNull();
   });
 });
 

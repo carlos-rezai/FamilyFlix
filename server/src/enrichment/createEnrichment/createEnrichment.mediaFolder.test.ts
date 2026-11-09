@@ -127,8 +127,6 @@ describe('createEnrichment: a Sync writes into the recorded Media folder', () =>
       scope: 'single',
       movieId: id,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     await reviewed(enrichment);
 
@@ -148,8 +146,6 @@ describe('createEnrichment: a Sync writes into the recorded Media folder', () =>
       scope: 'single',
       movieId: id,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     await reviewed(enrichment);
 
@@ -164,8 +160,6 @@ describe('createEnrichment: a Sync writes into the recorded Media folder', () =>
       scope: 'single',
       seriesId: id,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     await reviewed(enrichment);
 
@@ -185,8 +179,6 @@ describe('createEnrichment: a Sync writes into the recorded Media folder', () =>
       scope: 'single',
       seriesId: id,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     await reviewed(enrichment);
 
@@ -210,8 +202,6 @@ describe('createEnrichment: a Sync writes into the recorded Media folder', () =>
       scope: 'single',
       seriesId: id,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     await reviewed(enrichment);
 
@@ -234,8 +224,6 @@ describe('createEnrichment: a Sync writes into the recorded Media folder', () =>
       scope: 'single',
       seriesId: id,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     await reviewed(enrichment);
 

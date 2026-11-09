@@ -149,14 +149,11 @@ type Storage = ReturnType<typeof world>['storage'];
 function startSync(
   enrichment: Enrichment,
   scope: Exclude<EnrichScope, 'single'> = 'all',
-  fields: EnrichField[] = ALL_FIELDS,
-  writePosters = false
+  fields: EnrichField[] = ALL_FIELDS
 ) {
   return enrichment.start({
     scope,
     fields,
-    writeSheet: false,
-    writePosters,
   });
 }
 
@@ -331,8 +328,6 @@ describe('createEnrichment: every way into a show stores its season posters', ()
       scope: 'single',
       seriesId: id,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     expect(outcome.kind).toBe('started');
     await reviewed(enrichment);
@@ -410,7 +405,7 @@ function filesUnder(dir: string): string[] {
 }
 
 describe('createEnrichment: what a season poster leaves alone', () => {
-  it('writes nothing into a Library folder, even with the poster Write target on', async () => {
+  it('reaches a Library folder only through the Layout fill, as its Season folder’s poster', async () => {
     const { enrichment, storage, addShow } = world();
     const libraryFolder = join(
       sandboxRoot('familyflix-season-posters-library-'),
@@ -424,11 +419,13 @@ describe('createEnrichment: what a season poster leaves alone', () => {
       TITLE
     );
 
-    await startSync(enrichment, 'all', ALL_FIELDS, true);
+    await startSync(enrichment, 'all', ALL_FIELDS);
     await reviewed(enrichment);
 
     expect(seasonPosterRead(storage, id, 2)).toBe(`${folder}/S02-poster.jpg`);
-    expect(filesUnder(libraryFolder)).toEqual([]);
+    const written = filesUnder(libraryFolder);
+    expect(written).toContain(join(TITLE, 'Season 02', 'Images', 'poster.jpg'));
+    expect(written.some((file) => file.endsWith('S02-poster.jpg'))).toBe(false);
   });
 
   it('leaves Full details and the chips as they were', async () => {

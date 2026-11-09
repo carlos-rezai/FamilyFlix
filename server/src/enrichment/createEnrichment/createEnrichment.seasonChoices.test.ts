@@ -139,8 +139,6 @@ async function syncTheSeries(
     scope: 'single',
     seriesId,
     fields,
-    writeSheet: false,
-    writePosters: false,
   });
   expect(outcome.kind).toBe('started');
   return reviewed(enrichment);
@@ -250,8 +248,6 @@ describe('createEnrichment: a library-wide run carries no Season choices', () =>
     await enrichment.start({
       scope: 'all',
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
     const run = await reviewed(enrichment);
 

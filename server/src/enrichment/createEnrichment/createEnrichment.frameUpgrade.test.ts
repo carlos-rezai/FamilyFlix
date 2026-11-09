@@ -230,8 +230,6 @@ function sync(
   return enrichment.start({
     scope,
     fields: ALL_FIELDS,
-    writeSheet: false,
-    writePosters: false,
   });
 }
 

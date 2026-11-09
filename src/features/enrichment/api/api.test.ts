@@ -64,8 +64,6 @@ const OPTIONS: StartEnrichment = {
   scope: 'single',
   movieId: 'm1',
   fields: ['synopsis', 'poster'],
-  writeSheet: false,
-  writePosters: true,
 };
 
 const DECISION: Decision = {

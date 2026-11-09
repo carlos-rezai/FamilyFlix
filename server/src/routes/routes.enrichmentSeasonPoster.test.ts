@@ -183,7 +183,7 @@ async function startSync(api: Api, body: Record<string, unknown>) {
   const started = await fetch(`${api.baseUrl}/api/enrichment`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ writeSheet: false, writePosters: false, ...body }),
+    body: JSON.stringify(body),
   });
   expect(started.status).toBe(201);
   return untilReview(api.baseUrl);

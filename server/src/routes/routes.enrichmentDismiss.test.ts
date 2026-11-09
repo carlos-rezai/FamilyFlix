@@ -160,8 +160,6 @@ async function inReview() {
     body: JSON.stringify({
       scope: 'all',
       fields: [...ENRICH_FIELDS],
-      writeSheet: false,
-      writePosters: false,
     }),
   });
   expect(started.status).toBe(201);

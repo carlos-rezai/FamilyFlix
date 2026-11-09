@@ -230,8 +230,6 @@ const startSync = (baseUrl: string, movieId: string) =>
       scope: 'single',
       movieId,
       fields: ['synopsis'],
-      writeSheet: false,
-      writePosters: false,
     }),
   });
 

@@ -160,8 +160,6 @@ async function syncEverything(enrichment: Enrichment): Promise<EnrichmentRun> {
   await enrichment.start({
     scope: 'all',
     fields: ALL_FIELDS,
-    writeSheet: false,
-    writePosters: false,
   });
   return reviewed(enrichment);
 }

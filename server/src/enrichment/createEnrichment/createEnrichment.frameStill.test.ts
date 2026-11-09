@@ -185,8 +185,6 @@ function sync(
   return enrichment.start({
     scope: 'all',
     fields,
-    writeSheet: false,
-    writePosters: false,
   });
 }
 

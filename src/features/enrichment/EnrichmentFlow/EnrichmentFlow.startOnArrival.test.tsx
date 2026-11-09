@@ -284,8 +284,6 @@ describe('EnrichmentFlow — Started on arrival, no run held', () => {
       scope: 'single',
       movieId: FILM,
       fields: [...ENRICH_FIELDS],
-      writeSheet: true,
-      writePosters: true,
     });
     expect(await screen.findByRole('button', { name: 'Stop' })).toBeDefined();
   });
@@ -308,23 +306,9 @@ describe('EnrichmentFlow — Started on arrival, no run held', () => {
       scope: 'single',
       seriesId: SHOW,
       fields: [...ENRICH_FIELDS],
-      writeSheet: true,
-      writePosters: true,
     });
     await waitFor(() => expect(url()).toBe(`/enrich?series=${SHOW}`));
     expect(navigationType()).toBe('REPLACE');
-  });
-
-  it('offers no Write target with no Library folder, as setup does', async () => {
-    serve({ summary: { ...SUMMARY, libraryFolders: [] } });
-    renderFlow();
-
-    await waitFor(() => expect(starts()).toHaveLength(1));
-
-    expect(startBody()).toMatchObject({
-      writeSheet: false,
-      writePosters: false,
-    });
   });
 });
 

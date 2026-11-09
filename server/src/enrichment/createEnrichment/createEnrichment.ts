@@ -24,6 +24,10 @@ import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
+  createLayoutFill,
+  type LayoutFill,
+} from '../../import-export/createLayoutFill/createLayoutFill';
+import {
   fetchedFields,
   fetchedTvFields,
   releaseYear,
@@ -66,11 +70,6 @@ import type {
   TmdbSeason,
   TmdbTvDetail,
 } from '../tmdbClient/tmdbClient';
-import {
-  writeBack as realWriteBack,
-  type WriteBack,
-  type WriteTarget,
-} from '../writeBack/writeBack';
 
 /** One title a Sync snapshots: a film, or a show with its episodes. */
 type Title =
@@ -187,17 +186,11 @@ export interface EnrichmentDeps {
   media: Media;
   /** What takes a **Frame still** off an episode's own video. */
   playback: Playback;
-  /** The two **Write targets**; the real ones unless a test hands its own. */
-  writeBack?: WriteBack;
-}
-
-/**
- * A reachable Library folder of the Current run, and what it may be written.
- */
-interface RunFolder {
-  id: string;
-  path: string;
-  writable: Record<WriteTarget, boolean>;
+  /**
+   * The **Layout fill** run after each title's Sync; the real one over
+   * `storage` and `media` unless a test hands its own.
+   */
+  layoutFill?: LayoutFill;
 }
 
 /**
@@ -280,16 +273,9 @@ export function createEnrichment({
   client,
   media,
   playback,
-  writeBack = realWriteBack,
+  layoutFill = createLayoutFill({ storage, media }),
 }: EnrichmentDeps): Enrichment {
   let run: EnrichmentRun | null = null;
-  /**
-   * The reachable **Library folders** the Current run writes into, and which
-   * targets each may — filled by the write check before any TMDB request.
-   */
-  let runFolders: RunFolder[] = [];
-  /** Whether the Current run asked for posters at all. */
-  let runWantsPosters = false;
   /** Aborts the Current run's requests in flight — _Stop_'s handle. */
   let abort: AbortController | null = null;
   /** Each Decision of the Current run → the title it is about. */
@@ -463,71 +449,19 @@ export function createEnrichment({
   }
 
   /**
-   * The poster write target: the poster just stored, added to the title's
-   * **Source folder** as `poster.jpg` — a Collection folder film's as
-   * `<video stem>-poster.jpg` beside its video — when the run may write
-   * posters. A title
-   * with no source folder on record, or one whose folder is gone, is one line.
+   * The **Layout fill** after a title's Sync: each file it wrote logged as
+   * `↓ poster.jpg  →  <path>`, a folder it could not write as a Warning. It
+   * never fails the run, whatever the disk answers.
    */
-  async function writePoster(
+  async function fillTitle(
     current: EnrichmentRun,
-    movie: Movie,
-    stored: string
+    titleId: string
   ): Promise<void> {
-    if (!runWantsPosters) return;
-    const source = storage.titleSource(movie.id);
-    const home = source === null ? undefined : runFolderOf(source.folderId);
-    if (home !== undefined && !home.writable.posters) return;
-    let outcome: Awaited<ReturnType<WriteBack['poster']>> | null = null;
-    if (source !== null && home !== undefined) {
-      let poster: Readable;
-      try {
-        poster = await media.readStored(stored);
-      } catch {
-        return;
-      }
-      outcome = await writeBack.poster(
-        home.path,
-        source.sourceFolder,
-        poster,
-        source.sourceFile ?? null
-      );
-    }
-    if (outcome === null || outcome.kind === 'no-folder') {
-      log(
-        current,
-        `· ${movie.title}: no source folder on record, poster skipped`,
-        'info'
-      );
-      return;
-    }
-    if (outcome.line !== null) {
-      log(current, outcome.line.text, outcome.line.kind);
-    }
-    if (outcome.kind === 'written') current.written.posters = true;
-  }
-
-  /** The reachable Library folder of the Current run with this id, if any. */
-  function runFolderOf(folderId: string): RunFolder | undefined {
-    return runFolders.find((each) => each.id === folderId);
-  }
-
-  /**
-   * The sheet write target, at review: one sheet per writable folder, holding
-   * that folder's films A–Z, when the run may.
-   */
-  async function writeMetadataSheet(current: EnrichmentRun): Promise<void> {
-    const sheetFolders = runFolders.filter((each) => each.writable.sheet);
-    if (sheetFolders.length === 0) return;
-    const movies = storage.listMovies({ sort: 'a-z' });
-    const folderOf = new Map(
-      movies.map((movie) => [movie.id, storage.titleSource(movie.id)?.folderId])
-    );
-    for (const home of sheetFolders) {
-      const own = movies.filter((movie) => folderOf.get(movie.id) === home.id);
-      const outcome = await writeBack.sheet(home.path, own);
-      log(current, outcome.line.text, outcome.line.kind);
-      if (outcome.kind === 'written') current.written.sheet = true;
+    try {
+      const outcome = await layoutFill.fill(titleId);
+      for (const line of outcome.lines) log(current, line.text, line.kind);
+    } catch {
+      // A title folder that cannot be filled never keeps a Sync from going on.
     }
   }
 
@@ -559,10 +493,7 @@ export function createEnrichment({
         'poster.jpg',
         signal
       );
-      if (stored !== null) {
-        enrichment.posterPath = stored;
-        await writePoster(current, movie, stored);
-      }
+      if (stored !== null) enrichment.posterPath = stored;
     }
     if (fill.backdrop) {
       const stored = await storeImage(
@@ -1052,20 +983,8 @@ export function createEnrichment({
     apiKey: string,
     titles: readonly Title[],
     fields: readonly EnrichField[],
-    targets: readonly WriteTarget[],
     signal: AbortSignal
   ): Promise<void> {
-    // The permission check and its dry-run lines, before any TMDB request.
-    // One check per reachable Library folder, one dry-run line each.
-    if (targets.length > 0) {
-      for (const folder of await reachableFolders(storage)) {
-        const checked = await writeBack.check(folder.path, targets);
-        if (signal.aborted) return;
-        runFolders.push({ ...folder, writable: checked.writable });
-        for (const line of checked.lines) log(current, line.text, line.kind);
-      }
-    }
-
     let stopped = false;
     for (const title of titles) {
       if (title.kind === 'series') {
@@ -1100,6 +1019,8 @@ export function createEnrichment({
           current.enriched += 1;
           log(current, `✓ Matched   ${named(series)}`, 'success');
         }
+        await fillTitle(current, series.id);
+        if (signal.aborted) return;
         current.done += 1;
         continue;
       }
@@ -1145,11 +1066,11 @@ export function createEnrichment({
           log(current, `⚠ ${movie.title}: could not be saved`, 'warning');
         }
       }
+      await fillTitle(current, movie.id);
+      if (signal.aborted) return;
       current.done += 1;
     }
 
-    await writeMetadataSheet(current);
-    if (signal.aborted) return;
     if (!stopped) {
       log(
         current,
@@ -1230,24 +1151,13 @@ export function createEnrichment({
     runFields = options.fields;
     const controller = new AbortController();
     abort = controller;
-    runFolders = [];
-    runWantsPosters = options.writePosters;
-    const targets: WriteTarget[] = [
-      ...(options.writeSheet ? (['sheet'] as const) : []),
-      ...(options.writePosters ? (['posters'] as const) : []),
-    ];
     const snapshot = structuredClone(current);
 
-    void go(
-      current,
-      apiKey,
-      titles,
-      options.fields,
-      targets,
-      controller.signal
-    ).catch(() => {
-      if (!controller.signal.aborted) reachReview(current);
-    });
+    void go(current, apiKey, titles, options.fields, controller.signal).catch(
+      () => {
+        if (!controller.signal.aborted) reachReview(current);
+      }
+    );
 
     return { kind: 'started', run: snapshot };
   }

@@ -176,8 +176,6 @@ async function reviewedDecision(baseUrl: string): Promise<Decision> {
     body: JSON.stringify({
       scope: 'all',
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     }),
   });
   expect(started.status).toBe(201);

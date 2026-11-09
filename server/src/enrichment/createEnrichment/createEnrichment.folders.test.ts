@@ -2,41 +2,25 @@
 //
 // 30 — Library folders, Phase 4: "the Sync over folders" (issue #271).
 //
-// A **Sync** with both **Write targets** on, over a library whose titles came
-// from several **Library folders**:
+// A **Sync** over a library whose titles came from several **Library
+// folders** (the **Write targets** retired in 58, issue #543):
 //
-// - A title's on-disk folder is `sourcePath(id)` — its own Library folder
-//   joined to its **Source folder** — so each `poster.jpg` lands beside that
-//   title's files, whichever folder holds it.
-// - The write check runs once per reachable folder, one dry-run line each:
-//   `Will write familyflix-metadata.csv to <path>`, or `Can't write to <path>
-//   — the sheet and posters will be skipped`. A folder that fails it loses
-//   only its own targets.
-// - Each writable folder gets one **Metadata sheet**, holding that folder's
-//   films only.
-// - A title whose folder cannot be reached gets the _no source folder on
-//   record, poster skipped_ line, and its folder no check at all.
+// - A title's **Title folder** is its own Library folder joined to its
+//   **Source folder**, so the **Layout fill** lands each poster in that
+//   title's `Images/`, whichever folder holds it.
+// - A title whose folder cannot be reached gets nothing written beside it,
+//   and is still written into the library.
 // - The summary lists the reachable folders' paths.
 //
 // A real SQLite library on disk, two sandboxed Library folders and a third
-// listed but gone, a fake TMDB client — `createEnrichment.writeBack`'s
-// precedent. Windows answers every directory writable to `access`, so the
-// read-only folder is the real Write targets behind a check that refuses it.
+// listed but gone, a fake TMDB client.
 
 import { Readable } from 'node:stream';
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  readdirSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
-import { join, relative } from 'node:path';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { ENRICH_FIELDS, type EnrichmentRun } from '@/types';
-import { readSheet } from '../../import-export/readSheet/readSheet';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
 import {
@@ -51,18 +35,12 @@ import {
   tmdbImageBytes,
   tmdbMovieDetail,
 } from '../../test-support/fakeTmdb/fakeTmdb';
-import {
-  writeBack as realWriteBack,
-  type WriteBack,
-} from '../writeBack/writeBack';
 import { createEnrichment } from './createEnrichment';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
 // remove a sandbox holding an open database file.
 afterEach(closeTracked);
-
-const SHEET = 'familyflix-metadata.csv';
 
 type Home = 'movies' | 'archive' | 'gone';
 
@@ -84,41 +62,7 @@ type Film = (typeof FILMS)[number];
 
 const sourceFolderOf = (film: Film) => `${film.title} (${film.year})`;
 
-/** Every file under a directory, relative to it, sorted. */
-function filesUnder(dir: string): string[] {
-  if (!existsSync(dir)) return [];
-  const found: string[] = [];
-  const walk = (at: string) => {
-    for (const name of readdirSync(at)) {
-      const full = join(at, name);
-      if (statSync(full).isDirectory()) walk(full);
-      else found.push(relative(dir, full));
-    }
-  };
-  walk(dir);
-  return found.sort();
-}
-
-/** The real Write targets, with a permission check that refuses `readOnly`. */
-function refusing(readOnly: string): WriteBack {
-  return {
-    ...realWriteBack,
-    check: async (root, targets) =>
-      root === readOnly
-        ? {
-            writable: { sheet: false, posters: false },
-            lines: [
-              {
-                text: `Can't write to ${root}, so the sheet and posters will be skipped`,
-                kind: 'warning',
-              },
-            ],
-          }
-        : realWriteBack.check(root, targets),
-  };
-}
-
-function world({ readOnly }: { readOnly?: Home } = {}) {
+function world() {
   const dir = sandboxRoot('familyflix-enrich-folders-');
   const storage = track(createSqliteStorage(join(dir, 'familyflix.db')));
   storage.setTmdbKey(KEY);
@@ -150,7 +94,6 @@ function world({ readOnly }: { readOnly?: Home } = {}) {
       ),
     }),
     media,
-    ...(readOnly === undefined ? {} : { writeBack: refusing(paths[readOnly]) }),
     playback: framelessPlayback(),
   });
 
@@ -181,12 +124,10 @@ function world({ readOnly }: { readOnly?: Home } = {}) {
 
 type Enrichment = ReturnType<typeof world>['enrichment'];
 
-async function syncBoth(enrichment: Enrichment): Promise<EnrichmentRun> {
+async function syncAll(enrichment: Enrichment): Promise<EnrichmentRun> {
   const started = await enrichment.start({
     scope: 'all',
     fields: [...ENRICH_FIELDS],
-    writeSheet: true,
-    writePosters: true,
   });
   expect(started).toMatchObject({ kind: 'started' });
   return reviewed(enrichment);
@@ -195,122 +136,31 @@ async function syncBoth(enrichment: Enrichment): Promise<EnrichmentRun> {
 const texts = (run: EnrichmentRun) => run.log.map((line) => line.text);
 
 const posterOf = (paths: Record<Home, string>, film: Film) =>
-  join(paths[film.home], sourceFolderOf(film), 'poster.jpg');
-
-async function sheetTitles(folder: string): Promise<string[]> {
-  const rows = await readSheet(readFileSync(join(folder, SHEET)), SHEET);
-  return rows.map((row) => row.title);
-}
-
-describe('createEnrichment over Library folders: the write check', () => {
-  it('logs one dry-run line per reachable folder, and none for a folder that is gone', async () => {
-    const { enrichment, paths, addAll } = world();
-    await addAll();
-
-    const run = await syncBoth(enrichment);
-
-    const lines = texts(run);
-    for (const path of [paths.movies, paths.archive]) {
-      expect(
-        lines.filter((text) => text === `Will write ${SHEET} to ${path}`)
-      ).toHaveLength(1);
-    }
-    expect(lines.some((text) => text.includes(paths.gone))).toBe(false);
-  });
-});
+  join(paths[film.home], sourceFolderOf(film), 'Images', 'poster.jpg');
 
 describe('createEnrichment over Library folders: posters', () => {
-  it('lands each poster.jpg in its own title’s Source folder', async () => {
+  it('lands each poster.jpg in its own Title folder’s Images', async () => {
     const { enrichment, paths, addAll } = world();
     await addAll();
 
-    const run = await syncBoth(enrichment);
+    await syncAll(enrichment);
 
     for (const film of FILMS.filter((each) => each.home !== 'gone')) {
       expect(readFileSync(posterOf(paths, film), 'utf8')).toBe(
         tmdbImageBytes(`/poster-${film.tmdbId}.jpg`)
       );
     }
-    expect(run.written.posters).toBe(true);
-  });
-});
-
-describe('createEnrichment over Library folders: the Metadata sheets', () => {
-  it('writes one sheet into each folder, holding only that folder’s films A–Z', async () => {
-    const { enrichment, paths, addAll } = world();
-    await addAll();
-
-    const run = await syncBoth(enrichment);
-
-    expect(await sheetTitles(paths.movies)).toEqual([
-      'Lanternlight',
-      'Sundial',
-    ]);
-    expect(await sheetTitles(paths.archive)).toEqual([
-      'Amber Road',
-      'Kettle Bay',
-    ]);
-    expect(run.written.sheet).toBe(true);
-  });
-
-  it('leaves one folder’s existing sheet alone and still writes the other’s', async () => {
-    const { enrichment, paths, addAll } = world();
-    const ours = Buffer.from('Title,Year\nOur own list,1999\n');
-    writeFileSync(join(paths.archive, SHEET), ours);
-    await addAll();
-
-    await syncBoth(enrichment);
-
-    expect(readFileSync(join(paths.archive, SHEET)).equals(ours)).toBe(true);
-    expect(await sheetTitles(paths.movies)).toEqual([
-      'Lanternlight',
-      'Sundial',
-    ]);
-  });
-});
-
-describe('createEnrichment over Library folders: a read-only folder', () => {
-  it('logs its Can’t write line, and the other folder’s Will write line', async () => {
-    const { enrichment, paths, addAll } = world({ readOnly: 'archive' });
-    await addAll();
-
-    const run = await syncBoth(enrichment);
-
-    expect(texts(run)).toContain(
-      `Can't write to ${paths.archive}, so the sheet and posters will be skipped`
-    );
-    expect(texts(run)).toContain(`Will write ${SHEET} to ${paths.movies}`);
-  });
-
-  it('loses only its own targets — the other folder is still written', async () => {
-    const { enrichment, paths, addAll } = world({ readOnly: 'archive' });
-    const archiveBefore = filesUnder(paths.archive);
-    await addAll();
-
-    const run = await syncBoth(enrichment);
-
-    expect(filesUnder(paths.archive)).toEqual(archiveBefore);
-    expect(await sheetTitles(paths.movies)).toEqual([
-      'Lanternlight',
-      'Sundial',
-    ]);
-    for (const film of FILMS.filter((each) => each.home === 'movies')) {
-      expect(existsSync(posterOf(paths, film))).toBe(true);
-    }
-    expect(run.written).toEqual({ sheet: true, posters: true });
   });
 });
 
 describe('createEnrichment over Library folders: a folder that is gone', () => {
-  it('logs its titles’ skip line, and still writes them into the library', async () => {
+  it('writes nothing beside its titles, and still writes them into the library', async () => {
     const { storage, enrichment, paths, addAll } = world();
     await addAll();
 
-    const run = await syncBoth(enrichment);
+    const run = await syncAll(enrichment);
 
-    expect(texts(run)).toContain(
-      '· Fogline: no source folder on record, poster skipped'
-    );
+    expect(texts(run).some((text) => text.includes(paths.gone))).toBe(false);
     expect(existsSync(paths.gone)).toBe(false);
     const fogline = storage
       .listMovies({ sort: 'a-z' })

@@ -173,8 +173,6 @@ async function reviewedConflict(baseUrl: string): Promise<Decision> {
   const started = await post(`${baseUrl}/api/enrichment`, {
     scope: 'all',
     fields: ALL_FIELDS,
-    writeSheet: false,
-    writePosters: false,
   });
   expect(started.status).toBe(201);
   const run = await currentRun(baseUrl);

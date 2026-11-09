@@ -120,9 +120,6 @@ export function EnrichmentFlow() {
   const [libraryScope, setLibraryScope] = useState<EnrichScope>(() =>
     fromImport ? 'added' : 'missing'
   );
-  // Both on to begin with, the prototype's `enWriteSheet` / `enWritePosters`.
-  const [writeSheet, setWriteSheet] = useState(true);
-  const [writePosters, setWritePosters] = useState(true);
   const scope: EnrichScope = single === null ? libraryScope : 'single';
 
   useEffect(() => {
@@ -248,9 +245,6 @@ export function EnrichmentFlow() {
           : { seriesId: single.id }),
       ...(scope === 'added' && since !== undefined ? { since } : {}),
       fields,
-      // With no Library folder there is nowhere to write either (log 23 Q37).
-      writeSheet: summary.libraryFolders.length > 0 && writeSheet,
-      writePosters: summary.libraryFolders.length > 0 && writePosters,
     }).catch((error: unknown) => {
       // A refused start leaves the setup where it is, to press again; one
       // refused over another's running Sync says so — the **busy notice**.
@@ -258,18 +252,7 @@ export function EnrichmentFlow() {
         notify({ variant: 'warning', message: 'A sync is already running.' });
       }
     });
-  }, [
-    summary,
-    openSettings,
-    notify,
-    start,
-    scope,
-    single,
-    since,
-    fields,
-    writeSheet,
-    writePosters,
-  ]);
+  }, [summary, openSettings, notify, start, scope, single, since, fields]);
 
   const startOnArrival = single !== null && query.start === true;
   const decided = useRef(false);
@@ -316,10 +299,6 @@ export function EnrichmentFlow() {
             title={title}
             titleKind={single?.kind}
             fields={fields}
-            writeSheet={writeSheet}
-            writePosters={writePosters}
-            onToggleSheet={() => setWriteSheet((on) => !on)}
-            onTogglePosters={() => setWritePosters((on) => !on)}
             onChooseScope={setLibraryScope}
             onToggleField={onToggleField}
             onStart={onStart}

@@ -102,8 +102,6 @@ describe('a Sync writes the Still source', () => {
     await enrichment.start({
       scope: 'all',
       fields: [...ENRICH_FIELDS],
-      writeSheet: false,
-      writePosters: false,
     });
     await reviewed(enrichment);
 

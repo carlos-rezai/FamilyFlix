@@ -156,8 +156,6 @@ function sync(enrichment: Awaited<ReturnType<typeof world>>['enrichment']) {
   return enrichment.start({
     scope: 'all',
     fields: ALL_FIELDS,
-    writeSheet: false,
-    writePosters: false,
   });
 }
 

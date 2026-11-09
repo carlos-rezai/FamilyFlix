@@ -9,8 +9,7 @@
 // credits, and image bytes — so nothing here goes online and no route learns
 // there is a TMDB.
 //
-// - `POST /api/enrichment { scope, movieId?, fields, writeSheet,
-//   writePosters }` → `201 EnrichmentRun`.
+// - `POST /api/enrichment { scope, movieId?, fields }` → `201 EnrichmentRun`.
 // - `GET /api/enrichment/current` → the run, or `404` when none is held.
 //
 // The tracer end to end: a film from the library comes back with its
@@ -188,8 +187,6 @@ const startSync = (baseUrl: string, movieId: string) =>
       scope: 'single',
       movieId,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     }),
   });
 
@@ -300,8 +297,6 @@ const startLibrarySync = (baseUrl: string, scope: 'missing' | 'all') =>
     body: JSON.stringify({
       scope,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     }),
   });
 
@@ -337,8 +332,6 @@ describe('POST /api/enrichment — a body it refuses', () => {
     const response = await post(baseUrl, {
       scope: 'some',
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
 
     expect(response.status).toBe(400);
@@ -459,8 +452,6 @@ describe('POST /api/enrichment — a single-title Sync for a series', () => {
       body: JSON.stringify({
         scope: 'single',
         fields: ALL_FIELDS,
-        writeSheet: false,
-        writePosters: false,
         ...body,
       }),
     });

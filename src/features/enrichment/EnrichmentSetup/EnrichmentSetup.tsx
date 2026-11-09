@@ -6,13 +6,7 @@ import {
   type EnrichScope,
   type TitleReference,
 } from '@/types';
-import {
-  Button,
-  Chip,
-  DatabaseIcon,
-  LandscapeIcon,
-  TableIcon,
-} from '@/primitives';
+import { Button, Chip, DatabaseIcon, FolderIcon } from '@/primitives';
 import {
   enrichmentEstimate,
   scopeDescription,
@@ -20,7 +14,6 @@ import {
 } from '../enrichmentView/enrichmentView';
 import { ScopeCard } from '../ScopeCard/ScopeCard';
 import { SetupBanner } from '../SetupBanner/SetupBanner';
-import { WriteTargetRow } from '../WriteTargetRow/WriteTargetRow';
 import {
   Chips,
   Estimate,
@@ -28,6 +21,13 @@ import {
   LetGoNote,
   RatingNote,
   SeriesNote,
+  SavedBadge,
+  SavedGlyph,
+  SavedLine,
+  SavedPath,
+  SavedRow,
+  SavedText,
+  SavedTitle,
   SourceNote,
   SourceNoteMono,
   Scopes,
@@ -37,9 +37,6 @@ import {
   TargetDivider,
   Targets,
 } from './EnrichmentSetup.styles';
-
-const SHEET_TITLE = 'Metadata sheet in the collection root';
-const POSTERS_TITLE = 'Posters into each movie folder';
 
 /** The two library scopes, as the prototype's `scopeDefs` names them. */
 const LIBRARY_SCOPES: ReadonlyArray<{
@@ -70,11 +67,6 @@ export interface EnrichmentSetupProps {
   titleKind?: TitleReference['kind'];
   /** The chips that are on. */
   fields: readonly EnrichField[];
-  /** The two optional **Write targets**' switches, drawn only with a root. */
-  writeSheet: boolean;
-  writePosters: boolean;
-  onToggleSheet: () => void;
-  onTogglePosters: () => void;
   onChooseScope: (scope: EnrichScope) => void;
   onToggleField: (field: EnrichField) => void;
   onStart: () => void;
@@ -96,7 +88,8 @@ export interface EnrichmentSetupProps {
  * this series_) in their place for one title, and _Just what was added_
  * beside the two when the summary counts what a run brought in, the field
  * chips with the rating note, _Where it is saved_ with _Your library_ as
- * Required, and Start: _Start sync_, or _Fetch details_ with its estimate for
+ * Required and _Your library folders_ as Always, the note under them, and
+ * Start: _Start sync_, or _Fetch details_ with its estimate for
  * one film.
  */
 export function EnrichmentSetup({
@@ -105,10 +98,6 @@ export function EnrichmentSetup({
   title,
   titleKind = 'movie',
   fields,
-  writeSheet,
-  writePosters,
-  onToggleSheet,
-  onTogglePosters,
   onChooseScope,
   onToggleField,
   onStart,
@@ -119,8 +108,12 @@ export function EnrichmentSetup({
   const single = scope === 'single';
   const ready = summary.keySet && summary.online;
   const folders = summary.libraryFolders;
-  const root = folders.length === 1 ? folders[0] : null;
-  const anyFolder = folders.length > 0;
+  // Several Library folders: the line in words. One: its own path; none: the
+  // prototype's stand-in path.
+  const layoutPath =
+    folders.length > 1
+      ? '<title folder>\\Images in each library folder'
+      : `${folders[0] ?? 'E:\\Movies'}\\<title folder>\\Images`;
   const libraryScopes =
     summary.added === undefined
       ? LIBRARY_SCOPES
@@ -194,47 +187,35 @@ export function EnrichmentSetup({
       <div>
         <GroupLabel>Where it is saved</GroupLabel>
         <Targets>
-          <WriteTargetRow
-            glyph={<DatabaseIcon size={19} />}
-            title="Your library"
-            line="Always. This is what the app reads from."
-          />
-          {!anyFolder ? null : (
-            <>
-              <TargetDivider />
-              <WriteTargetRow
-                glyph={<TableIcon size={19} />}
-                title={SHEET_TITLE}
-                line={
-                  root === null
-                    ? 'familyflix-metadata.csv in each library folder'
-                    : `${root}\\familyflix-metadata.csv`
-                }
-                path
-                toggle={{ checked: writeSheet, onToggle: onToggleSheet }}
-              />
-              <TargetDivider />
-              <WriteTargetRow
-                glyph={<LandscapeIcon size={19} />}
-                title={POSTERS_TITLE}
-                line={
-                  root === null
-                    ? '<movie folder>\\poster.jpg in each library folder'
-                    : `${root}\\<movie folder>\\poster.jpg`
-                }
-                path
-                toggle={{ checked: writePosters, onToggle: onTogglePosters }}
-              />
-            </>
-          )}
+          <SavedRow>
+            <SavedGlyph>
+              <DatabaseIcon size={19} />
+            </SavedGlyph>
+            <SavedText>
+              <SavedTitle>Your library</SavedTitle>
+              <SavedLine>Always. This is what the app reads from.</SavedLine>
+            </SavedText>
+            <SavedBadge>Required</SavedBadge>
+          </SavedRow>
+          <TargetDivider />
+          <SavedRow>
+            <SavedGlyph>
+              <FolderIcon size={19} />
+            </SavedGlyph>
+            <SavedText>
+              <SavedTitle>Your library folders</SavedTitle>
+              <SavedPath>{layoutPath}</SavedPath>
+            </SavedText>
+            <SavedBadge>Always</SavedBadge>
+          </SavedRow>
         </Targets>
-        {anyFolder && (writeSheet || writePosters) ? (
-          <SourceNote>
-            FamilyFlix will write into your movie folders. Existing files are
-            never replaced: a new <SourceNoteMono>poster.jpg</SourceNoteMono> is
-            only written where there isn’t one.
-          </SourceNote>
-        ) : null}
+        <SourceNote>
+          Art goes into each title folder's{' '}
+          <SourceNoteMono>Images</SourceNoteMono> folder, only where there isn’t
+          one already: nothing of yours is ever replaced. The sheet in{' '}
+          <SourceNoteMono>Meta</SourceNoteMono> is FamilyFlix’s own and is kept
+          up to date.
+        </SourceNote>
       </div>
 
       <StartRow>

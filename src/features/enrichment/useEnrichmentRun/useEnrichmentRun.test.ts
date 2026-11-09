@@ -65,8 +65,6 @@ const isDecision =
 const OPTIONS: StartEnrichment = {
   scope: 'all',
   fields: ['synopsis'],
-  writeSheet: false,
-  writePosters: false,
 };
 
 const MISSING: Decision = {
@@ -370,8 +368,6 @@ const SINGLE: StartEnrichment = {
   scope: 'single',
   movieId: FILM,
   fields: ['synopsis'],
-  writeSheet: false,
-  writePosters: false,
 };
 
 const OWN_RUNNING = makeEnrichmentRun({
@@ -584,8 +580,6 @@ const SINGLE_SERIES: StartEnrichment = {
   scope: 'single',
   seriesId: SHOW,
   fields: ['synopsis'],
-  writeSheet: false,
-  writePosters: false,
 };
 
 const SHOW_RUNNING = makeEnrichmentRun({

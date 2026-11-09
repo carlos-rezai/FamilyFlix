@@ -230,8 +230,6 @@ function startSync(
   return enrichment.start({
     scope,
     fields,
-    writeSheet: false,
-    writePosters: false,
   });
 }
 
@@ -628,8 +626,6 @@ describe('createEnrichment: a single-title Sync for a series', () => {
       scope: 'single',
       seriesId,
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
   }
 
@@ -686,8 +682,6 @@ describe('createEnrichment: a single-title Sync for a series', () => {
       scope: 'single',
       movieId: 'no-such-movie',
       fields: ALL_FIELDS,
-      writeSheet: false,
-      writePosters: false,
     });
 
     expect(outcome.kind).toBe('no-title');
