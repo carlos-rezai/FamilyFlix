@@ -88,7 +88,9 @@ describe('readShowFolder: each video’s path inside the show', () => {
       sandboxRoot('familyflix-show-relative-'),
       'Harbor and Vine'
     );
-    folderWith(show, 'Extras', ['the harbor.mkv', 'the vine.mkv']);
+    // Since issue #557 `Extras/` is silent: untagged videos in a Season
+    // folder are the Unplaced ones.
+    folderWith(show, 'Season 01', ['the harbor.mkv', 'the vine.mkv']);
 
     const read = await readOf(show);
 
@@ -96,8 +98,8 @@ describe('readShowFolder: each video’s path inside the show', () => {
     expect(read.unplaced.map(({ relativePath }) => relativePath)).toEqual(
       read.unplaced.map(({ video }) =>
         video.endsWith('the harbor.mkv')
-          ? 'Extras/the harbor.mkv'
-          : 'Extras/the vine.mkv'
+          ? 'Season 01/the harbor.mkv'
+          : 'Season 01/the vine.mkv'
       )
     );
   });

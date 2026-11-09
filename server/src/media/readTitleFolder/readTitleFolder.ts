@@ -198,12 +198,32 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
 }
 
 /**
+ * Read a folder's **Season folders**, and nothing else in it, in number order:
+ * the one reader of a show, shared by the scan and the **Show folder read**.
+ * A folder the layout does not read as a Season folder (`Season 1`,
+ * `Extras`) is passed in silence. Throws when the folder cannot be read.
+ */
+export async function readSeasonFolders(
+  dir: string
+): Promise<SeasonFolderScan[]> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const scans: SeasonFolderScan[] = [];
+  for (const entry of entries) {
+    if (entry.isDirectory() && isSeasonFolder(entry.name)) {
+      scans.push(await readSeasonFolder(join(dir, entry.name)));
+    }
+  }
+  return scans.sort((a, b) => a.number - b.number);
+}
+
+/**
  * Read one **Title folder** by the **Folder layout**. One loose video or more
  * and no **Season folder** is a film: its art read by role from `Images/` (a
  * stem, case folded, ending in `poster` or `backdrop`, the first by name
  * order), its tracks from `Subtitles/` under any name. Season folders and no
  * loose video is a series. Both, neither, or a name that is no **Folder key**
- * is left out, with the reason the walk words as its **Layout warning**.
+ * is left out, with the reason the walk words as its **Layout warning**;
+ * Season folders that all hold no video are as good as none, `empty`.
  * `Extras/` and anything else the layout doesn't name is passed in silence.
  */
 export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
@@ -214,15 +234,15 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
   }
   const entries = await readdir(dir, { withFileTypes: true });
   const { videos } = looseFilesIn(dir, entries);
-  const seasons = entries
-    .filter((entry) => entry.isDirectory() && isSeasonFolder(entry.name))
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
+  const seasons = await readSeasonFolders(dir);
 
   if (videos.length > 0 && seasons.length > 0) {
     return { kind: 'left-out', dir, name, reason: 'mixed' };
   }
-  if (videos.length === 0 && seasons.length === 0) {
+  if (
+    videos.length === 0 &&
+    seasons.every((season) => season.videos.length === 0)
+  ) {
     return { kind: 'left-out', dir, name, reason: 'empty' };
   }
 
@@ -232,12 +252,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
   const backdrop = imageByRole(imagesDir, images, 'backdrop');
 
   if (seasons.length > 0) {
-    const scans: SeasonFolderScan[] = [];
-    for (const season of seasons) {
-      scans.push(await readSeasonFolder(join(dir, season)));
-    }
-    scans.sort((a, b) => a.number - b.number);
-    return { kind: 'series', dir, name, key, poster, backdrop, seasons: scans };
+    return { kind: 'series', dir, name, key, poster, backdrop, seasons };
   }
 
   return {

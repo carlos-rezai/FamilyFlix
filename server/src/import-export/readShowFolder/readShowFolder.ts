@@ -1,11 +1,10 @@
-import { readdir } from 'node:fs/promises';
-import { basename, dirname, join, relative } from 'node:path';
+import { basename, relative } from 'node:path';
 
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
   readLooseFiles,
   readSeasonFolder,
-  type FolderScan,
+  readSeasonFolders,
   type SeasonFolderScan,
 } from '../../media/readTitleFolder/readTitleFolder';
 import { isSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
@@ -43,77 +42,40 @@ export interface ShowFolderContext {
 }
 
 /**
- * The folders holding videos under a picked folder: the folder itself when
- * videos lie loose in it, then every folder beneath it holding a video, a
- * folder holding one not descended. A **Season folder** is read as the scan
- * reads it, its tracks from `Subtitles/S01E01/`.
+ * What a pick holds: a picked **Season folder** its own season, numbered as
+ * its show; a folder of loose videos those videos, not descended; any other
+ * folder its Season folders by `readSeasonFolders`, numbered by `numberShow`,
+ * the scan's own rules. Throws when the folder cannot be read.
  */
-async function scansUnder(
-  dir: string
-): Promise<(FolderScan | SeasonFolderScan)[]> {
-  const scans: (FolderScan | SeasonFolderScan)[] = [];
-  const visit = async (at: string, root: boolean): Promise<void> => {
-    const entries = await readdir(at, { withFileTypes: true });
-    const scan = isSeasonFolder(basename(at))
-      ? await readSeasonFolder(at)
-      : await readLooseFiles(at);
-    if (scan.videos.length > 0) {
-      scans.push(scan);
-      if (!root) {
-        return;
-      }
-    }
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        try {
-          await visit(join(at, entry.name), false);
-        } catch {
-          // A folder under the pick that cannot be read is passed over.
-        }
-      }
-    }
-  };
-  await visit(dir, true);
-  return scans;
-}
-
-/**
- * The scans under a pick as shows and films: each **Season folder** numbered
- * with the others of its parent by `numberShow`, every other scan a film.
- */
-function numberedShows(scans: (FolderScan | SeasonFolderScan)[]): {
-  shows: ShowScan[];
-  films: FolderScan[];
-} {
-  const seasonsOf = new Map<string, SeasonFolderScan[]>();
-  const films: FolderScan[] = [];
-  for (const scan of scans) {
-    if ('number' in scan) {
-      const parent = dirname(scan.dir);
-      seasonsOf.set(parent, [...(seasonsOf.get(parent) ?? []), scan]);
-    } else {
-      films.push(scan);
-    }
-  }
-  const shows = [...seasonsOf].map(([dir, seasons]) =>
+async function showUnder(
+  dir: string,
+  showFolder: string
+): Promise<{ show: ShowScan | null; loose: string[] }> {
+  const number = (seasons: SeasonFolderScan[]): ShowScan =>
     numberShow({
-      dir,
-      name: basename(dir),
+      dir: showFolder,
+      name: basename(showFolder),
       poster: null,
       backdrop: null,
       seasons,
-    })
-  );
-  return { shows, films };
+    });
+  if (isSeasonFolder(basename(dir))) {
+    return { show: number([await readSeasonFolder(dir)]), loose: [] };
+  }
+  const { videos } = await readLooseFiles(dir);
+  if (videos.length > 0) {
+    return { show: null, loose: videos };
+  }
+  return { show: number(await readSeasonFolders(dir)), loose: [] };
 }
 
 /**
  * Read one absolute folder picked on the series add as a **Show folder
- * read**: walked by `scansUnder`, numbered with `numberShow` (there is no
- * second numbering rule), so a **Season folder**'s number beats the
+ * read**: read by `readSeasonFolders`, numbered with `numberShow` (there is
+ * no second numbering rule), so a **Season folder**'s number beats the
  * filename's, and each episode keeps the tracks of its `Subtitles/S01E01/`
- * folder. A folder read as a film, loose tagged videos included, answers its
- * videos as **Unplaced**. The **Title guess** is the importer's own rule on
+ * folder. A folder of loose videos, tagged ones included, answers them as
+ * **Unplaced**, its subfolders not read. The **Title guess** is the importer's own rule on
  * the folder's name. A picked **Season folder** reads only its own videos but
  * stands for its Show folder (`showFolderOf`): titled by the show's name,
  * held-checked as the show, each path answered inside the show.
@@ -137,19 +99,18 @@ export async function readShowFolder(
   if ((await readableFolder(dir)) !== 'readable') {
     return { kind: 'refused', refusal: 'unreadable' };
   }
-  let scans: (FolderScan | SeasonFolderScan)[];
-  try {
-    scans = await scansUnder(dir);
-  } catch {
-    return { kind: 'refused', refusal: 'unreadable' };
-  }
-
   // A picked **Season folder** is read for its own videos, but titled,
   // held-checked and spelled by its Show folder.
   // The Show folder is each episode's Source folder, so a video's path
   // inside it is its **Source file**.
   const showFolder = showFolderOf(dir);
-  const { shows, films } = numberedShows(scans);
+  let read: { show: ShowScan | null; loose: string[] };
+  try {
+    read = await showUnder(dir, showFolder);
+  } catch {
+    return { kind: 'refused', refusal: 'unreadable' };
+  }
+  const shows = read.show === null ? [] : [read.show];
   const episodes: ShowFolderEpisode[] = shows
     .flatMap((show) => show.episodes)
     .map((episode) => ({
@@ -164,10 +125,7 @@ export async function readShowFolder(
       })),
     }))
     .sort((a, b) => a.season - b.season || a.number - b.number);
-  const unplaced = [
-    ...shows.flatMap((show) => show.unplaced),
-    ...films.flatMap((film) => film.videos),
-  ];
+  const unplaced = [...shows.flatMap((show) => show.unplaced), ...read.loose];
   if (episodes.length === 0 && unplaced.length === 0) {
     return { kind: 'refused', refusal: 'empty' };
   }
