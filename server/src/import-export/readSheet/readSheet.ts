@@ -2,7 +2,7 @@ import ExcelJS from 'exceljs';
 import { extname } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { ROW_TYPES, type RowType } from '@/types';
+import { ROW_TYPES, SHEET_PATH_SEPARATOR, type RowType } from '@/types';
 import { yearSpan } from '../../library/series/yearSpan/yearSpan';
 import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
 
@@ -131,9 +131,6 @@ const WATCHED = new Set(['yes', 'true', '1', '✓', 'watched']);
 
 /** The cell values that say a title is a favourite, case folded. */
 const FAVORITE = new Set(['yes', 'true', '1', '✓', 'favorite']);
-
-/** What separates one path from the next inside a path cell. */
-const PATH_SEPARATOR = '|';
 
 /** The row types that name a title, and so are skipped without one. */
 const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
@@ -359,7 +356,7 @@ export async function readSheet(
       tmdbId: cellWhole(read(row, 'tmdbId')),
       favorite: FAVORITE.has(read(row, 'favorite').toLowerCase()),
       video: cellOptional(read(row, 'video')),
-      subtitles: cellList(read(row, 'subtitles'), PATH_SEPARATOR),
+      subtitles: cellList(read(row, 'subtitles'), SHEET_PATH_SEPARATOR),
       poster: cellOptional(read(row, 'poster')),
       backdrop: cellOptional(read(row, 'backdrop')),
       still: cellOptional(read(row, 'still')),

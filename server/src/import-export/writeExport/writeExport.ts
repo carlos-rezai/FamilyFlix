@@ -4,7 +4,13 @@ import { dirname, join } from 'node:path';
 import type { Readable } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 
-import type { Movie, SeriesDetail, SheetColumn, StartExport } from '@/types';
+import {
+  SHEET_PATH_SEPARATOR,
+  type Movie,
+  type SeriesDetail,
+  type SheetColumn,
+  type StartExport,
+} from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
 import {
   LIBRARY_SHEET_STEM,
@@ -57,9 +63,6 @@ export type ExportOutcome =
     }
   | { kind: 'refused'; refusal: ExportRefusal }
   | { kind: 'failed'; reason: string };
-
-/** What separates one path from the next inside a path cell. */
-const PATH_SEPARATOR = '|';
 
 /** The columns whose cells name files the File plan holds. */
 const PATH_COLUMNS: ReadonlySet<string> = new Set<SheetColumn>([
@@ -138,9 +141,9 @@ function blanked(
             return cell;
           }
           const kept = cell
-            .split(PATH_SEPARATOR)
+            .split(SHEET_PATH_SEPARATOR)
             .filter((path) => !skipped.has(path));
-          return kept.length === 0 ? null : kept.join(PATH_SEPARATOR);
+          return kept.length === 0 ? null : kept.join(SHEET_PATH_SEPARATOR);
         })
   );
 }

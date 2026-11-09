@@ -61,6 +61,13 @@ export const SHEET_COLUMNS = [
 /** One of the columns in {@link SHEET_COLUMNS}. */
 export type SheetColumn = (typeof SHEET_COLUMNS)[number];
 
+/**
+ * What separates one path from the next inside a path cell: `|`, the one
+ * separator no Windows filename can hold (log 58, Q13). The sheet's writers
+ * join by it and its reader splits by it.
+ */
+export const SHEET_PATH_SEPARATOR = '|';
+
 /** What every **Export name** begins with, ahead of `_DD-MM-YYYY`. */
 export const EXPORT_NAME_PREFIX = 'familyflix-collection';
 

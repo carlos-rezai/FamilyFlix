@@ -1,5 +1,6 @@
 import {
   SHEET_COLUMNS,
+  SHEET_PATH_SEPARATOR,
   type Episode,
   type Movie,
   type SeasonSummary,
@@ -48,9 +49,6 @@ export interface ExportRows {
 
 /** What separates one genre or name from the next inside a cell. */
 const CELL_SEPARATOR = ', ';
-
-/** What separates one path from the next inside a path cell. */
-const PATH_SEPARATOR = '|';
 
 /** The word the Status column carries for each derived watch state. */
 const STATUS_CELL: Record<WatchStatus, string> = {
@@ -118,7 +116,7 @@ const rowOf = (cells: RowCells): ExportCell[] =>
 
 /** A path cell: its paths joined by `|`, blank for none. */
 const pathCell = (paths: readonly string[]): string | null =>
-  paths.length === 0 ? null : paths.join(PATH_SEPARATOR);
+  paths.length === 0 ? null : paths.join(SHEET_PATH_SEPARATOR);
 
 /** A title before it has a folder: its Folder key and how its rows are made. */
 interface Planned {
