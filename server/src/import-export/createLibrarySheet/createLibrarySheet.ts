@@ -20,6 +20,16 @@ export const LIBRARY_SHEET_DELAY_MS = 3000;
 /** The temporary file a rewrite lands through, beside the sheet in `Meta/`. */
 const TEMPORARY_SHEET = `${LIBRARY_SHEET}.tmp`;
 
+/**
+ * What one Library folder's sheet is written from: the titles recorded
+ * against it with a **Source folder**, and each one's Source folder by its id.
+ */
+interface FolderContent {
+  movies: Movie[];
+  series: SeriesDetail[];
+  sourceFolders: Map<string, string>;
+}
+
 /** What the **Library sheet writer** reads the library through. */
 export interface LibrarySheetDeps {
   storage: Pick<
@@ -59,21 +69,20 @@ export function createLibrarySheet({
   let timer: ReturnType<typeof setTimeout> | undefined;
   let writing: Promise<void> = Promise.resolve();
 
-  /**
-   * The titles recorded against a folder with a Source folder, and each
-   * one's Source folder by its id.
-   */
-  function contentOf(folderId: string): {
-    movies: Movie[];
-    series: SeriesDetail[];
-    sourceFolders: Map<string, string>;
-  } {
+  /** The titles recorded against a folder, as its sheet is written. */
+  function contentOf(folderId: string): FolderContent {
     const titles = storage.libraryTitles();
-    const recorded = <T extends { libraryFolderId: string | null }>(
-      list: readonly (T & { sourceFolder: string | null })[]
-    ) =>
+    const recorded = <
+      T extends {
+        id: string;
+        libraryFolderId: string | null;
+        sourceFolder: string | null;
+      },
+    >(
+      list: readonly T[]
+    ): (T & { sourceFolder: string })[] =>
       list.filter(
-        (title) =>
+        (title): title is T & { sourceFolder: string } =>
           title.libraryFolderId === folderId && title.sourceFolder !== null
       );
     const sourceFolders = new Map<string, string>();
@@ -81,9 +90,7 @@ export function createLibrarySheet({
       ...recorded(titles.movies),
       ...recorded(titles.series),
     ]) {
-      if (title.sourceFolder !== null) {
-        sourceFolders.set(title.id, title.sourceFolder);
-      }
+      sourceFolders.set(title.id, title.sourceFolder);
     }
     return {
       sourceFolders,
