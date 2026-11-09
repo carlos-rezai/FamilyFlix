@@ -19,6 +19,7 @@ import type { Episode, ExportFormat, Movie, SeriesDetail } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { exportRows, type ExportTable } from '../exportRows/exportRows';
+import { filePlan } from '../filePlan/filePlan';
 import { writeSheet } from './writeSheet';
 
 const FORMATS = [...EXPORT_FORMATS];
@@ -78,7 +79,11 @@ const TIDEWATER: SeriesDetail = ((): SeriesDetail => {
 })();
 
 /** The one table `exportRows` hands the writer: a film and a series. */
-const TABLE: ExportTable = exportRows([AMELIE], [TIDEWATER], ALL).table;
+const TABLE: ExportTable = exportRows(
+  [AMELIE],
+  [TIDEWATER],
+  filePlan(ALL).cells
+).table;
 
 async function open(
   bytes: Buffer,
@@ -129,7 +134,10 @@ describe.each(FORMATS)('writeSheet: the one table (%s)', (format) => {
   });
 
   it('writes the header alone for a library of none', async () => {
-    const bytes = await writeSheet(exportRows([], [], ALL).table, format);
+    const bytes = await writeSheet(
+      exportRows([], [], filePlan(ALL).cells).table,
+      format
+    );
 
     const workbook = await open(bytes, format);
     expect(cellsOf(workbook.worksheets[0])).toEqual([[...SHEET_COLUMNS]]);

@@ -2,7 +2,7 @@
 //
 // 58, Folder layout, Phase 5 (issue #538): the one sheet's table.
 //
-// `exportRows(movies, series, include)` answers one table, `table`: the
+// `exportRows(movies, series, cells)` answers one table, `table`: the
 // `SHEET_COLUMNS` header, then a row per Movie, Series, Season and Episode,
 // A to Z by **Folder key**, then season, then number. Every row carries its
 // `Type` and its `Folder`; a Season row adds `Season`, an Episode row `Season`
@@ -24,7 +24,8 @@ import {
 } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
-import { exportRows } from './exportRows';
+import { filePlan } from '../filePlan/filePlan';
+import { exportRows, type LayoutPlace, type PathCells } from './exportRows';
 
 const OFF = { images: false, subtitles: false };
 
@@ -36,7 +37,9 @@ function table(
   movies: readonly Movie[],
   series: readonly SeriesDetail[]
 ): string[][] {
-  return exportRows(movies, series, OFF).table.map((row) => row.map(text));
+  return exportRows(movies, series, filePlan(OFF).cells).table.map((row) =>
+    row.map(text)
+  );
 }
 
 /** Every row after the header, by column name. */
@@ -172,9 +175,9 @@ describe('exportRows: one table', () => {
       { images: true, subtitles: true },
       { images: true, subtitles: false },
     ]) {
-      expect(exportRows([HEAT], [SEVERANCE], include).table[0]).toEqual([
-        ...SHEET_COLUMNS,
-      ]);
+      expect(
+        exportRows([HEAT], [SEVERANCE], filePlan(include).cells).table[0]
+      ).toEqual([...SHEET_COLUMNS]);
     }
   });
 
@@ -385,5 +388,153 @@ describe('exportRows: what the sheet leaves out', () => {
 
     expect(cells).not.toContain('4321');
     expect(cells).not.toContain('777');
+  });
+});
+
+// 59, Rebuild whole, Phase 5 (issue #552): `exportRows(movies, series, cells)`
+// takes its path cells from the **Path cells** it is given, keyed by **Layout
+// place**, not by spelled path: the Export hands it its **File plan**, the
+// Library sheet its **Layout read**. Each path cell is what `cells` answers
+// for that row's place.
+describe('exportRows: the path cells it is given', () => {
+  /** A place spelled out, so a fake's answer names the place it was asked. */
+  function label(place: LayoutPlace): string {
+    switch (place.kind) {
+      case 'poster':
+      case 'backdrop':
+        return `${place.kind} of ${place.folder}`;
+      case 'season-poster':
+        return `poster of ${place.folder} season ${place.season}`;
+      case 'still':
+        return `still of ${place.folder} ${place.season}x${place.episode}`;
+      case 'tracks':
+        return `tracks of ${place.folder} ${place.season ?? '-'}x${place.episode ?? '-'}`;
+      case 'video':
+        return `video of ${place.folder} ${place.season ?? '-'} ${place.sourceFile ?? '-'}`;
+    }
+  }
+
+  /** A fake `PathCells`: each cell its place's label and the stored path. */
+  const FAKE: PathCells = {
+    image: (place, storedPath) =>
+      storedPath === null ? null : `${label(place)} <- ${storedPath}`,
+    tracks: (place, subtitles) =>
+      subtitles.map((subtitle) => `${label(place)} <- ${subtitle.path}`),
+    video: (place, storedPath) =>
+      storedPath ? `${label(place)} <- ${storedPath}` : null,
+  };
+
+  const FILM: Movie = makeMovie({
+    id: 'heat',
+    title: 'Heat',
+    year: 1995,
+    videoPath: 'heat-1995/heat.mkv',
+    posterPath: 'heat-1995/poster.jpg',
+    backdropPath: 'heat-1995/fanart.jpg',
+    subtitles: [
+      {
+        id: 'h1',
+        path: 'heat-1995/heat.en.srt',
+        language: 'English',
+        position: 0,
+      },
+    ],
+  });
+
+  /** _Severance_: S01E01 dressed with every file, held at a Source file. */
+  const SHOW: SeriesDetail = ((): SeriesDetail => {
+    const detail = makeSeriesDetail([['unwatched']], {
+      id: 'severance',
+      title: 'Severance',
+      year: 2022,
+      endYear: null,
+      posterPath: 'severance-2022/poster.jpg',
+      backdropPath: 'severance-2022/backdrop.jpg',
+    });
+    return {
+      ...detail,
+      seasons: detail.seasons.map((season) => ({
+        ...season,
+        posterPath: 'severance-2022/s1/poster.jpg',
+        episodes: season.episodes.map((episode) => ({
+          ...episode,
+          videoPath: 'severance-2022/s1/e1.mkv',
+          sourceFile: 'season 01/e1.mkv',
+          stillPath: 'severance-2022/s1/still.jpg',
+          subtitles: [
+            {
+              id: 'e1',
+              path: 'severance-2022/s1/e1.en.srt',
+              language: 'English',
+              position: 0,
+            },
+          ],
+        })),
+      })),
+    };
+  })();
+
+  /** The rows by column name, read through the fake. */
+  function faked(): Record<string, string>[] {
+    const [header = [], ...body] = exportRows([FILM], [SHOW], FAKE).table;
+    return body.map((row) =>
+      Object.fromEntries(
+        header.map((name, index) => [text(name), text(row[index])])
+      )
+    );
+  }
+
+  const pathCells = (row: Record<string, string> | undefined) => ({
+    Video: row?.Video,
+    Subtitles: row?.Subtitles,
+    Poster: row?.Poster,
+    Backdrop: row?.Backdrop,
+    Still: row?.Still,
+  });
+
+  it('fills a Movie row’s path cells with what the cells answer for its places', () => {
+    const film = faked().find((row) => row.Type === 'Movie');
+
+    expect(pathCells(film)).toEqual({
+      Video: 'video of Heat (1995) - - <- heat-1995/heat.mkv',
+      Subtitles: 'tracks of Heat (1995) -x- <- heat-1995/heat.en.srt',
+      Poster: 'poster of Heat (1995) <- heat-1995/poster.jpg',
+      Backdrop: 'backdrop of Heat (1995) <- heat-1995/fanart.jpg',
+      Still: '',
+    });
+  });
+
+  it('fills a Series and a Season row’s image cells with what the cells answer', () => {
+    const rows = faked();
+
+    expect(pathCells(rows.find((row) => row.Type === 'Series'))).toEqual({
+      Video: '',
+      Subtitles: '',
+      Poster: 'poster of Severance (2022) <- severance-2022/poster.jpg',
+      Backdrop: 'backdrop of Severance (2022) <- severance-2022/backdrop.jpg',
+      Still: '',
+    });
+    expect(pathCells(rows.find((row) => row.Type === 'Season'))).toEqual({
+      Video: '',
+      Subtitles: '',
+      Poster:
+        'poster of Severance (2022) season 1 <- severance-2022/s1/poster.jpg',
+      Backdrop: '',
+      Still: '',
+    });
+  });
+
+  it('fills an Episode row’s path cells with what the cells answer, its video place carrying its Source file', () => {
+    const episode = faked().find((row) => row.Type === 'Episode');
+
+    expect(pathCells(episode)).toEqual({
+      Video:
+        'video of Severance (2022) 1 season 01/e1.mkv <- severance-2022/s1/e1.mkv',
+      Subtitles:
+        'tracks of Severance (2022) 1x1 <- severance-2022/s1/e1.en.srt',
+      Poster: '',
+      Backdrop: '',
+      Still: 'still of Severance (2022) 1x1 <- severance-2022/s1/still.jpg',
+    });
   });
 });

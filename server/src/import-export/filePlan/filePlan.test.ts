@@ -1,9 +1,12 @@
 // @vitest-environment node
 //
 // 58, Folder layout, Phase 5 (issue #538): the layout's file plan.
+// 59, Rebuild whole, Phase 5 (issue #552): moved out of `exportRows` as
+// `filePlan(include)`, the Export's **File plan**: its **Path cells**, handed
+// to `exportRows`, and the files those cells planned. These tests are the
+// old `exportRows` ones, run through `filePlan`, and pass as before.
 //
-// Beside its one table, `exportRows(movies, series, include)` answers the
-// **File plan** of an **Export folder**: the layout less the videos (log 58,
+// The File plan of an **Export folder** is the layout less the videos (log 58,
 // Q19). Each file lies where the layout puts it and is named as the **Layout
 // fill** names it: `Images/poster.<ext>` and `Images/backdrop.<ext>`, a
 // **Season poster** at `Season NN/Images/poster.<ext>`, a Still at
@@ -14,7 +17,7 @@
 //
 // The path cells carry those same paths, relative to the Export folder, with
 // forward slashes, several tracks joined by `|`; a cell names only a file the
-// plan holds. `Video` names where the video goes, though no video is planned.
+// plan holds. `Video` names where the video lies, though no video is planned.
 // Two titles sharing a **Folder key** are numbered (`Heat (1995) (1)`), with
 // one Warning line.
 
@@ -23,12 +26,29 @@ import { describe, expect, it } from 'vitest';
 import type { Episode, Movie, SeriesDetail, Subtitle } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
-import { exportRows, type ExportInclude } from './exportRows';
+import {
+  exportRows,
+  type ExportFile,
+  type ExportInclude,
+  type ExportTable,
+} from '../exportRows/exportRows';
+import { filePlan } from './filePlan';
 
 const ALL: ExportInclude = { images: true, subtitles: true };
 const IMAGES: ExportInclude = { images: true, subtitles: false };
 const SUBTITLES: ExportInclude = { images: false, subtitles: true };
 const OFF: ExportInclude = { images: false, subtitles: false };
+
+/** The Export's table, its File plan's files and its Warning lines. */
+function exported(
+  movies: readonly Movie[],
+  series: readonly SeriesDetail[],
+  include: ExportInclude
+): { table: ExportTable; files: ExportFile[]; warnings: string[] } {
+  const plan = filePlan(include);
+  const { table, warnings } = exportRows(movies, series, plan.cells);
+  return { table, files: plan.files, warnings };
+}
 
 const PATH_COLUMNS = ['Video', 'Subtitles', 'Poster', 'Backdrop', 'Still'];
 
@@ -99,7 +119,7 @@ function rowsOf(
   series: readonly SeriesDetail[],
   include: ExportInclude
 ): Record<string, string>[] {
-  const [header = [], ...body] = exportRows(movies, series, include).table;
+  const [header = [], ...body] = exported(movies, series, include).table;
   return body.map((row) =>
     Object.fromEntries(
       header.map((name, index) => [text(name), text(row[index])])
@@ -114,7 +134,7 @@ function planOf(
   include: ExportInclude
 ): Record<string, string> {
   return Object.fromEntries(
-    exportRows(movies, series, include).files.map((file) => [
+    exported(movies, series, include).files.map((file) => [
       file.storedPath,
       file.path,
     ])
@@ -132,7 +152,7 @@ const find = (
       row.Type === type && row.Season === season && row.Episode === episode
   );
 
-describe('exportRows: a film’s files in the layout', () => {
+describe('filePlan: a film’s files in the layout', () => {
   it('plans its poster and backdrop under Images, each keeping its extension', () => {
     const plan = planOf([HEAT], [], IMAGES);
 
@@ -174,7 +194,7 @@ describe('exportRows: a film’s files in the layout', () => {
   });
 });
 
-describe('exportRows: a series’ files in the layout', () => {
+describe('filePlan: a series’ files in the layout', () => {
   it('plans the series poster, the Season poster and every Still, Frame stills included', () => {
     const plan = planOf([], [SEVERANCE], IMAGES);
 
@@ -245,7 +265,7 @@ describe('exportRows: a series’ files in the layout', () => {
   });
 });
 
-describe('exportRows: the Video cell', () => {
+describe('filePlan: the Video cell', () => {
   it('names where each video goes in the layout, though nothing travels', () => {
     const rows = rowsOf([HEAT], [SEVERANCE], OFF);
 
@@ -258,7 +278,7 @@ describe('exportRows: the Video cell', () => {
   });
 
   it('never plans a video, whatever the toggles', () => {
-    const planned = exportRows([HEAT], [SEVERANCE], ALL).files.map(
+    const planned = exported([HEAT], [SEVERANCE], ALL).files.map(
       (file) => file.storedPath
     );
 
@@ -266,9 +286,57 @@ describe('exportRows: the Video cell', () => {
   });
 });
 
-describe('exportRows: a path cell names only a file that is there', () => {
+// 59 Q13: the Video cell names the video where it lies. An episode's is its
+// **Source file** under its Title folder, case kept (on the Linux AppImage a
+// re-spelled `Season 03` names nothing); only an episode with no Source file
+// (a copied add) has the spelled Season folder. A film's is its one loose
+// video in its Title folder.
+describe('filePlan: the Video cell, where the video lies', () => {
+  /** _Severance_ with S01E01 held at a Source file in a lower-case folder. */
+  const LYING: SeriesDetail = {
+    ...SEVERANCE,
+    seasons: SEVERANCE.seasons.map((season) => ({
+      ...season,
+      episodes: season.episodes.map((episode) =>
+        episode.season === 1 && episode.number === 1
+          ? {
+              ...episode,
+              videoPath: 'severance-2022/s1/x.mkv',
+              sourceFile: 'season 03/Severance.S01E01.MKV',
+            }
+          : episode
+      ),
+    })),
+  };
+
+  it('fills an episode’s Video cell with its Source file as it lies, case kept', () => {
+    const rows = rowsOf([], [LYING], OFF);
+
+    expect(find(rows, 'Episode', '1', '1')?.Video).toBe(
+      'Severance (2022)/season 03/Severance.S01E01.MKV'
+    );
+  });
+
+  it('spells the Season folder only for an episode with no Source file', () => {
+    const rows = rowsOf([], [LYING], OFF);
+
+    expect(find(rows, 'Episode', '1', '2')?.Video).toBe(
+      'Severance (2022)/Season 01/e2.mkv'
+    );
+  });
+
+  it('fills a film’s Video cell with its one loose video in its Title folder', () => {
+    const film: Movie = { ...HEAT, videoPath: 'heat-1995/Heat.1995.MKV' };
+
+    expect(find(rowsOf([film], [], OFF), 'Movie')?.Video).toBe(
+      'Heat (1995)/Heat.1995.MKV'
+    );
+  });
+});
+
+describe('filePlan: a path cell names only a file that is there', () => {
   it('plans nothing and blanks every image and track cell with both toggles off', () => {
-    expect(exportRows([HEAT], [SEVERANCE], OFF).files).toEqual([]);
+    expect(exported([HEAT], [SEVERANCE], OFF).files).toEqual([]);
     for (const row of rowsOf([HEAT], [SEVERANCE], OFF)) {
       expect([row.Subtitles, row.Poster, row.Backdrop, row.Still]).toEqual([
         '',
@@ -292,7 +360,7 @@ describe('exportRows: a path cell names only a file that is there', () => {
   });
 
   it('names in every path cell but Video only paths the plan holds', () => {
-    const { table, files } = exportRows([HEAT], [SEVERANCE], ALL);
+    const { table, files } = exported([HEAT], [SEVERANCE], ALL);
     const planned = new Set(files.map((file) => file.path));
     const [header = [], ...body] = table;
 
@@ -313,7 +381,7 @@ describe('exportRows: a path cell names only a file that is there', () => {
   });
 
   it('writes every path relative, with forward slashes', () => {
-    const { table, files } = exportRows([HEAT], [SEVERANCE], ALL);
+    const { table, files } = exported([HEAT], [SEVERANCE], ALL);
 
     for (const path of [
       ...files.map((file) => file.path),
@@ -325,7 +393,7 @@ describe('exportRows: a path cell names only a file that is there', () => {
   });
 });
 
-describe('exportRows: two titles sharing a Folder key', () => {
+describe('filePlan: two titles sharing a Folder key', () => {
   const OTHER_HEAT: Movie = makeMovie({
     id: 'heat-tv-cut',
     title: 'Heat',
@@ -335,7 +403,7 @@ describe('exportRows: two titles sharing a Folder key', () => {
   });
 
   it('numbers the second folder apart', () => {
-    const paths = exportRows([HEAT, OTHER_HEAT], [], IMAGES)
+    const paths = exported([HEAT, OTHER_HEAT], [], IMAGES)
       .files.filter((file) => file.path.endsWith('/Images/poster.jpg'))
       .map((file) => file.path)
       .sort();
@@ -356,13 +424,13 @@ describe('exportRows: two titles sharing a Folder key', () => {
   });
 
   it('answers one Warning line naming the numbered folder', () => {
-    const { warnings } = exportRows([HEAT, OTHER_HEAT], [], IMAGES);
+    const { warnings } = exported([HEAT, OTHER_HEAT], [], IMAGES);
 
     expect(warnings).toHaveLength(1);
     expect(warnings[0]).toContain('Heat (1995) (1)');
   });
 
   it('answers no Warning line when every Folder key is its own', () => {
-    expect(exportRows([HEAT], [SEVERANCE], ALL).warnings).toEqual([]);
+    expect(exported([HEAT], [SEVERANCE], ALL).warnings).toEqual([]);
   });
 });

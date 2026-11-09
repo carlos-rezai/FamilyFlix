@@ -30,6 +30,7 @@ import {
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { exportRows } from '../exportRows/exportRows';
+import { filePlan } from '../filePlan/filePlan';
 import { writeSheet } from '../writeSheet/writeSheet';
 import { isTitleRow, readSheet, type SheetRow } from './readSheet';
 
@@ -235,10 +236,11 @@ describe.each([...EXPORT_FORMATS])(
       blank: number[];
       written: number;
     }> {
-      const { table } = exportRows([HEAT], [SEVERANCE], {
-        images: true,
-        subtitles: true,
-      });
+      const { table } = exportRows(
+        [HEAT],
+        [SEVERANCE],
+        filePlan({ images: true, subtitles: true }).cells
+      );
       const bytes = await writeSheet(table, format);
       const blank: number[] = [];
       const rows = await readSheet(bytes, `library.${format}`, (row) =>
