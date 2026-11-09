@@ -127,7 +127,8 @@ async function freshApi() {
         playback,
         librarySheet: idleLibrarySheet(),
       }),
-      enrichment
+      enrichment,
+      createLayoutFill({ storage, media: mediaDomain })
     )
   );
   const server = app.listen(0);

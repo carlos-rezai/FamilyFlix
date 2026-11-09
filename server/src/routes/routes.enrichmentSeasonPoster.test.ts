@@ -147,7 +147,8 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
         playback,
         librarySheet: idleLibrarySheet(),
       }),
-      enrichment
+      enrichment,
+      createLayoutFill({ storage, media })
     )
   );
   const server = app.listen(0);

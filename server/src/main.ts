@@ -98,7 +98,15 @@ async function start(): Promise<Started> {
   app.use(guard);
   app.use(
     '/api',
-    createApiRouter(storage, MEDIA_PATH, playback, media, importer, enrichment)
+    createApiRouter(
+      storage,
+      MEDIA_PATH,
+      playback,
+      media,
+      importer,
+      enrichment,
+      layoutFill
+    )
   );
   mountRenderer(app, RENDERER_PATH);
 

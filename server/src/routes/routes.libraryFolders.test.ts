@@ -95,7 +95,8 @@ function freshApi(): Api {
         media: mediaDomain,
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
-      })
+      }),
+      createLayoutFill({ storage, media: mediaDomain })
     )
   );
 

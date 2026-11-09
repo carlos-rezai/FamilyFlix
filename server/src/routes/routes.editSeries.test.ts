@@ -82,7 +82,8 @@ function freshApi(): {
         media: mediaDomain,
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
-      })
+      }),
+      createLayoutFill({ storage, media: mediaDomain })
     )
   );
   const server = app.listen(0);

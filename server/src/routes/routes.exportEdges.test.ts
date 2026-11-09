@@ -135,7 +135,8 @@ function freshApi(options: { breakReads?: boolean } = {}): {
         media,
         playback,
         layoutFill: createLayoutFill({ storage, media }),
-      })
+      }),
+      createLayoutFill({ storage, media })
     )
   );
   const server = app.listen(0);

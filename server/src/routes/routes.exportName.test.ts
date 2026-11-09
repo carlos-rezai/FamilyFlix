@@ -108,7 +108,8 @@ function freshApi(): { baseUrl: string; dir: string; destination: string } {
         media,
         playback,
         layoutFill: createLayoutFill({ storage, media }),
-      })
+      }),
+      createLayoutFill({ storage, media })
     )
   );
   const server = app.listen(0);

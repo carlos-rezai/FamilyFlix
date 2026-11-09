@@ -36,7 +36,7 @@ import {
   copyFoundEpisodes,
   type CopiedEpisode,
 } from '../import-export/copyFoundEpisodes/copyFoundEpisodes';
-import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
+import type { LayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
   placeFilmFolder,
@@ -765,7 +765,11 @@ const RESET_REFUSALS: Record<
  * `enrichment` is the fifth domain, injected so no route learns there is a
  * TMDB: the key routes hand it what was pasted and map the value it answers.
  *
- * All six are required, `media` included. It used to default to the domain over
+ * `layoutFill` is the **Layout fill** an add and an edit run after a save,
+ * injected so the router writes into a Library folder through the one the
+ * Sync runs too, made by the composition root like every other writer.
+ *
+ * All seven are required, `media` included. It used to default to the domain over
  * `mediaPath` so that a test could compose the router with three arguments —
  * which made it a seam pointed at the tests rather than at the app, and left two
  * places able to decide what the router is made of. `playback`, the seam this
@@ -778,10 +782,10 @@ export function createApiRouter(
   playback: Playback,
   media: Media,
   importer: Importer,
-  enrichment: Enrichment
+  enrichment: Enrichment,
+  layoutFill: LayoutFill
 ): Router {
   const router = express.Router();
-  const layoutFill = createLayoutFill({ storage, media });
 
   /**
    * The **Layout fill** after a save: never fails it, whatever the disk

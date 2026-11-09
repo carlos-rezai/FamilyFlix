@@ -87,7 +87,8 @@ async function freshApi(tmdbFetch: Fetch = answeringTmdb()) {
         playback,
         librarySheet: idleLibrarySheet(),
       }),
-      enrichment
+      enrichment,
+      createLayoutFill({ storage, media: mediaDomain })
     )
   );
 

@@ -190,7 +190,15 @@ async function filledApi({
   const app = express();
   app.use(
     '/api',
-    createApiRouter(storage, media, playback, mediaDomain, importer, enrichment)
+    createApiRouter(
+      storage,
+      media,
+      playback,
+      mediaDomain,
+      importer,
+      enrichment,
+      createLayoutFill({ storage, media: mediaDomain })
+    )
   );
 
   const server = app.listen(0);

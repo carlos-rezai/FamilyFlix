@@ -185,7 +185,8 @@ function freshApi({
         media: mediaDomain,
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
-      })
+      }),
+      createLayoutFill({ storage, media: mediaDomain })
     )
   );
 
@@ -1181,8 +1182,9 @@ describe('POST /api/playback/component — the pair goes live', () => {
     // slot** through the `playback` the router was composed with. A sixth
     // argument here would be a second resolution of the component, and the
     // report and pressing Play could then disagree. (The sixth the router does
-    // take is the `enrichment/` domain, issue #203 — not the component.)
-    expect(createApiRouter).toHaveLength(6);
+    // take is the `enrichment/` domain, issue #203 — not the component; the
+    // seventh is the Layout fill, issue #545.)
+    expect(createApiRouter).toHaveLength(7);
 
     const { baseUrl } = freshApi({ slot: uploadableSlot().slot });
 
@@ -1366,8 +1368,9 @@ describe('POST /api/playback/component — what the router was composed with', (
     // router already holds. A fifth thing injected here would be a second
     // resolution of the component, and the report and pressing Play could
     // then disagree. (The sixth the router does take is the `enrichment/`
-    // domain, issue #203 — not the component.)
-    expect(createApiRouter).toHaveLength(6);
+    // domain, issue #203 — not the component; the seventh is the Layout fill,
+    // issue #545.)
+    expect(createApiRouter).toHaveLength(7);
   });
 });
 
