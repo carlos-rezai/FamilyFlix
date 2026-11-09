@@ -11,6 +11,115 @@ Newest entry first.
 
 ---
 
+## 2026-11-09: Folder layout, the refactor (issue 545)
+
+Twenty-eight commits against
+`docs/refactor-plans/58-folder-layout-refactor.md`, one per plan commit.
+This is the initiative's closing round. **11477 tests pass across 724
+files**, against 11377 across 719 at the end of the build (`54586f51`): five
+new suites (`seasonNumberOf` 56, `folderLayout` 22, `placeTitleFolder` 6,
+`SavedRow` 5, `idleLibrarySheet` 1) and ten new cases in existing ones
+(`isTitleRow` 1, `sameFolderKey` 6, `layoutLine` 3). `tsc -b --force` is
+clean. `eslint src server electron` reports 1 error and 137 warnings, down
+from 4 and 138.
+
+### What shipped before this round
+
+The spec rows and the writers rule (534), then the build slices 535 to 543,
+RED and GREEN each: one film and one series in the layout, the Show folder
+pick, the Export's one sheet and file plan, Import from spreadsheet over it,
+the **Library sheet** and its writer, the scan reading `Meta/`, the **Layout
+fill** after an add and an edit, and the Sync filling the layout. The
+documents followed (544).
+
+### What each group changed
+
+- **Group 1, the layout spelled once** (`fba197cb` to `e1dc156b`).
+  `seasonNumberOf` is a media unit reading and spelling the **Season
+  folder** (`spellSeasonFolder`), and `groupShows`' `seasonOf` alias is gone.
+  `folderLayout` holds `IMAGES_FOLDER`, `STILLS_FOLDER`, `SUBTITLES_FOLDER`,
+  `META_FOLDER` and `LIBRARY_SHEET_STEM`, and the two rules a reader and a
+  writer share: `endsInRole` (what is already a poster) and
+  `spellTrackName`/`trackLanguageOf` (`English (2)`). The walk, the reader,
+  the Export, the Library sheet and the Layout fill all spell through it.
+  `SHEET_PATH_SEPARATOR` sits beside `SHEET_COLUMNS`.
+- **Group 2, one Title folder rule** (`0775c632`, `647c59e9`).
+  `placeTitleFolder` is log 58 Q22's rule; both place units build on it.
+- **Group 3, the importer without the Collection** (`a1c367bc` to
+  `efb71d95`). `wholeFolders` and `wholeOf` are gone; `isTitleRow`,
+  `sameFolderKey` and a module-level `episodeRowsOf` replace four inline
+  filters; `ImporterDeps` names the importer's dependencies.
+- **Group 4, the writers made by the composition root** (`035f4ab7` to
+  `e3f7c436`). `idleLibrarySheet` in `test-support/`; the importer requires
+  its Library sheet; `createEnrichment` and `createApiRouter` take the one
+  Layout fill `main.ts` makes. Every importer, Sync and router suite passes
+  one. `routes.settings` pins the router's arity twice: both now read 7, the
+  only assertion the group moved, named in its commit.
+- **Group 5, the change listener's wiring in `changes/`** (`e3a72d46`,
+  `95a0d61e`). `Changes` answers `onTitle`, `beforeTitle`, `onEpisode`,
+  `onCrossing` and `onCreated`; the storage index keeps only
+  `setSourceFolder` and `markScanned` as bodies. The onChange suite lives in
+  `changes/`.
+- **Group 6, small seams** (`8fe91fe9` to `3ddf263d`). `readLooseFiles` is
+  the one reading of a folder's loose files; `FolderContent` names the
+  Library sheet's content; `groupShows` tests a tag for `null` before reading
+  it; `SavedRow` draws _Where it is saved_; `layoutLine` words _Your library
+  folders_.
+- **Group 7, comments and suites** (`57bec73d` to `0dfceaf5`). Docblocks
+  rewrapped; every suite header this initiative wrote reads `58, Folder
+layout, Phase N (issue #n): …`, its `describe` titles take a colon; the
+  three typed byte order marks are `﻿`.
+- **Group 8, the docs** (`32151f74` and this commit). Step 41 and its row
+  ticked, the README's server tree, three release smokes, the glossary.
+
+### Where this round left the plan
+
+- **The app holds one Layout fill; a suite may hold two.** A router suite
+  hands the Sync and the router each a real fill over its own storage and
+  media, as the old defaults did; the fill keeps no state, so nothing moves.
+- **`routes.enrichment` is load-flaky.** Twice in this round a full run
+  failed one of its 409 cases (a second start while one runs, a start after
+  cancel) and passed alone and on the rerun. Nothing here touched it; it is
+  timing under a 104-second suite. Worth an issue if it keeps happening.
+- **A `git checkout` of scripted edits came back CRLF**, so a regex anchored
+  on `\n` missed the import lines; the script was rewritten to take either
+  ending, and Prettier put every file back to LF.
+- **`SavedRow`'s badge is a string**, not the toggle-or-pill
+  `WriteTargetRow` had: both rows draw a badge now.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: an options object for
+`createApiRouter`, `exportRows`' fourth positional argument, a server-wide
+`errorCode`, renaming the client's `readSeasonFolder`, converting old-shape
+libraries, and the frozen `handoff-folder-layout/`. Older em dashes on lines
+only rewrapped, and the first lines of suites this initiative only amended,
+kept. No wire, schema, Settings, copy or prototype change.
+
+### Follow-ups this refactor surfaced
+
+Three `fix:` issues against log 58, each a behaviour change:
+
+- **The importer never runs the Layout fill**, though log 58 Q17 and Phase 9
+  say it runs after an import and a scan's import.
+- **The Library sheet's path cells can name files that are not there**: it
+  plans its cells as an Export does (log 58 Q13: a cell names only a file
+  that is there).
+- **The Sync's done summary still words the retired Write targets**
+  (`writtenSummary`), from an `EnrichmentRun.written` the server always sends
+  as two `false`s.
+
+Also: an options object for `createApiRouter`; carried from Scan new
+folders, a discriminated library scope and `importPlaced`'s parameters as an
+object.
+
+### The initiative
+
+**Folder layout is done**: the spec rows (534), the slices (535 to 543), the
+documents (544) and this round (545). Issue 533, the epic, is shut with it.
+
+---
+
 ## 2026-11-06: Tidy into folders, dropped (issue 523)
 
 Step 40 was built through `issue-loop` (issues 524 to 530, `afac1fcd` to
