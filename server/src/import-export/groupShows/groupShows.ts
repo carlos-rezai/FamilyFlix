@@ -97,21 +97,24 @@ export function groupShows<T extends FolderScan>(scans: T[]): GroupedScans<T> {
     for (const video of scan.videos) {
       // The season is the folder's, so the Episode word is read too.
       const tag = episodeTag(basename(video), folderSeason);
-      const season = folderSeason;
-      const number = `${season}:${tag?.episode}`;
-      if (tag === null || numbers.has(number)) {
+      if (tag === null) {
+        show.unplaced.push(video);
+        continue;
+      }
+      const number = `${folderSeason}:${tag.episode}`;
+      if (numbers.has(number)) {
         show.unplaced.push(video);
         continue;
       }
       numbers.add(number);
       const episode: ShowEpisode = {
-        season,
+        season: folderSeason,
         episode: tag.episode,
         title: tag.title,
         video,
         subtitles: [],
       };
-      placed.set(spellEpisodeTag(season, tag.episode), episode);
+      placed.set(spellEpisodeTag(folderSeason, tag.episode), episode);
       show.episodes.push(episode);
     }
 
