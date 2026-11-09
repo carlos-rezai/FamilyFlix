@@ -30,6 +30,10 @@ const BARE: HeldValues = {
   synopsis: null,
   rating: null,
   status: 'unwatched',
+  tmdbId: null,
+  tmdbScore: null,
+  runtime: null,
+  isFavorite: false,
 };
 
 /** A row that names the title and nothing else. */
@@ -441,5 +445,108 @@ describe('planSheetFields: the title is never in play', () => {
     );
 
     expect(plan.fill).toEqual({ synopsis: 'A ferry crew.' });
+  });
+});
+
+// 59, Rebuild whole, Phase 4 (issue #551): a held title's empty fields are
+// filled. The TMDB id, TMDB rating and Runtime fill only where the held title
+// has none; `Favorite` `Yes` hearts and `No` never unhearts; an Episode row's
+// `Watched` marks a held unwatched episode. None is ever a **Sheet
+// difference**.
+
+const episode = (current: Partial<HeldValues>, row: Partial<SheetRow>) =>
+  planSheetFields(
+    { ...BARE, title: 'Pilot', ...current },
+    { ...BLANK_ROW, type: 'Episode', title: 'Pilot', ...row },
+    'episode'
+  );
+
+describe('planSheetFields: TMDB id, TMDB rating and Runtime fill only where none', () => {
+  it('fills a film’s empty TMDB id, TMDB rating and Runtime', () => {
+    expect(film({}, { tmdbId: 562, tmdbScore: 7.8, runtime: 132 })).toEqual({
+      fill: { tmdbId: 562, tmdbScore: 7.8, runtime: 132 },
+      differences: [],
+      proposed: {},
+    });
+  });
+
+  it('fills a series’ empty TMDB id and TMDB rating', () => {
+    expect(show({}, { tmdbId: 1399, tmdbScore: 8.1 }).fill).toEqual({
+      tmdbId: 1399,
+      tmdbScore: 8.1,
+    });
+  });
+
+  it('keeps a held TMDB id and TMDB rating, raising no difference, while it fills an empty Runtime', () => {
+    const plan = film(
+      { tmdbId: 562, tmdbScore: 7.8 },
+      { tmdbId: 999, tmdbScore: 5.5, runtime: 132 }
+    );
+
+    expect(plan).toEqual({
+      fill: { runtime: 132 },
+      differences: [],
+      proposed: {},
+    });
+    expect(film({ runtime: 132 }, { runtime: 999, tmdbId: 562 })).toEqual({
+      fill: { tmdbId: 562 },
+      differences: [],
+      proposed: {},
+    });
+  });
+
+  it('keeps a held series’ TMDB id, raising no difference, while it fills an empty TMDB rating', () => {
+    const plan = show({ tmdbId: 1399 }, { tmdbId: 7, tmdbScore: 8.1 });
+
+    expect(plan).toEqual({
+      fill: { tmdbScore: 8.1 },
+      differences: [],
+      proposed: {},
+    });
+  });
+
+  it('fills a TMDB rating of 0, a number rather than a blank', () => {
+    expect(film({}, { tmdbScore: 0 }).fill).toEqual({ tmdbScore: 0 });
+  });
+});
+
+describe('planSheetFields: Favorite only hearts', () => {
+  it('hearts a film not hearted on Yes, and leaves a hearted one under No or Yes', () => {
+    expect(film({ isFavorite: false }, { favorite: true })).toEqual({
+      fill: { favorite: true },
+      differences: [],
+      proposed: {},
+    });
+    expect(film({ isFavorite: true }, { favorite: false })).toEqual(NOTHING);
+    expect(film({ isFavorite: true }, { favorite: true })).toEqual(NOTHING);
+  });
+
+  it('hearts a series not hearted on Yes, and leaves a hearted one under No', () => {
+    expect(show({ isFavorite: false }, { favorite: true }).fill).toEqual({
+      favorite: true,
+    });
+    expect(show({ isFavorite: true }, { favorite: false })).toEqual(NOTHING);
+  });
+});
+
+describe('planSheetFields: an Episode row’s Watched only marks', () => {
+  it('marks a held unwatched episode watched', () => {
+    expect(episode({ status: 'unwatched' }, { watched: true })).toEqual({
+      fill: { watched: true },
+      differences: [],
+      proposed: {},
+    });
+  });
+
+  it('leaves a watched or in-progress episode as it is, and never unmarks one', () => {
+    // Paired with the mark above, so the planner must know an episode.
+    expect(episode({ status: 'unwatched' }, { watched: true }).fill).toEqual({
+      watched: true,
+    });
+    expect(episode({ status: 'watched' }, { watched: true })).toEqual(NOTHING);
+    expect(episode({ status: 'in-progress' }, { watched: true })).toEqual(
+      NOTHING
+    );
+    expect(episode({ status: 'watched' }, { watched: false })).toEqual(NOTHING);
   });
 });

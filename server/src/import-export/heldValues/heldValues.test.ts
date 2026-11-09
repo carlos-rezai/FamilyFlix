@@ -6,7 +6,9 @@
 // `heldValues` and `heldSeriesValues` are pure: a **Movie** or a **Series** →
 // its values in the shape `planSheetFields` compares a **Sheet row** against.
 // A series has a creator where a film has a director, an end year a film does
-// not, and no watch state of its own.
+// not, and no watch state of its own. Issue #551: each also carries its TMDB
+// id, TMDB rating, Runtime (a series has none) and Favorite, which a Sheet row
+// fills only where empty.
 
 import { describe, expect, it } from 'vitest';
 
@@ -30,6 +32,10 @@ describe('heldValues: a movie', () => {
       synopsis: 'A keeper tends a light.',
       rating: 7,
       status: 'in-progress',
+      tmdbId: 562,
+      tmdbScore: 7.8,
+      runtimeMinutes: 132,
+      isFavorite: true,
     });
 
     expect(heldValues(movie)).toEqual({
@@ -42,6 +48,10 @@ describe('heldValues: a movie', () => {
       synopsis: 'A keeper tends a light.',
       rating: 7,
       status: 'in-progress',
+      tmdbId: 562,
+      tmdbScore: 7.8,
+      runtime: 132,
+      isFavorite: true,
     });
   });
 
@@ -54,6 +64,10 @@ describe('heldValues: a movie', () => {
         cast: [],
         synopsis: null,
         rating: null,
+        tmdbId: null,
+        tmdbScore: null,
+        runtimeMinutes: null,
+        isFavorite: false,
       })
     );
 
@@ -65,6 +79,10 @@ describe('heldValues: a movie', () => {
       cast: [],
       synopsis: null,
       rating: null,
+      tmdbId: null,
+      tmdbScore: null,
+      runtime: null,
+      isFavorite: false,
     });
   });
 });
@@ -80,6 +98,9 @@ describe('heldSeriesValues: a series', () => {
       cast: ['Ingrid Sol'],
       synopsis: 'A fishing town keeps a secret.',
       rating: 9,
+      tmdbId: 1399,
+      tmdbScore: 8.1,
+      isFavorite: true,
     });
 
     expect(heldSeriesValues(series)).toEqual({
@@ -92,6 +113,10 @@ describe('heldSeriesValues: a series', () => {
       synopsis: 'A fishing town keeps a secret.',
       rating: 9,
       status: 'unwatched',
+      tmdbId: 1399,
+      tmdbScore: 8.1,
+      runtime: null,
+      isFavorite: true,
     });
   });
 
@@ -105,6 +130,9 @@ describe('heldSeriesValues: a series', () => {
         cast: [],
         synopsis: null,
         rating: null,
+        tmdbId: null,
+        tmdbScore: null,
+        isFavorite: false,
       })
     );
 
@@ -117,6 +145,10 @@ describe('heldSeriesValues: a series', () => {
       synopsis: null,
       rating: null,
       status: 'unwatched',
+      tmdbId: null,
+      tmdbScore: null,
+      runtime: null,
+      isFavorite: false,
     });
   });
 });
