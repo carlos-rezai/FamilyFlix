@@ -1,4 +1,4 @@
-import { mkdir, rename, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
 import type { Movie, SeriesDetail } from '@/types';
@@ -55,6 +55,15 @@ export interface LibrarySheet {
   release(folderId: string): void;
 }
 
+/** Whether the file at `path` already holds exactly `bytes`. */
+async function sameBytes(path: string, bytes: Uint8Array): Promise<boolean> {
+  try {
+    return (await readFile(path)).equals(bytes);
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The **Library sheet writer**: touches debounced by
  * {@link LIBRARY_SHEET_DELAY_MS} after the last, then each touched folder's
@@ -62,8 +71,9 @@ export interface LibrarySheet {
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
  * own name, its path cells from each Title folder's **Layout read**,
  * `layoutCells`), through a temporary file in `Meta/` and a rename, behind its
- * BOM. A folder no longer listed (a **Factory reset**'s) or **Unreachable**
- * is skipped; a later touch that finds it reachable writes it. The one
+ * BOM; a sheet whose bytes already match is left alone. A folder no longer
+ * listed (a **Factory reset**'s), a **New folder** or an **Unreachable** one
+ * is skipped; a later touch that finds it scanned and reachable writes it. The one
  * replacer inside a Library folder, and only of that one file.
  */
 export function createLibrarySheet({
@@ -131,7 +141,11 @@ export function createLibrarySheet({
     const folder = storage
       .libraryFolders()
       .find((listed) => listed.id === folderId);
-    if (!folder || (await readableFolder(folder.path)) !== 'readable') {
+    if (
+      !folder ||
+      folder.scannedAt === null ||
+      (await readableFolder(folder.path)) !== 'readable'
+    ) {
       return;
     }
     const { movies, series, sourceFolders } = contentOf(folderId);
@@ -144,6 +158,9 @@ export function createLibrarySheet({
     );
     const bytes = await writeSheet(table, 'csv');
     const sheet = join(folder.path, LIBRARY_SHEET);
+    if (await sameBytes(sheet, bytes)) {
+      return;
+    }
     const temporary = join(folder.path, TEMPORARY_SHEET);
     await mkdir(dirname(sheet), { recursive: true });
     try {

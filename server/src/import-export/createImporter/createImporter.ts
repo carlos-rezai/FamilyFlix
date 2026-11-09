@@ -1938,6 +1938,9 @@ export function createImporter({
           sheets.set(folder, walk.sheet);
         }
         read.push(folder);
+        // Held until the run closes, so its sheet catches up then, not in review.
+        heldSheets.add(folder.id);
+        librarySheet.hold(folder.id);
       } catch {
         // A folder that stopped being readable mid-walk: what was found is
         // what there is, and the run still reaches review.
