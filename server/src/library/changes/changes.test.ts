@@ -42,7 +42,11 @@ function world() {
     },
   ]);
   storage.setSourceFolder(series.id, folder.id, 'Harbor (2020)');
-  const episode = storage.listEpisodes(series.id)[0]!;
+  const episode = storage.listEpisodes(series.id).at(0);
+  expect(episode).toBeDefined();
+  if (episode === undefined) {
+    throw new Error('the world holds no episode');
+  }
   return { storage, folderId: folder.id, film, series, episode };
 }
 

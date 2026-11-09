@@ -89,7 +89,7 @@ async function open(
     await workbook.xlsx.load(bytes as unknown as ArrayBuffer);
     return workbook;
   }
-  const csv = bytes.toString('utf8').replace(/^﻿/, '');
+  const csv = bytes.toString('utf8').replace(/^\uFEFF/, '');
   await workbook.csv.read(Readable.from([csv]), {
     map: (value: string) => value,
   });

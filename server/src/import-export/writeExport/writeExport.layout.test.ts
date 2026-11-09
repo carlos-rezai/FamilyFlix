@@ -177,7 +177,7 @@ async function sheetRows(
     await workbook.xlsx.load(readFileSync(path) as unknown as ArrayBuffer);
   } else {
     await workbook.csv.read(
-      Readable.from([readFileSync(path, 'utf8').replace(/^﻿/, '')]),
+      Readable.from([readFileSync(path, 'utf8').replace(/^\uFEFF/, '')]),
       { map: (value: string) => value }
     );
   }

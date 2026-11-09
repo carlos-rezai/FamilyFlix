@@ -399,7 +399,7 @@ async function headerOf(dir: string, name: string): Promise<string[]> {
     );
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Library']);
   } else {
-    const text = readFileSync(join(dir, name), 'utf8').replace(/^﻿/, '');
+    const text = readFileSync(join(dir, name), 'utf8').replace(/^\uFEFF/, '');
     return text.split(/\r?\n/)[0].split(',');
   }
   const header: string[] = [];
