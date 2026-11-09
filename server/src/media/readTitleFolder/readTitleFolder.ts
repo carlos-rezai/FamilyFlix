@@ -119,12 +119,28 @@ const filesIn = (entries: Dirent[]): string[] =>
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
 
-/** The subtitles among `files` in `dir`, each with its language. */
-const subtitlesIn = (dir: string, files: string[]): SubtitleFound[] =>
-  files.filter(isSubtitleFilename).map((file) => ({
-    path: join(dir, file),
-    language: detectSubtitleLanguage(file),
-  }));
+/** A folder's loose videos and tracks by its entries, in name order. */
+const looseFilesIn = (dir: string, entries: Dirent[]): FolderScan => {
+  const files = filesIn(entries);
+  return {
+    dir,
+    name: basename(dir),
+    videos: files.filter(isVideoFilename).map((file) => join(dir, file)),
+    subtitles: files.filter(isSubtitleFilename).map((file) => ({
+      path: join(dir, file),
+      language: detectSubtitleLanguage(file),
+    })),
+  };
+};
+
+/**
+ * A folder's loose files: the videos and tracks directly in it, in name
+ * order, each track with the language its name says. None when the folder is
+ * not there or cannot be read.
+ */
+export async function readLooseFiles(dir: string): Promise<FolderScan> {
+  return looseFilesIn(dir, await entriesOf(dir));
+}
 
 /** The first image in `dir` that is the art of `role` by its name. */
 const imageByRole = (
@@ -144,10 +160,7 @@ const imageByRole = (
  * passed).
  */
 export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
-  const name = basename(dir);
-  const videos = filesIn(await entriesOf(dir))
-    .filter(isVideoFilename)
-    .map((file) => join(dir, file));
+  const { name, videos } = await readLooseFiles(dir);
 
   const imagesDir = join(dir, IMAGES_FOLDER);
   const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
@@ -168,9 +181,8 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
   for (const folder of tagFolders) {
-    const tracksDir = join(subtitlesDir, folder);
     subtitles.push(
-      ...subtitlesIn(tracksDir, filesIn(await entriesOf(tracksDir)))
+      ...(await readLooseFiles(join(subtitlesDir, folder))).subtitles
     );
   }
 
@@ -202,9 +214,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     return { kind: 'left-out', dir, name, reason: 'no-key' };
   }
   const entries = await readdir(dir, { withFileTypes: true });
-  const videos = filesIn(entries)
-    .filter(isVideoFilename)
-    .map((file) => join(dir, file));
+  const { videos } = looseFilesIn(dir, entries);
   const seasons = entries
     .filter((entry) => entry.isDirectory() && isSeasonFolder(entry.name))
     .map((entry) => entry.name)
@@ -231,7 +241,6 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     return { kind: 'series', dir, name, key, poster, backdrop, seasons: scans };
   }
 
-  const subtitlesDir = join(dir, SUBTITLES_FOLDER);
   return {
     kind: 'film',
     dir,
@@ -240,9 +249,6 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     videos,
     poster,
     backdrop,
-    subtitles: subtitlesIn(
-      subtitlesDir,
-      filesIn(await entriesOf(subtitlesDir))
-    ),
+    subtitles: (await readLooseFiles(join(dir, SUBTITLES_FOLDER))).subtitles,
   };
 }

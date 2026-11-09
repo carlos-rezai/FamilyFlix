@@ -1,14 +1,9 @@
-import type { Dirent } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { basename, join, relative } from 'node:path';
 
-import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
-import {
-  isSubtitleFilename,
-  isVideoFilename,
-} from '../../media/fileKinds/fileKinds';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
+  readLooseFiles,
   readSeasonFolder,
   type FolderScan,
 } from '../../media/readTitleFolder/readTitleFolder';
@@ -42,23 +37,6 @@ export interface ShowFolderContext {
   titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
 
-/** One folder's own videos and subtitles, the files directly inside it. */
-const folderScan = (dir: string, entries: Dirent[]): FolderScan => {
-  const files = entries
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
-  return {
-    dir,
-    name: basename(dir),
-    videos: files.filter(isVideoFilename).map((file) => join(dir, file)),
-    subtitles: files.filter(isSubtitleFilename).map((file) => ({
-      path: join(dir, file),
-      language: detectSubtitleLanguage(file),
-    })),
-  };
-};
-
 /**
  * The folders holding videos under a picked folder: the folder itself when
  * videos lie loose in it, then every folder beneath it holding a video, a
@@ -71,7 +49,7 @@ async function scansUnder(dir: string): Promise<FolderScan[]> {
     const entries = await readdir(at, { withFileTypes: true });
     const scan = isSeasonFolder(basename(at))
       ? await readSeasonFolder(at)
-      : folderScan(at, entries);
+      : await readLooseFiles(at);
     if (scan.videos.length > 0) {
       scans.push(scan);
       if (!root) {
