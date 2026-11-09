@@ -397,16 +397,29 @@ in either. Settled in a grill-me on 2026-11-08 (design log 58, handoff
       folder rebuilds its library offline, ratings, hearts and Status
       included. This is the one place FamilyFlix replaces a file inside a
       Library folder.
-    - **Layout fill**: after any save or Sync, FamilyFlix writes into the
-      title folder each poster, backdrop, Season poster, Still and subtitle
-      it holds whose place is empty, never replacing a file, and never a
-      frame still. The Sync's two Write target toggles go: neither is a
-      choice any more.
+    - **Library sheet writer**: every change to the library touches the
+      Library folders it concerns, and each touched folder's sheet is
+      rewritten through a temporary file and a rename; an Unreachable or
+      unlisted folder is skipped, and shutdown flushes what is pending.
+    - **Layout fill**: after an add or an edit from the Movie form and after
+      each title's Sync, FamilyFlix writes into the title folder each
+      poster, backdrop, Season poster, Still and subtitle it holds whose
+      place is empty: never replacing a file, never a frame still, a second
+      track of one language as `<Language> (2)`. Each file written is a
+      `↓` line in the Sync's log; a folder it can't write is one Warning
+      line and the save still succeeds. A title with no title folder gets
+      nothing. The Sync's two Write target toggles and its
+      `familyflix-metadata.csv` are gone: _Where it is saved_ draws _Your
+      library_ and _Your library folders_, both always. Running the fill
+      after a Bulk import or a scan's import is not wired yet.
     - **Export**: an Export folder is the same layout less the videos, its
       sheet `Meta/familyflix-library` in the chosen format, so its folders
       copied over a Library folder of videos scan back whole.
-    - **Left out**: a root entry that isn't in the layout is one Warning line
-      in the scan's log, never a Problem.
+    - **Left out**: a root entry that isn't in the layout is one Layout
+      warning in the scan's log, never a Problem: _isn't named Title
+      (Year)_, _holds no video or Season folder_, or _holds loose videos and
+      Season folders_, and one line for the root's loose videos. `Meta/`,
+      an Export folder and system folders pass in silence.
     - **Unchanged**: the Managed media directory keeps its own internal
       layout; the layout is for Library folders and Export folders only.
       The dev fixtures (`createImporter/fixture/` and `seriesFixture/`) move

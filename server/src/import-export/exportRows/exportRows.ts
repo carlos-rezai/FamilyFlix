@@ -279,14 +279,14 @@ const byKey = (a: Planned, b: Planned): number =>
 /**
  * The library in, the one sheet of an **Export** and its **File plan** out:
  * pure, and the one place every cell rule is spelled. The table is the
- * {@link SHEET_COLUMNS} header, then a Movie row per film and, per series, a
+ * **Sheet columns** header ({@link SHEET_COLUMNS}), then a Movie row per film and, per series, a
  * Series row, each season's Season row and its Episode rows, A to Z by
  * **Folder key**, then season, then number. A cell is blank where its type
  * has no such field; resume positions, the Details state, the Still source
  * and Import mode are never written.
  *
  * The File plan is the **Folder layout** less the videos (log 58, Q19): art
- * under each Title or Season folder's `Images/`, Stills (Frame stills too)
+ * under each **Title folder**'s or Season folder's `Images/`, Stills (Frame stills too)
  * under `Season NN/Images/Stills/` by **Episode tag**, a film's tracks under
  * `Subtitles/` by language and an episode's under `Season NN/Subtitles/<tag>/`,
  * a second of one language `(2)`. The path cells carry those same paths,
