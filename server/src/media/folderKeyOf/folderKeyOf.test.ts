@@ -10,7 +10,7 @@
 
 import { describe, expect, it } from 'vitest';
 
-import { folderKeyOf, spellFolderKey } from './folderKeyOf';
+import { folderKeyOf, sameFolderKey, spellFolderKey } from './folderKeyOf';
 
 describe('folderKeyOf, a Title folder', () => {
   it('reads Heat (1995) as its title and year', () => {
@@ -63,5 +63,23 @@ describe('spellFolderKey, the Title (Year) speller', () => {
     const name = spellFolderKey(title, year);
 
     expect(folderKeyOf(name)).toEqual({ name, title, year });
+  });
+});
+
+describe('sameFolderKey: two Folder keys compared', () => {
+  it.each([
+    ['Heat (1995)', 'Heat (1995)'],
+    ['Heat (1995)', 'heat (1995)'],
+    ['AMELIE (2001)', 'Amelie (2001)'],
+  ])('reads %s and %s as one key', (a, b) => {
+    expect(sameFolderKey(a, b)).toBe(true);
+  });
+
+  it.each([
+    ['Heat (1995)', 'Heat (1996)'],
+    ['Heat (1995)', 'Heat'],
+    ['Heat (1995)', 'Heat  (1995)'],
+  ])('reads %s and %s as two keys', (a, b) => {
+    expect(sameFolderKey(a, b)).toBe(false);
   });
 });

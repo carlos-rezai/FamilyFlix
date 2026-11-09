@@ -135,6 +135,12 @@ const FAVORITE = new Set(['yes', 'true', '1', '✓', 'favorite']);
 /** The row types that name a title, and so are skipped without one. */
 const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
 
+/**
+ * Whether a row names a title, a Movie or a Series row, and so a **Title
+ * folder**; a Season or Episode row is read with the series it names.
+ */
+export const isTitleRow = (row: SheetRow): boolean => TITLED.has(row.type);
+
 /** The rating column's own scale — the same ten the library stores. */
 const MAX_RATING = 10;
 

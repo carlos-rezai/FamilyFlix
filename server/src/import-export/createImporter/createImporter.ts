@@ -11,7 +11,10 @@ import type {
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
-import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
+import {
+  folderKeyOf,
+  sameFolderKey,
+} from '../../media/folderKeyOf/folderKeyOf';
 import {
   walkLibraryFolder,
   type WalkedTitle,
@@ -41,7 +44,7 @@ import {
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
 import type { LibrarySheet } from '../createLibrarySheet/createLibrarySheet';
-import { readSheet, type SheetRow } from '../readSheet/readSheet';
+import { isTitleRow, readSheet, type SheetRow } from '../readSheet/readSheet';
 import {
   readShowFolder,
   type ShowFolderAnswer,
@@ -397,6 +400,12 @@ const filesOf = (scan: FilmScan): ImportProblemDetail['files'] => ({
   ...(scan.backdrop === null ? {} : { backdrop: scan.backdrop }),
   subtitles: scan.subtitles.map(({ path, language }) => ({ path, language })),
 });
+
+/** A series' Episode rows: those of `rows` naming its **Folder key**. */
+const episodeRowsOf = (rows: readonly SheetRow[], key: string): SheetRow[] =>
+  rows.filter(
+    (row) => row.type === 'Episode' && sameFolderKey(row.folder, key)
+  );
 
 /**
  * An `ambiguous` **Problem**'s **Candidate folders**, as the **Folder picker**
@@ -1943,15 +1952,7 @@ export function createImporter({
 
     // A Movie or Series row names a Title folder; a Season or Episode row is
     // read with the series its Folder key names, never matched on its own.
-    const titleRows = rows.filter(
-      (row) => row.type === 'Movie' || row.type === 'Series'
-    );
-    const episodeRowsOf = (key: string): SheetRow[] =>
-      rows.filter(
-        (row) =>
-          row.type === 'Episode' &&
-          row.folder.toLowerCase() === key.toLowerCase()
-      );
+    const titleRows = rows.filter(isTitleRow);
     const verdicts = matchRows(titleRows, [...films, ...showOf.keys()]);
     const matched: Placed<Match>[] = [];
     const matchedShows: Placed<ShowMatch>[] = [];
@@ -1967,7 +1968,7 @@ export function createImporter({
           match.row,
           show,
           heldShow(held, seriesByKey, libraryFolder, show, match.row),
-          episodeRowsOf(match.row.folder)
+          episodeRowsOf(rows, match.row.folder)
         );
         if (joined.held !== null) {
           joined.updated = fillHeld(
@@ -2162,9 +2163,7 @@ export function createImporter({
       }
       // Each folder a row names, with that row, its path cells resolved.
       const named = new Map<FilmScan, SheetRow>();
-      const titleRows = rows.filter(
-        (row) => row.type === 'Movie' || row.type === 'Series'
-      );
+      const titleRows = rows.filter(isTitleRow);
       if (titleRows.length > 0) {
         const verdicts = matchRows(titleRows, [...found, ...showOf.keys()]);
         for (const match of verdicts.matched) {
@@ -2212,13 +2211,7 @@ export function createImporter({
           row,
           show,
           heldShow(held, seriesByKey, folder, show, row),
-          sheetRow === undefined
-            ? []
-            : rows.filter(
-                (each) =>
-                  each.type === 'Episode' &&
-                  each.folder.toLowerCase() === sheetRow.folder.toLowerCase()
-              )
+          sheetRow === undefined ? [] : episodeRowsOf(rows, sheetRow.folder)
         );
         if (sheetRow !== undefined && match.held !== null) {
           match.updated = fillHeld(

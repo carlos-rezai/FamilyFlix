@@ -32,7 +32,7 @@ import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { exportRows } from '../exportRows/exportRows';
 import { writeSheet } from '../writeSheet/writeSheet';
-import { readSheet, type SheetRow } from './readSheet';
+import { isTitleRow, readSheet, type SheetRow } from './readSheet';
 
 /** The film fixture's sheet pair. */
 const FILM_FIXTURE = fileURLToPath(
@@ -317,6 +317,28 @@ describe('readSheet — a sheet with no Type column', () => {
     );
 
     expect(rows[0].type).toBe('Movie');
+  });
+});
+
+describe('isTitleRow: a row that names a title', () => {
+  it('answers true for a Movie and a Series row, false for a Season and an Episode row', async () => {
+    const rows = await readSheet(
+      csv([
+        'Type,Folder,Season,Episode,Title,Year',
+        'Movie,Heat (1995),,,Heat,1995',
+        'Series,Tidewater (2018),,,Tidewater,2018',
+        'Season,Tidewater (2018),1,,,',
+        'Episode,Tidewater (2018),1,1,Pilot,',
+      ]),
+      'library.csv'
+    );
+
+    expect(rows.map((row) => [row.type, isTitleRow(row)])).toEqual([
+      ['Movie', true],
+      ['Series', true],
+      ['Season', false],
+      ['Episode', false],
+    ]);
   });
 });
 

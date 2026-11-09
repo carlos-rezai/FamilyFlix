@@ -1,5 +1,6 @@
 import { dirname, join } from 'node:path';
 
+import { sameFolderKey } from '../../media/folderKeyOf/folderKeyOf';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
 import type { SheetRow } from '../readSheet/readSheet';
 
@@ -46,9 +47,6 @@ export const MATCH_REASON = {
   noVideo: 'Folder matched, but no video file was found.',
   manyVideos: 'Two videos. Pick the film.',
 } as const;
-
-/** A **Folder key** as the matcher compares it: case folded. */
-const folded = (key: string): string => key.toLowerCase();
 
 /** A path cell, relative with forward slashes, resolved against `base`. */
 const resolved = (base: string, cell: string): string =>
@@ -104,8 +102,9 @@ export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
   };
 
   for (const row of rows) {
-    const key = folded(row.folder);
-    const exact = folders.filter((folder) => folded(folder.name) === key);
+    const exact = folders.filter((folder) =>
+      sameFolderKey(folder.name, row.folder)
+    );
 
     if (exact.length > 1) {
       problem(row, 'ambiguous', MATCH_REASON.twoFolders, exact);
