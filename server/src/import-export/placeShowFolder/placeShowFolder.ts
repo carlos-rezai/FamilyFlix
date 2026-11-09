@@ -1,9 +1,8 @@
-import { basename, dirname, relative, sep } from 'node:path';
+import { basename, dirname } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
-import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
 import { seasonNumberOf } from '../../media/seasonNumberOf/seasonNumberOf';
-import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
+import { placeTitleFolder } from '../placeTitleFolder/placeTitleFolder';
 
 /** Where a found episode lies in the **Folder layout**. */
 export interface PlacedShowFolder {
@@ -32,18 +31,12 @@ export function placeShowFolder(
   if (seasonNumberOf(basename(season)) === null) {
     return null;
   }
-  const show = dirname(season);
-  const listed = listedFolderOf(folders, show);
-  if (listed === null) {
-    return null;
-  }
-  const sourceFolder = relative(listed.path, show);
-  if (sourceFolder.includes(sep) || folderKeyOf(sourceFolder) === null) {
+  const placed = placeTitleFolder(folders, dirname(season));
+  if (placed === null) {
     return null;
   }
   return {
-    folderId: listed.id,
-    sourceFolder,
+    ...placed,
     sourceFile: `${basename(season)}/${basename(video)}`,
   };
 }

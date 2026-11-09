@@ -1,8 +1,7 @@
-import { basename, dirname, relative, sep } from 'node:path';
+import { dirname, relative, sep } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
-import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
-import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
+import { placeTitleFolder } from '../placeTitleFolder/placeTitleFolder';
 
 /** Where a found film lies, as `setSourceFolder` records it. */
 export interface FilmSource {
@@ -47,14 +46,6 @@ export function placeFilmFolder(
   folders: readonly StoredLibraryFolder[],
   video: string
 ): FilmSource | null {
-  const listed = listedFolderOf(folders, video);
-  const dir = dirname(video);
-  if (
-    listed === null ||
-    relative(listed.path, dirname(dir)) !== '' ||
-    folderKeyOf(basename(dir)) === null
-  ) {
-    return null;
-  }
-  return filmSourceOf(listed, { dir });
+  const placed = placeTitleFolder(folders, dirname(video));
+  return placed === null ? null : { ...placed, sourceFile: null };
 }
