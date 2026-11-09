@@ -5,10 +5,10 @@
 //
 // A picked **Title folder** answers its `Season NN` folders' episodes, each
 // by its **Episode tag** under its folder's season, and its **Unplaced**
-// videos: an untagged one in a Season folder, and every video in a folder
-// the layout does not read as a Season folder (`Season 2`). A picked Season
-// folder answers its series; a picked folder of loose tagged videos answers
-// them as Unplaced. Picking `Tidewater (2018)/` of the series fixture finds
+// videos: an untagged one in a Season folder. Since issue #557 a folder
+// the layout does not read as a Season folder (`Season 2`) is silent. A
+// picked Season folder answers its series; a picked folder of loose tagged
+// videos answers them as Unplaced. Picking `Tidewater (2018)/` of the series fixture finds
 // the same seasons and episodes the scan's `readTitleFolder` finds.
 //
 // Against real trees under `sandboxRoot`, the context a stub.
@@ -96,14 +96,13 @@ describe('readShowFolder: a picked Title folder', () => {
     expect(read.libraryFolderId).toBe('shows');
   });
 
-  it('answers an untagged video and a folder no Season folder of the layout as Unplaced', async () => {
+  it('answers an untagged video as Unplaced; a folder no Season folder of the layout passes in silence', async () => {
     const { shows, show } = harborAndVine();
 
     const read = await readOf(show, onRecord(shows));
 
     expect(read.unplaced.map((video) => video.relativePath).sort()).toEqual([
       'Season 01/bonus.mkv',
-      'Season 2/Harbor.and.Vine.S02E02.Neap.Tide.mkv',
     ]);
   });
 
