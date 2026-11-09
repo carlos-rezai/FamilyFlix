@@ -1181,14 +1181,6 @@ export function createImporter({
         'warning'
       );
     }
-    if (episodes.length === 0) {
-      if (held !== null && !match.updated) {
-        logAlreadyHeld(current, row);
-      }
-      return false;
-    }
-    const folder = held?.folder ?? media.reserveFolder(row.title, row.year);
-    let series: Series | null = held?.series ?? null;
     // Every episode whose copy threw, filed as the show's one `failed` row.
     const failures: { video: string; reason: string }[] = [];
     // Every piece of art whose copy threw, filed on that same row.
@@ -1219,6 +1211,87 @@ export function createImporter({
         return undefined;
       }
     };
+
+    /**
+     * A held series' empty art filled from its Title folder: its **Poster**,
+     * **Backdrop**, each held season's **Season poster** and each held
+     * episode's **Still** (a picked one), never replacing art it has.
+     */
+    const fillHeldArt = async (
+      heldSeries: HeldSeries,
+      into: string
+    ): Promise<void> => {
+      const detail = storage.getSeriesDetail(heldSeries.series.id);
+      if (detail === null) {
+        return;
+      }
+      const id = detail.series.id;
+      if (detail.series.posterPath === null) {
+        const posterPath = await copyArt(into, show.poster);
+        if (posterPath !== undefined) {
+          storage.enrichSeries(id, { posterPath });
+        }
+      }
+      if (detail.series.backdropPath === null) {
+        const backdropPath = await copyArt(into, show.backdrop);
+        if (backdropPath !== undefined) {
+          storage.enrichSeries(id, { backdropPath });
+        }
+      }
+      for (const season of detail.seasons) {
+        const seasonFolder = media.seasonFolder(into, season.number);
+        if (season.posterPath === null) {
+          const posterPath = await copyArt(
+            seasonFolder,
+            show.seasons.find((scanned) => scanned.number === season.number)
+              ?.poster ?? null
+          );
+          if (posterPath !== undefined) {
+            storage.setSeasonPoster(id, season.number, posterPath);
+          }
+        }
+        for (const episode of season.episodes) {
+          if (episode.stillPath !== null) {
+            continue;
+          }
+          const stillPath = await copyArt(
+            seasonFolder,
+            show.episodes.find(
+              (scanned) =>
+                scanned.season === episode.season &&
+                scanned.episode === episode.number
+            )?.still ?? null
+          );
+          if (stillPath !== undefined) {
+            storage.enrichEpisode(episode.id, {
+              stillPath,
+              stillSource: 'picked',
+            });
+          }
+        }
+      }
+    };
+
+    if (held !== null && held.folder !== null) {
+      try {
+        await fillHeldArt(held, held.folder);
+      } catch (error) {
+        if (signal.aborted) {
+          return false;
+        }
+        throw error;
+      }
+    }
+    if (episodes.length === 0) {
+      if (held !== null && !match.updated) {
+        logAlreadyHeld(current, row);
+      }
+      if (artFailures.length === 0) {
+        return false;
+      }
+    }
+    const folder = held?.folder ?? media.reserveFolder(row.title, row.year);
+    let series: Series | null = held?.series ?? null;
 
     for (const episode of episodes) {
       // A turn of the loop per episode, as per film: see `importPlaced`.
