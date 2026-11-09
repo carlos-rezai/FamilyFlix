@@ -700,6 +700,22 @@ function addFoldersUnder(
   }
 }
 
+/** What the import domain is composed over. */
+export interface ImporterDeps {
+  /** The library a run reads what it holds from and adds to. */
+  storage: LibraryStorage;
+  /** The media domain a copy-mode import copies and reserves folders through. */
+  media: Media;
+  /** Playback: a found video's runtime, and whether a held video is there. */
+  playback: Playback;
+  /**
+   * The **Library sheet writer**, told which folders' sheets the **Current
+   * run** read: held while the run holds their values, released when it
+   * closes.
+   */
+  librarySheet?: Pick<LibrarySheet, 'hold' | 'release'>;
+}
+
 /**
  * Compose the import domain over the library, the media domain and playback.
  *
@@ -743,17 +759,7 @@ export function createImporter({
   media,
   playback,
   librarySheet,
-}: {
-  storage: LibraryStorage;
-  media: Media;
-  playback: Playback;
-  /**
-   * The **Library sheet writer**, told which folders' sheets the **Current
-   * run** read: held while the run holds their values, released when it
-   * closes.
-   */
-  librarySheet?: Pick<LibrarySheet, 'hold' | 'release'>;
-}): Importer {
+}: ImporterDeps): Importer {
   let run: ImportRun | null = null;
   /** The Library folders whose `Meta/` sheet the **Current run** read, held. */
   const heldSheets = new Set<string>();
