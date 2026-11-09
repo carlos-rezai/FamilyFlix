@@ -36,6 +36,7 @@ import {
   copyFoundEpisodes,
   type CopiedEpisode,
 } from '../import-export/copyFoundEpisodes/copyFoundEpisodes';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
   placeFilmFolder,
@@ -780,6 +781,17 @@ export function createApiRouter(
   enrichment: Enrichment
 ): Router {
   const router = express.Router();
+  const layoutFill = createLayoutFill({ storage, media });
+
+  /**
+   * The **Layout fill** after a save: never fails it, whatever the disk
+   * answers.
+   */
+  const fillAfterSave = (titleId: string): Promise<void> =>
+    layoutFill.fill(titleId).then(
+      () => undefined,
+      () => undefined
+    );
 
   router.use(express.json());
 
@@ -1127,6 +1139,7 @@ export function createApiRouter(
           )
         )
       );
+      await fillAfterSave(series.id);
       res.status(201).json(series);
     } catch {
       rollback();
@@ -1313,6 +1326,7 @@ export function createApiRouter(
       }
 
       storage.leaveOut(removedVideos);
+      await fillAfterSave(outcome.series.id);
       res.json(outcome.series);
 
       // Only a commit authorises the unlink: what no row points at any more.
@@ -1684,6 +1698,7 @@ export function createApiRouter(
       }
       // A hand add brings its found video back, in either mode.
       storage.clearLeftOut(leftOutEntries(folders, [found]));
+      await fillAfterSave(movie.id);
       res.status(201).json(movie);
     } catch {
       // `addMovie` is transactional, so a throw here has left no row — and the
@@ -1884,6 +1899,7 @@ export function createApiRouter(
         return;
       }
 
+      await fillAfterSave(saved.id);
       res.json(saved);
 
       // The only place in the app that deletes media, and it runs here rather
