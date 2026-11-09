@@ -12,6 +12,7 @@ import {
   scopeDescription,
   singleScopeLabel,
 } from '../enrichmentView/enrichmentView';
+import { SavedRow } from '../SavedRow/SavedRow';
 import { ScopeCard } from '../ScopeCard/ScopeCard';
 import { SetupBanner } from '../SetupBanner/SetupBanner';
 import {
@@ -21,13 +22,6 @@ import {
   LetGoNote,
   RatingNote,
   SeriesNote,
-  SavedBadge,
-  SavedGlyph,
-  SavedLine,
-  SavedPath,
-  SavedRow,
-  SavedText,
-  SavedTitle,
   SourceNote,
   SourceNoteMono,
   Scopes,
@@ -187,27 +181,20 @@ export function EnrichmentSetup({
       <div>
         <GroupLabel>Where it is saved</GroupLabel>
         <Targets>
-          <SavedRow>
-            <SavedGlyph>
-              <DatabaseIcon size={19} />
-            </SavedGlyph>
-            <SavedText>
-              <SavedTitle>Your library</SavedTitle>
-              <SavedLine>Always. This is what the app reads from.</SavedLine>
-            </SavedText>
-            <SavedBadge>Required</SavedBadge>
-          </SavedRow>
+          <SavedRow
+            glyph={<DatabaseIcon size={19} />}
+            title="Your library"
+            line="Always. This is what the app reads from."
+            badge="Required"
+          />
           <TargetDivider />
-          <SavedRow>
-            <SavedGlyph>
-              <FolderIcon size={19} />
-            </SavedGlyph>
-            <SavedText>
-              <SavedTitle>Your library folders</SavedTitle>
-              <SavedPath>{layoutPath}</SavedPath>
-            </SavedText>
-            <SavedBadge>Always</SavedBadge>
-          </SavedRow>
+          <SavedRow
+            glyph={<FolderIcon size={19} />}
+            title="Your library folders"
+            line={layoutPath}
+            path
+            badge="Always"
+          />
         </Targets>
         <SourceNote>
           Art goes into each title folder's{' '}
