@@ -44,6 +44,7 @@ import type {
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
 // remove a sandbox holding an open database file.
@@ -77,6 +78,7 @@ function world() {
     client: fakeTmdb({ searches: SEARCHES, movies: DETAILS }),
     media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
 
   /** A film in the library, its video really stored, and what else is given. */

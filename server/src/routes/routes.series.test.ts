@@ -38,6 +38,7 @@ import type {
   SeriesDetail,
   SeriesHomePayload,
 } from '@/types';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -80,6 +81,7 @@ function freshApi(): { storage: LibraryStorage; baseUrl: string } {
         client: offlineTmdb(),
         media: mediaDomain,
         playback,
+        layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       })
     )
   );

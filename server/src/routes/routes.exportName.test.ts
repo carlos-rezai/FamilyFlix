@@ -31,6 +31,7 @@ import { newMovie } from '../test-support/newMovie/newMovie';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const readOnly = vi.hoisted(() => new Set<string>());
 
@@ -101,7 +102,13 @@ function freshApi(): { baseUrl: string; dir: string; destination: string } {
         playback,
         librarySheet: idleLibrarySheet(),
       }),
-      createEnrichment({ storage, client: offlineTmdb(), media, playback })
+      createEnrichment({
+        storage,
+        client: offlineTmdb(),
+        media,
+        playback,
+        layoutFill: createLayoutFill({ storage, media }),
+      })
     )
   );
   const server = app.listen(0);

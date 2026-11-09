@@ -36,6 +36,7 @@ import {
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import { createEnrichment } from './createEnrichment';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -109,6 +110,7 @@ function world() {
     client,
     media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
 
   async function addFilm(

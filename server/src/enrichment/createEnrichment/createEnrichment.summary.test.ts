@@ -25,16 +25,19 @@ import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { createEnrichment } from './createEnrichment';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 function world({ reachable = true } = {}) {
   const storage = freshStorage();
   const client = fakeTmdb({ reachable });
+  const media = createMedia(sandboxRoot('familyflix-enrich-summary-'));
   const enrichment = createEnrichment({
     storage,
     client,
-    media: createMedia(sandboxRoot('familyflix-enrich-summary-')),
+    media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
   return { storage, client, enrichment };
 }

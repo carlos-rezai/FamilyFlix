@@ -6,7 +6,7 @@
 // real `fetch` from the test, real status codes and bodies, over a real
 // `:memory:` library. The fifth server domain, `enrichment/`, is injected into
 // the router as its sixth argument —
-// `createEnrichment({ storage, client, media, playback })` over a
+// `createEnrichment({ storage, client, media, playback, layoutFill: createLayoutFill({ storage, media }) })` over a
 // `createTmdbClient` whose own `fetch` is a fake, so nothing here goes online
 // and no route learns there is a TMDB.
 //
@@ -35,6 +35,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -97,6 +98,7 @@ function freshApi(tmdb: Tmdb = 'accepts'): Api {
     client: createTmdbClient(tmdbFetch),
     media: mediaDomain,
     playback,
+    layoutFill: createLayoutFill({ storage, media: mediaDomain }),
   });
 
   const app = express();

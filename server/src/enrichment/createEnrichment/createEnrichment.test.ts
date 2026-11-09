@@ -40,6 +40,7 @@ import type {
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 
 /** The ten chips, every one on — the setup's default. */
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
@@ -102,6 +103,7 @@ function world(
     client,
     media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
 
   /** A movie in the library, its video really in its Movie folder. */

@@ -52,6 +52,7 @@ import type {
   PlaybackCapabilities,
   PlaybackComponentInfo,
 } from '@/types';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const IMPORT_RUNNING =
   'An import is running. Stop it before erasing everything.';
@@ -166,6 +167,7 @@ async function filledApi({
     client: tmdb,
     media: mediaDomain,
     playback,
+    layoutFill: createLayoutFill({ storage, media: mediaDomain }),
   });
 
   const folder = mediaDomain.reserveFolder('The Lantern Keeper', 2019);

@@ -43,6 +43,7 @@ import {
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 import { createEnrichment } from './createEnrichment';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
 // remove a sandbox holding an open database file.
@@ -104,6 +105,7 @@ async function world() {
     }),
     media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
 
   return { enrichment, root, titleFolder, images: join(titleFolder, 'Images') };

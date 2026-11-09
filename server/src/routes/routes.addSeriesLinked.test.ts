@@ -45,6 +45,7 @@ import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun, Series } from '@/types';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -165,6 +166,7 @@ function freshApi(): {
         client: offlineTmdb(),
         media: mediaDomain,
         playback,
+        layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       })
     )
   );

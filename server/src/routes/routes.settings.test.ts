@@ -98,6 +98,7 @@ import {
   type Settings,
   type StorageReport,
 } from '@/types';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 // --- per-test resource tracking ------------------------------------------------
 
@@ -183,6 +184,7 @@ function freshApi({
         client: offlineTmdb(),
         media: mediaDomain,
         playback,
+        layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       })
     )
   );

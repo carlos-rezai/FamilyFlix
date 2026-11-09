@@ -29,6 +29,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -96,6 +97,7 @@ async function freshApi() {
     client: createTmdbClient(fakeTmdb()),
     media: mediaDomain,
     playback,
+    layoutFill: createLayoutFill({ storage, media: mediaDomain }),
   });
 
   for (const [title, year] of [

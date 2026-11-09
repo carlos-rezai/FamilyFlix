@@ -44,6 +44,7 @@ import type {
 } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
 
@@ -119,6 +120,7 @@ function world(client: FakeTmdb = knowsBoth()) {
     client,
     media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
 
   /** A film in the library, its video really in its Movie folder. */

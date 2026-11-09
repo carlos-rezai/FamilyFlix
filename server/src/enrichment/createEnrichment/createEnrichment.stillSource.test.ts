@@ -30,6 +30,7 @@ import {
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { createEnrichment } from './createEnrichment';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 
 // Close the databases before the sandbox holding them is swept: a file's own
 // `afterEach` runs before the helpers'.
@@ -88,6 +89,7 @@ describe('a Sync writes the Still source', () => {
       client,
       media,
       playback: framelessPlayback(),
+      layoutFill: createLayoutFill({ storage, media }),
     });
 
     const folder = media.reserveFolder(TITLE, 2018);

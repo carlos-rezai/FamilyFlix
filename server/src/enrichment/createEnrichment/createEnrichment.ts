@@ -23,10 +23,7 @@ import type { Media } from '../../media/createMedia/createMedia';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
-import {
-  createLayoutFill,
-  type LayoutFill,
-} from '../../import-export/createLayoutFill/createLayoutFill';
+import type { LayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 import {
   fetchedFields,
   fetchedTvFields,
@@ -187,10 +184,10 @@ export interface EnrichmentDeps {
   /** What takes a **Frame still** off an episode's own video. */
   playback: Playback;
   /**
-   * The **Layout fill** run after each title's Sync; the real one over
-   * `storage` and `media` unless a test hands its own.
+   * The **Layout fill** run after each title's Sync: the one the composition
+   * root makes, the routes' own.
    */
-  layoutFill?: LayoutFill;
+  layoutFill: LayoutFill;
 }
 
 /**
@@ -273,7 +270,7 @@ export function createEnrichment({
   client,
   media,
   playback,
-  layoutFill = createLayoutFill({ storage, media }),
+  layoutFill,
 }: EnrichmentDeps): Enrichment {
   let run: EnrichmentRun | null = null;
   /** Aborts the Current run's requests in flight — _Stop_'s handle. */

@@ -3,6 +3,7 @@ import express from 'express';
 import { createEnrichment } from './enrichment/createEnrichment/createEnrichment';
 import { createTmdbClient } from './enrichment/tmdbClient/tmdbClient';
 import { createImporter } from './import-export/createImporter/createImporter';
+import { createLayoutFill } from './import-export/createLayoutFill/createLayoutFill';
 import { createLibrarySheet } from './import-export/createLibrarySheet/createLibrarySheet';
 import { createSqliteStorage } from './library';
 import { createMedia } from './media/createMedia/createMedia';
@@ -72,6 +73,8 @@ async function start(): Promise<Started> {
       storage.libraryFolders().find((folder) => folder.id === id)?.path ?? null
   );
   const media = createMedia(MEDIA_PATH);
+  // The one **Layout fill**, run after an add, an edit and a Sync.
+  const layoutFill = createLayoutFill({ storage, media });
 
   // The import domain over the same library and managed directory the routes
   // write through, so an imported film is a hand-added one to every read in
@@ -83,6 +86,7 @@ async function start(): Promise<Started> {
     client: createTmdbClient(fetch),
     media,
     playback,
+    layoutFill,
   });
 
   // The **Loopback guard**, in front of everything: only this machine, and

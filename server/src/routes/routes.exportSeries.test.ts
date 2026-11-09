@@ -38,6 +38,7 @@ import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { SHEET_COLUMNS, EXPORT_FORMATS } from '@/types';
 import type { ExportFormat, ExportResult, ImportRun } from '@/types';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const FORMATS = [...EXPORT_FORMATS];
 
@@ -96,6 +97,7 @@ function freshApi(): {
         client: offlineTmdb(),
         media: mediaDomain,
         playback,
+        layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       })
     )
   );

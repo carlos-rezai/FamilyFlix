@@ -41,6 +41,7 @@ import {
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import type { TmdbSeason } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
@@ -104,11 +105,13 @@ function world({
   storage.setTmdbKey(KEY);
   const root = sandboxRoot('familyflix-enrich-season-posters-');
   const realMedia = createMedia(root);
+  const media = wrapMedia(realMedia);
   const enrichment = createEnrichment({
     storage,
     client,
-    media: wrapMedia(realMedia),
+    media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
 
   /** The show in the library, each video really in its season folder. */

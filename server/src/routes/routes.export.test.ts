@@ -65,6 +65,7 @@ import type {
   ExportSummary,
   ImportRun,
 } from '@/types';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const FORMATS = [...EXPORT_FORMATS];
 
@@ -122,6 +123,7 @@ function freshApi(): {
         client: offlineTmdb(),
         media: mediaDomain,
         playback,
+        layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       })
     )
   );

@@ -34,6 +34,7 @@ import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type { TmdbMovieDetail } from '../tmdbClient/tmdbClient';
 import { createEnrichment } from './createEnrichment';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 
 const SINCE = '2026-10-01T12:00:00.000Z';
 const BEFORE = '2026-09-30T08:00:00.000Z';
@@ -97,6 +98,7 @@ function world() {
     client,
     media,
     playback: framelessPlayback(),
+    layoutFill: createLayoutFill({ storage, media }),
   });
 
   async function storedVideo(title: string, year: number) {

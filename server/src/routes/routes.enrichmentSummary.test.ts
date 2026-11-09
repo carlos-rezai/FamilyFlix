@@ -25,6 +25,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -69,6 +70,7 @@ async function freshApi(tmdbFetch: Fetch = answeringTmdb()) {
     client: createTmdbClient(tmdbFetch),
     media: mediaDomain,
     playback,
+    layoutFill: createLayoutFill({ storage, media: mediaDomain }),
   });
 
   const app = express();

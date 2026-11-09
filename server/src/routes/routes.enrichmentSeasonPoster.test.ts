@@ -49,6 +49,7 @@ import {
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
+import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -111,7 +112,13 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
   const root = sandboxRoot('familyflix-enrich-season-poster-api-');
   const media = createMedia(root);
   const playback = createPlayback(root, fixedSlot(null), () => null);
-  const enrichment = createEnrichment({ storage, client, media, playback });
+  const enrichment = createEnrichment({
+    storage,
+    client,
+    media,
+    playback,
+    layoutFill: createLayoutFill({ storage, media }),
+  });
 
   const reserved = media.reserveFolder(TITLE, 2018);
   const series = storage.addSeries({ title: TITLE, year: 2018 });

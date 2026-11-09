@@ -47,6 +47,7 @@ import {
   type FakeTmdb,
 } from '../../test-support/fakeTmdb/fakeTmdb';
 import { createEnrichment } from './createEnrichment';
+import { createLayoutFill } from '../../import-export/createLayoutFill/createLayoutFill';
 import { framelessPlayback } from '../../test-support/framelessPlayback/framelessPlayback';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
@@ -124,11 +125,13 @@ function world({
   const realMedia = createMedia(root);
   const frameMock = vi.fn<Frame>(frame);
   const playback = framelessPlayback(frameMock);
+  const domainMedia = media === undefined ? realMedia : media(realMedia);
   const enrichment = createEnrichment({
     storage,
     client,
-    media: media === undefined ? realMedia : media(realMedia),
+    media: domainMedia,
     playback,
+    layoutFill: createLayoutFill({ storage, media: domainMedia }),
   });
 
   /** The show, each episode's video really in its season folder. */
