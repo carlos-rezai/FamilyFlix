@@ -12,6 +12,11 @@ import {
   isImageFilename,
   isSubtitleFilename,
 } from '../../media/fileKinds/fileKinds';
+import {
+  IMAGES_FOLDER,
+  STILLS_FOLDER,
+  SUBTITLES_FOLDER,
+} from '../../media/folderLayout/folderLayout';
 import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 
 /** One subtitle track FamilyFlix holds: its language and its **Stored path**. */
@@ -119,7 +124,7 @@ function trackWrites(
 function folderPlans(title: HeldTitleFiles): FolderPlan[] {
   const plans: FolderPlan[] = [
     {
-      at: ['Images'],
+      at: [IMAGES_FOLDER],
       writes: (existing) =>
         artWrites(
           [
@@ -130,7 +135,7 @@ function folderPlans(title: HeldTitleFiles): FolderPlan[] {
         ),
     },
     {
-      at: ['Subtitles'],
+      at: [SUBTITLES_FOLDER],
       writes: (existing) => trackWrites(title.subtitles, existing),
     },
   ];
@@ -138,11 +143,11 @@ function folderPlans(title: HeldTitleFiles): FolderPlan[] {
     const folder = spellSeasonFolder(season.number);
     plans.push(
       {
-        at: [folder, 'Images'],
+        at: [folder, IMAGES_FOLDER],
         writes: (existing) => artWrites([['poster', season.poster]], existing),
       },
       {
-        at: [folder, 'Images', 'Stills'],
+        at: [folder, IMAGES_FOLDER, STILLS_FOLDER],
         writes: (existing) => {
           const tags = new Set(
             existing.filter(isImageFilename).flatMap((name) => {
@@ -173,7 +178,7 @@ function folderPlans(title: HeldTitleFiles): FolderPlan[] {
       plans.push({
         at: [
           folder,
-          'Subtitles',
+          SUBTITLES_FOLDER,
           spellEpisodeTag(season.number, episode.number),
         ],
         writes: (existing) => trackWrites(episode.subtitles, existing),

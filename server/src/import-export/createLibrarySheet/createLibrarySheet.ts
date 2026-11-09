@@ -3,18 +3,22 @@ import { dirname, join } from 'node:path';
 
 import type { Movie, SeriesDetail } from '@/types';
 import type { LibraryStorage } from '../../library';
+import {
+  LIBRARY_SHEET_STEM,
+  META_FOLDER,
+} from '../../media/folderLayout/folderLayout';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { exportRows } from '../exportRows/exportRows';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The **Library sheet**'s path inside its Library folder. */
-export const LIBRARY_SHEET = 'Meta/familyflix-library.csv';
+export const LIBRARY_SHEET = `${META_FOLDER}/${LIBRARY_SHEET_STEM}.csv`;
 
 /** How long after the last touch a folder's sheet is rewritten. */
 export const LIBRARY_SHEET_DELAY_MS = 3000;
 
 /** The temporary file a rewrite lands through, beside the sheet in `Meta/`. */
-const TEMPORARY_SHEET = 'Meta/familyflix-library.csv.tmp';
+const TEMPORARY_SHEET = `${LIBRARY_SHEET}.tmp`;
 
 /** What the **Library sheet writer** reads the library through. */
 export interface LibrarySheetDeps {

@@ -12,6 +12,11 @@ import {
 import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
+import {
+  IMAGES_FOLDER,
+  STILLS_FOLDER,
+  SUBTITLES_FOLDER,
+} from '../../media/folderLayout/folderLayout';
 import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
 
@@ -190,9 +195,19 @@ const movieRows =
       Video: movie.videoPath
         ? `${folder}/${basenameOf(movie.videoPath)}`
         : null,
-      Subtitles: pathCell(plan.tracks(movie.subtitles, `${folder}/Subtitles`)),
-      Poster: plan.image(movie.posterPath, `${folder}/Images`, 'poster'),
-      Backdrop: plan.image(movie.backdropPath, `${folder}/Images`, 'backdrop'),
+      Subtitles: pathCell(
+        plan.tracks(movie.subtitles, `${folder}/${SUBTITLES_FOLDER}`)
+      ),
+      Poster: plan.image(
+        movie.posterPath,
+        `${folder}/${IMAGES_FOLDER}`,
+        'poster'
+      ),
+      Backdrop: plan.image(
+        movie.backdropPath,
+        `${folder}/${IMAGES_FOLDER}`,
+        'backdrop'
+      ),
     }),
   ];
 
@@ -217,9 +232,13 @@ function episodeRow(
       ? `${season}/${basenameOf(episode.videoPath)}`
       : null,
     Subtitles: pathCell(
-      plan.tracks(episode.subtitles, `${season}/Subtitles/${tag}`)
+      plan.tracks(episode.subtitles, `${season}/${SUBTITLES_FOLDER}/${tag}`)
     ),
-    Still: plan.image(episode.stillPath, `${season}/Images/Stills`, tag),
+    Still: plan.image(
+      episode.stillPath,
+      `${season}/${IMAGES_FOLDER}/${STILLS_FOLDER}`,
+      tag
+    ),
   });
 }
 
@@ -235,7 +254,7 @@ const seasonRows = (
     Season: season.number,
     Poster: plan.image(
       season.posterPath,
-      `${folder}/${spellSeasonFolder(season.number)}/Images`,
+      `${folder}/${spellSeasonFolder(season.number)}/${IMAGES_FOLDER}`,
       'poster'
     ),
   }),
@@ -261,8 +280,16 @@ const seriesRows =
       'TMDB rating': series.tmdbScore,
       'TMDB id': series.tmdbId,
       Favorite: series.isFavorite ? 'Yes' : null,
-      Poster: plan.image(series.posterPath, `${folder}/Images`, 'poster'),
-      Backdrop: plan.image(series.backdropPath, `${folder}/Images`, 'backdrop'),
+      Poster: plan.image(
+        series.posterPath,
+        `${folder}/${IMAGES_FOLDER}`,
+        'poster'
+      ),
+      Backdrop: plan.image(
+        series.backdropPath,
+        `${folder}/${IMAGES_FOLDER}`,
+        'backdrop'
+      ),
     }),
     ...[...seasons]
       .sort((a, b) => a.number - b.number)

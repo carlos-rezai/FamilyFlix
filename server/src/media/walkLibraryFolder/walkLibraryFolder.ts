@@ -3,6 +3,7 @@ import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import { isVideoFilename } from '../fileKinds/fileKinds';
+import { LIBRARY_SHEET_STEM, META_FOLDER } from '../folderLayout/folderLayout';
 import {
   readTitleFolder,
   type FilmFolderScan,
@@ -24,11 +25,8 @@ export interface LayoutWalk {
   sheet: string | null;
 }
 
-/** The folder holding a Library folder's own sheet, and an Export's. */
-const META = 'Meta';
-
 /** The `Meta/` sheets a walk reads, the **Library sheet** first. */
-const SHEETS = ['familyflix-library.csv', 'familyflix-library.xlsx'];
+const SHEETS = [`${LIBRARY_SHEET_STEM}.csv`, `${LIBRARY_SHEET_STEM}.xlsx`];
 
 /** A **Layout warning**'s text for a root folder left out. */
 const WARNING: Record<LeftOutReason, (name: string) => string> = {
@@ -47,7 +45,9 @@ const isSystemFolder = (name: string): boolean =>
 async function holdsMeta(dir: string): Promise<boolean> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
-    return entries.some((entry) => entry.isDirectory() && entry.name === META);
+    return entries.some(
+      (entry) => entry.isDirectory() && entry.name === META_FOLDER
+    );
   } catch {
     return false;
   }
@@ -59,11 +59,13 @@ async function holdsMeta(dir: string): Promise<boolean> {
  */
 async function sheetIn(root: string): Promise<string | null> {
   try {
-    const entries = await readdir(join(root, META), { withFileTypes: true });
+    const entries = await readdir(join(root, META_FOLDER), {
+      withFileTypes: true,
+    });
     const sheet = SHEETS.find((name) =>
       entries.some((entry) => entry.isFile() && entry.name === name)
     );
-    return sheet === undefined ? null : join(root, META, sheet);
+    return sheet === undefined ? null : join(root, META_FOLDER, sheet);
   } catch {
     return null;
   }
@@ -96,7 +98,7 @@ export async function walkLibraryFolder(
     }
     const dir = join(root, entry.name);
     if (
-      entry.name === META ||
+      entry.name === META_FOLDER ||
       isSystemFolder(entry.name) ||
       (await holdsMeta(dir))
     ) {

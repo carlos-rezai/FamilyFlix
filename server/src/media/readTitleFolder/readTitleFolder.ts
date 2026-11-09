@@ -11,6 +11,11 @@ import {
 import { episodeTag, spellEpisodeTag } from '../episodeTag/episodeTag';
 import { folderKeyOf, type FolderKey } from '../folderKeyOf/folderKeyOf';
 import {
+  IMAGES_FOLDER,
+  STILLS_FOLDER,
+  SUBTITLES_FOLDER,
+} from '../folderLayout/folderLayout';
+import {
   isSeasonFolder,
   seasonNumberOf,
 } from '../seasonNumberOf/seasonNumberOf';
@@ -147,10 +152,10 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
     .filter(isVideoFilename)
     .map((file) => join(dir, file));
 
-  const imagesDir = join(dir, 'Images');
+  const imagesDir = join(dir, IMAGES_FOLDER);
   const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
 
-  const stillsDir = join(imagesDir, 'Stills');
+  const stillsDir = join(imagesDir, STILLS_FOLDER);
   const stills: Record<string, string> = {};
   for (const file of filesIn(await entriesOf(stillsDir))) {
     const tag = tagOf(file);
@@ -159,7 +164,7 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
     }
   }
 
-  const subtitlesDir = join(dir, 'Subtitles');
+  const subtitlesDir = join(dir, SUBTITLES_FOLDER);
   const subtitles: SubtitleFound[] = [];
   const tagFolders = (await entriesOf(subtitlesDir))
     .filter((entry) => entry.isDirectory() && tagOf(entry.name) !== null)
@@ -215,7 +220,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     return { kind: 'left-out', dir, name, reason: 'empty' };
   }
 
-  const imagesDir = join(dir, 'Images');
+  const imagesDir = join(dir, IMAGES_FOLDER);
   const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
   const poster = imageByRole(imagesDir, images, 'poster');
   const backdrop = imageByRole(imagesDir, images, 'backdrop');
@@ -229,7 +234,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     return { kind: 'series', dir, name, key, poster, backdrop, seasons: scans };
   }
 
-  const subtitlesDir = join(dir, 'Subtitles');
+  const subtitlesDir = join(dir, SUBTITLES_FOLDER);
   return {
     kind: 'film',
     dir,

@@ -6,6 +6,10 @@ import { pipeline } from 'node:stream/promises';
 
 import type { Movie, SeriesDetail, SheetColumn, StartExport } from '@/types';
 import type { Media } from '../../media/createMedia/createMedia';
+import {
+  LIBRARY_SHEET_STEM,
+  META_FOLDER,
+} from '../../media/folderLayout/folderLayout';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { writableFolder } from '../../media/writableFolder/writableFolder';
 import {
@@ -53,12 +57,6 @@ export type ExportOutcome =
     }
   | { kind: 'refused'; refusal: ExportRefusal }
   | { kind: 'failed'; reason: string };
-
-/** The folder inside the **Export folder** the sheet is written to. */
-const META_FOLDER = 'Meta';
-
-/** The sheet's name, its format's extension to follow, whatever the Export name. */
-const SHEET_STEM = 'familyflix-library';
 
 /** What separates one path from the next inside a path cell. */
 const PATH_SEPARATOR = '|';
@@ -224,7 +222,7 @@ export async function writeExport(
     const bytes = await writeSheet(blanked(table, skipped), request.format);
     await mkdir(join(folder, META_FOLDER));
     await writeFile(
-      join(folder, META_FOLDER, `${SHEET_STEM}.${request.format}`),
+      join(folder, META_FOLDER, `${LIBRARY_SHEET_STEM}.${request.format}`),
       bytes,
       { flag: 'wx' }
     );
