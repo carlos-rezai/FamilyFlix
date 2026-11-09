@@ -1,16 +1,21 @@
 import { readdir } from 'node:fs/promises';
-import { basename, join, relative } from 'node:path';
+import { basename, dirname, join, relative } from 'node:path';
 
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
   readLooseFiles,
   readSeasonFolder,
   type FolderScan,
+  type SeasonFolderScan,
 } from '../../media/readTitleFolder/readTitleFolder';
 import { isSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import type { StoredLibraryFolder } from '../../library';
 import type { HeldTitle } from '../../library/holding/holding';
-import { groupShows, showFolderOf } from '../groupShows/groupShows';
+import {
+  numberShow,
+  showFolderOf,
+  type ShowScan,
+} from '../numberShow/numberShow';
 import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
@@ -43,8 +48,10 @@ export interface ShowFolderContext {
  * folder holding one not descended. A **Season folder** is read as the scan
  * reads it, its tracks from `Subtitles/S01E01/`.
  */
-async function scansUnder(dir: string): Promise<FolderScan[]> {
-  const scans: FolderScan[] = [];
+async function scansUnder(
+  dir: string
+): Promise<(FolderScan | SeasonFolderScan)[]> {
+  const scans: (FolderScan | SeasonFolderScan)[] = [];
   const visit = async (at: string, root: boolean): Promise<void> => {
     const entries = await readdir(at, { withFileTypes: true });
     const scan = isSeasonFolder(basename(at))
@@ -71,8 +78,38 @@ async function scansUnder(dir: string): Promise<FolderScan[]> {
 }
 
 /**
+ * The scans under a pick as shows and films: each **Season folder** numbered
+ * with the others of its parent by `numberShow`, every other scan a film.
+ */
+function numberedShows(scans: (FolderScan | SeasonFolderScan)[]): {
+  shows: ShowScan[];
+  films: FolderScan[];
+} {
+  const seasonsOf = new Map<string, SeasonFolderScan[]>();
+  const films: FolderScan[] = [];
+  for (const scan of scans) {
+    if ('number' in scan) {
+      const parent = dirname(scan.dir);
+      seasonsOf.set(parent, [...(seasonsOf.get(parent) ?? []), scan]);
+    } else {
+      films.push(scan);
+    }
+  }
+  const shows = [...seasonsOf].map(([dir, seasons]) =>
+    numberShow({
+      dir,
+      name: basename(dir),
+      poster: null,
+      backdrop: null,
+      seasons,
+    })
+  );
+  return { shows, films };
+}
+
+/**
  * Read one absolute folder picked on the series add as a **Show folder
- * read**: walked by `scansUnder`, grouped with `groupShows` (there is no
+ * read**: walked by `scansUnder`, numbered with `numberShow` (there is no
  * second numbering rule), so a **Season folder**'s number beats the
  * filename's, and each episode keeps the tracks of its `Subtitles/S01E01/`
  * folder. A folder read as a film, loose tagged videos included, answers its
@@ -100,7 +137,7 @@ export async function readShowFolder(
   if ((await readableFolder(dir)) !== 'readable') {
     return { kind: 'refused', refusal: 'unreadable' };
   }
-  let scans: FolderScan[];
+  let scans: (FolderScan | SeasonFolderScan)[];
   try {
     scans = await scansUnder(dir);
   } catch {
@@ -112,7 +149,7 @@ export async function readShowFolder(
   // The Show folder is each episode's Source folder, so a video's path
   // inside it is its **Source file**.
   const showFolder = showFolderOf(dir);
-  const { shows, films } = groupShows(scans);
+  const { shows, films } = numberedShows(scans);
   const episodes: ShowFolderEpisode[] = shows
     .flatMap((show) => show.episodes)
     .map((episode) => ({

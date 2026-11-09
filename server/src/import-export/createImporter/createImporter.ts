@@ -10,7 +10,10 @@ import type {
 } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
-import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
+import type {
+  FilmScan,
+  FolderScan,
+} from '../../media/readTitleFolder/readTitleFolder';
 import {
   folderKeyOf,
   sameFolderKey,
@@ -24,10 +27,10 @@ import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
 import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import {
-  groupShows,
+  numberShow,
   type ShowEpisode,
   type ShowScan,
-} from '../groupShows/groupShows';
+} from '../numberShow/numberShow';
 import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
@@ -516,6 +519,10 @@ const unplacedReason = (n: number): string =>
 const failedShowReason = (n: number, first: string): string =>
   `${n === 1 ? '1 episode' : `${count(n)} episodes`} couldn't be copied: ${first}.`;
 
+/** A show's one `failed` row's reason when only its art failed: the first. */
+const failedArtReason = (file: string, first: string): string =>
+  `Couldn't copy ${basename(file)}: ${first}.`;
+
 /**
  * A **Show folder** as the matcher weighs it: a scan under the show's own
  * name and folder, holding its first episode — or its first **Unplaced**
@@ -676,17 +683,11 @@ const isUnder = (folder: string, path: string): boolean => {
 };
 
 /**
- * A **Title folder** the walk read, as the scans the run groups: a film's
- * one, a series' one per **Season folder**, each with no art of its own.
+ * The folders a **Title folder** the walk read holds videos in: a film's
+ * own, a series' **Season folders**.
  */
-const scansOf = (title: WalkedTitle): FilmScan[] =>
-  title.kind === 'film'
-    ? [title]
-    : title.seasons.map((season) => ({
-        ...season,
-        poster: null,
-        backdrop: null,
-      }));
+const scansOf = (title: WalkedTitle): FolderScan[] =>
+  title.kind === 'film' ? [title] : title.seasons;
 
 /**
  * Add to `folders` every folder a scan went through under its Library folder:
@@ -696,7 +697,7 @@ const scansOf = (title: WalkedTitle): FilmScan[] =>
 function addFoldersUnder(
   folders: Set<string>,
   listed: string,
-  scan: FilmScan
+  scan: FolderScan
 ): void {
   for (let dir = scan.dir; isUnder(listed, dir); dir = dirname(dir)) {
     folders.add(dir);
@@ -1148,6 +1149,10 @@ export function createImporter({
    * with no episode leaves no folder behind, and one with none to import
    * reserves none. Each episode's subtitles are copied in beside its video;
    * a subtitle that begins with no episode's stem is a **Warning line**.
+   * The show's art is copied in whatever the **Import mode**: a new series'
+   * **Poster** and **Backdrop** with it, each **Season poster** once its
+   * season holds an episode, each **Still** on its episode as a picked one.
+   * An art copy that fails is filed on the show's one `failed` Problem.
    *
    * A show **Already in library** joins the series it matched: only its
    * `episodes` — those with no held `(season, episode)` — are copied, into
@@ -1186,6 +1191,34 @@ export function createImporter({
     let series: Series | null = held?.series ?? null;
     // Every episode whose copy threw, filed as the show's one `failed` row.
     const failures: { video: string; reason: string }[] = [];
+    // Every piece of art whose copy threw, filed on that same row.
+    const artFailures: { file: string; reason: string }[] = [];
+    // The seasons whose Season poster this run has set.
+    const postered = new Set<number>();
+
+    /**
+     * One piece of the show's art copied `into` managed storage, or
+     * `undefined` when there is none or its copy threw: remembered, and the
+     * show goes on. A cancel is no failure, and stops the show.
+     */
+    const copyArt = async (
+      into: string,
+      file: string | null
+    ): Promise<string | undefined> => {
+      if (file === null) {
+        return undefined;
+      }
+      try {
+        return await media.copyIn(into, file, signal);
+      } catch (error) {
+        signal.throwIfAborted();
+        artFailures.push({
+          file,
+          reason: error instanceof Error ? error.message : String(error),
+        });
+        return undefined;
+      }
+    };
 
     for (const episode of episodes) {
       // A turn of the loop per episode, as per film: see `importPlaced`.
@@ -1208,6 +1241,7 @@ export function createImporter({
             language: track.language,
           });
         }
+        const stillPath = await copyArt(into, episode.still);
         signal.throwIfAborted();
         const runtime = derivedRuntime(playback, video);
         const sheetEpisode = match.sheetEpisodes.find(
@@ -1222,6 +1256,8 @@ export function createImporter({
 
         if (series === null) {
           const genres = knownGenres(row.genres, genreNames, current);
+          const posterPath = await copyArt(folder, show.poster);
+          const backdropPath = await copyArt(folder, show.backdrop);
           const input: NewSeries = {
             title: row.title,
             ...(row.year === null ? {} : { year: row.year }),
@@ -1231,6 +1267,8 @@ export function createImporter({
             ...(row.rating === null ? {} : { rating: row.rating }),
             ...(row.cast.length === 0 ? {} : { cast: row.cast }),
             ...(genres.length === 0 ? {} : { genres }),
+            ...(posterPath === undefined ? {} : { posterPath }),
+            ...(backdropPath === undefined ? {} : { backdropPath }),
             mediaFolder: basename(folder),
           };
           series = storage.addSeries(input);
@@ -1248,7 +1286,20 @@ export function createImporter({
           ...(airDate === null ? {} : { airDate }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
           ...(subtitles.length === 0 ? {} : { subtitles }),
+          ...(stillPath === undefined ? {} : { stillPath }),
         });
+        // A new series' Season poster, once its season holds an episode.
+        if (held === null && !postered.has(episode.season)) {
+          postered.add(episode.season);
+          const seasonPoster = await copyArt(
+            into,
+            show.seasons.find((season) => season.number === episode.season)
+              ?.poster ?? null
+          );
+          if (seasonPoster !== undefined) {
+            storage.setSeasonPoster(series.id, episode.season, seasonPoster);
+          }
+        }
         logPlaced(current, label);
       } catch (error) {
         if (signal.aborted) {
@@ -1265,13 +1316,15 @@ export function createImporter({
       current.done += 1;
     }
 
-    if (failures.length > 0) {
+    if (failures.length > 0 || artFailures.length > 0) {
       file(
         current,
         problemOf(
           'failed',
           row.title,
-          failedShowReason(failures.length, failures[0].reason),
+          failures.length > 0
+            ? failedShowReason(failures.length, failures[0].reason)
+            : failedArtReason(artFailures[0].file, artFailures[0].reason),
           series === null ? undefined : { seriesId: series.id }
         ),
         {
@@ -1687,7 +1740,7 @@ export function createImporter({
         log(current, `⚠ Can't reach ${folder.path}, skipped`, 'warning');
         continue;
       }
-      let scans: FilmScan[] = [];
+      let titles: WalkedTitle[] = [];
       try {
         const walk = await walkLibraryFolder(
           folder.path,
@@ -1705,7 +1758,7 @@ export function createImporter({
         for (const warning of walk.warnings) {
           log(current, warning, 'warning');
         }
-        scans = walk.titles.flatMap(scansOf);
+        titles = walk.titles;
         if (walk.sheet !== null) {
           sheets.set(folder, walk.sheet);
         }
@@ -1717,21 +1770,32 @@ export function createImporter({
       if (signal.aborted) {
         return null;
       }
-      for (const scan of scans) {
+      for (const scan of titles.flatMap(scansOf)) {
         addFoldersUnder(walkedFolders, folder.path, scan);
       }
       current.found = walkedFolders.size;
-      const kept = withoutLeftOut(folder, scans);
-      leftOut += kept.skipped;
-      scans = kept.scans;
-      const grouped = groupShows(scans);
-      const films = grouped.films;
-      // Titles, not folders: every film and every show grouped, held or new.
-      found += films.length + grouped.shows.length;
+      const out = storage.leftOut(folder.id);
+      const films: FilmScan[] = [];
+      const shows: ShowScan[] = [];
+      for (const title of titles) {
+        if (title.kind === 'film') {
+          const kept = withoutLeftOut(folder, out, [title]);
+          leftOut += kept.skipped;
+          films.push(...kept.scans);
+          continue;
+        }
+        const kept = withoutLeftOut(folder, out, title.seasons);
+        leftOut += kept.skipped;
+        if (kept.scans.length > 0) {
+          shows.push(numberShow({ ...title, seasons: kept.scans }));
+        }
+      }
+      // Titles, not folders: every film and every show, held or new.
+      found += films.length + shows.length;
       walked.push({
         folder,
         films,
-        shows: grouped.shows,
+        shows,
         sheet: sheets.get(folder) ?? null,
       });
     }
@@ -1756,16 +1820,16 @@ export function createImporter({
    * any match or held check: a folder left with no video goes whole, so a
    * Show folder all left out makes no series. Answers how many were skipped.
    */
-  const withoutLeftOut = (
+  const withoutLeftOut = <T extends FolderScan>(
     folder: StoredLibraryFolder,
-    scans: FilmScan[]
-  ): { scans: FilmScan[]; skipped: number } => {
-    const out = storage.leftOut(folder.id);
+    out: ReadonlySet<string>,
+    scans: T[]
+  ): { scans: T[]; skipped: number } => {
     if (out.size === 0) {
       return { scans, skipped: 0 };
     }
     let skipped = 0;
-    const kept: FilmScan[] = [];
+    const kept: T[] = [];
     for (const scan of scans) {
       const videos = scan.videos.filter(
         (video) => !out.has(spellLinkedVideo(folder.path, video))
