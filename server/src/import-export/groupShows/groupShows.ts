@@ -20,8 +20,7 @@ export interface ShowEpisode {
 
 /**
  * A series' **Title folder**, the parent of one or more **Season folders**,
- * and every episode found in it in season,
- * then episode order.
+ * and every episode found in it in season, then episode order.
  */
 export interface ShowScan {
   /** The Show folder itself, absolute. */

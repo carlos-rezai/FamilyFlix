@@ -55,11 +55,10 @@ export interface LibrarySheet {
  * {@link LIBRARY_SHEET_DELAY_MS} after the last, then each touched folder's
  * {@link LIBRARY_SHEET} rewritten from the library under the **Sheet
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
- * own name), through a temporary file
- * in `Meta/` and a rename, behind its BOM. A folder no longer listed (a
- * **Factory reset**'s) or **Unreachable** is skipped; a later touch that
- * finds it reachable writes it. The one replacer inside a Library folder,
- * and only of that one file.
+ * own name), through a temporary file in `Meta/` and a rename, behind its
+ * BOM. A folder no longer listed (a **Factory reset**'s) or **Unreachable**
+ * is skipped; a later touch that finds it reachable writes it. The one
+ * replacer inside a Library folder, and only of that one file.
  */
 export function createLibrarySheet({
   storage,

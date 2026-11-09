@@ -545,7 +545,10 @@ interface ShowMatch {
   show: ShowScan;
   held: HeldSeries | null;
   episodes: ShowEpisode[];
-  /** The sheet's Episode rows for the show, by its **Folder key**: none for an unnamed show. */
+  /**
+   * The sheet's Episode rows for the show, by its **Folder key**: none for an
+   * unnamed show.
+   */
   sheetEpisodes: SheetRow[];
   /**
    * The show's one `unplaced` **Problem**, once filed: the run names the

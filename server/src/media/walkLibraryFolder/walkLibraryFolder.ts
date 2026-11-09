@@ -74,10 +74,10 @@ async function sheetIn(root: string): Promise<string | null> {
 /**
  * Walk a **Library folder** by the **Folder layout**: only the root's entries
  * are read, each folder by `readTitleFolder`, a **Title folder** when its
- * name is a **Folder key**. A folder left out of the layout
- * is one **Layout warning**, and the root's loose videos one line for the
- * whole folder. `Meta/`, an **Export folder** (a folder holding `Meta/`) and
- * system folders pass in silence; nothing inside a Title folder warns.
+ * name is a **Folder key**. A folder left out of the layout is one **Layout
+ * warning**, and the root's loose videos one line for the whole folder.
+ * `Meta/`, an **Export folder** (a folder holding `Meta/`) and system folders
+ * pass in silence; nothing inside a Title folder warns.
  *
  * `onFound` is told of each Title folder as it is read. A Title folder that
  * cannot be read is told to `onUnreadable` and skipped; the root itself is

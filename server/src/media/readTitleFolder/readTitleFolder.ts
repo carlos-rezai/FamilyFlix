@@ -204,8 +204,7 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
  * order), its tracks from `Subtitles/` under any name. Season folders and no
  * loose video is a series. Both, neither, or a name that is no **Folder key**
  * is left out, with the reason the walk words as its **Layout warning**.
- * `Extras/` and anything else the layout doesn't name is passed
- * in silence.
+ * `Extras/` and anything else the layout doesn't name is passed in silence.
  */
 export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
   const name = basename(dir);

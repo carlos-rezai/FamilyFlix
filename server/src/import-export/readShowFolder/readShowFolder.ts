@@ -72,14 +72,14 @@ async function scansUnder(dir: string): Promise<FolderScan[]> {
 
 /**
  * Read one absolute folder picked on the series add as a **Show folder
- * read**: walked by `scansUnder`, grouped with `groupShows` — there
- * is no second numbering rule — so a **Season folder**'s number beats the
+ * read**: walked by `scansUnder`, grouped with `groupShows` (there is no
+ * second numbering rule), so a **Season folder**'s number beats the
  * filename's, and each episode keeps the tracks of its `Subtitles/S01E01/`
  * folder. A folder read as a film, loose tagged videos included, answers its
- * videos as **Unplaced**. The **Title guess** is the importer's own rule
- * on the folder's name. A picked **Season folder** reads only its own videos
- * but stands for its Show folder (`showFolderOf`): titled by the show's
- * name, held-checked as the show, each path answered inside the show.
+ * videos as **Unplaced**. The **Title guess** is the importer's own rule on
+ * the folder's name. A picked **Season folder** reads only its own videos but
+ * stands for its Show folder (`showFolderOf`): titled by the show's name,
+ * held-checked as the show, each path answered inside the show.
  *
  * Its `libraryFolderId` is the listed **Library folder** it lies inside, by
  * `listedFolderOf`, or `null`. A folder that is already a held series's
