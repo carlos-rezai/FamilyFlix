@@ -71,6 +71,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Linux build: FamilyFlix on SteamOS, as an AppImage  | ✅ Done    |
 | Tidy into folders: each loose video its own folder  | ❌ Dropped |
 | Folder layout: one shape to scan, sync and export   | ✅ Done    |
+| Rebuild whole: every sheet field and series art     | 🔲 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -426,3 +427,25 @@ handoff `docs/handoff/handoff-folder-layout/`):
       layout; the layout is for Library folders and Export folders only.
       The dev fixtures (`createImporter/fixture/` and `seriesFixture/`) move
       to the new layout; `db:seed-series` writes no folders, so it stays.
+
+Step 42 came out of the end-to-end QA pass after step 41: a Factory reset
+rebuilt by a scan gave back series with no art and titles without their TMDB
+match, hearts and episode Status, and the sheet rewritten when the scan closed
+erased what it had skipped. Settled in a grill-me on 2026-11-09 (design log
+59, handoff `docs/handoff/handoff-rebuild-whole/`, which keeps the QA ticket):
+
+42. 🔲 **Rebuild whole**: a Library folder gives its whole library back. A
+    scan imports a series' poster, backdrop, Season posters and Stills from
+    its Title folder, and a rescan fills them in for a series already held
+    without them. Every sheet column is read: a title comes back with its
+    TMDB match and score, its heart and each episode's Watched, so it needs
+    no second Sync, and a sheet written, reset and scanned back is the same
+    sheet byte for byte. The sheet's file cells name the files the folder
+    really holds, an episode's video as it lies. A show folder picked in the
+    form reads exactly as the scan reads it, a title folder whose seasons
+    hold no video is one warning line, and so is a sheet row whose folder is
+    gone. A scan fills each title folder's empty art places, as a save
+    does. A folder FamilyFlix has not scanned yet never has its sheet
+    rewritten, so adding it back after a Factory reset can't erase the
+    sheet that will rebuild it, and every scan rewrites the sheets it read
+    when one fell behind.

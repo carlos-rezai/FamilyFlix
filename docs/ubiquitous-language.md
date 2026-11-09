@@ -997,6 +997,24 @@ folder** has one shape on disk, which a scan reads, the **Layout fill** and an
 | **Write target** (retired)                     | The Sync's opt-in places in a Library folder (the Metadata sheet, `poster.jpg`). Replaced by the **Layout fill** and the **Library sheet**, neither a choice; _Where it is saved_ draws both as _Always_.                                                                                                                                                                   |                                                   |
 | **Titles sheet**, **Episodes sheet** (retired) | The Export's two tables. Replaced by the one sheet under the **Sheet columns**.                                                                                                                                                                                                                                                                                             |                                                   |
 
+## Rebuild whole
+
+Design log 59: step 42, initiative `rebuild-whole`. A Library folder gives its
+whole library back: every Sheet column and every file a Title folder holds,
+and a sheet that names only what is there.
+
+| Term                               | Definition                                                                                                                                                                                                                              | Aliases to avoid                          |
+| ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Round trip** (new)               | A library written to its **Library sheet**, Factory reset and rebuilt by one **Folder scan**: equal titles, fields and art, and the sheet the run's close writes byte for byte the sheet the scan read. Step 42's acceptance test.      | restore, reimport, recovery               |
+| **Layout read** (new)              | What a **Title folder** holds in each place of the **Folder layout**, as `readTitleFolder` reads it off the disk; the **Library sheet**'s path cells come from it (`layoutCells`).                                                      | disk scan, folder index                   |
+| **Path cells** (new)               | `PathCells`: where `exportRows` takes a row's `Video`, `Subtitles`, `Poster`, `Backdrop` and `Still` cells from, by **Layout place**: the Export's **File plan** or the Library sheet's **Layout read**.                                | planner (the old unit's name), file cells |
+| **Layout place** (new)             | One slot of the **Folder layout** a path cell names (`LayoutPlace`): a title's poster or backdrop, a Season poster, a Still, a track list, a video.                                                                                     | slot (say place), location                |
+| **File plan** (new)                | The Export's **Path cells** (`filePlan(include)`, `plannerFor` until log 59): each place spelled as the Export writes it, and the files planned into the **Export folder**.                                                             | export plan, copy list                    |
+| **Orphaned row** (new)             | A **Library sheet** row whose **Folder key** no **Title folder** in its Library folder holds; a **Folder scan** logs one Warning line per such title, _is in the sheet but has no folder, left out_, and the rewrite on close drops it. | stale row, ghost row, missing folder      |
+| **Library sheet writer** (updated) | Since log 59, reads each recorded Title folder for its **Path cells**, never writes a **New folder**'s sheet, and writes nothing when the new bytes equal the file's.                                                                   |                                           |
+| **Show folder read** (updated)     | Since log 59, reads by `readSeasonFolders` and `numberShow`, the scan's own rules: a folder in a Title folder that is no **Season folder** passes in silence, as in the scan.                                                           |                                           |
+| **Layout warning** (updated)       | Since log 59, a Title folder whose Season folders all hold no video is `empty`, _holds no video or Season folder_.                                                                                                                      |                                           |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1187,6 +1205,10 @@ folder** has one shape on disk, which a scan reads, the **Layout fill** and an
 - An **AppImage** run keeps exactly one **Menu entry**, pointing at that AppImage's current path; a Windows run or an **Unpackaged run** writes none (log 56 amendment).
 - A **Tidy** moves one **Loose video** (or one loose show's episodes) and its **Companion files** into exactly one new folder it makes, named by the **Tidy folder name**; nothing on record names a file it moves, since a **Held video** and a **Left-out video** are never loose (log 57).
 - A **Folder scan** files one **`loose`** Problem per **Tidy** its walk finds; a sheet run files none (log 57).
+- A **Round trip** holds when every **Sheet column** a **Row type** has is taken by the scan and every **Path cell** names a file of the **Layout read**; neither alone is enough (log 59).
+- A **New folder**'s **Library sheet** is never written; the run that marks it scanned writes it on close (log 59 Q20).
+- A run that reaches review touches every **Library folder** its walk read, so a sheet a crash left behind catches up at the next scan (log 59 Q19).
+- A sheet's path cell fills only a **Layout place** the Title folder left empty; the folder wins, and the `Video` cell is never read (log 59 Q14).
 
 ## Example dialogue
 
@@ -1939,6 +1961,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "Into the app, and by the **Layout fill** into `Heat (1995)/Images/backdrop.jpg`, since nothing there ends in `backdrop`. His poster stays: the fill never replaces. Seconds later the **Library sheet writer** rewrites `Meta/familyflix-library.csv` with the new Backdrop cell."
 > **Dev:** "Then he does a Factory reset. Is the library gone?"
 > **Domain expert:** "From the app, yes. Not from the folder: the reset never rewrites a Library sheet, so one scan reads every row back, details, ratings and hearts included, with no Sync."
+
+> **Dev:** "Mum hearted Tidewater and watched its first episode. Dad does a Factory reset and scans the folder back. What does she find?"
+> **Domain expert:** "The same library: that's the **Round trip**. The scan takes every **Sheet column**, so the heart, the Watched on S01E01 and the TMDB id come back, and the series' poster, Season posters and Stills come from its **Title folder**. No second Sync."
+> **Dev:** "And between the reset and the scan he adds `E:\Movies` back and hand-adds one film into it?"
+> **Domain expert:** "The sheet isn't touched. `E:\Movies` is a **New folder** until a scan reads it, so the **Library sheet writer** leaves the sheet that will rebuild it alone."
+> **Dev:** "He renamed `Heat (1995)` to `Heat`. What happens to its row?"
+> **Domain expert:** "It's an **Orphaned row**: one Warning line, _Heat (1995) is in the sheet but has no folder, left out_, and the sheet written on close no longer holds it. `Heat` itself is a **Layout warning**, since it isn't named Title (Year)."
 
 ## Flagged ambiguities
 
@@ -2923,3 +2952,4 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Library sheet" is not "Export file" (new):** both are the one sheet under the **Sheet columns**, but the **Library sheet** is FamilyFlix's own, CSV, in a Library folder's `Meta/` and rewritten on every change, while an **Export file** is written once inside a new **Export folder** in the chosen format. Never say "metadata sheet" for either; it is retired.
 - **"Folder key" is not "Title key" (new):** the **Title key** (log 13) is a folded title for fuzzy matching; the **Folder key** is a Title folder's exact `Title (Year)` name, which a sheet row is matched by first.
 - **"Fill" adds, "rewrite" replaces (new):** the **Layout fill** only creates a file where its slot is empty; the **Library sheet writer** is the one replacer, and only of `Meta/familyflix-library.csv`. Never say "sync to disk" or "write-back" for either.
+- **"Path cell" names a file that is there (new):** in an **Export file** a path cell names where the **File plan** put a file; in a **Library sheet** it names what the **Layout read** found. Never call a Library sheet's cell "planned", and never fill it from storage's own paths (log 59).
