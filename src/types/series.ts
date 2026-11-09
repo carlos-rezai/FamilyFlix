@@ -116,6 +116,10 @@ export interface NewSeries {
   creator?: string;
   cast?: string[];
   rating?: number;
+  /** Its **TMDB rating**; none by default. */
+  tmdbScore?: number;
+  /** Whether it is hearted; not by default. */
+  isFavorite?: boolean;
   posterPath?: string;
   backdropPath?: string;
   genres?: string[];
@@ -133,6 +137,8 @@ export interface NewEpisode {
   title?: string;
   airDate?: string;
   runtimeMinutes?: number;
+  /** Whether it has been watched, at zero; not by default. */
+  watched?: boolean;
   /** Its subtitle tracks, in order, already stored under the Series folder. */
   subtitles?: NewSubtitle[];
   /** Its **Source file**, relative to the series' Source folder; none by default. */

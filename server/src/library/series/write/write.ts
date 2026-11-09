@@ -120,12 +120,12 @@ export function createSeriesWrite(
 ): SeriesWrite {
   const insertSeries = db.prepare(`
     INSERT INTO series (
-      id, tmdb_id, title, year, end_year, synopsis, creator, cast, rating,
-      is_favorite, poster_path, backdrop_path, created_at, updated_at,
+      id, tmdb_id, tmdb_score, title, year, end_year, synopsis, creator, cast,
+      rating, is_favorite, poster_path, backdrop_path, created_at, updated_at,
       media_folder
     ) VALUES (
-      @id, @tmdb_id, @title, @year, @end_year, @synopsis, @creator, @cast, @rating,
-      0, @poster_path, @backdrop_path, @created_at, @updated_at,
+      @id, @tmdb_id, @tmdb_score, @title, @year, @end_year, @synopsis, @creator,
+      @cast, @rating, @is_favorite, @poster_path, @backdrop_path, @created_at, @updated_at,
       @media_folder
     )
   `);
@@ -138,12 +138,12 @@ export function createSeriesWrite(
   const insertEpisode = db.prepare(`
     INSERT INTO episodes (
       id, series_id, season_number, episode_number, title, air_date,
-      runtime_minutes, video_path, source_file, video_folder_id, still_path,
-      still_source, created_at, updated_at
+      runtime_minutes, watched, video_path, source_file, video_folder_id,
+      still_path, still_source, created_at, updated_at
     ) VALUES (
       @id, @series_id, @season_number, @episode_number, @title, @air_date,
-      @runtime_minutes, @video_path, @source_file, @video_folder_id, @still_path,
-      @still_source, @created_at, @updated_at
+      @runtime_minutes, @watched, @video_path, @source_file, @video_folder_id,
+      @still_path, @still_source, @created_at, @updated_at
     )
   `);
   const fillSeriesFolder = db.prepare(
@@ -160,6 +160,7 @@ export function createSeriesWrite(
       insertSeries.run({
         id,
         tmdb_id: input.tmdbId ?? null,
+        tmdb_score: input.tmdbScore ?? null,
         title: input.title,
         year: input.year ?? null,
         end_year: input.endYear ?? null,
@@ -167,6 +168,7 @@ export function createSeriesWrite(
         creator: input.creator ?? null,
         cast: input.cast ? JSON.stringify(input.cast) : null,
         rating: input.rating ?? null,
+        is_favorite: input.isFavorite ? 1 : 0,
         poster_path: input.posterPath ?? null,
         backdrop_path: input.backdropPath ?? null,
         created_at: now,
@@ -199,6 +201,7 @@ export function createSeriesWrite(
         title: input.title ?? null,
         air_date: input.airDate ?? null,
         runtime_minutes: input.runtimeMinutes ?? null,
+        watched: input.watched ? 1 : 0,
         video_path: input.videoPath,
         source_file: input.sourceFile ?? null,
         video_folder_id: input.videoFolderId ?? null,

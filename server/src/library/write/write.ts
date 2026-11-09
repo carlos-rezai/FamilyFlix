@@ -51,12 +51,12 @@ export interface Write {
 export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
   const insertMovie = db.prepare(`
     INSERT INTO movies (
-      id, tmdb_id, title, year, runtime_minutes, synopsis, director, cast,
+      id, tmdb_id, tmdb_score, title, year, runtime_minutes, synopsis, director, cast,
       rating, is_favorite, watched, resume_position_seconds, video_path,
       poster_path, backdrop_path, created_at, updated_at, last_watched_at,
       media_folder, video_folder_id
     ) VALUES (
-      @id, @tmdb_id, @title, @year, @runtime_minutes, @synopsis, @director, @cast,
+      @id, @tmdb_id, @tmdb_score, @title, @year, @runtime_minutes, @synopsis, @director, @cast,
       @rating, @is_favorite, @watched, @resume_position_seconds, @video_path,
       @poster_path, @backdrop_path, @created_at, @updated_at, @last_watched_at,
       @media_folder, @video_folder_id
@@ -86,6 +86,7 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
     insertMovie.run({
       id,
       tmdb_id: input.tmdbId ?? null,
+      tmdb_score: input.tmdbScore ?? null,
       title: input.title,
       year: input.year ?? null,
       runtime_minutes: input.runtimeMinutes ?? null,

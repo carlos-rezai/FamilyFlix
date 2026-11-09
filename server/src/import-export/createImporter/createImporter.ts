@@ -1072,7 +1072,8 @@ export function createImporter({
       // A cancel that landed between the last copy and the row: the folder
       // goes, the row is never written, and nothing half-done is left.
       signal.throwIfAborted();
-      const runtime = derivedRuntime(playback, video);
+      // The probe's runtime wins; the sheet's stands in when it answers none.
+      const runtime = derivedRuntime(playback, video) ?? row.runtime;
       const genres = knownGenres(row.genres, genreNames, current);
 
       const movie: NewMovie = {
@@ -1081,6 +1082,8 @@ export function createImporter({
         watched: row.watched,
         ...(row.favorite ? { isFavorite: true } : {}),
         ...(row.year === null ? {} : { year: row.year }),
+        ...(row.tmdbId === null ? {} : { tmdbId: row.tmdbId }),
+        ...(row.tmdbScore === null ? {} : { tmdbScore: row.tmdbScore }),
         ...(runtime === null ? {} : { runtimeMinutes: runtime }),
         ...(row.director === null ? {} : { director: row.director }),
         ...(row.synopsis === null ? {} : { synopsis: row.synopsis }),
@@ -1316,11 +1319,13 @@ export function createImporter({
         }
         const stillPath = await copyArt(into, episode.still);
         signal.throwIfAborted();
-        const runtime = derivedRuntime(playback, video);
         const sheetEpisode = match.sheetEpisodes.find(
           (entry) =>
             entry.season === episode.season && entry.episode === episode.episode
         );
+        // The probe's runtime wins; the sheet's stands in when it answers none.
+        const runtime =
+          derivedRuntime(playback, video) ?? sheetEpisode?.runtime ?? null;
         const title =
           sheetEpisode !== undefined && sheetEpisode.title !== ''
             ? sheetEpisode.title
@@ -1334,6 +1339,9 @@ export function createImporter({
           const input: NewSeries = {
             title: row.title,
             ...(row.year === null ? {} : { year: row.year }),
+            ...(row.tmdbId === null ? {} : { tmdbId: row.tmdbId }),
+            ...(row.tmdbScore === null ? {} : { tmdbScore: row.tmdbScore }),
+            ...(row.favorite ? { isFavorite: true } : {}),
             ...(row.endYear === null ? {} : { endYear: row.endYear }),
             ...(row.director === null ? {} : { creator: row.director }),
             ...(row.synopsis === null ? {} : { synopsis: row.synopsis }),
@@ -1358,6 +1366,7 @@ export function createImporter({
           ...(title === null ? {} : { title }),
           ...(airDate === null ? {} : { airDate }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+          ...(sheetEpisode?.watched === true ? { watched: true } : {}),
           ...(subtitles.length === 0 ? {} : { subtitles }),
           ...(stillPath === undefined ? {} : { stillPath }),
         });

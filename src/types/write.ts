@@ -19,6 +19,8 @@ export interface NewMovie {
   title: string;
   videoPath: string;
   tmdbId?: number;
+  /** Its **TMDB rating**; none by default. */
+  tmdbScore?: number;
   year?: number | null;
   runtimeMinutes?: number;
   synopsis?: string;
