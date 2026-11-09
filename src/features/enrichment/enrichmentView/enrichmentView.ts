@@ -99,6 +99,17 @@ export function scopeDescription(
 }
 
 /**
+ * _Your library folders_' line under _Where it is saved_: the one Library
+ * folder's own `Images` path, the prototype's stand-in path when none is
+ * listed, and the line in words for several.
+ */
+export function layoutLine(folders: readonly string[]): string {
+  return folders.length > 1
+    ? '<title folder>\\Images in each library folder'
+    : `${folders[0] ?? 'E:\\Movies'}\\<title folder>\\Images`;
+}
+
+/**
  * _All done_'s line off what the run says landed — the prototype's
  * `writtenSummary`: your library always, each optional target only when written.
  */

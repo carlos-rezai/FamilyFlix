@@ -6,6 +6,7 @@ import {
   enrichmentEstimate,
   enrichmentView,
   finishLabel,
+  layoutLine,
   letGoLine,
   singleScopeLabel,
   scopeDescription,
@@ -210,6 +211,22 @@ describe('scopeDescription — the library scope cards’ lines', () => {
     );
     expect(scopeDescription(empty, 'all')).toBe(
       '0 titles, re-checking ones already filled in'
+    );
+  });
+});
+
+describe('layoutLine: Your library folders’ line', () => {
+  it('stands in the prototype’s path for no Library folder', () => {
+    expect(layoutLine([])).toBe('E:\\Movies\\<title folder>\\Images');
+  });
+
+  it('names the one Library folder’s own Images path', () => {
+    expect(layoutLine(['D:\\Films'])).toBe('D:\\Films\\<title folder>\\Images');
+  });
+
+  it('words the line for several Library folders', () => {
+    expect(layoutLine(['D:\\Films', 'E:\\Series'])).toBe(
+      '<title folder>\\Images in each library folder'
     );
   });
 });

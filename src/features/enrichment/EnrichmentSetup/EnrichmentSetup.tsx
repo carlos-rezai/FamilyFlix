@@ -9,6 +9,7 @@ import {
 import { Button, Chip, DatabaseIcon, FolderIcon } from '@/primitives';
 import {
   enrichmentEstimate,
+  layoutLine,
   scopeDescription,
   singleScopeLabel,
 } from '../enrichmentView/enrichmentView';
@@ -101,13 +102,6 @@ export function EnrichmentSetup({
 }: EnrichmentSetupProps) {
   const single = scope === 'single';
   const ready = summary.keySet && summary.online;
-  const folders = summary.libraryFolders;
-  // Several Library folders: the line in words. One: its own path; none: the
-  // prototype's stand-in path.
-  const layoutPath =
-    folders.length > 1
-      ? '<title folder>\\Images in each library folder'
-      : `${folders[0] ?? 'E:\\Movies'}\\<title folder>\\Images`;
   const libraryScopes =
     summary.added === undefined
       ? LIBRARY_SCOPES
@@ -191,7 +185,7 @@ export function EnrichmentSetup({
           <SavedRow
             glyph={<FolderIcon size={19} />}
             title="Your library folders"
-            line={layoutPath}
+            line={layoutLine(summary.libraryFolders)}
             path
             badge="Always"
           />
