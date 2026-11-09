@@ -2436,6 +2436,18 @@ export function createImporter({
         for (const match of verdicts.matched) {
           named.set(match.folder, match.row);
         }
+        // An **Orphaned row**: a Folder key no Title folder holds is one
+        // **Warning line**, never a Problem, its Season and Episode rows with
+        // it; the sheet written on close no longer holds it.
+        for (const { kind, row } of verdicts.problems) {
+          if (kind === 'no-folder') {
+            log(
+              current,
+              `⚠ ${row.folder} is in the sheet but has no folder, left out`,
+              'warning'
+            );
+          }
+        }
       }
 
       for (const scan of found) {
