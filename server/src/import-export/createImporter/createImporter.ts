@@ -400,22 +400,18 @@ const filesOf = (scan: FilmScan): ImportProblemDetail['files'] => ({
 
 /**
  * An `ambiguous` **Problem**'s **Candidate folders**, as the **Folder picker**
- * draws them: each weighed scan's whole folder — the folder as the walk found
- * it, before a **Collection folder** was split — once per path, in the order
+ * draws them: each weighed scan's folder, once per path, in the order
  * weighed.
  */
-const candidateFolders = (
-  scans: FilmScan[],
-  wholeOf: (scan: FilmScan) => FilmScan
-): CandidateFolder[] => [
+const candidateFolders = (scans: FilmScan[]): CandidateFolder[] => [
   ...new Map(
-    scans.map((scan) => {
-      const whole = wholeOf(scan);
-      return [
-        whole.dir,
-        { path: whole.dir, name: whole.name, videos: whole.videos.length },
-      ] as const;
-    })
+    scans.map(
+      (scan) =>
+        [
+          scan.dir,
+          { path: scan.dir, name: scan.name, videos: scan.videos.length },
+        ] as const
+    )
   ).values(),
 ];
 
@@ -681,9 +677,9 @@ const scansOf = (title: WalkedTitle): FilmScan[] =>
       }));
 
 /**
- * Add to `folders` every folder a scan went through: its **Source folder** and
- * every shelf between it and its Library folder — `Drama/` counts, the
- * Library folder does not.
+ * Add to `folders` every folder a scan went through under its Library folder:
+ * a film's **Title folder**, or a **Season folder** and its series' Title
+ * folder. The Library folder itself does not count.
  */
 function addFoldersUnder(
   folders: Set<string>,
@@ -768,14 +764,6 @@ export function createImporter({
    * difference — what _Apply choices_ writes from.
    */
   const differing = new Map<string, Differing>();
-  /**
-   * Each film **Source folder** the walk found, by its path, before a
-   * **Collection folder** was split: what a **Candidate folder** is, whole.
-   */
-  const wholeFolders = new Map<string, FilmScan>();
-  /** A scan's folder as the walk found it — the scan itself, unless split. */
-  const wholeOf = (scan: FilmScan): FilmScan =>
-    wholeFolders.get(scan.dir) ?? scan;
   /** The cancel of the run that is going, and the run itself, to be awaited. */
   let stop: AbortController = new AbortController();
   let running: Promise<void> = Promise.resolve();
@@ -1655,8 +1643,8 @@ export function createImporter({
    * The walk both starts take: one `Scanning   <path>` line per listed
    * **Library folder**, in the order given, then each folder walked — one that
    * cannot be reached skipped with a **Warning line**, the run going on over
-   * the others — and the found line. Each folder answers its films, Collection
-   * folders split, and its shows, so every title is placed against the folder
+   * the others — and the found line. Each folder answers its films and its
+   * shows, so every title is placed against the folder
    * it was found under. Beside them, the folders it `read`. `null` once the
    * run was cancelled mid-walk.
    */
@@ -1668,8 +1656,6 @@ export function createImporter({
     for (const folder of folders) {
       log(current, `Scanning   ${folder.path}`, 'scan');
     }
-    wholeFolders.clear();
-
     const walked: WalkedFolder[] = [];
     const read: StoredLibraryFolder[] = [];
     let found = 0;
@@ -1721,9 +1707,6 @@ export function createImporter({
       leftOut += kept.skipped;
       scans = kept.scans;
       const grouped = groupShows(scans);
-      for (const film of grouped.films) {
-        wholeFolders.set(film.dir, film);
-      }
       const films = grouped.films;
       // Titles, not folders: every film and every show grouped, held or new.
       found += films.length + grouped.shows.length;
@@ -2057,7 +2040,7 @@ export function createImporter({
         file(
           current,
           kind === 'ambiguous'
-            ? { ...problem, candidates: candidateFolders(candidates, wholeOf) }
+            ? { ...problem, candidates: candidateFolders(candidates) }
             : problem,
           {
             row,
@@ -2418,12 +2401,14 @@ export function createImporter({
       if (candidate === undefined || row === null) {
         return { kind: 'refused', error: REFUSAL.notCandidate };
       }
-      const scan = wholeOf(candidate);
-      const libraryFolder = listedFolderOf(storage.libraryFolders(), scan.dir);
+      const libraryFolder = listedFolderOf(
+        storage.libraryFolders(),
+        candidate.dir
+      );
       if (libraryFolder === null) {
         return { kind: 'refused', error: REFUSAL.unlisted };
       }
-      return importFromReview(current, id, row, true, scan, libraryFolder);
+      return importFromReview(current, id, row, true, candidate, libraryFolder);
     },
 
     importGuessed: async (id) => {
