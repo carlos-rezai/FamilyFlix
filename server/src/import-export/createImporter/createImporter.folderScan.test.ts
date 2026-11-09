@@ -45,6 +45,7 @@ import {
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
@@ -87,6 +88,7 @@ function sandbox(): Sandbox {
     storage,
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
+    librarySheet: idleLibrarySheet(),
   });
   return {
     storage,

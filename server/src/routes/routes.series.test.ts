@@ -31,6 +31,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type {
   GenreListPayload,
   HomePayload,
@@ -68,7 +69,12 @@ function freshApi(): { storage: LibraryStorage; baseUrl: string } {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({
+        storage,
+        media: mediaDomain,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

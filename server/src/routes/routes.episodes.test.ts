@@ -41,6 +41,7 @@ import {
   FIXTURE_VIDEO,
 } from '../test-support/fixtureVideo/fixtureVideo';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { EpisodeRead } from '@/types';
 
 const storages: LibraryStorage[] = [];
@@ -83,7 +84,12 @@ function freshApi(): Api {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({
+        storage,
+        media: mediaDomain,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

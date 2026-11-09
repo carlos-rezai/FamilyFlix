@@ -44,6 +44,7 @@ import {
 } from '../../test-support/freshStorage/freshStorage';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
@@ -131,6 +132,7 @@ function sandbox(): Sandbox {
     storage,
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
+    librarySheet: idleLibrarySheet(),
   });
   const folder = storage.addLibraryFolder(root);
   return { storage, importer, root, folder };

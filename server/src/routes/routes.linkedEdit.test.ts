@@ -39,6 +39,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { FIXTURE_VIDEO } from '../test-support/fixtureVideo/fixtureVideo';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { Episode, Movie, Series } from '@/types';
 
 const storages: LibraryStorage[] = [];
@@ -85,7 +86,12 @@ function freshApi(): {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({
+        storage,
+        media: mediaDomain,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

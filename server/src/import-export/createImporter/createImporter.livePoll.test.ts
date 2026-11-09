@@ -29,6 +29,7 @@ import {
 } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 
 afterEach(closeTracked);
 
@@ -77,6 +78,7 @@ describe('createImporter — the Import phase under Link', () => {
           return real.duration(file);
         },
       },
+      librarySheet: idleLibrarySheet(),
     });
 
     setImmediate(turn);

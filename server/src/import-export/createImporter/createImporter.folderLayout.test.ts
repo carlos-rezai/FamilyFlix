@@ -44,6 +44,7 @@ import {
   track,
 } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportMode, ImportRun, Movie } from '@/types';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
@@ -93,6 +94,7 @@ function sandbox(entries: string[]): Sandbox {
     storage,
     media: createMedia(media),
     playback,
+    librarySheet: idleLibrarySheet(),
   });
   return {
     storage,

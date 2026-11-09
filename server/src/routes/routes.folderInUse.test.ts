@@ -29,6 +29,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { LibraryFolder } from '@/types';
 
 const storages: LibraryStorage[] = [];
@@ -77,7 +78,12 @@ function freshApi(): Api {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({
+        storage,
+        media: mediaDomain,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

@@ -89,6 +89,7 @@ import {
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
   type CodecCapability,
@@ -171,7 +172,12 @@ function freshApi({
       mediaPath ?? media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({
+        storage,
+        media: mediaDomain,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

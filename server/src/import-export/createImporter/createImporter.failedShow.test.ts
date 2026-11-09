@@ -29,6 +29,7 @@ import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import type { ImportProblem, ImportRun, Series } from '@/types';
 
@@ -112,6 +113,7 @@ function sandbox(
     storage,
     media: failing(failures)(createMedia(media)),
     playback: createPlayback(media, fixedSlot(null), () => null),
+    librarySheet: idleLibrarySheet(),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, root, sheet };
@@ -310,6 +312,7 @@ describe('createImporter — at most one Problem per kind per source', () => {
       storage,
       media: failing('all')(createMedia(media)),
       playback: createPlayback(media, fixedSlot(null), () => null),
+      librarySheet: idleLibrarySheet(),
     });
     const folder = storage.addLibraryFolder(root);
     return { importer, folder, sheet };

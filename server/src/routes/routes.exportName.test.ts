@@ -30,6 +30,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 
 const readOnly = vi.hoisted(() => new Set<string>());
 
@@ -94,7 +95,12 @@ function freshApi(): { baseUrl: string; dir: string; destination: string } {
       mediaPath,
       playback,
       media,
-      createImporter({ storage, media, playback }),
+      createImporter({
+        storage,
+        media,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({ storage, client: offlineTmdb(), media, playback })
     )
   );

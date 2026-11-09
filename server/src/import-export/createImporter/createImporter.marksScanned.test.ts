@@ -33,6 +33,7 @@ import {
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
 /** The one root whose read fails mid-walk; `null` for none. */
@@ -104,6 +105,7 @@ function sandbox(): Sandbox {
     storage,
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
+    librarySheet: idleLibrarySheet(),
   });
   return { storage, importer, films, shows, gone: join(dir, 'gone'), sheet };
 }

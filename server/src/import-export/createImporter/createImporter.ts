@@ -713,7 +713,7 @@ export interface ImporterDeps {
    * run** read: held while the run holds their values, released when it
    * closes.
    */
-  librarySheet?: Pick<LibrarySheet, 'hold' | 'release'>;
+  librarySheet: Pick<LibrarySheet, 'hold' | 'release'>;
 }
 
 /**
@@ -766,7 +766,7 @@ export function createImporter({
   /** Release every folder the run held: the run has closed. */
   const releaseSheets = (): void => {
     for (const folderId of heldSheets) {
-      librarySheet?.release(folderId);
+      librarySheet.release(folderId);
     }
     heldSheets.clear();
   };
@@ -2116,7 +2116,7 @@ export function createImporter({
     sheetPath: string
   ): Promise<SheetRow[]> => {
     heldSheets.add(folder.id);
-    librarySheet?.hold(folder.id);
+    librarySheet.hold(folder.id);
     try {
       return await readSheet(await readFile(sheetPath), sheetPath);
     } catch {

@@ -42,6 +42,7 @@ import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
@@ -81,6 +82,7 @@ function open(
         storage.libraryFolders().find((folder) => folder.id === id)?.path ??
         null
     ),
+    librarySheet: idleLibrarySheet(),
   });
   return { storage, db, importer };
 }

@@ -42,6 +42,7 @@ import {
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type {
   Episode,
   ImportMode,
@@ -84,7 +85,12 @@ function sandbox(kind: 'films' | 'shows'): Sandbox {
       storage.libraryFolders().find((folder) => folder.id === id)?.path ?? null
   );
   const mediaDomain = createMedia(media);
-  const importer = createImporter({ storage, media: mediaDomain, playback });
+  const importer = createImporter({
+    storage,
+    media: mediaDomain,
+    playback,
+    librarySheet: idleLibrarySheet(),
+  });
   return {
     storage,
     importer,

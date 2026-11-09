@@ -27,6 +27,7 @@ import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
 /** The four shapes: each Show folder, its Season folder and its videos. */
@@ -77,6 +78,7 @@ function sandbox(): {
     storage,
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
+    librarySheet: idleLibrarySheet(),
   });
   const folder = storage.addLibraryFolder(root);
   return { storage, importer, folder };

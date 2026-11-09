@@ -57,6 +57,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { EXPORT_FORMATS, SHEET_COLUMNS } from '@/types';
 import type {
   ExportFormat,
@@ -110,7 +111,12 @@ function freshApi(): {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({
+        storage,
+        media: mediaDomain,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

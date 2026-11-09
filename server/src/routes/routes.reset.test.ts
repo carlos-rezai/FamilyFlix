@@ -44,6 +44,7 @@ import { fakeTmdb, TMDB_KEY } from '../test-support/fakeTmdb/fakeTmdb';
 import { heldCopy } from '../test-support/heldCopy/heldCopy';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type {
   EnrichmentRun,
   HomePayload,
@@ -153,7 +154,12 @@ async function filledApi({
   const mediaDomain = seam(createMedia(media));
   const { slot, removes } = removableSlot({ outcome: removal });
   const playback = createPlayback(media, slot, () => null);
-  const importer = createImporter({ storage, media: mediaDomain, playback });
+  const importer = createImporter({
+    storage,
+    media: mediaDomain,
+    playback,
+    librarySheet: idleLibrarySheet(),
+  });
   const tmdb = fakeTmdb();
   const enrichment = createEnrichment({
     storage,

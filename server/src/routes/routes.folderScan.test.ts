@@ -32,6 +32,7 @@ import { heldCopy } from '../test-support/heldCopy/heldCopy';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
 const storages: LibraryStorage[] = [];
@@ -74,7 +75,12 @@ function freshApi({
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaSeam(mediaDomain), playback }),
+      createImporter({
+        storage,
+        media: mediaSeam(mediaDomain),
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

@@ -48,6 +48,7 @@ import {
 } from '../test-support/fakeTmdb/fakeTmdb';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 
 const storages: LibraryStorage[] = [];
 const servers: Server[] = [];
@@ -133,7 +134,12 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
       root,
       playback,
       media,
-      createImporter({ storage, media, playback }),
+      createImporter({
+        storage,
+        media,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       enrichment
     )
   );

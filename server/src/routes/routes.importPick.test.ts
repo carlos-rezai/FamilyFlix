@@ -33,6 +33,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportProblem, ImportRun } from '@/types';
 import { pickFolderBody } from './importBody/importBody';
 
@@ -73,7 +74,12 @@ function freshApi({
 
   const mediaDomain = createMedia(media);
   const playback = createPlayback(media, fixedSlot(null), () => null);
-  const composed = createImporter({ storage, media: mediaDomain, playback });
+  const composed = createImporter({
+    storage,
+    media: mediaDomain,
+    playback,
+    librarySheet: idleLibrarySheet(),
+  });
 
   const app = express();
   app.use(

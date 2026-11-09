@@ -27,6 +27,7 @@ import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { LibraryStorage } from '../../library';
 import type { ImportProblem, ImportRun, Movie } from '@/types';
 
@@ -50,6 +51,7 @@ function sandbox(): Sandbox {
     storage,
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
+    librarySheet: idleLibrarySheet(),
   });
   storage.addLibraryFolder(root);
   return {

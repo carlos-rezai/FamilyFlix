@@ -40,6 +40,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { LIBRARY_FIXTURE } from '../test-support/libraryFixture/libraryFixture';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportProblem, ImportRun, Series } from '@/types';
 
 const storages: LibraryStorage[] = [];
@@ -117,7 +118,12 @@ function freshApi(episodes: string[]): {
       media,
       playback,
       mediaDomain,
-      createImporter({ storage, media: mediaDomain, playback }),
+      createImporter({
+        storage,
+        media: mediaDomain,
+        playback,
+        librarySheet: idleLibrarySheet(),
+      }),
       createEnrichment({
         storage,
         client: offlineTmdb(),

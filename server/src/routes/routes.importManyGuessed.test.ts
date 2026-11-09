@@ -34,6 +34,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportMode, ImportRun, Movie } from '@/types';
 
 const storages: LibraryStorage[] = [];
@@ -82,7 +83,12 @@ function freshApi({
     (id) =>
       storage.libraryFolders().find((each) => each.id === id)?.path ?? null
   );
-  const composed = createImporter({ storage, media: mediaDomain, playback });
+  const composed = createImporter({
+    storage,
+    media: mediaDomain,
+    playback,
+    librarySheet: idleLibrarySheet(),
+  });
 
   const app = express();
   app.use(

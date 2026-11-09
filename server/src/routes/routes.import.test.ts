@@ -44,6 +44,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { heldCopy } from '../test-support/heldCopy/heldCopy';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type {
   ImportProblem,
   ImportProblemDetail,
@@ -119,7 +120,12 @@ function freshApi({
 
   const mediaDomain = seam(createMedia(media));
   const playback = createPlayback(media, fixedSlot(null), () => null);
-  const composed = createImporter({ storage, media: mediaDomain, playback });
+  const composed = createImporter({
+    storage,
+    media: mediaDomain,
+    playback,
+    librarySheet: idleLibrarySheet(),
+  });
 
   const app = express();
   app.use(
