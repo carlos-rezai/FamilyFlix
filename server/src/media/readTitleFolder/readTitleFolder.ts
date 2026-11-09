@@ -10,6 +10,10 @@ import {
 } from '../fileKinds/fileKinds';
 import { episodeTag, spellEpisodeTag } from '../episodeTag/episodeTag';
 import { folderKeyOf, type FolderKey } from '../folderKeyOf/folderKeyOf';
+import {
+  isSeasonFolder,
+  seasonNumberOf,
+} from '../seasonNumberOf/seasonNumberOf';
 
 /** One subtitle file a scan found, and the language its name says. */
 export interface SubtitleFound {
@@ -86,22 +90,6 @@ export interface LeftOutFolder {
 
 /** What one folder in a Library folder's root reads as. */
 export type TitleFolderScan = FilmFolderScan | SeriesFolderScan | LeftOutFolder;
-
-/**
- * A **Season folder**'s name: `Season NN`, two digits or more, case folded;
- * `Season 00` the specials.
- */
-const SEASON_FOLDER = /^season (\d{2,})$/i;
-
-/** The season a folder's name says, or `null` for no **Season folder**. */
-export const seasonNumberOf = (name: string): number | null => {
-  const found = SEASON_FOLDER.exec(name);
-  return found === null ? null : Number(found[1]);
-};
-
-/** Whether a folder's name is a **Season folder**'s. */
-export const isSeasonFolder = (name: string): boolean =>
-  seasonNumberOf(name) !== null;
 
 /** A name read as an **Episode tag**'s folder or Still: the tag, spelled. */
 const tagOf = (name: string): string | null => {

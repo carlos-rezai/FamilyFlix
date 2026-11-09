@@ -1,11 +1,11 @@
 import { basename, dirname } from 'node:path';
 
 import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
-import {
-  seasonNumberOf,
-  type FolderScan,
-  type SubtitleFound,
+import type {
+  FolderScan,
+  SubtitleFound,
 } from '../../media/readTitleFolder/readTitleFolder';
+import { seasonNumberOf } from '../../media/seasonNumberOf/seasonNumberOf';
 
 /** One episode video of a show, numbered. */
 export interface ShowEpisode {

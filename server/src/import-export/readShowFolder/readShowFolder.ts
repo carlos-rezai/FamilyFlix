@@ -9,10 +9,10 @@ import {
 } from '../../media/fileKinds/fileKinds';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
-  isSeasonFolder,
   readSeasonFolder,
   type FolderScan,
 } from '../../media/readTitleFolder/readTitleFolder';
+import { isSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import type { StoredLibraryFolder } from '../../library';
 import type { HeldTitle } from '../../library/holding/holding';
 import { groupShows, showFolderOf } from '../groupShows/groupShows';

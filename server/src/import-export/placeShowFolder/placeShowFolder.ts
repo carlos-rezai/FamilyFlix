@@ -2,7 +2,7 @@ import { basename, dirname, relative, sep } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
 import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
-import { seasonNumberOf } from '../../media/readTitleFolder/readTitleFolder';
+import { seasonNumberOf } from '../../media/seasonNumberOf/seasonNumberOf';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 
 /** Where a found episode lies in the **Folder layout**. */
