@@ -307,6 +307,50 @@ describe('createImporter.scan: a Factory reset then a scan', () => {
   });
 });
 
+// 59, Rebuild whole, Phase 6 (issue #553): the Library sheet's path cells
+// name the files on disk (`layoutCells`), so _Import from spreadsheet_ of a
+// Library sheet finds its art through its cells.
+describe('createImporter.start: Import from spreadsheet of a Library sheet', () => {
+  it('finds its art through the cells that name the files on disk', async () => {
+    const box = sandbox({ kind: 'none' });
+    const images = join(box.root, 'Die Hard (1988)', 'Images');
+    renameSync(
+      join(images, 'poster.jpg'),
+      join(images, 'die-hard-1988-poster.jpg')
+    );
+    await scanned(box.importer, box.folder);
+    await box.importer.cancel();
+    await box.writer.flush();
+
+    const written = await sheetRows(box.root);
+    expect(written.find((row) => row.title === 'Die Hard')).toMatchObject({
+      poster: 'Die Hard (1988)/Images/die-hard-1988-poster.jpg',
+      backdrop: 'Die Hard (1988)/Images/backdrop.jpg',
+      subtitles: [
+        'Die Hard (1988)/Subtitles/Die.Hard.1988.1080p.en.srt',
+        'Die Hard (1988)/Subtitles/Die.Hard.1988.1080p.pt.srt',
+      ],
+    });
+    expect(written.find((row) => row.title === 'Amelie')).toMatchObject({
+      subtitles: ['Amelie (2001)/Subtitles/Amelie.srt'],
+    });
+
+    box.storage.reset();
+    box.storage.addLibraryFolder(box.root);
+    await box.importer.start(join(box.root, 'Meta', 'familyflix-library.csv'));
+    await untilReview(box.importer);
+
+    expect(titles(box.storage)).toEqual(['Amelie', 'Die Hard']);
+    for (const title of ['Amelie', 'Die Hard']) {
+      const movie = movieTitled(box.storage, title);
+      expect(movie.posterPath).not.toBeNull();
+      expect(movie.backdropPath).not.toBeNull();
+    }
+    expect(movieTitled(box.storage, 'Die Hard').subtitles).toHaveLength(2);
+    expect(movieTitled(box.storage, 'Amelie').subtitles).toHaveLength(1);
+  });
+});
+
 describe('createImporter.scan: an In progress title', () => {
   it('comes back with no resume position', async () => {
     const box = sandbox({

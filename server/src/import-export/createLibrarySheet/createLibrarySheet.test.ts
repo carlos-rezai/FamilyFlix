@@ -353,3 +353,158 @@ describe('createLibrarySheet: hold and release', () => {
     expect(await titlesIn(pathB)).toEqual(['Ronin']);
   });
 });
+
+// 59, Rebuild whole, Phase 6 (issue #553): the sheet reads its folders.
+//
+// Before a write, each recorded **Title folder** is read with
+// `readTitleFolder` and the reads become the sheet's **Path cells**
+// (`layoutCells`): each cell names the file on disk, by its own name, never
+// the path storage or a **File plan** would spell. A **Frame still**, which
+// the folder never holds, is blank. A Title folder that cannot be read gives
+// blank path cells and every other cell of its row.
+
+/** One Library folder holding Die Hard and Tidewater as the family named them. */
+function laidOut() {
+  const root = sandboxRoot('familyflix-library-sheet-cells-');
+  const path = join(root, 'Movies');
+  const put = (...parts: string[]): void => {
+    const file = join(path, ...parts);
+    mkdirSync(join(file, '..'), { recursive: true });
+    writeFileSync(file, parts.join('/'));
+  };
+  put('Die Hard (1988)', 'Die.Hard.1988.1080p.mp4');
+  put('Die Hard (1988)', 'Images', 'die-hard-1988-poster.jpg');
+  put('Die Hard (1988)', 'Images', 'my-own-BACKDROP.png');
+  put('Die Hard (1988)', 'Subtitles', 'Die.Hard.1988.1080p.en.srt');
+  put('Tidewater (2018)', 'Images', 'my-own-POSTER.jpg');
+  put('Tidewater (2018)', 'Season 01', 'Tidewater S01E01.mkv');
+  put('Tidewater (2018)', 'Season 01', 'Tidewater S01E02.mkv');
+  put('Tidewater (2018)', 'Season 01', 'Images', 'season-one-poster.png');
+  put('Tidewater (2018)', 'Season 01', 'Images', 'Stills', 'S01E01.png');
+  put(
+    'Tidewater (2018)',
+    'Season 01',
+    'Subtitles',
+    'S01E01',
+    'Tidewater.S01E01.en.srt'
+  );
+
+  const storage = freshStorage();
+  const folder = storage.addLibraryFolder(path);
+
+  const dieHard = storage.addMovie(
+    newMovie({
+      title: 'Die Hard',
+      year: 1988,
+      director: 'John McTiernan',
+      synopsis: 'A New York cop takes on a tower full of thieves.',
+      videoPath: 'Die Hard (1988)/Die.Hard.1988.1080p.mp4',
+      videoFolderId: folder.id,
+      posterPath: 'die-hard/poster.jpg',
+      backdropPath: 'die-hard/backdrop.jpg',
+      subtitles: [{ path: 'die-hard/English.srt', language: 'English' }],
+    })
+  );
+  storage.setSourceFolder(dieHard.id, folder.id, 'Die Hard (1988)');
+
+  const tidewater = storage.addSeries(
+    { title: 'Tidewater', year: 2018, posterPath: 'tidewater/poster.jpg' },
+    [1, 2].map((number) => ({
+      season: 1,
+      number,
+      title: `Episode ${number}`,
+      videoPath: `Tidewater (2018)/Season 01/Tidewater S01E0${number}.mkv`,
+      videoFolderId: folder.id,
+      sourceFile: `Season 01/Tidewater S01E0${number}.mkv`,
+      // S01E02's is a Frame still: stored, never in the folder.
+      stillPath: `tidewater/season-01/Tidewater S01E0${number}.frame.jpg`,
+    }))
+  );
+  storage.setSourceFolder(tidewater.id, folder.id, 'Tidewater (2018)');
+  storage.setSeasonPoster(tidewater.id, 1, 'tidewater/season-01.jpg');
+
+  const sheet = createLibrarySheet({ storage });
+  return { storage, sheet, folder, path };
+}
+
+/** A folder's sheet read back as rows, after one touch and a flush. */
+async function writtenRows(
+  sheet: ReturnType<typeof createLibrarySheet>,
+  folderId: string,
+  path: string
+) {
+  sheet.touch([folderId]);
+  await sheet.flush();
+  return readSheet(readFileSync(sheetOf(path)), 'familyflix-library.csv');
+}
+
+describe('createLibrarySheet: the path cells name the files on disk', () => {
+  it('names a film’s art and tracks by their own names', async () => {
+    const { sheet, folder, path } = laidOut();
+
+    const rows = await writtenRows(sheet, folder.id, path);
+
+    expect(rows.find((row) => row.title === 'Die Hard')).toMatchObject({
+      video: 'Die Hard (1988)/Die.Hard.1988.1080p.mp4',
+      poster: 'Die Hard (1988)/Images/die-hard-1988-poster.jpg',
+      backdrop: 'Die Hard (1988)/Images/my-own-BACKDROP.png',
+      subtitles: ['Die Hard (1988)/Subtitles/Die.Hard.1988.1080p.en.srt'],
+    });
+  });
+
+  it('names a series’ poster, its Season poster, a Still and an episode’s tracks', async () => {
+    const { sheet, folder, path } = laidOut();
+
+    const rows = await writtenRows(sheet, folder.id, path);
+
+    expect(rows.find((row) => row.type === 'Series')).toMatchObject({
+      poster: 'Tidewater (2018)/Images/my-own-POSTER.jpg',
+      backdrop: null,
+    });
+    expect(rows.find((row) => row.type === 'Season')).toMatchObject({
+      poster: 'Tidewater (2018)/Season 01/Images/season-one-poster.png',
+    });
+    const episode = (number: number) =>
+      rows.find((row) => row.type === 'Episode' && row.episode === number);
+    expect(episode(1)).toMatchObject({
+      still: 'Tidewater (2018)/Season 01/Images/Stills/S01E01.png',
+      subtitles: [
+        'Tidewater (2018)/Season 01/Subtitles/S01E01/Tidewater.S01E01.en.srt',
+      ],
+    });
+  });
+
+  it('leaves a Frame still’s cell blank', async () => {
+    const { sheet, folder, path } = laidOut();
+
+    const rows = await writtenRows(sheet, folder.id, path);
+
+    expect(
+      rows.find((row) => row.type === 'Episode' && row.episode === 2)
+    ).toMatchObject({ still: null, subtitles: [] });
+  });
+});
+
+describe('createLibrarySheet: a Title folder it cannot read', () => {
+  it('gives blank path cells and every other cell of its row', async () => {
+    const { sheet, folder, path } = laidOut();
+    rmSync(join(path, 'Die Hard (1988)'), { recursive: true, force: true });
+
+    const rows = await writtenRows(sheet, folder.id, path);
+
+    expect(rows.find((row) => row.title === 'Die Hard')).toMatchObject({
+      type: 'Movie',
+      folder: 'Die Hard (1988)',
+      year: 1988,
+      director: 'John McTiernan',
+      synopsis: 'A New York cop takes on a tower full of thieves.',
+      video: null,
+      poster: null,
+      backdrop: null,
+      subtitles: [],
+    });
+    expect(rows.find((row) => row.type === 'Series')).toMatchObject({
+      poster: 'Tidewater (2018)/Images/my-own-POSTER.jpg',
+    });
+  });
+});
