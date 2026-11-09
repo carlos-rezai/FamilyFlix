@@ -14,9 +14,9 @@
 
 import { describe, expect, it, vi } from 'vitest';
 
-import type { LibraryStorage } from '.';
-import { freshStorage } from '../test-support/freshStorage/freshStorage';
-import { newMovie } from '../test-support/newMovie/newMovie';
+import type { LibraryStorage } from '..';
+import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { newMovie } from '../../test-support/newMovie/newMovie';
 
 /** A library with folder A listed, a film and a series recorded under it. */
 function world() {
