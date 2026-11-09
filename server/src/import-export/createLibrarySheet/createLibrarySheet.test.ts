@@ -23,6 +23,7 @@ import {
   readdirSync,
   rmSync,
   statSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -46,6 +47,9 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+/** When the fixtures' folders were last walked to review. */
+const SCANNED_AT = '2026-01-01T00:00:00.000Z';
+
 /** A library with folders A and B listed on disk, and titles recorded under them. */
 function world() {
   const root = sandboxRoot('familyflix-library-sheet-');
@@ -58,6 +62,8 @@ function world() {
   const storage = freshStorage();
   const a = storage.addLibraryFolder(pathA);
   const b = storage.addLibraryFolder(pathB);
+  // Walked to review once: no **New folder**, so their sheets are written.
+  storage.markScanned([a.id, b.id], SCANNED_AT);
 
   const heat = storage.addMovie(
     newMovie({
@@ -224,6 +230,7 @@ describe('createLibrarySheet: an Unreachable folder', () => {
     const { root, storage, sheet } = world();
     const unplugged = join(root, 'Unplugged');
     const folder = storage.addLibraryFolder(unplugged);
+    storage.markScanned([folder.id], SCANNED_AT);
     const film = storage.addMovie(
       newMovie({
         title: 'Alien',
@@ -391,6 +398,7 @@ function laidOut() {
 
   const storage = freshStorage();
   const folder = storage.addLibraryFolder(path);
+  storage.markScanned([folder.id], SCANNED_AT);
 
   const dieHard = storage.addMovie(
     newMovie({
@@ -506,5 +514,118 @@ describe('createLibrarySheet: a Title folder it cannot read', () => {
     expect(rows.find((row) => row.type === 'Series')).toMatchObject({
       poster: 'Tidewater (2018)/Images/my-own-POSTER.jpg',
     });
+  });
+});
+
+// 59, Rebuild whole, Phase 12 (issue #559): the sheet catches up, and a New
+// folder's sheet is safe.
+//
+// The writer skips a **New folder** (`scannedAt` null) as it skips an
+// **Unreachable** one: a touch never writes its sheet, and the first touch
+// after a run marks it scanned writes it whole. A rewrite whose bytes equal
+// the file's writes nothing, so the file's mtime stands. Nothing is written
+// at startup: only a touch writes.
+
+describe('createLibrarySheet: a New folder', () => {
+  it('is never written by a touch, its sheet left as the family had it', async () => {
+    const { root, storage, sheet } = world();
+    const path = join(root, 'Added back');
+    mkdirSync(join(path, 'Meta'), { recursive: true });
+    writeFileSync(sheetOf(path), 'Type,Folder,Title\n');
+    const before = readFileSync(sheetOf(path));
+    const folder = storage.addLibraryFolder(path);
+    const film = storage.addMovie(
+      newMovie({
+        title: 'Alien',
+        year: 1979,
+        videoPath: 'Alien (1979)/Alien.mkv',
+        videoFolderId: folder.id,
+      })
+    );
+    storage.setSourceFolder(film.id, folder.id, 'Alien (1979)');
+
+    sheet.touch([folder.id]);
+    await vi.advanceTimersByTimeAsync(LIBRARY_SHEET_DELAY_MS * 10);
+    await sheet.flush();
+
+    expect(readFileSync(sheetOf(path)).equals(before)).toBe(true);
+  });
+
+  it('is written whole by the first touch once it is marked scanned', async () => {
+    const { root, storage, sheet } = world();
+    const path = join(root, 'Added back');
+    mkdirSync(join(path, 'Alien (1979)'), { recursive: true });
+    const folder = storage.addLibraryFolder(path);
+    const film = storage.addMovie(
+      newMovie({
+        title: 'Alien',
+        year: 1979,
+        videoPath: 'Alien (1979)/Alien.mkv',
+        videoFolderId: folder.id,
+      })
+    );
+    storage.setSourceFolder(film.id, folder.id, 'Alien (1979)');
+    sheet.touch([folder.id]);
+    await sheet.flush();
+    expect(existsSync(sheetOf(path))).toBe(false);
+
+    storage.markScanned([folder.id], new Date().toISOString());
+    sheet.touch([folder.id]);
+    await sheet.flush();
+
+    expect(await titlesIn(path)).toEqual(['Alien']);
+  });
+});
+
+describe('createLibrarySheet: a rewrite with equal bytes', () => {
+  it('writes nothing, leaving the file and its mtime as they were', async () => {
+    const { sheet, a, pathA } = world();
+    sheet.touch([a.id]);
+    await sheet.flush();
+    const long = new Date('2020-01-01T00:00:00.000Z');
+    utimesSync(sheetOf(pathA), long, long);
+    const before = statSync(sheetOf(pathA), { bigint: true });
+
+    sheet.touch([a.id]);
+    await sheet.flush();
+
+    const after = statSync(sheetOf(pathA), { bigint: true });
+    expect(after.mtimeMs).toBe(before.mtimeMs);
+    expect(after.ino).toBe(before.ino);
+  });
+
+  it('still rewrites a sheet whose bytes differ from the library’s', async () => {
+    const { storage, sheet, a, pathA, heat } = world();
+    sheet.touch([a.id]);
+    await sheet.flush();
+    const long = new Date('2020-01-01T00:00:00.000Z');
+    utimesSync(sheetOf(pathA), long, long);
+
+    storage.setRating(heat.id, 7);
+    sheet.touch([a.id]);
+    await sheet.flush();
+
+    expect(statSync(sheetOf(pathA)).mtimeMs).toBeGreaterThan(long.getTime());
+    const rows = await readSheet(
+      readFileSync(sheetOf(pathA)),
+      'familyflix-library.csv'
+    );
+    expect(rows.find((row) => row.title === 'Heat')?.rating).toBe(7);
+  });
+});
+
+describe('createLibrarySheet: startup', () => {
+  it('writes no sheet: wired to the library’s changes as the server wires it, nothing is written until a touch', async () => {
+    const { storage, sheet, pathA, pathB } = world();
+    mkdirSync(join(pathA, 'Meta'));
+    writeFileSync(sheetOf(pathA), 'Type,Folder,Title\n');
+    const before = readFileSync(sheetOf(pathA));
+    storage.onChange((folderIds) => sheet.touch(folderIds));
+
+    await vi.advanceTimersByTimeAsync(LIBRARY_SHEET_DELAY_MS * 10);
+    await sheet.flush();
+
+    expect(readFileSync(sheetOf(pathA)).equals(before)).toBe(true);
+    expect(existsSync(sheetOf(pathB))).toBe(false);
   });
 });
