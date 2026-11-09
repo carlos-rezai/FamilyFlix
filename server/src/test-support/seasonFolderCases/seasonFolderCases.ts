@@ -1,7 +1,7 @@
 /**
  * 58, Folder layout (issue #537): the **Season folder**'s one table.
  *
- * The server's `seasonOf` reads `Season NN` only (issue #536), and the
+ * The server's `seasonNumberOf` reads `Season NN` only (issue #536), and the
  * client's `readSeasonFolder`, which seeds the **Numbering guess** off a
  * folder name, mirrors it. The client's table test and the drift guard read
  * these cases, the drift guard over both sides.

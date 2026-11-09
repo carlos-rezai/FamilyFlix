@@ -19,9 +19,10 @@
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-import { groupShows, seasonOf, showFolderOf } from './groupShows';
+import { groupShows, showFolderOf } from './groupShows';
 import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
+import { seasonNumberOf } from '../../media/seasonNumberOf/seasonNumberOf';
 
 const ROOT = join('/', 'library');
 
@@ -485,11 +486,11 @@ describe('groupShows — the Episode word', () => {
 });
 
 /**
- * 58, Folder layout (issue #536): `seasonOf` reads `Season NN` only, two
- * digits or more, case folded, `Season 00` the specials. The wider rule of
- * log 51 is retired.
+ * 58, Folder layout (issue #536): `seasonNumberOf`, the reading a group
+ * reads, takes `Season NN` only, two digits or more, case folded, `Season 00`
+ * the specials. The wider rule of log 51 is retired.
  */
-describe('seasonOf: Season NN only', () => {
+describe('seasonNumberOf: Season NN only', () => {
   it.each([
     ['Season 01', 1],
     ['season 01', 1],
@@ -499,7 +500,7 @@ describe('seasonOf: Season NN only', () => {
     ['Season 00', 0],
     ['season 00', 0],
   ])('reads %s as season %s', (name, season) => {
-    expect(seasonOf(name)).toBe(season);
+    expect(seasonNumberOf(name)).toBe(season);
   });
 
   it.each([
@@ -519,7 +520,7 @@ describe('seasonOf: Season NN only', () => {
     ['Season'],
     ['Extras'],
   ])('reads %s as no Season folder', (name) => {
-    expect(seasonOf(name)).toBeNull();
+    expect(seasonNumberOf(name)).toBeNull();
   });
 });
 

@@ -8,7 +8,7 @@ import {
 
 /**
  * 58, Folder layout (issue #537): the **Season folder**'s name read on the
- * client, the server's `seasonOf` rule: `Season NN`, two digits or more, in
+ * client, the server's `seasonNumberOf` rule: `Season NN`, two digits or more, in
  * either case, and nothing else. One table shared with the drift guard; each
  * group is one rule, asserted whole, so a group fails until every name in it
  * reads right.

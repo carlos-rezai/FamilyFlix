@@ -45,20 +45,11 @@ export interface GroupedScans<T extends FolderScan = FolderScan> {
 }
 
 /**
- * The season a folder's name says, or `null` for a name that is no **Season
- * folder**: `Season NN`, two digits or more, case folded, `Season 00` the
- * specials. `Season 1`, `Seizoen 1`, `S01`, `Specials` and a name with
- * anything after the number are no Season folder (log 58; log 51's wider rule
- * is retired). `readTitleFolder`'s own rule, so a scan and a group agree.
- */
-export const seasonOf = seasonNumberOf;
-
-/**
  * The **Show folder** a folder of episode videos belongs to: a **Season
  * folder**'s parent, else the folder itself.
  */
 export const showFolderOf = (dir: string): string =>
-  seasonOf(basename(dir)) === null ? dir : dirname(dir);
+  seasonNumberOf(basename(dir)) === null ? dir : dirname(dir);
 
 /**
  * Group the **Source folders** the walk answered into shows and films.
@@ -80,7 +71,7 @@ export function groupShows<T extends FolderScan>(scans: T[]): GroupedScans<T> {
   const taken = new Map<ShowScan, Set<string>>();
 
   for (const scan of scans) {
-    const folderSeason = seasonOf(scan.name);
+    const folderSeason = seasonNumberOf(scan.name);
     if (folderSeason === null) {
       films.push(scan);
       continue;

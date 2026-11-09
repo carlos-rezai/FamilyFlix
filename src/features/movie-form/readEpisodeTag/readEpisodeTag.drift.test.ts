@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { readEpisodeTag } from './readEpisodeTag';
 import { readSeasonFolder } from '../readSeasonFolder/readSeasonFolder';
 import { episodeTag } from '../../../../server/src/media/episodeTag/episodeTag';
-import { seasonOf } from '../../../../server/src/import-export/groupShows/groupShows';
+import { seasonNumberOf } from '../../../../server/src/media/seasonNumberOf/seasonNumberOf';
 import { ALL_SEASON_FOLDER_CASES } from '../../../../server/src/test-support/seasonFolderCases/seasonFolderCases';
 
 /**
@@ -140,16 +140,16 @@ describe('the Episode tag — client and server agree', () => {
 
 /**
  * 58, Folder layout (issue #537): the **Season folder** is read on two sides
- * too, the server's `seasonOf`, which groups a scan and a **Show folder
- * pick**, and the client's `readSeasonFolder`, which seeds the **Numbering
- * guess**. Both read `Season NN` only, over one table.
+ * too, the server's `seasonNumberOf`, which reads a scan, groups it and
+ * places a **Show folder pick**, and the client's `readSeasonFolder`, which
+ * seeds the **Numbering guess**. Both read `Season NN` only, over one table.
  */
 describe('the Season folder: client and server agree', () => {
   it.each(ALL_SEASON_FOLDER_CASES.map(([name, season]) => [name, season]))(
     '%s reads as season %s on both sides',
     (name, season) => {
       expect({
-        server: seasonOf(name),
+        server: seasonNumberOf(name),
         client: readSeasonFolder(name),
       }).toEqual({ server: season, client: season });
     }
