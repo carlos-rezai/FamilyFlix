@@ -27,6 +27,7 @@ import {
   type ExportFile,
   type ExportTable,
 } from '../exportRows/exportRows';
+import { filePlan } from '../filePlan/filePlan';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The library an **Export** is written from. */
@@ -216,10 +217,11 @@ export async function writeExport(
   let folder: string | null = null;
   try {
     folder = await makeFolder(request.destination, name);
-    const { table, files, warnings } = exportRows(
+    const { cells, files } = filePlan(request);
+    const { table, warnings } = exportRows(
       content.movies,
       content.series,
-      request
+      cells
     );
     const skipped = await copyPlanned(media, folder, files);
     const bytes = await writeSheet(blanked(table, skipped), request.format);

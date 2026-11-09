@@ -9,6 +9,7 @@ import {
 } from '../../media/folderLayout/folderLayout';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import { exportRows } from '../exportRows/exportRows';
+import { filePlan } from '../filePlan/filePlan';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The **Library sheet**'s path inside its Library folder. */
@@ -113,7 +114,7 @@ export function createLibrarySheet({
     const { table } = exportRows(
       movies,
       series,
-      { images: true, subtitles: true },
+      filePlan({ images: true, subtitles: true }).cells,
       (titleId) => sourceFolders.get(titleId) ?? null
     );
     const bytes = await writeSheet(table, 'csv');
