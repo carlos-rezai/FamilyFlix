@@ -1,7 +1,6 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 6: Import from spreadsheet reads the one sheet
-// (issue #539).
+// 58, Folder layout, Phase 6 (issue #539): the one sheet read back.
 //
 // `readSheet` reads the one table, every **Row type**, into **Sheet rows**
 // carrying their new fields: `type`, `folder`, `season`, `episode`,
@@ -228,7 +227,7 @@ const EPISODE_ROWS: SheetRow[] = [
 ];
 
 describe.each([...EXPORT_FORMATS])(
-  'readSheet — the round trip from the library (%s)',
+  'readSheet: the round trip from the library (%s)',
   (format) => {
     /** The library written as the one sheet, then read back. */
     async function roundTrip(): Promise<{
@@ -300,7 +299,7 @@ describe.each([...EXPORT_FORMATS])(
   }
 );
 
-describe('readSheet — a sheet with no Type column', () => {
+describe('readSheet: a sheet with no Type column', () => {
   it('reads every row as a Movie', async () => {
     const rows = await readSheet(
       csv(['Title,Year', 'Heat,1995', 'Amélie,2001']),
@@ -342,7 +341,7 @@ describe('isTitleRow: a row that names a title', () => {
   });
 });
 
-describe('readSheet — the Folder cell', () => {
+describe('readSheet: the Folder cell', () => {
   it('reads the Folder cell as the row’s Folder key, whatever the title', async () => {
     const rows = await readSheet(
       csv([
@@ -419,7 +418,7 @@ const identity = (row: SheetRow): string =>
   [row.type, row.folder, row.season ?? '', row.episode ?? ''].join(' | ');
 
 describe.each([['library.csv'], ['library.xlsx']])(
-  'readSheet — the fixtures’ %s is the one sheet',
+  'readSheet: the fixtures’ %s is the one sheet',
   (name) => {
     it('carries the Sheet columns as its header, in the film fixture', async () => {
       expect(await headerOf(FILM_FIXTURE, name)).toEqual([...SHEET_COLUMNS]);

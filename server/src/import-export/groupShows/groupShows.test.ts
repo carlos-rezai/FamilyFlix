@@ -50,7 +50,7 @@ function scan(
   };
 }
 
-describe('groupShows — Season folders under their Title folder', () => {
+describe('groupShows: Season folders under their Title folder', () => {
   it.each([['Season 01'], ['season 01'], ['SEASON 01']])(
     'reads %s as a Season folder and its parent as the show',
     (seasonName) => {
@@ -178,7 +178,7 @@ describe('groupShows — Season folders under their Title folder', () => {
   });
 });
 
-describe('groupShows — only Season NN is a Season folder', () => {
+describe('groupShows: only Season NN is a Season folder', () => {
   it.each([
     ['Season 1'],
     ['Seizoen 1'],
@@ -252,7 +252,7 @@ describe('groupShows — every other scan is a film', () => {
  * **Episode tag** is no show. It passes through as a film, its second video
  * the film's _more than one video_ Problem, never a series.
  */
-describe('groupShows — loose tagged videos are no show', () => {
+describe('groupShows: loose tagged videos are no show', () => {
   it('passes a folder of loose tagged videos through as a film', () => {
     const loose = scan(
       ['Lighthouse Keepers (2019)'],
@@ -290,7 +290,7 @@ describe('groupShows — loose tagged videos are no show', () => {
  * Season folder: a track lands on the episode its folder's tag numbers, and a
  * track whose folder numbers no placed episode is a stray.
  */
-describe('groupShows — episode tracks by their S01E01 folder', () => {
+describe('groupShows: episode tracks by their S01E01 folder', () => {
   it('gives each episode the tracks of its own tag folder, each with its language', () => {
     const season = scan(
       ['Harbor & Vine (2021)', 'Season 01'],

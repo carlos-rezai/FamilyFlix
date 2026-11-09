@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58, Folder layout, Phase 2: "one film in the layout" (issue #535).
+// 58, Folder layout, Phase 2 (issue #535): one Title folder read.
 //
 // `readTitleFolder(dir)`, the deepest disk unit of the **Folder layout**,
 // replacing `scanMovieFolder`: one **Title folder** in, what of a film is in
@@ -43,7 +43,7 @@ async function filmIn(dir: string) {
 
 const name = (path: string | null) => (path === null ? null : basename(path));
 
-describe('readTitleFolder, a film', () => {
+describe('readTitleFolder: a film', () => {
   it('reads a film by one loose video, under any name', async () => {
     const dir = titleFolder('Heat (1995)', ['whatever it is called.mkv']);
 
@@ -87,7 +87,7 @@ describe('readTitleFolder, a film', () => {
   });
 });
 
-describe('readTitleFolder, images by role', () => {
+describe('readTitleFolder: images by role', () => {
   it('reads the poster and the backdrop from Images/ by the end of the stem', async () => {
     const dir = titleFolder('Heat (1995)', [
       'Heat.mkv',
@@ -158,7 +158,7 @@ describe('readTitleFolder, images by role', () => {
   });
 });
 
-describe('readTitleFolder, tracks', () => {
+describe('readTitleFolder: tracks', () => {
   it('reads every track in Subtitles/ under any name, each with its language', async () => {
     const dir = titleFolder('Heat (1995)', [
       'Heat.mkv',
@@ -188,7 +188,7 @@ describe('readTitleFolder, tracks', () => {
   });
 });
 
-// 58, Folder layout, Phase 3: "one series in the layout" (issue #536).
+// 58, Folder layout, Phase 3 (issue #536): one series in the layout.
 //
 // A series is a **Title folder** of **Season folders** and no loose video.
 // A Season folder is `Season NN`, two digits or more, case folded, `Season 00`
@@ -206,7 +206,7 @@ async function seriesIn(dir: string) {
   return scan as Extract<typeof scan, { kind: 'series' }>;
 }
 
-describe('readTitleFolder, a series', () => {
+describe('readTitleFolder: a series', () => {
   it('reads a series by its Season folders, each with its videos in name order', async () => {
     const dir = titleFolder('Severance (2022)', [
       'Season 01/Severance.S01E02.Half.Loop.mkv',
@@ -337,7 +337,7 @@ describe('readTitleFolder, a series', () => {
   });
 });
 
-describe('readTitleFolder, a series’ art', () => {
+describe('readTitleFolder: a series’ art', () => {
   it('reads the series’ own poster and backdrop from its Images/', async () => {
     const dir = titleFolder('Severance (2022)', [
       'Season 01/Severance.S01E01.mkv',
@@ -425,7 +425,7 @@ describe('readTitleFolder, a series’ art', () => {
   });
 });
 
-describe('readTitleFolder, an episode’s tracks', () => {
+describe('readTitleFolder: an episode’s tracks', () => {
   it('reads each episode’s tracks from its Subtitles/S01E01/ folder, with languages', async () => {
     const dir = titleFolder('Severance (2022)', [
       'Season 01/Severance.S01E01.mkv',

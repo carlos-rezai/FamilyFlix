@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// Log 58, Folder layout, Phase 8: "the scan reads Meta/" (issue #541).
+// 58, Folder layout, Phase 8 (issue #541): the scan reads Meta/.
 //
 // A **Folder scan** reads its **Library folder**'s **Meta folder** sheet,
 // `Meta/familyflix-library.csv` when there, else the `.xlsx`, as that
@@ -203,7 +203,7 @@ function holdDieHard(box: Sandbox): Movie {
   return held;
 }
 
-describe('createImporter.scan, which sheet it reads', () => {
+describe('createImporter.scan: which sheet it reads', () => {
   it('reads Meta/familyflix-library.csv as the folder’s sheet', async () => {
     const box = sandbox({ kind: 'csv' });
 
@@ -254,7 +254,7 @@ describe('createImporter.scan, which sheet it reads', () => {
   });
 });
 
-describe('createImporter.scan, a Factory reset then a scan', () => {
+describe('createImporter.scan: a Factory reset then a scan', () => {
   it('rebuilds every title with its Rating, Favorite, Status and art, offline', async () => {
     const box = sandbox({ kind: 'csv' });
     await scanned(box.importer, box.folder);
@@ -307,7 +307,7 @@ describe('createImporter.scan, a Factory reset then a scan', () => {
   });
 });
 
-describe('createImporter.scan, an In progress title', () => {
+describe('createImporter.scan: an In progress title', () => {
   it('comes back with no resume position', async () => {
     const box = sandbox({
       kind: 'csv',
@@ -323,7 +323,7 @@ describe('createImporter.scan, an In progress title', () => {
   });
 });
 
-describe('createImporter.scan, a held title', () => {
+describe('createImporter.scan: a held title', () => {
   it('fills its empty fields from the folder’s sheet', async () => {
     const box = sandbox({ kind: 'csv' });
     const held = holdDieHard(box);
@@ -360,7 +360,7 @@ describe('createImporter.scan, a held title', () => {
   });
 });
 
-describe('createImporter.scan, the Library sheet held during the run', () => {
+describe('createImporter.scan: the Library sheet held during the run', () => {
   it('leaves the sheet as it was while the run is in review', async () => {
     const box = sandbox({ kind: 'csv' });
     holdDieHard(box);

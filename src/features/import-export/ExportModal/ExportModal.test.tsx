@@ -494,8 +494,8 @@ describe('ExportModal — Export ready', () => {
  * The **Include** group, after the Folder name field and before _Columns included_:
  * a Settings-`Row`-furniture row reading _Images_ over _Posters, backdrops,
  * season posters and stills, in each title folder's Images, as your library
- * folders hold them._ (log 58, Q19), with a Toggle — on by default,
- * and what the request sends.
+ * folders hold them._ (log 58, Q19), with a Toggle, on by default, and what
+ * the request sends.
  */
 describe('ExportModal — Include', () => {
   const imagesToggle = () =>
@@ -559,8 +559,7 @@ describe('ExportModal — Include', () => {
  *
  * The Include group's second row, after _Images_: _Subtitles_ over _Every
  * subtitle file, in each title folder's Subtitles._ (log 58, Q19), with a
- * Toggle — off by default,
- * and what the request sends.
+ * Toggle, off by default, and what the request sends.
  */
 describe('ExportModal — Include, Subtitles', () => {
   const subtitlesToggle = () =>

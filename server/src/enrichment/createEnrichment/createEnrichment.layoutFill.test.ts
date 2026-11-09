@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 10: "the Sync fills the layout" (issue #543).
+// 58, Folder layout, Phase 10 (issue #543): the Sync fills the layout.
 //
 // A **Sync** over a real SQLite library and a real **Library folder** in a
 // sandbox, with a fake TMDB client: the `createEnrichment` suites' precedent.

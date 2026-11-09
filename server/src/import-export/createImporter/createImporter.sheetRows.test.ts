@@ -1,7 +1,7 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 6: Import from spreadsheet reads the one sheet
-// (issue #539).
+// 58, Folder layout, Phase 6 (issue #539): Import from spreadsheet reads the
+// one sheet.
 //
 // _Import from spreadsheet_ over the one sheet: a series' Series, Season and
 // Episode rows all name its **Title folder** by their **Folder key**, and the
@@ -145,7 +145,7 @@ async function untilReview(importer: Importer): Promise<ImportRun> {
   }
 }
 
-describe('createImporter — Import from spreadsheet reads Season and Episode rows', () => {
+describe('createImporter: Import from spreadsheet reads Season and Episode rows', () => {
   it('files no Problem for the Season and Episode rows, and adds no film', async () => {
     const { run, storage } = await importSheet(SERIES_FIXTURE, HARBOR_SHEET);
 
@@ -191,7 +191,7 @@ describe('createImporter — Import from spreadsheet reads Season and Episode ro
   });
 });
 
-describe('createImporter — an Export’s sheet uploaded alone', () => {
+describe('createImporter: an Export’s sheet uploaded alone', () => {
   it('matches each Movie row by its Folder key, case folded, and files no Problem', async () => {
     const { run, storage } = await importSheet(LIBRARY_FIXTURE, EXPORT_SHEET);
 

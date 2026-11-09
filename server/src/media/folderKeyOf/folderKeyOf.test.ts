@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58, Folder layout, Phase 2: "one film in the layout" (issue #535).
+// 58, Folder layout, Phase 2 (issue #535): the Folder key.
 //
 // The **Folder key**, pure: a **Title folder**'s name in, `{ name, title,
 // year }` out by `^(.+) \((\d{4})\)$`, or `null` for a name the **Folder
@@ -12,7 +12,7 @@ import { describe, expect, it } from 'vitest';
 
 import { folderKeyOf, sameFolderKey, spellFolderKey } from './folderKeyOf';
 
-describe('folderKeyOf, a Title folder', () => {
+describe('folderKeyOf: a Title folder', () => {
   it('reads Heat (1995) as its title and year', () => {
     expect(folderKeyOf('Heat (1995)')).toEqual({
       name: 'Heat (1995)',
@@ -37,7 +37,7 @@ describe('folderKeyOf, a Title folder', () => {
   });
 });
 
-describe('folderKeyOf, a name the layout does not read', () => {
+describe('folderKeyOf: a name the layout does not read', () => {
   it.each([
     ['a year-less name', 'Drama'],
     ['a range', 'Severance (2022–)'],
@@ -50,7 +50,7 @@ describe('folderKeyOf, a name the layout does not read', () => {
   });
 });
 
-describe('spellFolderKey, the Title (Year) speller', () => {
+describe('spellFolderKey: the Title (Year) speller', () => {
   it('spells a title and a year as Title (Year)', () => {
     expect(spellFolderKey('Heat', 1995)).toBe('Heat (1995)');
   });

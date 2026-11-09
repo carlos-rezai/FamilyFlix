@@ -7,7 +7,8 @@ import { ENRICH_FIELDS, type EnrichmentSummary } from '@/types';
 import { EnrichmentSetup } from './EnrichmentSetup';
 
 /**
- * 58 — Folder layout, Phase 10: "the Sync fills the layout" (issue #543).
+ * 58, Folder layout, Phase 10 (issue #543): Where it is saved, without the
+ * Write targets.
  *
  * _Where it is saved_ per the amended `feat.EnrichmentFlow.dc.html`: the
  * **Write target** toggles are gone. The card draws _Your library_
@@ -74,7 +75,7 @@ function rowOf(title: string): HTMLElement {
   return at;
 }
 
-describe('EnrichmentSetup — Where it is saved, in the Folder layout', () => {
+describe('EnrichmentSetup: Where it is saved, in the Folder layout', () => {
   it('draws Your library, Required, and Your library folders, Always, under one Library folder', () => {
     renderSetup([ROOT]);
 

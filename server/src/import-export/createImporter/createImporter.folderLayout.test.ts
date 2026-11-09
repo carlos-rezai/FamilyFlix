@@ -1,7 +1,7 @@
 // @vitest-environment node
 //
-// 58, Folder layout, Phase 2: "one film in the layout" (issue #535), the
-// importer's half.
+// 58, Folder layout, Phase 2 (issue #535): the importer's half of one film
+// in the layout.
 //
 // A **Folder scan** reads its **Library folder** by the **Folder layout**:
 //
@@ -178,7 +178,7 @@ const DIE_HARD = [
   'Die Hard (1988)/Extras/Making of.mp4',
 ];
 
-describe('createImporter.scan, a film in the layout', () => {
+describe('createImporter.scan: a film in the layout', () => {
   it('scans Die Hard (1988)/ to a film with its poster, backdrop and two tracks', async () => {
     const box = sandbox(DIE_HARD);
 
@@ -232,7 +232,7 @@ describe('createImporter.scan, a film in the layout', () => {
   });
 });
 
-describe('createImporter.scan, the Layout warnings', () => {
+describe('createImporter.scan: the Layout warnings', () => {
   it('logs Drama/ as one Warning line and imports nothing from it', async () => {
     const box = sandbox([...DIE_HARD, 'Drama/Amelie (2001)/Amelie.mp4']);
 
@@ -297,7 +297,7 @@ describe('createImporter.scan, the Layout warnings', () => {
   });
 });
 
-describe('createImporter.scan, a title held from an old shape', () => {
+describe('createImporter.scan: a title held from an old shape', () => {
   it('still plays from its stored path while its folder is left out', async () => {
     const box = sandbox(['Drama/Amelie (2001)/Amelie.mp4']);
     const held = box.storage.addMovie({

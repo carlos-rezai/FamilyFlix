@@ -1,6 +1,7 @@
 // @vitest-environment node
 //
-// Log 58, Phase 7: "the Library sheet" (issue #540).
+// 58, Folder layout, Phase 7 (issue #540): the writes that touch a Library
+// sheet.
 //
 // `LibraryStorage.onChange(listener) => unsubscribe` calls its listener with
 // the **Library folders** touched by every write that changes a cell of a

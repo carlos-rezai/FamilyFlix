@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58, Folder layout (issue #545): one Title folder rule.
+// 58, Folder layout, refactor (issue #545): one Title folder rule.
 //
 // `placeTitleFolder(folders, dir)` answers where a folder lies as a **Title
 // folder** (log 58 Q22): directly in a listed **Library folder** and named by

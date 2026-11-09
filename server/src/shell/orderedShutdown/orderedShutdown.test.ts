@@ -111,7 +111,7 @@ function worldOver(server: Server, log: string[]): ShutdownWorld {
 }
 
 describe('orderedShutdown', () => {
-  it('cancels the import and the sync, drops connections before closing, flushes the Library sheet, closes the database, and exits 0 — in that order', async () => {
+  it('cancels the import and the sync, drops connections before closing, flushes the Library sheet, closes the database, and exits 0, in that order', async () => {
     const log: string[] = [];
     const server = await listening();
 

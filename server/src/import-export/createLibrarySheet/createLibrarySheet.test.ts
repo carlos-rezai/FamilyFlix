@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// Log 58, Phase 7: "the Library sheet" (issue #540).
+// 58, Folder layout, Phase 7 (issue #540): the Library sheet writer.
 //
 // `createLibrarySheet({ storage })` is the **Library sheet writer**: told
 // which **Library folders** a write touched, it waits a few seconds after the
@@ -284,10 +284,10 @@ describe('createLibrarySheet: a Factory reset', () => {
   });
 });
 
-// Log 58, Phase 8: "the scan reads Meta/" (issue #541). While a run's review
-// holds a folder's sheet values, `hold` keeps that folder's sheet as it is;
-// `release` rewrites it from the library, so a difference the family skipped
-// becomes the family's value in the sheet.
+// 58, Folder layout, Phase 8 (issue #541): while a run's review holds a
+// folder's sheet values, `hold` keeps that folder's sheet as it is; `release`
+// rewrites it from the library, so a difference the family skipped becomes the
+// family's value in the sheet.
 describe('createLibrarySheet: hold and release', () => {
   it('writes nothing to a held folder however long it waits, flush included', async () => {
     const { storage, sheet, a, pathA, heat } = world();

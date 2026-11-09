@@ -1,6 +1,7 @@
 // @vitest-environment node
 //
-// Log 58, Phase 9: "the Layout fill after a save" (issue #542).
+// 58, Folder layout, Phase 9 (issue #542): the Layout fill into one Title
+// folder.
 //
 // `fillLayout(media, root, title)` is the **Layout fill**: it writes into a
 // **Title folder** (`title.folder`, relative to the **Library folder**

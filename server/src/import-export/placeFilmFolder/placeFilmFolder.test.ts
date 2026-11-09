@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58, Folder layout, Phase 2: "one film in the layout" (issue #535).
+// 58, Folder layout, Phase 2 (issue #535): where a found film lies.
 //
 // `placeFilmFolder(folders, video)` answers where a found film lies as the
 // importer records it: a **Title folder** or nothing. A video loose in a Title
@@ -36,7 +36,7 @@ function films(root: string): StoredLibraryFolder {
   return { id: 'films', path, titleCount: 0, scannedAt: null };
 }
 
-describe('placeFilmFolder, a Title folder', () => {
+describe('placeFilmFolder: a Title folder', () => {
   it('places a film at its Folder key with no Source file', async () => {
     const root = sandboxRoot('familyflix-place-film-');
     const listed = films(root);
@@ -66,7 +66,7 @@ describe('placeFilmFolder, a Title folder', () => {
   });
 });
 
-describe('placeFilmFolder, nothing', () => {
+describe('placeFilmFolder: nothing', () => {
   it('answers null for a folder not named Title (Year)', async () => {
     const root = sandboxRoot('familyflix-place-film-');
     const listed = films(root);

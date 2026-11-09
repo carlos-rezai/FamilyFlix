@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 5: the one sheet (issue #538).
+// 58, Folder layout, Phase 5 (issue #538): the one sheet's bytes.
 //
 // `writeSheet(table, format)` is the **Sheet writer**: `exportRows`' one
 // table and an **Export format** in, the sheet's bytes out. Pure over the
@@ -113,7 +113,7 @@ function cellsOf(sheet: ExcelJS.Worksheet): string[][] {
   return rows;
 }
 
-describe.each(FORMATS)('writeSheet — the one table (%s)', (format) => {
+describe.each(FORMATS)('writeSheet: the one table (%s)', (format) => {
   it('writes the table row for row, every row type in one sheet', async () => {
     const bytes = await writeSheet(TABLE, format);
 
@@ -136,7 +136,7 @@ describe.each(FORMATS)('writeSheet — the one table (%s)', (format) => {
   });
 });
 
-describe('writeSheet — as csv', () => {
+describe('writeSheet: as csv', () => {
   it('starts the one file with a UTF-8 BOM, once', async () => {
     const csv = (await writeSheet(TABLE, 'csv')).toString('utf8');
 
@@ -160,7 +160,7 @@ describe('writeSheet — as csv', () => {
   });
 });
 
-describe('writeSheet — as xlsx', () => {
+describe('writeSheet: as xlsx', () => {
   it('writes a workbook, the zip an .xlsx is, with no BOM', async () => {
     const bytes = await writeSheet(TABLE, 'xlsx');
 

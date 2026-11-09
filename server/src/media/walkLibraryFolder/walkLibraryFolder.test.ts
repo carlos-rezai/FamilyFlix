@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58, Folder layout, Phase 2: "one film in the layout" (issue #535).
+// 58, Folder layout, Phase 2 (issue #535): the Library folder walk.
 //
 // The **Library folder** walk, against a real tree under `sandboxRoot`. It
 // reads only the root's entries: each **Title folder** is read by
@@ -40,7 +40,7 @@ function libraryWith(files: string[]): string {
 const titleNames = (walk: { titles: Array<{ dir: string }> }) =>
   walk.titles.map((title) => basename(title.dir)).sort();
 
-describe('walkLibraryFolder, root entries only', () => {
+describe('walkLibraryFolder: root entries only', () => {
   it('reads a Title folder in the root as a film', async () => {
     const root = libraryWith(['Die Hard (1988)/Die Hard.mkv']);
 
@@ -96,7 +96,7 @@ describe('walkLibraryFolder, root entries only', () => {
   });
 });
 
-describe('walkLibraryFolder, the Layout warnings', () => {
+describe('walkLibraryFolder: the Layout warnings', () => {
   it('warns of a folder not named Title (Year)', async () => {
     const root = libraryWith(['Drama/Amelie (2001)/Amelie.mp4']);
 
@@ -164,7 +164,7 @@ describe('walkLibraryFolder, the Layout warnings', () => {
   });
 });
 
-describe('walkLibraryFolder, what passes in silence', () => {
+describe('walkLibraryFolder: what passes in silence', () => {
   it.each([
     ['Meta/', 'Meta/familyflix-library.csv'],
     [
@@ -203,7 +203,7 @@ describe('walkLibraryFolder, what passes in silence', () => {
   });
 });
 
-describe('walkLibraryFolder, the sheet', () => {
+describe('walkLibraryFolder: the sheet', () => {
   it('finds the Meta/ sheet', async () => {
     const root = libraryWith([
       'Die Hard (1988)/Die Hard.mkv',

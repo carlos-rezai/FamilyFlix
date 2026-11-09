@@ -1,6 +1,7 @@
 // @vitest-environment node
 //
-// Log 58, Phase 9: "the Layout fill after a save" (issue #542).
+// 58, Folder layout, Phase 9 (issue #542): the Layout fill after an add and
+// an edit.
 //
 // After an add and an edit, the **Layout fill** writes into the title's
 // **Title folder** every file FamilyFlix holds whose slot is empty, for a

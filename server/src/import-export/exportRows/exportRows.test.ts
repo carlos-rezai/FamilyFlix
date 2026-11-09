@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 5: the one sheet (issue #538).
+// 58, Folder layout, Phase 5 (issue #538): the one sheet's table.
 //
 // `exportRows(movies, series, include)` answers one table, `table`: the
 // `SHEET_COLUMNS` header, then a row per Movie, Series, Season and Episode,
@@ -165,7 +165,7 @@ describe('the Sheet columns and Row types', () => {
   });
 });
 
-describe('exportRows — one table', () => {
+describe('exportRows: one table', () => {
   it('writes the Sheet columns as its header, whatever the options', () => {
     for (const include of [
       OFF,
@@ -195,7 +195,7 @@ describe('exportRows — one table', () => {
   });
 });
 
-describe('exportRows — the order', () => {
+describe('exportRows: the order', () => {
   it('runs A to Z by Folder key, then season, then number', () => {
     expect(rows([HEAT, EXISTENZ, AMELIE], [SEVERANCE]).map(identity)).toEqual([
       'Movie | Amelie (2001) |  | ',
@@ -225,7 +225,7 @@ describe('exportRows — the order', () => {
   });
 });
 
-describe('exportRows — a Movie row', () => {
+describe('exportRows: a Movie row', () => {
   it('fills every column a film has, and leaves the rest blank', () => {
     const [heat] = rows([HEAT], []);
 
@@ -279,7 +279,7 @@ describe('exportRows — a Movie row', () => {
   });
 });
 
-describe('exportRows — a Series row', () => {
+describe('exportRows: a Series row', () => {
   it('fills a series’ columns, and leaves blank what its rows derive', () => {
     const series = rows([], [SEVERANCE]).find((row) => row.Type === 'Series');
 
@@ -310,7 +310,7 @@ describe('exportRows — a Series row', () => {
   });
 });
 
-describe('exportRows — a Season row', () => {
+describe('exportRows: a Season row', () => {
   it('carries its Type, Folder and Season, and nothing else with no poster', () => {
     const season = rows([], [SEVERANCE]).find(
       (row) => row.Type === 'Season' && row.Season === '2'
@@ -329,7 +329,7 @@ describe('exportRows — a Season row', () => {
   });
 });
 
-describe('exportRows — an Episode row', () => {
+describe('exportRows: an Episode row', () => {
   it('fills an episode’s columns, and leaves the rest blank', () => {
     const episode = rows([], [SEVERANCE]).find(
       (row) =>
@@ -363,7 +363,7 @@ describe('exportRows — an Episode row', () => {
   });
 });
 
-describe('exportRows — what the sheet leaves out', () => {
+describe('exportRows: what the sheet leaves out', () => {
   it('has no count columns and no bookkeeping columns', () => {
     const [header = []] = table([HEAT], [SEVERANCE]);
 

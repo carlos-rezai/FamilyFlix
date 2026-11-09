@@ -1,11 +1,12 @@
 // @vitest-environment node
 //
-// 58, Folder layout (issue #545): the two rules a reader and a writer of the
-// **Folder layout** share. `endsInRole` is what is already a poster or a
-// backdrop in an **Images folder** (log 58 Q8): the scan reads art by it and
-// the **Layout fill** writes none where it holds. `spellTrackName` names a
-// second track of one language `<Language> (2)` (Q17), and `trackLanguageOf`
-// reads such a name back as its language. Prior art: `folderKeyOf`'s tables.
+// 58, Folder layout, refactor (issue #545): the two rules a reader and a
+// writer of the **Folder layout** share. `endsInRole` is what is already a
+// poster or a backdrop in an **Images folder** (log 58 Q8): the scan reads art
+// by it and the **Layout fill** writes none where it holds. `spellTrackName`
+// names a second track of one language `<Language> (2)` (Q17), and
+// `trackLanguageOf` reads such a name back as its language. Prior art:
+// `folderKeyOf`'s tables.
 
 import { describe, expect, it } from 'vitest';
 

@@ -1,6 +1,7 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 5: the Export writes the one sheet (issue #538).
+// 58, Folder layout, Phase 5 (issue #538): the Export writes the layout and
+// the one sheet.
 //
 // `writeExport` makes an **Export folder** that is the **Folder layout**
 // less the videos (log 58, Q19): `Meta/familyflix-library.<csv|xlsx>`
@@ -203,7 +204,7 @@ const find = (
       row.Type === type && row.Season === season && row.Episode === episode
   );
 
-describe('writeExport — the Export folder mirrors the layout less the videos', () => {
+describe('writeExport: the Export folder mirrors the layout less the videos', () => {
   it('writes every file in its layout place, and no video', async () => {
     const { media, destination } = sandbox();
 
@@ -240,7 +241,7 @@ describe('writeExport — the Export folder mirrors the layout less the videos',
   });
 });
 
-describe('writeExport — the sheet in Meta', () => {
+describe('writeExport: the sheet in Meta', () => {
   it.each(['csv', 'xlsx'] as const)(
     'is Meta/familyflix-library.%s whatever the Export name',
     async (format) => {
@@ -361,7 +362,7 @@ describe('writeExport — the sheet in Meta', () => {
   });
 });
 
-describe('writeExport — two titles sharing a Folder key', () => {
+describe('writeExport: two titles sharing a Folder key', () => {
   const OTHER_HEAT: Movie = makeMovie({
     id: 'heat-tv-cut',
     title: 'Heat',
@@ -406,7 +407,7 @@ describe('writeExport — two titles sharing a Folder key', () => {
   });
 });
 
-describe('writeExport — nothing outside the new Export folder is written', () => {
+describe('writeExport: nothing outside the new Export folder is written', () => {
   it('leaves the destination with the new folder alone beside what was there', async () => {
     const { media, destination, dir, mediaPath } = sandbox();
     writeFileSync(join(destination, 'kept.txt'), 'kept');

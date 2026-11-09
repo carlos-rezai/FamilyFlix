@@ -1,7 +1,6 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 6: Import from spreadsheet reads the one sheet
-// (issue #539).
+// 58, Folder layout, Phase 6 (issue #539): a row matched by its Folder key.
 //
 // The matcher reads a row's **Folder key** (its `folder`, the Folder cell or
 // `Title (Year)` spelled by the reader) and matches it to the Title folder of
@@ -68,7 +67,7 @@ function folder(name: string, root: string = FIRST) {
   };
 }
 
-describe('matchRows — by Folder key', () => {
+describe('matchRows: by Folder key', () => {
   it('matches by the key whatever the row’s title says', () => {
     const amelie = folder('Amelie (2001)');
 
@@ -158,7 +157,7 @@ describe('matchRows — by Folder key', () => {
   });
 });
 
-describe('matchRows — path cells resolved against the matched Library folder', () => {
+describe('matchRows: path cells resolved against the matched Library folder', () => {
   const cells = {
     video: 'Heat (1995)/Heat.1995.1080p.mkv',
     subtitles: ['Heat (1995)/Subtitles/en.srt', 'Heat (1995)/Subtitles/nl.srt'],

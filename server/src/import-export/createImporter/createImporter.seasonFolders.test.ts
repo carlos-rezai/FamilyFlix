@@ -1,7 +1,7 @@
 // @vitest-environment node
 //
-// 58, Folder layout, Phase 2: "one film in the layout" (issue #535), over
-// the four shapes log 51 Phase 4 (issue #447) once read as Season folders.
+// 58, Folder layout, Phase 2 (issue #535): one film in the layout, over the
+// four shapes log 51 Phase 4 (issue #447) once read as Season folders.
 //
 // The importer's **Folder scan** reads a Library folder by the **Folder
 // layout**, whose Season folder is `Season` and its number: a Dutch

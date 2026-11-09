@@ -10,7 +10,7 @@
 // the absent **Playback component**.
 //
 // A **Library root** holding a film beside a **Show folder** whose videos sit
-// in **Season folders** — `Season 01/` and `Season 02/` — is imported over a
+// in **Season folders** (`Season 01/` and `Season 02/`) is imported over a
 // sheet naming both. What is asserted is what the run leaves behind and what
 // it says on the way:
 //
@@ -772,7 +772,7 @@ describe('createImporter — unplaced episodes', () => {
   });
 });
 
-describe('createImporter — two Show folders with one Folder key', () => {
+describe('createImporter: two Show folders with one Folder key', () => {
   it('files the row as ambiguous and imports neither', async () => {
     const { storage, importer, root, sheet } = looseSandbox({
       [SEASON_01]: ['Lighthouse.Keepers.S01E01.First.Light.mp4'],

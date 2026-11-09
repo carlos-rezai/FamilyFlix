@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 10: "the Sync fills the layout" (issue #543).
+// 58, Folder layout, Phase 10 (issue #543): no Write target options.
 //
 // `POST /api/enrichment` takes no **Write target** options: a body without
 // `writeSheet` and `writePosters` is a Sync, and one still sending them reads

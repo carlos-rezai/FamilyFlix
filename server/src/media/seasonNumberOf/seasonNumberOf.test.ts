@@ -1,6 +1,7 @@
 // @vitest-environment node
 //
-// 58, Folder layout (issue #545): the **Season folder**, read and spelled.
+// 58, Folder layout, refactor (issue #545): the **Season folder**, read and
+// spelled.
 //
 // `seasonNumberOf` reads a folder's name as its season by the one table the
 // client's mirror and the drift guard read too; `spellSeasonFolder` is its

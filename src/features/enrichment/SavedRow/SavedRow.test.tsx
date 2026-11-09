@@ -11,7 +11,7 @@ import {
 import { SavedRow, type SavedRowProps } from './SavedRow';
 
 /**
- * 58, Folder layout (issue #545): `SavedRow` is its own unit.
+ * 58, Folder layout, refactor (issue #545): `SavedRow` is its own unit.
  *
  * One row of _Where it is saved_: the 38px glyph tile, the title, one line
  * (sans for a plain one, mono and clipped for a path) and the badge at its

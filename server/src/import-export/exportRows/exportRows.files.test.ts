@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 58 — Folder layout, Phase 5: the layout's file plan (issue #538).
+// 58, Folder layout, Phase 5 (issue #538): the layout's file plan.
 //
 // Beside its one table, `exportRows(movies, series, include)` answers the
 // **File plan** of an **Export folder**: the layout less the videos (log 58,
@@ -132,7 +132,7 @@ const find = (
       row.Type === type && row.Season === season && row.Episode === episode
   );
 
-describe('exportRows — a film’s files in the layout', () => {
+describe('exportRows: a film’s files in the layout', () => {
   it('plans its poster and backdrop under Images, each keeping its extension', () => {
     const plan = planOf([HEAT], [], IMAGES);
 
@@ -174,7 +174,7 @@ describe('exportRows — a film’s files in the layout', () => {
   });
 });
 
-describe('exportRows — a series’ files in the layout', () => {
+describe('exportRows: a series’ files in the layout', () => {
   it('plans the series poster, the Season poster and every Still, Frame stills included', () => {
     const plan = planOf([], [SEVERANCE], IMAGES);
 
@@ -245,7 +245,7 @@ describe('exportRows — a series’ files in the layout', () => {
   });
 });
 
-describe('exportRows — the Video cell', () => {
+describe('exportRows: the Video cell', () => {
   it('names where each video goes in the layout, though nothing travels', () => {
     const rows = rowsOf([HEAT], [SEVERANCE], OFF);
 
@@ -266,7 +266,7 @@ describe('exportRows — the Video cell', () => {
   });
 });
 
-describe('exportRows — a path cell names only a file that is there', () => {
+describe('exportRows: a path cell names only a file that is there', () => {
   it('plans nothing and blanks every image and track cell with both toggles off', () => {
     expect(exportRows([HEAT], [SEVERANCE], OFF).files).toEqual([]);
     for (const row of rowsOf([HEAT], [SEVERANCE], OFF)) {
@@ -325,7 +325,7 @@ describe('exportRows — a path cell names only a file that is there', () => {
   });
 });
 
-describe('exportRows — two titles sharing a Folder key', () => {
+describe('exportRows: two titles sharing a Folder key', () => {
   const OTHER_HEAT: Movie = makeMovie({
     id: 'heat-tv-cut',
     title: 'Heat',
