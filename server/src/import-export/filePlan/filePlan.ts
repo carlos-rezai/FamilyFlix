@@ -75,6 +75,12 @@ function videoPath(place: VideoPlace, storedPath: string): string {
     : `${seasonDir(place.folder, place.season)}/${basenameOf(storedPath)}`;
 }
 
+/** A Video cell: where the video lies, blank for none stored. */
+export const videoCell = (
+  place: VideoPlace,
+  storedPath: string | null
+): string | null => (storedPath ? videoPath(place, storedPath) : null);
+
 /**
  * The Export's **File plan** (log 59): the **Path cells** `exportRows` fills
  * its path cells from, each answer the place's path in the **Folder layout**
@@ -120,8 +126,7 @@ export function filePlan(include: ExportInclude): FilePlan {
         );
       });
     },
-    video: (place, storedPath) =>
-      storedPath ? videoPath(place, storedPath) : null,
+    video: videoCell,
   };
 
   return { cells, files };

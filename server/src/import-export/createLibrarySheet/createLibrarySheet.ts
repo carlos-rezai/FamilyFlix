@@ -8,8 +8,12 @@ import {
   META_FOLDER,
 } from '../../media/folderLayout/folderLayout';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
+import {
+  readTitleFolder,
+  type TitleFolderScan,
+} from '../../media/readTitleFolder/readTitleFolder';
 import { exportRows } from '../exportRows/exportRows';
-import { filePlan } from '../filePlan/filePlan';
+import { layoutCells } from '../layoutCells/layoutCells';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The **Library sheet**'s path inside its Library folder. */
@@ -56,7 +60,8 @@ export interface LibrarySheet {
  * {@link LIBRARY_SHEET_DELAY_MS} after the last, then each touched folder's
  * {@link LIBRARY_SHEET} rewritten from the library under the **Sheet
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
- * own name), through a temporary file in `Meta/` and a rename, behind its
+ * own name, its path cells from each Title folder's **Layout read**,
+ * `layoutCells`), through a temporary file in `Meta/` and a rename, behind its
  * BOM. A folder no longer listed (a **Factory reset**'s) or **Unreachable**
  * is skipped; a later touch that finds it reachable writes it. The one
  * replacer inside a Library folder, and only of that one file.
@@ -103,6 +108,25 @@ export function createLibrarySheet({
     };
   }
 
+  /**
+   * The **Layout read** of each recorded **Title folder**, by its own name;
+   * a folder that cannot be read has none, so its path cells are blank.
+   */
+  async function readFolders(
+    root: string,
+    sourceFolders: ReadonlyMap<string, string>
+  ): Promise<Map<string, TitleFolderScan>> {
+    const reads = new Map<string, TitleFolderScan>();
+    for (const name of new Set(sourceFolders.values())) {
+      try {
+        reads.set(name, await readTitleFolder(join(root, name)));
+      } catch {
+        // An unreadable Title folder keeps every cell but its paths.
+      }
+    }
+    return reads;
+  }
+
   async function writeOne(folderId: string): Promise<void> {
     const folder = storage
       .libraryFolders()
@@ -111,10 +135,11 @@ export function createLibrarySheet({
       return;
     }
     const { movies, series, sourceFolders } = contentOf(folderId);
+    const reads = await readFolders(folder.path, sourceFolders);
     const { table } = exportRows(
       movies,
       series,
-      filePlan({ images: true, subtitles: true }).cells,
+      layoutCells(reads, folder.path),
       (titleId) => sourceFolders.get(titleId) ?? null
     );
     const bytes = await writeSheet(table, 'csv');
