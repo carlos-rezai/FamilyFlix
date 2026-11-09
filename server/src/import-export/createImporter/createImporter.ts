@@ -49,6 +49,7 @@ import {
 } from '../planSheetFields/planSheetFields';
 import type { LibrarySheet } from '../createLibrarySheet/createLibrarySheet';
 import { isTitleRow, readSheet, type SheetRow } from '../readSheet/readSheet';
+import type { LayoutFill } from '../createLayoutFill/createLayoutFill';
 import {
   readShowFolder,
   type ShowFolderAnswer,
@@ -731,6 +732,11 @@ export interface ImporterDeps {
    * closes.
    */
   librarySheet: Pick<LibrarySheet, 'hold' | 'release'>;
+  /**
+   * The **Layout fill** a **Folder scan** runs after each title it imports
+   * or fills, its lines the run's own.
+   */
+  layoutFill: LayoutFill;
 }
 
 /**
@@ -776,6 +782,7 @@ export function createImporter({
   media,
   playback,
   librarySheet,
+  layoutFill,
 }: ImporterDeps): Importer {
   let run: ImportRun | null = null;
   /** The Library folders whose `Meta/` sheet the **Current run** read, held. */
@@ -839,6 +846,20 @@ export function createImporter({
     current.log.push({ text, kind });
     if (current.log.length > LOG_CAP) {
       current.log.splice(0, current.log.length - LOG_CAP);
+    }
+  };
+
+  /**
+   * The **Layout fill** run over one title a scan imported or filled: each
+   * file it writes one `↓` line, a folder it can't write one Warning line.
+   */
+  const fillTitleFolder = async (
+    current: ImportRun,
+    titleId: string
+  ): Promise<void> => {
+    const { lines } = await layoutFill.fill(titleId);
+    for (const line of lines) {
+      log(current, line.text, line.kind);
     }
   };
 
@@ -1234,7 +1255,7 @@ export function createImporter({
     current: ImportRun,
     signal: AbortSignal,
     libraryFolder: StoredLibraryFolder
-  ): Promise<boolean> => {
+  ): Promise<string | null> => {
     const { row, show, held, episodes } = match;
     // Where the show came from, relative to its Library folder: on a held
     // series too, so a re-run backfills a library imported before it was
@@ -1346,7 +1367,7 @@ export function createImporter({
         await fillHeldArt(held, held.folder);
       } catch (error) {
         if (signal.aborted) {
-          return false;
+          return null;
         }
         throw error;
       }
@@ -1356,7 +1377,7 @@ export function createImporter({
         logAlreadyHeld(current, row);
       }
       if (artFailures.length === 0) {
-        return false;
+        return held?.series.id ?? null;
       }
     }
     const folder = held?.folder ?? media.reserveFolder(row.title, row.year);
@@ -1488,7 +1509,7 @@ export function createImporter({
     if (series === null) {
       media.removeFolder(folder);
     }
-    return held === null && series !== null;
+    return series?.id ?? null;
   };
 
   /**
@@ -1824,12 +1845,15 @@ export function createImporter({
         imported += 1;
         logPlaced(current, match.row.title);
         warnOfMissingFiles(current, match);
+        if (verb === 'Scan') {
+          await fillTitleFolder(current, added.id);
+        }
       }
       current.done += 1;
     }
 
     for (const { match, libraryFolder } of shows) {
-      const added = await importShow(
+      const seriesId = await importShow(
         match,
         genres,
         current,
@@ -1840,8 +1864,11 @@ export function createImporter({
         return;
       }
       // A new series is one title imported; a held one gaining episodes none.
-      if (added) {
+      if (seriesId !== null && match.held === null) {
         imported += 1;
+      }
+      if (seriesId !== null && verb === 'Scan') {
+        await fillTitleFolder(current, seriesId);
       }
     }
 
@@ -2429,6 +2456,9 @@ export function createImporter({
             fillHeld(current, { kind: 'movie', id: heldId }, sheetRow, genres);
           if (!filled && again === null) {
             logAlreadyHeld(current, row);
+          }
+          if (filled) {
+            await fillTitleFolder(current, heldId);
           }
           continue;
         }

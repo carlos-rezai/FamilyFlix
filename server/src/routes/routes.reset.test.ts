@@ -44,6 +44,7 @@ import { fakeTmdb, TMDB_KEY } from '../test-support/fakeTmdb/fakeTmdb';
 import { heldCopy } from '../test-support/heldCopy/heldCopy';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type {
   EnrichmentRun,
@@ -160,6 +161,7 @@ async function filledApi({
     media: mediaDomain,
     playback,
     librarySheet: idleLibrarySheet(),
+    layoutFill: idleLayoutFill(),
   });
   const tmdb = fakeTmdb();
   const enrichment = createEnrichment({

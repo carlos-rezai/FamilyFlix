@@ -44,6 +44,7 @@ import {
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
@@ -99,6 +100,7 @@ function sandbox(): Sandbox {
     media: createMedia(media),
     playback,
     librarySheet: idleLibrarySheet(),
+    layoutFill: idleLayoutFill(),
   });
   return {
     dir,

@@ -48,6 +48,7 @@ import {
 } from '../test-support/fakeTmdb/fakeTmdb';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
@@ -146,6 +147,7 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
         media,
         playback,
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       }),
       enrichment,
       createLayoutFill({ storage, media })

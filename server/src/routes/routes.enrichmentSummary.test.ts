@@ -24,6 +24,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
@@ -86,6 +87,7 @@ async function freshApi(tmdbFetch: Fetch = answeringTmdb()) {
         media: mediaDomain,
         playback,
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       }),
       enrichment,
       createLayoutFill({ storage, media: mediaDomain })

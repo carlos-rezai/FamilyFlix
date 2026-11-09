@@ -35,6 +35,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { seriesFixture } from '../test-support/seriesFixture/seriesFixture';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { SHEET_COLUMNS, EXPORT_FORMATS } from '@/types';
 import type { ExportFormat, ExportResult, ImportRun } from '@/types';
@@ -91,6 +92,7 @@ function freshApi(): {
         media: mediaDomain,
         playback,
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       }),
       createEnrichment({
         storage,

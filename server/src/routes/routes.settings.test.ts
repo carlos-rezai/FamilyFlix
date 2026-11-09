@@ -89,6 +89,7 @@ import {
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
@@ -178,6 +179,7 @@ function freshApi({
         media: mediaDomain,
         playback,
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       }),
       createEnrichment({
         storage,

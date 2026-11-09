@@ -52,6 +52,7 @@ import { heldCopy } from '../../test-support/heldCopy/heldCopy';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { LibraryStorage } from '../../library';
 import type { Episode, ImportRun, LogLine, Series } from '@/types';
@@ -121,6 +122,7 @@ function sandbox({
     media: mediaSeam(createMedia(media)),
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
+    layoutFill: idleLayoutFill(),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
@@ -384,6 +386,7 @@ describe('createImporter — the checked-in series fixture', () => {
       media: createMedia(media),
       playback: createPlayback(media, fixedSlot(null), () => null),
       librarySheet: idleLibrarySheet(),
+      layoutFill: idleLayoutFill(),
     });
 
     await importer.start(sheet);
@@ -491,6 +494,7 @@ function looseSandbox(layout: Record<string, string[]>): {
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
+    layoutFill: idleLayoutFill(),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
@@ -887,6 +891,7 @@ function rerunSandbox(
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
+    layoutFill: idleLayoutFill(),
   });
   return {
     storage,
@@ -1043,6 +1048,7 @@ describe('createImporter — a show already in the library', () => {
         media: createMedia(media),
         playback: createPlayback(media, fixedSlot(null), () => null),
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       });
 
       await runOnce(importer, sheet);

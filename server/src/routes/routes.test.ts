@@ -64,6 +64,7 @@ import {
 } from '../test-support/fixtureVideo/fixtureVideo';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
@@ -155,6 +156,7 @@ function freshApi(
         media: mediaDomain,
         playback,
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       }),
       createEnrichment({
         storage,
@@ -3168,6 +3170,7 @@ function relisten(
         media: mediaDomain,
         playback,
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       }),
       createEnrichment({
         storage,

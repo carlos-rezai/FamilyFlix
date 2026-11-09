@@ -32,6 +32,7 @@ import { heldCopy } from '../test-support/heldCopy/heldCopy';
 import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
+import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
@@ -81,6 +82,7 @@ function freshApi({
         media: mediaSeam(mediaDomain),
         playback,
         librarySheet: idleLibrarySheet(),
+        layoutFill: idleLayoutFill(),
       }),
       createEnrichment({
         storage,

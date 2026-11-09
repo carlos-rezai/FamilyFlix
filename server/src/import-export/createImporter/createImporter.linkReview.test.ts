@@ -42,6 +42,7 @@ import {
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type {
   Episode,
@@ -90,6 +91,7 @@ function sandbox(kind: 'films' | 'shows'): Sandbox {
     media: mediaDomain,
     playback,
     librarySheet: idleLibrarySheet(),
+    layoutFill: idleLayoutFill(),
   });
   return {
     storage,

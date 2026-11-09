@@ -28,6 +28,7 @@ import {
 } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import {
   closeTracked,
@@ -103,6 +104,7 @@ function sandbox(): Sandbox {
     media: createMedia(media),
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: writer,
+    layoutFill: idleLayoutFill(),
   });
   return { storage, importer, writer, media, root };
 }

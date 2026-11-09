@@ -42,6 +42,7 @@ import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
 
@@ -83,6 +84,7 @@ function open(
         null
     ),
     librarySheet: idleLibrarySheet(),
+    layoutFill: idleLayoutFill(),
   });
   return { storage, db, importer };
 }
