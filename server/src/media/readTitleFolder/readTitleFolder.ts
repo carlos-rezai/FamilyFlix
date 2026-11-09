@@ -1,6 +1,6 @@
 import type { Dirent } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
+import { basename, join } from 'node:path';
 
 import { detectSubtitleLanguage } from '../detectSubtitleLanguage/detectSubtitleLanguage';
 import {
@@ -11,6 +11,7 @@ import {
 import { episodeTag, spellEpisodeTag } from '../episodeTag/episodeTag';
 import { folderKeyOf, type FolderKey } from '../folderKeyOf/folderKeyOf';
 import {
+  endsInRole,
   IMAGES_FOLDER,
   STILLS_FOLDER,
   SUBTITLES_FOLDER,
@@ -102,10 +103,6 @@ const tagOf = (name: string): string | null => {
   return tag === null ? null : spellEpisodeTag(tag.season, tag.episode);
 };
 
-/** The name before the extension, lowercased. */
-const stem = (filename: string): string =>
-  basename(filename, extname(filename)).toLowerCase();
-
 /** A folder's entries, none when it is not there or cannot be read. */
 async function entriesOf(dir: string): Promise<Dirent[]> {
   try {
@@ -129,13 +126,13 @@ const subtitlesIn = (dir: string, files: string[]): SubtitleFound[] =>
     language: detectSubtitleLanguage(file),
   }));
 
-/** The first image in `dir` whose stem, case folded, ends in `role`. */
+/** The first image in `dir` that is the art of `role` by its name. */
 const imageByRole = (
   dir: string,
   images: string[],
   role: string
 ): string | null => {
-  const found = images.find((file) => stem(file).endsWith(role));
+  const found = images.find((file) => endsInRole(file, role));
   return found === undefined ? null : join(dir, found);
 };
 

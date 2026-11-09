@@ -6,16 +6,18 @@ import { pipeline } from 'node:stream/promises';
 import type { LogLine } from '@/types';
 import type { StillSource } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
-import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
 import { episodeTag, spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import {
   isImageFilename,
   isSubtitleFilename,
 } from '../../media/fileKinds/fileKinds';
 import {
+  endsInRole,
   IMAGES_FOLDER,
+  spellTrackName,
   STILLS_FOLDER,
   SUBTITLES_FOLDER,
+  trackLanguageOf,
 } from '../../media/folderLayout/folderLayout';
 import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 
@@ -74,18 +76,14 @@ interface FolderPlan {
 /** The Still sources whose Still is written; a **Frame still** never is. */
 const WRITTEN_STILLS: ReadonlySet<StillSource> = new Set(['tmdb', 'picked']);
 
-/** A filename's stem, case folded. */
-const stemOf = (name: string): string =>
-  name.slice(0, name.length - extname(name).length).toLowerCase();
-
 /** The Images folder's art by role: none when an image already ends in it. */
 function artWrites(
   roles: readonly [role: string, stored: string | null][],
   existing: readonly string[]
 ): Write[] {
-  const images = existing.filter(isImageFilename).map(stemOf);
+  const images = existing.filter(isImageFilename);
   return roles.flatMap(([role, stored]) =>
-    stored === null || images.some((stem) => stem.endsWith(role))
+    stored === null || images.some((image) => endsInRole(image, role))
       ? []
       : [{ stored, name: `${role}${extname(stored)}` }]
   );
@@ -102,11 +100,7 @@ function trackWrites(
   const there = new Set(
     existing
       .filter(isSubtitleFilename)
-      .map((name) =>
-        detectSubtitleLanguage(
-          `${stemOf(name).replace(/ \(\d+\)$/, '')}${extname(name)}`
-        ).toLowerCase()
-      )
+      .map((name) => trackLanguageOf(name).toLowerCase())
   );
   const counts = new Map<string, number>();
   return tracks.flatMap((track) => {
@@ -115,7 +109,7 @@ function trackWrites(
     }
     const count = (counts.get(track.language) ?? 0) + 1;
     counts.set(track.language, count);
-    const name = count === 1 ? track.language : `${track.language} (${count})`;
+    const name = spellTrackName(track.language, count);
     return [{ stored: track.path, name: `${name}${extname(track.path)}` }];
   });
 }

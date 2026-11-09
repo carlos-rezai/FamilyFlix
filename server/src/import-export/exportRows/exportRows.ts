@@ -14,6 +14,7 @@ import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
 import {
   IMAGES_FOLDER,
+  spellTrackName,
   STILLS_FOLDER,
   SUBTITLES_FOLDER,
 } from '../../media/folderLayout/folderLayout';
@@ -163,7 +164,7 @@ function plannerFor(include: ExportInclude, files: ExportFile[]): Planner {
         const language = safeName(subtitle.language);
         const count = (seen.get(language.toLowerCase()) ?? 0) + 1;
         seen.set(language.toLowerCase(), count);
-        const name = count === 1 ? language : `${language} (${count})`;
+        const name = spellTrackName(language, count);
         return add(
           subtitle.path,
           `${dir}/${name}${extensionOf(subtitle.path)}`
