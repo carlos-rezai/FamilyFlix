@@ -16,6 +16,11 @@ export interface HeldValues {
   synopsis: string | null;
   rating: number | null;
   status: WatchStatus;
+  tmdbId: number | null;
+  tmdbScore: number | null;
+  /** Minutes; a series has none. */
+  runtime: number | null;
+  isFavorite: boolean;
 }
 
 /**
@@ -33,6 +38,10 @@ export function heldValues(movie: Movie): HeldValues {
     synopsis: movie.synopsis,
     rating: movie.rating,
     status: movie.status,
+    tmdbId: movie.tmdbId,
+    tmdbScore: movie.tmdbScore,
+    runtime: movie.runtimeMinutes,
+    isFavorite: movie.isFavorite,
   };
 }
 
@@ -52,5 +61,9 @@ export function heldSeriesValues(series: Series): HeldValues {
     synopsis: series.synopsis,
     rating: series.rating,
     status: 'unwatched',
+    tmdbId: series.tmdbId,
+    tmdbScore: series.tmdbScore,
+    runtime: null,
+    isFavorite: series.isFavorite,
   };
 }

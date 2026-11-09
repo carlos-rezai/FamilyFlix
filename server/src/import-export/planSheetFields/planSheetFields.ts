@@ -7,7 +7,9 @@ import type { SheetRow } from '../readSheet/readSheet';
  * The **Sheet fills**: each empty held field the row fills, in the row's
  * values. A series' `year` brings its `endYear` with it — `null` an open run,
  * which a proposal carries so _Apply choices_ clears a held end year; `watched`
- * is only ever a mark on an unwatched film.
+ * is only ever a mark on an unwatched film or episode, `favorite` only ever a
+ * heart. The TMDB id, TMDB rating and Runtime are fills alone, never a
+ * difference.
  */
 export interface SheetFill {
   synopsis?: string;
@@ -18,6 +20,10 @@ export interface SheetFill {
   cast?: string[];
   rating?: number;
   watched?: true;
+  tmdbId?: number;
+  tmdbScore?: number;
+  runtime?: number;
+  favorite?: true;
 }
 
 /**
@@ -79,18 +85,27 @@ const sameSet = (a: string[], b: string[]): boolean => {
  * that differs is a **Sheet difference**, never a fill. Text is compared
  * trimmed and case-blind, cast and genres as sets, the rating as a number,
  * a series' year as its spelled **Year range**. A film's year never differs,
- * the title is never in play, and Watched only marks an unwatched film. The
+ * the title is never in play, and Watched only marks an unwatched film or
+ * episode. The TMDB id, TMDB rating and Runtime only fill where none is held,
+ * and Favorite only hearts. An Episode row plans its Watched mark alone. The
  * row's genres arrive already read onto the **Genre pool**. Each difference's
  * sheet side is also `proposed`, normalised exactly as a fill would be.
  */
 export function planSheetFields(
   current: HeldValues,
   row: SheetRow,
-  kind: 'movie' | 'series'
+  kind: 'movie' | 'series' | 'episode'
 ): SheetPlan {
   const fill: SheetFill = {};
   const differences: SheetDifference[] = [];
   const proposed: SheetFill = {};
+  const marksWatched = row.watched && current.status === 'unwatched';
+  if (kind === 'episode') {
+    if (marksWatched) {
+      fill.watched = true;
+    }
+    return { fill, differences, proposed };
+  }
   const differ = (field: SheetField, mine: string, sheet: string): void => {
     differences.push({
       field,
@@ -171,8 +186,21 @@ export function planSheetFields(
     }
   }
 
-  if (kind === 'movie' && row.watched && current.status === 'unwatched') {
+  if (kind === 'movie' && marksWatched) {
     fill.watched = true;
+  }
+
+  if (row.tmdbId !== null && current.tmdbId === null) {
+    fill.tmdbId = row.tmdbId;
+  }
+  if (row.tmdbScore !== null && current.tmdbScore === null) {
+    fill.tmdbScore = row.tmdbScore;
+  }
+  if (kind === 'movie' && row.runtime !== null && current.runtime === null) {
+    fill.runtime = row.runtime;
+  }
+  if (row.favorite && !current.isFavorite) {
+    fill.favorite = true;
   }
 
   return { fill, differences, proposed };

@@ -5,8 +5,9 @@ import type { SheetFill } from '../planSheetFields/planSheetFields';
 /**
  * Pure: a **Sheet fill** → the patch `updateMovie` writes on a held film —
  * `plannedEnrichment`'s `movieEnrichment` on the import's side. Its rating is
- * a column like any other; Watched is not here, since it is a mark rather
- * than a field, and the writer routes it through `markWatched`.
+ * a column like any other, the Runtime its minutes; Watched is not here,
+ * since it is a mark rather than a field, and the writer routes it through
+ * `markWatched`, nor the TMDB rating, which `updateMovie` writes none of.
  */
 export function movieSheetPatch(fill: SheetFill): MoviePatch {
   const patch: MoviePatch = {};
@@ -16,6 +17,8 @@ export function movieSheetPatch(fill: SheetFill): MoviePatch {
   if (fill.director !== undefined) patch.director = fill.director;
   if (fill.cast !== undefined) patch.cast = fill.cast;
   if (fill.rating !== undefined) patch.rating = fill.rating;
+  if (fill.tmdbId !== undefined) patch.tmdbId = fill.tmdbId;
+  if (fill.runtime !== undefined) patch.runtimeMinutes = fill.runtime;
   return patch;
 }
 
@@ -33,6 +36,8 @@ export function seriesSheetPatch(fill: SheetFill): SeriesEnrichment {
   if (fill.genres !== undefined) patch.genres = fill.genres;
   if (fill.director !== undefined) patch.creator = fill.director;
   if (fill.cast !== undefined) patch.cast = fill.cast;
+  if (fill.tmdbId !== undefined) patch.tmdbId = fill.tmdbId;
+  if (fill.tmdbScore !== undefined) patch.tmdbScore = fill.tmdbScore;
   return patch;
 }
 

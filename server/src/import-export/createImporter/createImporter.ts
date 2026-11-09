@@ -587,7 +587,11 @@ interface Differing extends HeldTitle {
 /** The fields a fill names on its `✓ Updated` line, in the sheet's order. */
 const filledNames = (fill: SheetFill): string[] => [
   ...SHEET_FIELDS.filter((field) => fill[field] !== undefined),
+  ...(['runtime', 'tmdbScore', 'tmdbId'] as const).filter(
+    (field) => fill[field] !== undefined
+  ),
   ...(fill.watched === true ? ['watched'] : []),
+  ...(fill.favorite === true ? ['favorite'] : []),
 ];
 
 /**
@@ -921,9 +925,10 @@ export function createImporter({
   /**
    * Any **Sheet fill** written onto a held title — the run's fills and
    * _Apply choices_ alike, so a sheet value lands the same whichever wrote
-   * it. A film through `updateMovie`, its Watched mark through `markWatched`;
-   * a series through `enrichSeries`, its rating through `setSeriesRating`. An
-   * empty patch is never written.
+   * it. A film through `updateMovie`, its TMDB rating through `enrichMovie`,
+   * its Watched mark through `markWatched`; a series through `enrichSeries`,
+   * its rating through `setSeriesRating`; a heart through `setFavorite` or
+   * `setSeriesFavorite`. An empty patch is never written.
    */
   const writeSheetFill = ({ kind, id }: HeldTitle, fill: SheetFill): void => {
     if (kind === 'movie') {
@@ -931,8 +936,14 @@ export function createImporter({
       if (Object.keys(patch).length > 0) {
         storage.updateMovie(id, patch);
       }
+      if (fill.tmdbScore !== undefined) {
+        storage.enrichMovie(id, { tmdbScore: fill.tmdbScore });
+      }
       if (fill.watched === true) {
         storage.markWatched(id);
+      }
+      if (fill.favorite === true) {
+        storage.setFavorite(id, true);
       }
       return;
     }
@@ -943,6 +954,49 @@ export function createImporter({
     if (fill.rating !== undefined) {
       storage.setSeriesRating(id, fill.rating);
     }
+    if (fill.favorite === true) {
+      storage.setSeriesFavorite(id, true);
+    }
+  };
+
+  /**
+   * A held series' Episode rows' **Sheet fills**: each row's Watched marking
+   * the held episode it names by season and number, when that one is
+   * unwatched. Answers the `SxxEyy` of each episode marked.
+   */
+  const fillHeldEpisodes = (seriesId: string, rows: SheetRow[]): string[] => {
+    const detail = storage.getSeriesDetail(seriesId);
+    if (detail === null) {
+      return [];
+    }
+    const marked: string[] = [];
+    for (const row of rows) {
+      const episode = detail.seasons
+        .flatMap((season) => season.episodes)
+        .find(
+          (each) => each.season === row.season && each.number === row.episode
+        );
+      if (episode === undefined) {
+        continue;
+      }
+      const { fill } = planSheetFields(
+        {
+          ...heldSeriesValues(detail.series),
+          status: episode.status,
+        },
+        row,
+        'episode'
+      );
+      if (fill.watched === true) {
+        storage.setEpisodeWatched(episode.id, true);
+        marked.push(
+          `S${String(episode.season).padStart(2, '0')}E${String(
+            episode.number
+          ).padStart(2, '0')} watched`
+        );
+      }
+    }
+    return marked;
   };
 
   /** The **Already in library** line: a held title the run added nothing to. */
@@ -986,7 +1040,8 @@ export function createImporter({
     current: ImportRun,
     held: HeldTitle,
     row: SheetRow,
-    genres: GenreReader
+    genres: GenreReader,
+    episodeRows: SheetRow[] = []
   ): boolean => {
     const movie = held.kind === 'movie' ? storage.getMovie(held.id) : null;
     const series = held.kind === 'series' ? storage.getSeries(held.id) : null;
@@ -1007,7 +1062,9 @@ export function createImporter({
     );
     fileDiffers(current, pooled, { ...held, proposed }, differences);
     writeSheetFill(held, fill);
-    return logUpdated(current, row, filledNames(fill));
+    const episodes =
+      held.kind === 'series' ? fillHeldEpisodes(held.id, episodeRows) : [];
+    return logUpdated(current, row, [...filledNames(fill), ...episodes]);
   };
 
   /**
@@ -2130,7 +2187,8 @@ export function createImporter({
             current,
             { kind: 'series', id: joined.held.series.id },
             match.row,
-            genres
+            genres,
+            joined.sheetEpisodes
           );
         }
         matchedShows.push({ match: joined, libraryFolder });
@@ -2185,7 +2243,15 @@ export function createImporter({
             : null;
       if (heldTitle !== null) {
         // No folder found, so nothing else is added to say it took nothing.
-        if (!fillHeld(current, heldTitle, row, genres)) {
+        if (
+          !fillHeld(
+            current,
+            heldTitle,
+            row,
+            genres,
+            episodeRowsOf(rows, row.folder)
+          )
+        ) {
           logAlreadyHeld(current, row);
         }
       } else {
@@ -2373,7 +2439,8 @@ export function createImporter({
             current,
             { kind: 'series', id: match.held.series.id },
             sheetRow,
-            genres
+            genres,
+            match.sheetEpisodes
           );
         }
         fileUnplaced(current, match);
