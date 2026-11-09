@@ -164,19 +164,23 @@ familyflix/
 │       │   ├── folders/           # the Library folders: the list, its title counts, the remove that keeps the titles, and folderOverlap
 │       │   ├── holding/           # the Held video rule's read: the title a video already belongs to
 │       │   ├── leftOut/           # the Left-out videos a scan skips, and titleVideos, the ones a keep-files Delete records
+│       │   ├── changes/           # which write touches which Library sheet: the change listener and its touch wrappers
 │       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf, and yearSpan, the one reading of a Year range
 │       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, into a title's Media folder or a season under it; readStored), subtitle detection, removing a title's Media folder after a delete, space used
 │       │   ├── readableFolder/        # whether a path is a folder the app can read, never throwing
-│       │   ├── walkLibraryFolder/     # a Library folder → its Source folders
-│       │   ├── scanMovieFolder/       # one folder → its video, poster, backdrop, subtitles
+│       │   ├── walkLibraryFolder/     # a Library folder → its Title folders, Layout warnings and Meta/ sheet
+│       │   ├── readTitleFolder/       # one Title folder by the layout: a film, a series of Season folders, or left out
+│       │   ├── folderKeyOf/           # the Folder key: a Title folder's name read as Title (Year), and spelled back
+│       │   ├── seasonNumberOf/        # the Season folder: Season NN read as its number, and spelled back
+│       │   ├── folderLayout/          # the layout's folder and sheet names, and the image role and track name rules
 │       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
 │       │   ├── episodeTag/            # the Episode tag: read off a filename, and spelled back as S01E03
 │       │   ├── spaceUsed/             # the bytes under the media root, never throwing
 │       │   ├── writableFolder/        # whether a folder can be written into, never throwing
 │       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, heldValues, readShowFolder, listedFolderOf, foldersToScan, heldByVideo, placeFoundVideo, leftOutEntries, placeShowFolder, placeFilmFolder, copyFoundEpisodes, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport
+│       ├── import-export/  # the bulk importer and the exporter: readSheet, titleKey, matchRows, groupShows, admitFolder, heldValues, readShowFolder, listedFolderOf, foldersToScan, heldByVideo, placeFoundVideo, leftOutEntries, placeTitleFolder, placeShowFolder, placeFilmFolder, copyFoundEpisodes, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, exportSummary, writeExport, createLibrarySheet (the Library sheet writer), createLayoutFill and fillLayout (the Layout fill)
 │       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedRuntime, capabilities(component)
-│       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, writeBack, createEnrichment
+│       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, createEnrichment
 │       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them; 8 and 9: the Source file an episode and a film remember across scans; 10: season posters); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
 │       ├── shell/          # the server's half of the shell seam: shellHandshake, listen (the loopback bind and boundPort), orderedShutdown
 │       └── test-support/   # Shared test doubles, never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, …)
@@ -208,7 +212,7 @@ familyflix/
 │   │   ├── player/          # built-in video player for any Playable, the Audio picker (AudioMenu) and the Subtitle picker (SubtitleMenu, subtitleLabel), their Audio and Subtitle choices held by PlayerScreen for the sitting, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
 │   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs; MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, useImportMode, useShowFolderPick, readEpisodeTag, titleFromFilename, and createSeries, readShowFolder and containingFolder in its api/; and Resolve, the Import context
 │   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView; the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan; and the Export dialog: ExportModal, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
-│   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, WriteTargetRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
+│   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, SavedRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
 │   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins and TMDB ratings Toggles, and the Start on Pill tabs); CodecManager (the Codecs page's screen) over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
 │   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture: what every group draws with
 │   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share

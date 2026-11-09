@@ -135,6 +135,14 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       folders_ is disabled. Tick the TMDB box and scan a new folder again:
       _Continue to TMDB sync_ opens the Sync on **Just what was added**,
       reading _N titles this run brought in_, chosen.
+- [ ] The Library sheet, over the sandbox library: rate a film in a Title
+      folder there. A few seconds later
+      `<sandbox>\Meta\familyflix-library.csv` is rewritten, and its row's
+      Rating cell holds the new rating.
+- [ ] The Layout fill, over the sandbox library: put a `heat-poster.png` in
+      one film's `Images\` and empty another's, then Sync both. The empty
+      `Images\` now holds a `poster` and a `backdrop`; the first keeps its
+      `heat-poster.png` and gains no `poster`.
 
 ## 6. The slot over the default
 
@@ -168,6 +176,9 @@ Quit the app. Open a Command Prompt in the install directory,
 - [ ] Loading states, the reset, last because it erases the library: Settings
       → _Factory reset_, then _Erase everything_: the dialog locks, shows
       _Erasing everything_, and the app reloads on an empty library.
+- [ ] The scan after a Factory reset: list the sandbox Library folder again
+      and _Scan all folders_. Every title in it comes back with its ratings,
+      hearts and Status, read from its `Meta\familyflix-library.csv`.
 
 ## 9. Back on the dev machine
 

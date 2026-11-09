@@ -70,7 +70,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Intro animation: the FF mark opens FamilyFlix       | ✅ Done    |
 | Linux build: FamilyFlix on SteamOS, as an AppImage  | ✅ Done    |
 | Tidy into folders: each loose video its own folder  | ❌ Dropped |
-| Folder layout: one shape to scan, sync and export   | 🔜 Planned |
+| Folder layout: one shape to scan, sync and export   | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -356,16 +356,18 @@ subfolders the scan never opens: a `Subtitles/` folder beside the video, a
 folder per episode inside it, and the art apart in its own folder. The scan
 reads only the files lying directly in a Source folder, so those subtitles
 were never found, and an Export's own `subtitles/` folder did not come back
-in either. Settled in a grill-me on 2026-11-08 (design log 58, handoff
-`docs/handoff/handoff-folder-layout/`):
+in either. Settled in a grill-me on 2026-11-08, it is done (design log 58,
+handoff `docs/handoff/handoff-folder-layout/`):
 
-41. 🔜 **Folder layout**: every title folder in a Library folder has one
+41. ✅ **Folder layout**: every title folder in a Library folder has one
     layout, which the scan reads, the Layout fill and an Export write, and
     nothing else is read. The old shapes (genre shelves, Collection folders,
     loose shows, art and subtitles loose beside the video) are no longer
     read: FamilyFlix is before v1.0.0, a title already held from one keeps
     playing, and converting an existing library is left to a separate tool,
-    as step 40's tidy was.
+    as step 40's tidy was. Built in issues 534 to 544; the closing round
+    (issue 545) spelled the layout's names and its two shared rules once, in
+    `media/`, and had the composition root make every writer.
     - **Title folders** sit directly in a Library folder's root, named
       `Title (Year)` always, a series by its first year (`Severance (2022)`).
       Four Star Wars films are four folders in the root, and two films
