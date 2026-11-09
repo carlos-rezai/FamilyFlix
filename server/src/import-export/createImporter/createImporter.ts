@@ -35,6 +35,7 @@ import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { filmSourceOf, sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
+import { filmWithCells, showWithCells } from '../pathCellFills/pathCellFills';
 import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
 import { heldSeriesValues, heldValues } from '../heldValues/heldValues';
 import {
@@ -408,6 +409,14 @@ const filesOf = (scan: FilmScan): ImportProblemDetail['files'] => ({
 const episodeRowsOf = (rows: readonly SheetRow[], key: string): SheetRow[] =>
   rows.filter(
     (row) => row.type === 'Episode' && sameFolderKey(row.folder, key)
+  );
+
+/** A series' Season and Episode rows: those of `rows` naming its **Folder key**. */
+const partRowsOf = (rows: readonly SheetRow[], key: string): SheetRow[] =>
+  rows.filter(
+    (row) =>
+      (row.type === 'Season' || row.type === 'Episode') &&
+      sameFolderKey(row.folder, key)
   );
 
 /**
@@ -2178,7 +2187,11 @@ export function createImporter({
       if (show !== undefined) {
         const joined = showMatch(
           match.row,
-          show,
+          await showWithCells(
+            show,
+            match.row,
+            partRowsOf(rows, match.row.folder)
+          ),
           heldShow(held, seriesByKey, libraryFolder, show, match.row),
           episodeRowsOf(rows, match.row.folder)
         );
@@ -2224,7 +2237,13 @@ export function createImporter({
         }
         continue;
       }
-      matched.push({ match, libraryFolder });
+      matched.push({
+        match: {
+          ...match,
+          folder: await filmWithCells(match.folder, match.row),
+        },
+        libraryFolder,
+      });
     }
     // Every match-time problem is on the snapshot before the first byte is
     // copied: the rows the matcher could not settle, and then the folders no
@@ -2423,14 +2442,23 @@ export function createImporter({
           );
           continue;
         }
-        films.push({ match: { row, folder: scan }, libraryFolder: folder });
+        films.push({
+          match: { row, folder: await filmWithCells(scan, row) },
+          libraryFolder: folder,
+        });
       }
       for (const [matchable, show] of showOf) {
         const sheetRow = named.get(matchable);
         const row = sheetRow ?? guessedRow(show.name);
         const match = showMatch(
           row,
-          show,
+          sheetRow === undefined
+            ? show
+            : await showWithCells(
+                show,
+                sheetRow,
+                partRowsOf(rows, sheetRow.folder)
+              ),
           heldShow(held, seriesByKey, folder, show, row),
           sheetRow === undefined ? [] : episodeRowsOf(rows, sheetRow.folder)
         );
