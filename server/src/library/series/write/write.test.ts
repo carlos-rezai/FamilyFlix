@@ -827,3 +827,45 @@ describe('series write: Season posters', () => {
     expect(outcome?.removedPaths).not.toContain('harbor-2019/S01-poster-2.jpg');
   });
 });
+
+// 59, Rebuild whole, Phase 3 (issue #550): the write types carry what a
+// sheet gives a new title, so an import keeps the heart, the TMDB rating and
+// the Watched.
+describe('series write: the fields a sheet gives a new title', () => {
+  it('addSeries stores its heart and its TMDB rating', () => {
+    const storage = freshStorage();
+
+    const series = storage.addSeries({
+      title: 'Harbor & Vine',
+      isFavorite: true,
+      tmdbScore: 7.8,
+    });
+
+    expect(series).toMatchObject({ isFavorite: true, tmdbScore: 7.8 });
+    expect(storage.getSeriesDetail(series.id)?.series).toMatchObject({
+      isFavorite: true,
+      tmdbScore: 7.8,
+    });
+  });
+
+  it('addEpisode stores a watched episode as watched, at zero', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries({ title: 'Harbor & Vine' });
+
+    const episode = storage.addEpisode(series.id, {
+      season: 1,
+      number: 1,
+      videoPath: 'harbor-vine/season-01/S01E01.mp4',
+      watched: true,
+    });
+
+    expect(episode).toMatchObject({
+      watched: true,
+      resumePositionSeconds: 0,
+      status: 'watched',
+    });
+    expect(
+      storage.getSeriesDetail(series.id)?.seasons[0].episodes[0]
+    ).toMatchObject({ watched: true, status: 'watched' });
+  });
+});
