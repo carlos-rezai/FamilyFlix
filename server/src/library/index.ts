@@ -526,63 +526,10 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const holding = createHolding(db);
   const leftOut = createLeftOut(db);
   const changes = createChanges(db);
-  const { touch, folderOfTitle, folderOfEpisode } = changes;
-
-  /** A write over one Movie or Series, then its folder touched. */
-  function onTitle<A extends unknown[], R>(
-    write: (id: string, ...rest: A) => R
-  ): (id: string, ...rest: A) => R {
-    return (id, ...rest) => {
-      const result = write(id, ...rest);
-      touch([folderOfTitle(id)]);
-      return result;
-    };
-  }
-
-  /** A delete or a clear: the folder read first, while the title is held. */
-  function beforeTitle<A extends unknown[], R>(
-    write: (id: string, ...rest: A) => R
-  ): (id: string, ...rest: A) => R {
-    return (id, ...rest) => {
-      const folder = folderOfTitle(id);
-      const result = write(id, ...rest);
-      touch([folder]);
-      return result;
-    };
-  }
-
-  /** A write over one Episode, then its series' folder touched. */
-  function onEpisode<A extends unknown[], R>(
-    write: (id: string, ...rest: A) => R
-  ): (id: string, ...rest: A) => R {
-    return (id, ...rest) => {
-      const result = write(id, ...rest);
-      touch([folderOfEpisode(id)]);
-      return result;
-    };
-  }
-
-  /** A **Watch tick**: its folder touched only when it crosses a Status. */
-  function onCrossing(
-    statusOf: (id: string) => string | null,
-    folderOf: (id: string) => string | null,
-    write: (id: string, seconds: number) => void
-  ): (id: string, seconds: number) => void {
-    return (id, seconds) => {
-      const before = statusOf(id);
-      write(id, seconds);
-      if (statusOf(id) !== before) {
-        touch([folderOf(id)]);
-      }
-    };
-  }
+  const { touch, folderOfTitle, onTitle, beforeTitle, onEpisode } = changes;
 
   return {
-    addMovie(input) {
-      const movie = write.addMovie(input);
-      touch([folderOfTitle(movie.id)]);
-      return movie;
-    },
+    addMovie: changes.onCreated(write.addMovie),
     updateMovie: onTitle(write.updateMovie),
     enrichMovie: onTitle(enrich.enrichMovie),
     enrichSeries: onTitle(seriesEnrich.enrichSeries),
@@ -604,16 +551,11 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     getHome: home.getHome,
     getGenre: genre.getGenre,
     getGenreLess: genre.getGenreLess,
-    setResumePosition: onCrossing(
-      changes.movieStatus,
-      folderOfTitle,
-      watch.setResumePosition
-    ),
+    setResumePosition: changes.onCrossing('movie', watch.setResumePosition),
     markWatched: onTitle(watch.markWatched),
     markUnwatched: onTitle(watch.markUnwatched),
-    setEpisodeResumePosition: onCrossing(
-      changes.episodeStatus,
-      folderOfEpisode,
+    setEpisodeResumePosition: changes.onCrossing(
+      'episode',
       seriesWatch.setEpisodeResumePosition
     ),
     setEpisodeWatched: onEpisode(seriesWatch.setEpisodeWatched),
@@ -651,11 +593,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     leftOut: leftOut.leftOut,
     clearLeftOut: leftOut.clearLeftOut,
     bringBack: leftOut.bringBack,
-    addSeries(input, episodes, seasonPosters) {
-      const series = seriesWrite.addSeries(input, episodes, seasonPosters);
-      touch([folderOfTitle(series.id)]);
-      return series;
-    },
+    addSeries: changes.onCreated(seriesWrite.addSeries),
     addEpisode: onTitle(seriesWrite.addEpisode),
     deleteSeries: beforeTitle(seriesWrite.deleteSeries),
     updateSeries: onTitle(seriesWrite.updateSeries),
