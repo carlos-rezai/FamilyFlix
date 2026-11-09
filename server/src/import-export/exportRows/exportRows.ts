@@ -12,6 +12,7 @@ import {
 import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
+import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
 
 /** A cell's value: text or a number, or `null` for an empty cell. */
@@ -75,10 +76,6 @@ function folderKeyName(title: string, year: number | null): string {
   const name = year === null ? title : spellFolderKey(title, year);
   return safeName(safeName(name).replace(/[. ]+$/, ''));
 }
-
-/** A **Season folder**'s name: `Season 01`, `Season 00` the specials. */
-const seasonFolder = (season: number): string =>
-  `Season ${String(season).padStart(2, '0')}`;
 
 /** A stored path's last segment. */
 const basenameOf = (storedPath: string): string =>
@@ -205,7 +202,7 @@ function episodeRow(
   folder: string,
   plan: Planner
 ): ExportCell[] {
-  const season = `${folder}/${seasonFolder(episode.season)}`;
+  const season = `${folder}/${spellSeasonFolder(episode.season)}`;
   const tag = spellEpisodeTag(episode.season, episode.number);
   return rowOf({
     Type: 'Episode',
@@ -238,7 +235,7 @@ const seasonRows = (
     Season: season.number,
     Poster: plan.image(
       season.posterPath,
-      `${folder}/${seasonFolder(season.number)}/Images`,
+      `${folder}/${spellSeasonFolder(season.number)}/Images`,
       'poster'
     ),
   }),

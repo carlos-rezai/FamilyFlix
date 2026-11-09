@@ -12,6 +12,7 @@ import {
   isImageFilename,
   isSubtitleFilename,
 } from '../../media/fileKinds/fileKinds';
+import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 
 /** One subtitle track FamilyFlix holds: its language and its **Stored path**. */
 export interface HeldTrack {
@@ -67,10 +68,6 @@ interface FolderPlan {
 
 /** The Still sources whose Still is written; a **Frame still** never is. */
 const WRITTEN_STILLS: ReadonlySet<StillSource> = new Set(['tmdb', 'picked']);
-
-/** A **Season folder**'s name: `Season 01`. */
-const seasonFolder = (season: number): string =>
-  `Season ${String(season).padStart(2, '0')}`;
 
 /** A filename's stem, case folded. */
 const stemOf = (name: string): string =>
@@ -138,7 +135,7 @@ function folderPlans(title: HeldTitleFiles): FolderPlan[] {
     },
   ];
   for (const season of title.seasons) {
-    const folder = seasonFolder(season.number);
+    const folder = spellSeasonFolder(season.number);
     plans.push(
       {
         at: [folder, 'Images'],
