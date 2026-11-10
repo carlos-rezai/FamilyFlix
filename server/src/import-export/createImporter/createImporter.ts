@@ -787,6 +787,14 @@ export function createImporter({
   let run: ImportRun | null = null;
   /** The Library folders whose `Meta/` sheet the **Current run** read, held. */
   const heldSheets = new Set<string>();
+  /**
+   * Hold a Library folder's sheet until the run closes, so its sheet catches
+   * up then, not in review.
+   */
+  const holdSheet = (folderId: string): void => {
+    heldSheets.add(folderId);
+    librarySheet.hold(folderId);
+  };
   /** Release every folder the run held: the run has closed. */
   const releaseSheets = (): void => {
     for (const folderId of heldSheets) {
@@ -1928,9 +1936,7 @@ export function createImporter({
           sheets.set(folder, walk.sheet);
         }
         read.push(folder);
-        // Held until the run closes, so its sheet catches up then, not in review.
-        heldSheets.add(folder.id);
-        librarySheet.hold(folder.id);
+        holdSheet(folder.id);
       } catch {
         // A folder that stopped being readable mid-walk: what was found is
         // what there is, and the run still reaches review.
@@ -2359,18 +2365,15 @@ export function createImporter({
   };
 
   /**
-   * A Library folder's `Meta/` sheet, read for a **Folder scan**, the folder
-   * held first so the **Library sheet** keeps the values the run reads until
-   * it closes. A sheet that cannot be read is a **Warning line**, and the
-   * folder is scanned by its layout alone.
+   * A Library folder's `Meta/` sheet, read for a **Folder scan**. The walk
+   * already held the folder, so the **Library sheet** keeps the values the run
+   * reads until it closes. A sheet that cannot be read is a **Warning line**,
+   * and the folder is scanned by its layout alone.
    */
   const readMetaSheet = async (
     current: ImportRun,
-    folder: StoredLibraryFolder,
     sheetPath: string
   ): Promise<SheetRow[]> => {
-    heldSheets.add(folder.id);
-    librarySheet.hold(folder.id);
     try {
       return await readSheet(await readFile(sheetPath), sheetPath);
     } catch {
@@ -2424,8 +2427,7 @@ export function createImporter({
       shows: foundShows,
       sheet,
     } of walked) {
-      const rows =
-        sheet === null ? [] : await readMetaSheet(current, folder, sheet);
+      const rows = sheet === null ? [] : await readMetaSheet(current, sheet);
       if (signal.aborted) {
         return;
       }
