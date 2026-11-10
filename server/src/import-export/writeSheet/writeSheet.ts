@@ -38,7 +38,7 @@ const PATH_COLUMNS: ReadonlySet<string> = new Set<SheetColumn>([
  *
  * A csv written with the `;` separator writes its numbers with a decimal
  * comma, the convention that goes with it, so `7.9` writes as `7,9`; a field
- * holding `;` is quoted. The `,` default writes what it always wrote.
+ * holding `;` is quoted. Either way, every csv row has its header's width.
  */
 export async function writeSheet(
   table: ExportTable,
@@ -55,12 +55,32 @@ export async function writeSheet(
   addSheet(
     workbook,
     WORKSHEET,
-    separator === ';' ? withDecimalCommas(table) : table
+    paddedToHeader(separator === ';' ? withDecimalCommas(table) : table)
   );
   const csv = (await workbook.csv.writeBuffer({
     formatterOptions: { delimiter: separator },
   })) as unknown as Buffer;
   return Buffer.concat([UTF8_BOM, csv]);
+}
+
+/**
+ * `table` with every row as wide as its header, its trailing blanks written
+ * as empty fields: `exceljs` drops a row's trailing empty cells, so the last
+ * one is held as `''`.
+ */
+function paddedToHeader(table: ExportTable): ExportTable {
+  const width = table[0]?.length ?? 0;
+  return table.map((row) => {
+    const padded = [
+      ...row,
+      ...Array<null>(Math.max(0, width - row.length)).fill(null),
+    ];
+    const last = padded.length - 1;
+    if (last >= 0 && padded[last] === null) {
+      padded[last] = '';
+    }
+    return padded;
+  });
 }
 
 /** `table` with every number cell written with a decimal comma. */
