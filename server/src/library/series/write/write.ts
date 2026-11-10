@@ -125,8 +125,8 @@ export function createSeriesWrite(
       media_folder
     ) VALUES (
       @id, @tmdb_id, @tmdb_score, @title, @year, @end_year, @synopsis, @creator,
-      @cast, @rating, @is_favorite, @poster_path, @backdrop_path, @created_at, @updated_at,
-      @media_folder
+      @cast, @rating, @is_favorite, @poster_path, @backdrop_path, @created_at,
+      @updated_at, @media_folder
     )
   `);
   const selectGenreIdByName = db.prepare(

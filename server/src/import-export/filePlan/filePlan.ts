@@ -78,15 +78,14 @@ function tracksDir(place: TracksPlace): string {
 /**
  * The Export's **File plan** (log 59): the **Path cells** `exportRows` fills
  * its path cells from, each answer the **Layout place**'s path in the
- * **Folder layout** relative to the **Export folder**, and the files those answers planned.
- * The layout less the videos (log 58, Q19): art under each **Title folder**'s
- * or Season folder's `Images/`, Stills (Frame stills too) under
- * `Season NN/Images/Stills/` by **Episode tag**, a film's tracks under
+ * **Folder layout** relative to the **Export folder**, and the files those
+ * answers planned. The layout less the videos (log 58, Q19): art under each
+ * **Title folder**'s or Season folder's `Images/`, Stills (Frame stills too)
+ * under `Season NN/Images/Stills/` by **Episode tag**, a film's tracks under
  * `Subtitles/` by language and an episode's under `Season NN/Subtitles/<tag>/`,
  * a second of one language `(2)`. A cell is blank where nothing travels (no
- * stored file, or its toggle off). `Video` names where the video lies, a
- * film's one loose video or an episode's **Source file**, case kept, the
- * spelled Season folder only for one with none; no video is planned.
+ * stored file, or its toggle off). `Video` names where the video lies, by
+ * `exportRows`' own `videoCell`; no video is planned.
  */
 export function filePlan(include: ExportInclude): FilePlan {
   const files: ExportFile[] = [];

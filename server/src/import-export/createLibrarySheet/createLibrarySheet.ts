@@ -92,11 +92,11 @@ async function readTitleFolders(
  * own name, its **Path cells** from each Title folder's **Layout read**,
  * `layoutCells`), through a temporary file in `Meta/` and a rename, behind its
  * BOM; a sheet whose bytes already match is left alone. A library scanned
- * back from its sheet writes that sheet again byte for byte: the
- * **Round trip**. A folder no longer
- * listed (a **Factory reset**'s), a **New folder** or an **Unreachable** one
- * is skipped; a later touch that finds it scanned and reachable writes it. The one
- * replacer inside a Library folder, and only of that one file.
+ * back from its sheet writes that sheet again byte for byte: the **Round
+ * trip**. A folder no longer listed (a **Factory reset**'s), a **New folder**
+ * or an **Unreachable** one is skipped; a later touch that finds it scanned
+ * and reachable writes it. The one replacer inside a Library folder, and only
+ * of that one file.
  */
 export function createLibrarySheet({
   storage,

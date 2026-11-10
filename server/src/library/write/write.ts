@@ -51,15 +51,16 @@ export interface Write {
 export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
   const insertMovie = db.prepare(`
     INSERT INTO movies (
-      id, tmdb_id, tmdb_score, title, year, runtime_minutes, synopsis, director, cast,
-      rating, is_favorite, watched, resume_position_seconds, video_path,
-      poster_path, backdrop_path, created_at, updated_at, last_watched_at,
-      media_folder, video_folder_id
+      id, tmdb_id, tmdb_score, title, year, runtime_minutes, synopsis,
+      director, cast, rating, is_favorite, watched, resume_position_seconds,
+      video_path, poster_path, backdrop_path, created_at, updated_at,
+      last_watched_at, media_folder, video_folder_id
     ) VALUES (
-      @id, @tmdb_id, @tmdb_score, @title, @year, @runtime_minutes, @synopsis, @director, @cast,
-      @rating, @is_favorite, @watched, @resume_position_seconds, @video_path,
-      @poster_path, @backdrop_path, @created_at, @updated_at, @last_watched_at,
-      @media_folder, @video_folder_id
+      @id, @tmdb_id, @tmdb_score, @title, @year, @runtime_minutes, @synopsis,
+      @director, @cast, @rating, @is_favorite, @watched,
+      @resume_position_seconds, @video_path, @poster_path, @backdrop_path,
+      @created_at, @updated_at, @last_watched_at, @media_folder,
+      @video_folder_id
     )
   `);
   const selectGenreIdByName = db.prepare(

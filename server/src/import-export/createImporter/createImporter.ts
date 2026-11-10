@@ -1243,23 +1243,28 @@ export function createImporter({
    * on the bar — the current item and its `success` line read `Show · SnnEnn`
    * — and is written as it lands, so a cancel keeps the episodes already
    * copied, as it keeps the films. The series is written with its first
-   * episode, from the row: title, year, genres, synopsis, rating and cast,
-   * its _Director_ the creator; its _Status_ is not applied. An episode whose
-   * copy fails is remembered and the show goes on, and the show's failures are
-   * one `failed` Problem titled with it — the count and the first error, its
-   * detail the failed episodes, naming the series when one is held; a show that ends
-   * with no episode leaves no folder behind, and one with none to import
-   * reserves none. Each episode's subtitles are copied in beside its video;
-   * a subtitle that begins with no episode's stem is a **Warning line**.
-   * The show's art is copied in whatever the **Import mode**: a new series'
-   * **Poster** and **Backdrop** with it, each **Season poster** once its
-   * season holds an episode, each **Still** on its episode as a picked one.
-   * An art copy that fails is filed on the show's one `failed` Problem.
+   * episode, from the row: title, year, genres, synopsis, rating, cast, TMDB
+   * id, TMDB rating and heart, its _Director_ the creator. Each episode takes
+   * its Episode row's Watched (an `In progress` one starts unwatched). An
+   * episode whose copy fails is remembered and the show goes on, and the
+   * show's failures are one `failed` Problem titled with it — the count and
+   * the first error, its detail the failed episodes, naming the series when
+   * one is held; a show that ends with no episode leaves no folder behind,
+   * and one with none to import reserves none. Each episode's subtitles are
+   * copied in beside its video; a subtitle that begins with no episode's stem
+   * is a **Warning line**. The show's art is copied in whatever the **Import
+   * mode**: a new series' **Poster** and **Backdrop** with it, each **Season
+   * poster** once its season holds an episode, each **Still** on its episode
+   * as a picked one. An art copy that fails is filed on the show's one
+   * `failed` Problem.
    *
    * A show **Already in library** joins the series it matched: only its
    * `episodes` — those with no held `(season, episode)` — are copied, into
-   * the Series folder the held episodes already live in, and the held
-   * metadata is left as it is. One with nothing new says so and adds nothing.
+   * the Series folder the held episodes already live in. Its empty art is
+   * filled from the scan, never replaced. One with nothing new says so and
+   * adds nothing.
+   *
+   * Answers the series' id, or `null` when nothing was made or held.
    */
   const importShow = async (
     match: ShowMatch,

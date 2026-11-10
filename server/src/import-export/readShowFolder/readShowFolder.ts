@@ -81,10 +81,10 @@ async function showUnder(
  * no second numbering rule), so a **Season folder**'s number beats the
  * filename's, and each episode keeps the tracks of its `Subtitles/S01E01/`
  * folder. A folder of loose videos, tagged ones included, answers them as
- * **Unplaced**, its subfolders not read. The **Title guess** is the importer's own rule on
- * the folder's name. A picked **Season folder** reads only its own videos but
- * stands for its Show folder (`showFolderOf`): titled by the show's name,
- * held-checked as the show, each path answered inside the show.
+ * **Unplaced**, its subfolders not read. The **Title guess** is the importer's
+ * own rule on the folder's name. A picked **Season folder** reads only its own
+ * videos but stands for its Show folder (`showFolderOf`): titled by the show's
+ * name, held-checked as the show, each path answered inside the show.
  *
  * Its `libraryFolderId` is the listed **Library folder** it lies inside, by
  * `listedFolderOf`, or `null`. A folder that is already a held series's

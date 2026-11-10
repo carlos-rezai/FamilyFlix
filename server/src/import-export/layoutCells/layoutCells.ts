@@ -12,12 +12,12 @@ import { videoCell, type PathCells } from '../exportRows/exportRows';
  * `reads` holds each recorded **Title folder** as `readTitleFolder` read it,
  * keyed by the folder's own name, and every cell is relative to `root`, the
  * **Library folder**, with forward slashes. A cell names what the folder
- * holds at its **Layout place**, never what storage holds: a poster or backdrop by its own name, a
- * **Season poster**, a **Still** by its **Episode tag**, every track of the
- * place's `Subtitles/` by its own name. A **Frame still**, a place the folder
- * holds nothing in, and a folder with no read (or one left out) are blank.
- * `Video` names where the video lies, as the **File plan** does, for a folder
- * that was read. Plans nothing.
+ * holds at its **Layout place**, never what storage holds: a poster or
+ * backdrop by its own name, a **Season poster**, a **Still** by its **Episode
+ * tag**, every track of the place's `Subtitles/` by its own name. A **Frame
+ * still**, a place the folder holds nothing in, and a folder with no read (or
+ * one left out) are blank. `Video` names where the video lies, by
+ * `exportRows`' own `videoCell`, for a folder that was read. Plans nothing.
  */
 export function layoutCells(
   reads: ReadonlyMap<string, TitleFolderScan>,
