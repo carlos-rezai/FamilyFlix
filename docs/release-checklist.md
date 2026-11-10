@@ -179,6 +179,13 @@ Quit the app. Open a Command Prompt in the install directory,
 - [ ] The scan after a Factory reset: list the sandbox Library folder again
       and _Scan all folders_. Every title in it comes back with its ratings,
       hearts and Status, read from its `Meta\familyflix-library.csv`.
+- [ ] Rebuild whole, over the sandbox Library folder: a series there with a
+      poster, a Season poster and a Still in its Title folder, hearted, one
+      episode Watched. Note the size and modified time of
+      `<sandbox>\Meta\familyflix-library.csv`. Settings → _Factory reset_,
+      list the folder again, _Scan new folders_, then _Done_: the series
+      comes back with all three pieces of art, the heart and the Watched,
+      and the sheet's size and modified time are unchanged.
 
 ## 9. Back on the dev machine
 
