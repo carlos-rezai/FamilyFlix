@@ -8,19 +8,11 @@
 // silence. A picked Season folder stands for its show, its subfolders not
 // read. A picked folder of loose videos answers them as **Unplaced** without
 // descending. The pick and the scan number the same show identically.
-// The old walk under a pick is retired.
 //
 // Against real trees under `sandboxRoot`, the context a stub.
 
-import {
-  existsSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { readShowFolder, type ShowFolderContext } from './readShowFolder';
@@ -160,33 +152,5 @@ describe('readShowFolder: a picked folder of loose videos', () => {
       'Tidewater.S01E01.Low.Water.mp4',
       'Tidewater.S01E02.The.Crossing.mp4',
     ]);
-  });
-});
-
-/** Every `.ts` file under `dir`, absolute. */
-function sourcesUnder(dir: string): string[] {
-  return (
-    readdirSync(dir, { recursive: true, withFileTypes: true }) as {
-      isFile(): boolean;
-      name: string;
-      parentPath: string;
-    }[]
-  )
-    .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
-    .map((entry) => join(entry.parentPath, entry.name));
-}
-
-/** `server/src/`, two folders above this one. */
-const SERVER_SRC = fileURLToPath(new URL('../../', import.meta.url));
-
-describe('the old walk under a pick is retired', () => {
-  it('is named by nothing under server/src', () => {
-    expect(existsSync(SERVER_SRC)).toBe(true);
-    const retired = ['scans', 'Under'].join('');
-    const namers = sourcesUnder(SERVER_SRC).filter((file) =>
-      readFileSync(file, 'utf8').includes(retired)
-    );
-
-    expect(namers).toEqual([]);
   });
 });

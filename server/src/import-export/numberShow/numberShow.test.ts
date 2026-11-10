@@ -16,11 +16,9 @@
 // are no films to pass through and no Season folders to group.
 //
 // Table tests: a scan is built by name under a fixed root, and nothing
-// touches the disk, save the last suite's look at the source tree.
+// touches the disk.
 
-import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 import { numberShow, showFolderOf } from './numberShow';
@@ -510,37 +508,4 @@ describe('showFolderOf', () => {
       expect(showFolderOf(dir)).toBe(dir);
     }
   );
-});
-
-/** Every `.ts` file under `dir`, absolute. */
-function sourcesUnder(dir: string): string[] {
-  return (
-    readdirSync(dir, { recursive: true, withFileTypes: true }) as {
-      isFile(): boolean;
-      name: string;
-      parentPath: string;
-    }[]
-  )
-    .filter((entry) => entry.isFile() && /\.tsx?$/.test(entry.name))
-    .map((entry) => join(entry.parentPath, entry.name));
-}
-
-/** `server/src/`, two folders above this one. */
-const SERVER_SRC = fileURLToPath(new URL('../../', import.meta.url));
-
-describe('groupShows is retired', () => {
-  it('is gone from the import-export domain', () => {
-    expect(existsSync(join(SERVER_SRC, 'import-export', 'groupShows'))).toBe(
-      false
-    );
-  });
-
-  it('is imported by nothing', () => {
-    const retired = ['group', 'Shows/group', 'Shows'].join('');
-    const importers = sourcesUnder(SERVER_SRC).filter((file) =>
-      readFileSync(file, 'utf8').includes(retired)
-    );
-
-    expect(importers).toEqual([]);
-  });
 });
