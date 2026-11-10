@@ -1020,9 +1020,7 @@ export function createImporter({
       if (fill.watched === true) {
         storage.setEpisodeWatched(episode.id, true);
         marked.push(
-          `S${String(episode.season).padStart(2, '0')}E${String(
-            episode.number
-          ).padStart(2, '0')} watched`
+          `${spellEpisodeTag(episode.season, episode.number)} watched`
         );
       }
     }
