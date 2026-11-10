@@ -212,7 +212,7 @@ export function planSheetFields(
   if (kind === 'movie' && row.runtime !== null && current.runtime === null) {
     fill.runtime = row.runtime;
   }
-  if (row.favorite && !current.isFavorite) {
+  if (row.favorite && !current.favorite) {
     fill.favorite = true;
   }
 

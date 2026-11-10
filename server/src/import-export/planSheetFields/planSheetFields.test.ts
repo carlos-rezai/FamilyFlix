@@ -33,7 +33,7 @@ const BARE: HeldValues = {
   tmdbId: null,
   tmdbScore: null,
   runtime: null,
-  isFavorite: false,
+  favorite: false,
 };
 
 /** A row that names the title and nothing else. */
@@ -505,20 +505,20 @@ describe('planSheetFields: TMDB id, TMDB rating and Runtime fill only where none
 
 describe('planSheetFields: Favorite only hearts', () => {
   it('hearts a film not hearted on Yes, and leaves a hearted one under No or Yes', () => {
-    expect(film({ isFavorite: false }, { favorite: true })).toEqual({
+    expect(film({ favorite: false }, { favorite: true })).toEqual({
       fill: { favorite: true },
       differences: [],
       proposed: {},
     });
-    expect(film({ isFavorite: true }, { favorite: false })).toEqual(NOTHING);
-    expect(film({ isFavorite: true }, { favorite: true })).toEqual(NOTHING);
+    expect(film({ favorite: true }, { favorite: false })).toEqual(NOTHING);
+    expect(film({ favorite: true }, { favorite: true })).toEqual(NOTHING);
   });
 
   it('hearts a series not hearted on Yes, and leaves a hearted one under No', () => {
-    expect(show({ isFavorite: false }, { favorite: true }).fill).toEqual({
+    expect(show({ favorite: false }, { favorite: true }).fill).toEqual({
       favorite: true,
     });
-    expect(show({ isFavorite: true }, { favorite: false })).toEqual(NOTHING);
+    expect(show({ favorite: true }, { favorite: false })).toEqual(NOTHING);
   });
 });
 

@@ -51,7 +51,7 @@ describe('heldValues: a movie', () => {
       tmdbId: 562,
       tmdbScore: 7.8,
       runtime: 132,
-      isFavorite: true,
+      favorite: true,
     });
   });
 
@@ -82,7 +82,7 @@ describe('heldValues: a movie', () => {
       tmdbId: null,
       tmdbScore: null,
       runtime: null,
-      isFavorite: false,
+      favorite: false,
     });
   });
 });
@@ -116,7 +116,7 @@ describe('heldSeriesValues: a series', () => {
       tmdbId: 1399,
       tmdbScore: 8.1,
       runtime: null,
-      isFavorite: true,
+      favorite: true,
     });
   });
 
@@ -148,7 +148,7 @@ describe('heldSeriesValues: a series', () => {
       tmdbId: null,
       tmdbScore: null,
       runtime: null,
-      isFavorite: false,
+      favorite: false,
     });
   });
 });

@@ -20,7 +20,7 @@ export interface HeldValues {
   tmdbScore: number | null;
   /** Minutes; a series has none. */
   runtime: number | null;
-  isFavorite: boolean;
+  favorite: boolean;
 }
 
 /**
@@ -41,7 +41,7 @@ export function heldValues(movie: Movie): HeldValues {
     tmdbId: movie.tmdbId,
     tmdbScore: movie.tmdbScore,
     runtime: movie.runtimeMinutes,
-    isFavorite: movie.isFavorite,
+    favorite: movie.isFavorite,
   };
 }
 
@@ -64,6 +64,6 @@ export function heldSeriesValues(series: Series): HeldValues {
     tmdbId: series.tmdbId,
     tmdbScore: series.tmdbScore,
     runtime: null,
-    isFavorite: series.isFavorite,
+    favorite: series.isFavorite,
   };
 }
