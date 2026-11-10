@@ -414,6 +414,20 @@ const episodeRowsOf = (rows: readonly SheetRow[], key: string): SheetRow[] =>
     (row) => row.type === 'Episode' && sameFolderKey(row.folder, key)
   );
 
+/** The Season poster a show's scan found for `season`, or `null`. */
+const scannedSeasonPoster = (show: ShowScan, season: number): string | null =>
+  show.seasons.find((scanned) => scanned.number === season)?.poster ?? null;
+
+/** The Still a show's scan found for an episode, or `null`. */
+const scannedStill = (
+  show: ShowScan,
+  season: number,
+  episode: number
+): string | null =>
+  show.episodes.find(
+    (scanned) => scanned.season === season && scanned.episode === episode
+  )?.still ?? null;
+
 /** A series' Season and Episode rows: those of `rows` naming its **Folder key**. */
 const partRowsOf = (rows: readonly SheetRow[], key: string): SheetRow[] =>
   rows.filter(
@@ -1331,8 +1345,7 @@ export function createImporter({
         if (season.posterPath === null) {
           const posterPath = await copyArt(
             seasonFolder,
-            show.seasons.find((scanned) => scanned.number === season.number)
-              ?.poster ?? null
+            scannedSeasonPoster(show, season.number)
           );
           if (posterPath !== undefined) {
             storage.setSeasonPoster(id, season.number, posterPath);
@@ -1344,11 +1357,7 @@ export function createImporter({
           }
           const stillPath = await copyArt(
             seasonFolder,
-            show.episodes.find(
-              (scanned) =>
-                scanned.season === episode.season &&
-                scanned.episode === episode.number
-            )?.still ?? null
+            scannedStill(show, episode.season, episode.number)
           );
           if (stillPath !== undefined) {
             storage.enrichEpisode(episode.id, {
@@ -1460,8 +1469,7 @@ export function createImporter({
           postered.add(episode.season);
           const seasonPoster = await copyArt(
             into,
-            show.seasons.find((season) => season.number === episode.season)
-              ?.poster ?? null
+            scannedSeasonPoster(show, episode.season)
           );
           if (seasonPoster !== undefined) {
             storage.setSeasonPoster(series.id, episode.season, seasonPoster);
