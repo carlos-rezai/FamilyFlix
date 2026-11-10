@@ -434,6 +434,20 @@ const scannedStill = (
     (scanned) => scanned.season === season && scanned.episode === episode
   )?.still ?? null;
 
+/** A held title and its Title folder's read, as `fillHeldFiles` fills it. */
+type HeldFiles =
+  | { kind: 'movie'; id: string; scan: FilmScan }
+  | { kind: 'series'; id: string; show: ShowScan };
+
+/**
+ * One piece of art copied `into` managed storage, or `undefined` when there
+ * is none or its copy failed and was remembered.
+ */
+type ArtCopy = (
+  into: string,
+  file: string | null
+) => Promise<string | undefined>;
+
 /** A series' Season and Episode rows: those of `rows` naming its **Folder key**. */
 const partRowsOf = (rows: readonly SheetRow[], key: string): SheetRow[] =>
   rows.filter(
@@ -1243,6 +1257,110 @@ export function createImporter({
   };
 
   /**
+   * A held title's empty art filled from its Title folder's read, never
+   * replacing art it has, and filing no **Problem**. A film takes its
+   * **Poster** and **Backdrop** (its **Path cells** already read into the
+   * places the read left empty); a series its **Poster**, **Backdrop**, each
+   * held season's **Season poster** and each held episode's **Still** (a
+   * picked one).
+   */
+  /**
+   * A held film's art copy: a copy that fails is one **Warning line**, never
+   * a Problem, and the run goes on; a cancel copies nothing more.
+   */
+  const heldArtCopy =
+    (current: ImportRun, title: string, signal: AbortSignal): ArtCopy =>
+    async (into, file) => {
+      if (file === null || signal.aborted) {
+        return undefined;
+      }
+      try {
+        return await media.copyIn(into, file, signal);
+      } catch (error) {
+        if (!signal.aborted) {
+          const reason = error instanceof Error ? error.message : String(error);
+          log(
+            current,
+            `⚠ ${title}: couldn't copy ${basename(file)}: ${reason}`,
+            'warning'
+          );
+        }
+        return undefined;
+      }
+    };
+
+  const fillHeldFiles = async (
+    held: HeldFiles,
+    into: string,
+    copyArt: ArtCopy
+  ): Promise<void> => {
+    if (held.kind === 'movie') {
+      const movie = storage.getMovie(held.id);
+      if (movie === null) {
+        return;
+      }
+      if (movie.posterPath === null) {
+        const posterPath = await copyArt(into, held.scan.poster);
+        if (posterPath !== undefined) {
+          storage.enrichMovie(held.id, { posterPath });
+        }
+      }
+      if (movie.backdropPath === null) {
+        const backdropPath = await copyArt(into, held.scan.backdrop);
+        if (backdropPath !== undefined) {
+          storage.enrichMovie(held.id, { backdropPath });
+        }
+      }
+      return;
+    }
+    const { show } = held;
+    const detail = storage.getSeriesDetail(held.id);
+    if (detail === null) {
+      return;
+    }
+    const id = detail.series.id;
+    if (detail.series.posterPath === null) {
+      const posterPath = await copyArt(into, show.poster);
+      if (posterPath !== undefined) {
+        storage.enrichSeries(id, { posterPath });
+      }
+    }
+    if (detail.series.backdropPath === null) {
+      const backdropPath = await copyArt(into, show.backdrop);
+      if (backdropPath !== undefined) {
+        storage.enrichSeries(id, { backdropPath });
+      }
+    }
+    for (const season of detail.seasons) {
+      const seasonFolder = media.seasonFolder(into, season.number);
+      if (season.posterPath === null) {
+        const posterPath = await copyArt(
+          seasonFolder,
+          scannedSeasonPoster(show, season.number)
+        );
+        if (posterPath !== undefined) {
+          storage.setSeasonPoster(id, season.number, posterPath);
+        }
+      }
+      for (const episode of season.episodes) {
+        if (episode.stillPath !== null) {
+          continue;
+        }
+        const stillPath = await copyArt(
+          seasonFolder,
+          scannedStill(show, episode.season, episode.number)
+        );
+        if (stillPath !== undefined) {
+          storage.enrichEpisode(episode.id, {
+            stillPath,
+            stillSource: 'picked',
+          });
+        }
+      }
+    }
+  };
+
+  /**
    * Import one matched show as a **Series**: one **Series folder** reserved
    * from the row's title and year, every episode copied under its
    * `season-NN/`, its runtime derived after the copy. Each episode is one item
@@ -1306,10 +1424,7 @@ export function createImporter({
      * `undefined` when there is none or its copy threw: remembered, and the
      * show goes on. A cancel is no failure, and stops the show.
      */
-    const copyArt = async (
-      into: string,
-      file: string | null
-    ): Promise<string | undefined> => {
+    const copyArt: ArtCopy = async (into, file) => {
       if (file === null) {
         return undefined;
       }
@@ -1325,64 +1440,13 @@ export function createImporter({
       }
     };
 
-    /**
-     * A held series' empty art filled from its Title folder: its **Poster**,
-     * **Backdrop**, each held season's **Season poster** and each held
-     * episode's **Still** (a picked one), never replacing art it has.
-     */
-    const fillHeldArt = async (
-      heldSeries: HeldSeries,
-      into: string
-    ): Promise<void> => {
-      const detail = storage.getSeriesDetail(heldSeries.series.id);
-      if (detail === null) {
-        return;
-      }
-      const id = detail.series.id;
-      if (detail.series.posterPath === null) {
-        const posterPath = await copyArt(into, show.poster);
-        if (posterPath !== undefined) {
-          storage.enrichSeries(id, { posterPath });
-        }
-      }
-      if (detail.series.backdropPath === null) {
-        const backdropPath = await copyArt(into, show.backdrop);
-        if (backdropPath !== undefined) {
-          storage.enrichSeries(id, { backdropPath });
-        }
-      }
-      for (const season of detail.seasons) {
-        const seasonFolder = media.seasonFolder(into, season.number);
-        if (season.posterPath === null) {
-          const posterPath = await copyArt(
-            seasonFolder,
-            scannedSeasonPoster(show, season.number)
-          );
-          if (posterPath !== undefined) {
-            storage.setSeasonPoster(id, season.number, posterPath);
-          }
-        }
-        for (const episode of season.episodes) {
-          if (episode.stillPath !== null) {
-            continue;
-          }
-          const stillPath = await copyArt(
-            seasonFolder,
-            scannedStill(show, episode.season, episode.number)
-          );
-          if (stillPath !== undefined) {
-            storage.enrichEpisode(episode.id, {
-              stillPath,
-              stillSource: 'picked',
-            });
-          }
-        }
-      }
-    };
-
     if (held !== null && held.folder !== null) {
       try {
-        await fillHeldArt(held, held.folder);
+        await fillHeldFiles(
+          { kind: 'series', id: held.series.id, show },
+          held.folder,
+          copyArt
+        );
       } catch (error) {
         if (signal.aborted) {
           return null;
@@ -2495,6 +2559,21 @@ export function createImporter({
           linkHeld(heldId, folder, scan);
           if (again !== null) {
             foundAgain.push({ match: again, libraryFolder: folder });
+          }
+          const into = heldFolder('movie', heldId);
+          if (into !== null) {
+            await fillHeldFiles(
+              {
+                kind: 'movie',
+                id: heldId,
+                scan: await filmWithCells(scan, row),
+              },
+              into,
+              heldArtCopy(current, row.title, signal)
+            );
+            if (signal.aborted) {
+              return;
+            }
           }
           const filled =
             sheetRow !== undefined &&
