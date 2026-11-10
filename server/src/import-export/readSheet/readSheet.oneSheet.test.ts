@@ -32,7 +32,12 @@ import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDeta
 import { exportRows } from '../exportRows/exportRows';
 import { filePlan } from '../filePlan/filePlan';
 import { writeSheet } from '../writeSheet/writeSheet';
-import { isTitleRow, readSheet, type SheetRow } from './readSheet';
+import {
+  isTitleRow,
+  readSheet,
+  resolvePathCell,
+  type SheetRow,
+} from './readSheet';
 
 /** The film fixture's sheet pair. */
 const FILM_FIXTURE = fileURLToPath(
@@ -340,6 +345,39 @@ describe('isTitleRow: a row that names a title', () => {
       ['Season', false],
       ['Episode', false],
     ]);
+  });
+});
+
+describe('resolvePathCell: a path cell joined to its Library folder', () => {
+  it('joins a nested cell segment by segment', () => {
+    expect(
+      resolvePathCell(
+        join('library'),
+        'Tidewater (2018)/Season 01/Subtitles/S01E01/en.srt'
+      )
+    ).toBe(
+      join(
+        'library',
+        'Tidewater (2018)',
+        'Season 01',
+        'Subtitles',
+        'S01E01',
+        'en.srt'
+      )
+    );
+  });
+
+  it('keeps a space in a cell', () => {
+    expect(resolvePathCell('library', 'Die Hard (1988)/Die Hard.mkv')).toBe(
+      join('library', 'Die Hard (1988)', 'Die Hard.mkv')
+    );
+  });
+
+  it('keeps a Windows root in the Library folder', () => {
+    const resolved = resolvePathCell('D:\\Movies', 'Heat (1995)/poster.jpg');
+
+    expect(resolved).toBe(join('D:\\Movies', 'Heat (1995)', 'poster.jpg'));
+    expect(resolved.startsWith('D:\\Movies')).toBe(true);
   });
 });
 

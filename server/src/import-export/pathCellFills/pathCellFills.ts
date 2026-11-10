@@ -1,17 +1,17 @@
 import { stat } from 'node:fs/promises';
-import { basename, dirname, isAbsolute, join, resolve } from 'node:path';
+import { basename, dirname, isAbsolute, resolve } from 'node:path';
 
 import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
 import type { ShowScan } from '../numberShow/numberShow';
-import type { SheetRow } from '../readSheet/readSheet';
+import { resolvePathCell, type SheetRow } from '../readSheet/readSheet';
 
 /**
- * A path cell against the **Library folder** `base`: relative with forward
- * slashes as the sheet spells it, or already resolved by the matcher.
+ * A path cell against the **Library folder** `base`, by `resolvePathCell`;
+ * a cell the matcher already resolved is absolute, and stands as it is.
  */
 const resolvedCell = (base: string, cell: string): string =>
-  isAbsolute(cell) ? cell : join(base, ...cell.split('/'));
+  isAbsolute(cell) ? cell : resolvePathCell(base, cell);
 
 /** Whether `path` is a file that is there. */
 async function isFile(path: string): Promise<boolean> {

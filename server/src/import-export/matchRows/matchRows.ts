@@ -1,8 +1,8 @@
-import { dirname, join } from 'node:path';
+import { dirname } from 'node:path';
 
 import { sameFolderKey } from '../../media/folderKeyOf/folderKeyOf';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
-import type { SheetRow } from '../readSheet/readSheet';
+import { resolvePathCell, type SheetRow } from '../readSheet/readSheet';
 
 /** A **Match**: one **Sheet row** and the one **Source folder** that is its film. */
 export interface Match {
@@ -48,10 +48,6 @@ export const MATCH_REASON = {
   manyVideos: 'Two videos. Pick the film.',
 } as const;
 
-/** A path cell, relative with forward slashes, resolved against `base`. */
-const resolved = (base: string, cell: string): string =>
-  join(base, ...cell.split('/'));
-
 /**
  * A matched row with its path cells resolved against the Library folder
  * holding its Title folder: the parent of the folder's `dir`.
@@ -59,11 +55,11 @@ const resolved = (base: string, cell: string): string =>
 function resolvedRow(row: SheetRow, folder: FilmScan): SheetRow {
   const base = dirname(folder.dir);
   const one = (cell: string | null): string | null =>
-    cell === null ? null : resolved(base, cell);
+    cell === null ? null : resolvePathCell(base, cell);
   return {
     ...row,
     video: one(row.video),
-    subtitles: row.subtitles.map((cell) => resolved(base, cell)),
+    subtitles: row.subtitles.map((cell) => resolvePathCell(base, cell)),
     poster: one(row.poster),
     backdrop: one(row.backdrop),
     still: one(row.still),

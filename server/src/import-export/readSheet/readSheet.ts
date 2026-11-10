@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { extname } from 'node:path';
+import { extname, join } from 'node:path';
 import { Readable } from 'node:stream';
 
 import { ROW_TYPES, SHEET_PATH_SEPARATOR, type RowType } from '@/types';
@@ -134,6 +134,13 @@ const FAVORITE = new Set(['yes', 'true', '1', '✓', 'favorite']);
 
 /** The row types that name a title, and so are skipped without one. */
 const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
+
+/**
+ * A **Path cell** as the file it names: the cell, relative with forward
+ * slashes as the sheet spells it, joined to its **Library folder** `base`.
+ */
+export const resolvePathCell = (base: string, cell: string): string =>
+  join(base, ...cell.split('/'));
 
 /**
  * Whether a row names a title, a Movie or a Series row, and so a **Title
