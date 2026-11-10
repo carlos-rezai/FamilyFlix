@@ -5,8 +5,7 @@ import type {
   SeasonFolderScan,
   TitleFolderScan,
 } from '../../media/readTitleFolder/readTitleFolder';
-import type { PathCells } from '../exportRows/exportRows';
-import { videoCell } from '../filePlan/filePlan';
+import { videoCell, type PathCells } from '../exportRows/exportRows';
 
 /**
  * The **Library sheet**'s **Path cells** from the **Layout read** (log 59):

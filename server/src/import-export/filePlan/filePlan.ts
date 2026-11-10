@@ -15,7 +15,7 @@ import {
   type ImagePlace,
   type PathCells,
   type TracksPlace,
-  type VideoPlace,
+  videoCell,
 } from '../exportRows/exportRows';
 
 /** The Export's **File plan**: its **Path cells** and the files they planned. */
@@ -64,22 +64,6 @@ function tracksDir(place: TracksPlace): string {
     ? `${place.folder}/${SUBTITLES_FOLDER}`
     : `${seasonDir(place.folder, place.season)}/${SUBTITLES_FOLDER}/${spellEpisodeTag(place.season, place.episode)}`;
 }
-
-/** Where a video place's video lies: an episode's Source file as it lies. */
-function videoPath(place: VideoPlace, storedPath: string): string {
-  if (place.season === undefined) {
-    return `${place.folder}/${basenameOf(storedPath)}`;
-  }
-  return place.sourceFile
-    ? `${place.folder}/${place.sourceFile}`
-    : `${seasonDir(place.folder, place.season)}/${basenameOf(storedPath)}`;
-}
-
-/** A Video cell: where the video lies, blank for none stored. */
-export const videoCell = (
-  place: VideoPlace,
-  storedPath: string | null
-): string | null => (storedPath ? videoPath(place, storedPath) : null);
 
 /**
  * The Export's **File plan** (log 59): the **Path cells** `exportRows` fills

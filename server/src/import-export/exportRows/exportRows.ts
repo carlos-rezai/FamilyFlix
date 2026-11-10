@@ -12,6 +12,7 @@ import {
 } from '@/types';
 import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
 import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
+import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
 
 /** A cell's value: text or a number, or `null` for an empty cell. */
@@ -59,6 +60,25 @@ export interface VideoPlace {
   season?: number;
   sourceFile?: string | null;
 }
+
+/** Where a video place's video lies: an episode's Source file as it lies. */
+function videoPath(place: VideoPlace, storedPath: string): string {
+  if (place.season === undefined) {
+    return `${place.folder}/${basenameOf(storedPath)}`;
+  }
+  return place.sourceFile
+    ? `${place.folder}/${place.sourceFile}`
+    : `${place.folder}/${spellSeasonFolder(place.season)}/${basenameOf(storedPath)}`;
+}
+
+/**
+ * A Video cell: where the video lies, blank for none stored. Both **Path
+ * cells** answer it alike.
+ */
+export const videoCell = (
+  place: VideoPlace,
+  storedPath: string | null
+): string | null => (storedPath ? videoPath(place, storedPath) : null);
 
 /**
  * A **Layout place**: where in its **Title folder** a path cell's file
