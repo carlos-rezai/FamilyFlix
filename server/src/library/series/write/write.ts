@@ -33,6 +33,8 @@ export interface SeriesWrite {
    * and number is refused by the schema.
    */
   addEpisode(seriesId: string, input: NewEpisode): Episode;
+  /** Append tracks after an episode's own, its held tracks kept as they are. */
+  addEpisodeSubtitles(id: string, subtitles: readonly NewSubtitle[]): void;
   /**
    * Delete a series; the cascade takes its episodes, `series_genres` and
    * `episode_subtitles`. A silent no-op for an unknown id, `deleteMovie`'s
@@ -228,6 +230,23 @@ export function createSeriesWrite(
   );
 
   const deleteSeriesRow = db.prepare('DELETE FROM series WHERE id = ?');
+  const nextEpisodeSubtitlePosition = db.prepare(
+    'SELECT COALESCE(MAX(position) + 1, 0) AS next FROM episode_subtitles WHERE episode_id = ?'
+  );
+  const addEpisodeSubtitles = db.transaction(
+    (id: string, subtitles: readonly NewSubtitle[]) => {
+      const { next } = nextEpisodeSubtitlePosition.get(id) as { next: number };
+      subtitles.forEach((track, offset) => {
+        insertEpisodeSubtitle.run({
+          id: randomUUID(),
+          episode_id: id,
+          path: track.path,
+          language: track.language,
+          position: next + offset,
+        });
+      });
+    }
+  );
 
   const upsertSeasonPoster = db.prepare(
     `INSERT INTO season_posters (series_id, season_number, poster_path)
@@ -498,6 +517,8 @@ export function createSeriesWrite(
       insertSeriesWithEpisodes(id, input, episodes, seasonPosters);
       return reader.getSeries(id) as Series;
     },
+
+    addEpisodeSubtitles: (id, subtitles) => addEpisodeSubtitles(id, subtitles),
 
     addEpisode: (seriesId, input) => {
       const id = randomUUID();

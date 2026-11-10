@@ -18,6 +18,7 @@ import type {
   NewEpisode,
   NewMovie,
   NewSeries,
+  NewSubtitle,
   Series,
   SeriesDetail,
   SeriesHomePayload,
@@ -112,6 +113,13 @@ export interface LibraryStorage {
    * id; a failure inside the transaction commits nothing.
    */
   updateMovie(id: string, patch: MoviePatch): Movie;
+  /**
+   * Append tracks after a movie's own, in order, its held tracks kept with
+   * their ids: a rescan's tracks of languages the film lacks.
+   */
+  addMovieSubtitles(id: string, subtitles: readonly NewSubtitle[]): void;
+  /** {@link addMovieSubtitles} over one **Episode**. */
+  addEpisodeSubtitles(id: string, subtitles: readonly NewSubtitle[]): void;
   /**
    * A **Sync**'s write: the columns `fields` names and only those — never
    * `rating`, `watched`, `resume_position_seconds` or `last_watched_at`.
@@ -531,6 +539,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   return {
     addMovie: changes.onCreated(write.addMovie),
     updateMovie: onTitle(write.updateMovie),
+    addMovieSubtitles: onTitle(write.addMovieSubtitles),
+    addEpisodeSubtitles: onEpisode(seriesWrite.addEpisodeSubtitles),
     enrichMovie: onTitle(enrich.enrichMovie),
     enrichSeries: onTitle(seriesEnrich.enrichSeries),
     enrichEpisode: onEpisode(seriesEnrich.enrichEpisode),

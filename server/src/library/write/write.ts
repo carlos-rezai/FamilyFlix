@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type { SqliteDatabase } from '../../db';
-import type { Movie, MoviePatch, NewMovie } from '@/types';
+import type { Movie, MoviePatch, NewMovie, NewSubtitle } from '@/types';
 import { parentFolder } from '../parentFolder/parentFolder';
 import type { MovieReader } from '../read/read';
 
@@ -45,6 +45,8 @@ const PATCH_SCALARS: ReadonlyArray<{
 export interface Write {
   addMovie(input: NewMovie): Movie;
   updateMovie(id: string, patch: MoviePatch): Movie;
+  /** Append tracks after a movie's own, its held tracks kept as they are. */
+  addMovieSubtitles(id: string, subtitles: readonly NewSubtitle[]): void;
   deleteMovie(id: string): void;
 }
 
@@ -80,6 +82,24 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
     'DELETE FROM subtitles WHERE movie_id = ?'
   );
   const deleteMovieRow = db.prepare('DELETE FROM movies WHERE id = ?');
+  const nextSubtitlePosition = db.prepare(
+    'SELECT COALESCE(MAX(position) + 1, 0) AS next FROM subtitles WHERE movie_id = ?'
+  );
+
+  const addMovieSubtitles = db.transaction(
+    (id: string, subtitles: readonly NewSubtitle[]) => {
+      const { next } = nextSubtitlePosition.get(id) as { next: number };
+      subtitles.forEach((subtitle, offset) => {
+        insertSubtitle.run({
+          id: randomUUID(),
+          movie_id: id,
+          path: subtitle.path,
+          language: subtitle.language,
+          position: next + offset,
+        });
+      });
+    }
+  );
 
   const insertMovieGraph = db.transaction((id: string, input: NewMovie) => {
     const now = new Date().toISOString();
@@ -213,5 +233,5 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
     deleteMovieRow.run(id);
   }
 
-  return { addMovie, updateMovie, deleteMovie };
+  return { addMovie, updateMovie, addMovieSubtitles, deleteMovie };
 }

@@ -13,6 +13,7 @@ import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type {
   FilmScan,
   FolderScan,
+  SubtitleFound,
 } from '../../media/readTitleFolder/readTitleFolder';
 import {
   folderKeyOf,
@@ -433,6 +434,35 @@ const scannedStill = (
   show.episodes.find(
     (scanned) => scanned.season === season && scanned.episode === episode
   )?.still ?? null;
+
+/** The tracks a show's scan found for an episode, or none. */
+const scannedTracks = (
+  show: ShowScan,
+  season: number,
+  episode: number
+): SubtitleFound[] =>
+  show.episodes.find(
+    (scanned) => scanned.season === season && scanned.episode === episode
+  )?.subtitles ?? [];
+
+/**
+ * The tracks of `found` whose language `held` holds none of, the first of
+ * each language only: a track the **Layout fill** wrote out is never a
+ * second copy.
+ */
+const lackingTracks = (
+  held: readonly { language: string }[],
+  found: readonly SubtitleFound[]
+): SubtitleFound[] => {
+  const languages = new Set(held.map((track) => track.language));
+  return found.filter((track) => {
+    if (languages.has(track.language)) {
+      return false;
+    }
+    languages.add(track.language);
+    return true;
+  });
+};
 
 /** A held title and its Title folder's read, as `fillHeldFiles` fills it. */
 type HeldFiles =
@@ -1262,7 +1292,8 @@ export function createImporter({
    * **Poster** and **Backdrop** (its **Path cells** already read into the
    * places the read left empty); a series its **Poster**, **Backdrop**, each
    * held season's **Season poster** and each held episode's **Still** (a
-   * picked one).
+   * picked one). A film, and each held episode, takes each track of a
+   * language it holds none of.
    */
   /**
    * A held film's art copy: a copy that fails is one **Warning line**, never
@@ -1289,6 +1320,22 @@ export function createImporter({
       }
     };
 
+  /** Each track copied in `into` by `copy`, a failed copy left out. */
+  const copyTracks = async (
+    into: string,
+    tracks: readonly SubtitleFound[],
+    copy: ArtCopy
+  ): Promise<NewSubtitle[]> => {
+    const copied: NewSubtitle[] = [];
+    for (const track of tracks) {
+      const path = await copy(into, track.path);
+      if (path !== undefined) {
+        copied.push({ path, language: track.language });
+      }
+    }
+    return copied;
+  };
+
   const fillHeldFiles = async (
     held: HeldFiles,
     into: string,
@@ -1310,6 +1357,14 @@ export function createImporter({
         if (backdropPath !== undefined) {
           storage.enrichMovie(held.id, { backdropPath });
         }
+      }
+      const tracks = await copyTracks(
+        into,
+        lackingTracks(movie.subtitles, held.scan.subtitles),
+        copyArt
+      );
+      if (tracks.length > 0) {
+        storage.addMovieSubtitles(held.id, tracks);
       }
       return;
     }
@@ -1343,18 +1398,28 @@ export function createImporter({
         }
       }
       for (const episode of season.episodes) {
-        if (episode.stillPath !== null) {
-          continue;
+        if (episode.stillPath === null) {
+          const stillPath = await copyArt(
+            seasonFolder,
+            scannedStill(show, episode.season, episode.number)
+          );
+          if (stillPath !== undefined) {
+            storage.enrichEpisode(episode.id, {
+              stillPath,
+              stillSource: 'picked',
+            });
+          }
         }
-        const stillPath = await copyArt(
+        const tracks = await copyTracks(
           seasonFolder,
-          scannedStill(show, episode.season, episode.number)
+          lackingTracks(
+            episode.subtitles,
+            scannedTracks(show, episode.season, episode.number)
+          ),
+          copyArt
         );
-        if (stillPath !== undefined) {
-          storage.enrichEpisode(episode.id, {
-            stillPath,
-            stillSource: 'picked',
-          });
+        if (tracks.length > 0) {
+          storage.addEpisodeSubtitles(episode.id, tracks);
         }
       }
     }
