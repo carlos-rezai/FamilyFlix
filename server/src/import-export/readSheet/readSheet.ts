@@ -167,14 +167,23 @@ const CAST_SEPARATORS = /,/;
 
 /**
  * The cell values that say a film has been watched, case folded. `watched` is
- * the word the **Sheet writer** writes under `Status`; its other two —
- * `In progress` and `Unwatched` — fall through to `false`, as does every value
- * not listed here.
+ * the word the **Sheet writer** writes under `Status`; its other two,
+ * `In progress` and `Unwatched`, are on the no-list below.
  */
 const WATCHED = new Set(['yes', 'true', '1', '✓', 'watched']);
 
+/**
+ * The cell values that say a film has not been watched, case folded: the
+ * spelled no-words and the **Sheet writer**'s other two. A value on neither
+ * list reads as not watched too, and is an **Unread cell**.
+ */
+const UNWATCHED = new Set(['no', 'false', '0', 'unwatched', 'in progress']);
+
 /** The cell values that say a title is a favourite, case folded. */
 const FAVORITE = new Set(['yes', 'true', '1', '✓', 'favorite']);
+
+/** The cell values that say a title is not a favourite, case folded. */
+const NOT_FAVORITE = new Set(['no', 'false', '0']);
 
 /** The row types that name a title, and so are skipped without one. */
 const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
@@ -317,10 +326,10 @@ function cellWhole(text: string): number | null {
   return value === null || !Number.isInteger(value) ? null : value;
 }
 
-/** A cell's **Row type**, case folded; blank or unknown reads as a Movie. */
-function cellType(text: string): RowType {
+/** A cell's **Row type**, case folded, or `null` for one that names none. */
+function cellType(text: string): RowType | null {
   const folded = text.toLowerCase();
-  return ROW_TYPES.find((type) => type.toLowerCase() === folded) ?? 'Movie';
+  return ROW_TYPES.find((type) => type.toLowerCase() === folded) ?? null;
 }
 
 /** A date cell as `YYYY-MM-DD`, or `null` for anything not shaped as one. */
@@ -429,16 +438,21 @@ export async function readSheet(
     if (number === 1) {
       return;
     }
-    const type = cellType(read(row, 'type'));
+    const typeText = read(row, 'type');
+    // A blank or unknown Type reads as a Movie; an unknown one is reported.
+    const type = cellType(typeText) ?? 'Movie';
     const title = read(row, 'title');
     if (title === '' && TITLED.has(type)) {
       onSkip({ kind: 'blank-title', rowNumber: number });
       return;
     }
-    const span = yearSpan(read(row, 'year')) ?? { year: null, endYear: null };
+    const yearText = read(row, 'year');
+    const span = yearSpan(yearText) ?? { year: null, endYear: null };
     const folder = read(row, 'folder') || spelledKey(title, span.year);
-    const season = cellWhole(read(row, 'season'));
-    const episode = cellWhole(read(row, 'episode'));
+    const seasonText = read(row, 'season');
+    const season = cellWhole(seasonText);
+    const episodeText = read(row, 'episode');
+    const episode = cellWhole(episodeText);
     /** The row as a skip names it: a Season by its season, an Episode by its tag. */
     const label =
       type === 'Season' && season !== null
@@ -469,6 +483,56 @@ export async function readSheet(
       return text === '' ? null : (contained(column, [text])[0] ?? null);
     };
 
+    /** Report a filled cell the reader can't take, under its writer's header. */
+    const unread = (header: string, text: string): void => {
+      onSkip({ kind: 'unread-cell', label, column: header, text });
+    };
+    /** A cell parsed by `parse`; a filled one that doesn't parse is reported. */
+    const parsed = <T>(
+      column: Column,
+      header: string,
+      parse: (text: string) => T | null
+    ): T | null => {
+      const text = read(row, column);
+      const value = parse(text);
+      if (value === null && text !== '') {
+        unread(header, text);
+      }
+      return value;
+    };
+    /** A yes/no cell by its two lists; a value on neither is reported, read as no. */
+    const flag = (
+      column: Column,
+      header: string,
+      yes: ReadonlySet<string>,
+      no: ReadonlySet<string>
+    ): boolean => {
+      const text = read(row, column);
+      const folded = text.toLowerCase();
+      if (text !== '' && !yes.has(folded) && !no.has(folded)) {
+        unread(header, text);
+      }
+      return yes.has(folded);
+    };
+
+    if (typeText !== '' && cellType(typeText) === null) {
+      unread('Type', typeText);
+    }
+    if (yearText !== '' && span.year === null) {
+      unread('Year', yearText);
+    }
+    if (seasonText !== '' && season === null) {
+      unread('Season', seasonText);
+    }
+    if (episodeText !== '' && episode === null) {
+      unread('Episode', episodeText);
+    }
+    // A synopsis is not an episode's field: an Episode row's is reported.
+    const synopsisText = read(row, 'synopsis');
+    if (type === 'Episode' && synopsisText !== '') {
+      unread('Synopsis', synopsisText);
+    }
+
     rows.push({
       type,
       folder,
@@ -479,14 +543,14 @@ export async function readSheet(
       genres: cellList(read(row, 'genres'), GENRE_SEPARATORS),
       director: cellOptional(read(row, 'director')),
       cast: cellList(read(row, 'cast'), CAST_SEPARATORS),
-      synopsis: cellOptional(read(row, 'synopsis')),
-      rating: cellRating(read(row, 'rating')),
-      watched: WATCHED.has(read(row, 'watched').toLowerCase()),
-      airDate: cellDate(read(row, 'airDate')),
-      runtime: cellWhole(read(row, 'runtime')),
-      tmdbScore: cellNumber(read(row, 'tmdbScore')),
-      tmdbId: cellWhole(read(row, 'tmdbId')),
-      favorite: FAVORITE.has(read(row, 'favorite').toLowerCase()),
+      synopsis: type === 'Episode' ? null : cellOptional(synopsisText),
+      rating: parsed('rating', 'Rating', cellRating),
+      watched: flag('watched', 'Status', WATCHED, UNWATCHED),
+      airDate: parsed('airDate', 'Air date', cellDate),
+      runtime: parsed('runtime', 'Runtime', cellWhole),
+      tmdbScore: parsed('tmdbScore', 'TMDB rating', cellNumber),
+      tmdbId: parsed('tmdbId', 'TMDB id', cellWhole),
+      favorite: flag('favorite', 'Favorite', FAVORITE, NOT_FAVORITE),
       video: cellOptional(read(row, 'video')),
       subtitles: contained(
         'subtitles',
