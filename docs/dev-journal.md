@@ -11,6 +11,26 @@ Newest entry first.
 
 ---
 
+## 2026-11-10: Rebuild edges, the grill-me (log 60)
+
+A second QA pass after step 42 (issue 562, kept whole in
+`docs/handoff/handoff-rebuild-edges/` and deleted after the session) opened
+step 43, settled in `docs/design-logs/60-rebuild-edges.md`.
+
+### A correction a log can't make
+
+- **Log 58 Q13 ticks `Synopsis` for an Episode row, and that tick was wrong.**
+  `Episode` has no synopsis and no screen draws one, so the cell was always
+  written blank and a hand-entered one dropped. Log 60 Q12 settles it: the
+  cell is not an Episode's, and a filled one is an **Unread cell**. Read Q13's
+  table with that row struck.
+- **The rebuild-whole handoff's `↓` example is shorthand.** Its _Copy_ table
+  gives `Heat (1995)/Images/poster.jpg`; the prototype's Sync line, which
+  `fillLayout` follows, names the file under its Library folder's root. Log 60
+  Q18 keeps the line as it is.
+
+---
+
 ## 2026-11-10: Rebuild whole, the refactor (issue 561)
 
 Eighteen commits against

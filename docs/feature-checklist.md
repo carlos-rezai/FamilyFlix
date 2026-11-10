@@ -72,6 +72,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Tidy into folders: each loose video its own folder  | ❌ Dropped |
 | Folder layout: one shape to scan, sync and export   | ✅ Done    |
 | Rebuild whole: every sheet field and series art     | ✅ Done    |
+| Rebuild edges: hand-kept sheets, growing folders    | 🔲 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -458,3 +459,34 @@ QA ticket):
       its sheet rewritten, so adding it back after a Factory reset can't
       erase the sheet that will rebuild it; every scan rewrites the sheets it
       read when one fell behind, and equal bytes are never written.
+
+Step 43 came out of the second end-to-end QA pass, after step 42: the round
+trip held, and its edges did not. A sheet's path cell could reach outside its
+title's folder, a sheet resaved by a Dutch Excel was lost and then
+overwritten, and a held film never took art put into its folder later.
+Settled in a grill-me on 2026-11-10 (design log 60, handoff
+`docs/handoff/handoff-rebuild-edges/`, which keeps the QA ticket):
+
+43. 🔲 **Rebuild edges**: a hand-kept sheet and a growing folder reach the
+    library whole and safely.
+    - **Contained path cells**: a path cell is read only when it lies inside
+      its own row's Title folder and names its kind (an image for Poster,
+      Backdrop and Still, a subtitle for Subtitles); any other is an
+      **Unread cell**. _Import from spreadsheet_ reads by the same rule.
+    - **The Sheet dialect**: a sheet saved by any Excel reads back, UTF-8 or
+      cp1252, `,` or `;`, decimal comma or point, and the Library sheet is
+      rewritten in the dialect it was found in. A sheet that still doesn't
+      read is never replaced; the scan says so.
+    - **Unread cells**: every cell the reader can't take (a rating of `8½`, a
+      Favorite of `ja`, a path outside its folder) is one Warning line before
+      the rewrite on close erases it; two rows for one title read the first,
+      and say so. An Episode row has no Synopsis.
+    - **Held files**: a held film takes the poster, backdrop and tracks put
+      into its folder later, as a held series does, and a season the run adds
+      takes its Season poster on that run. A held title's `✓ Updated` line
+      names the files it took.
+    - **Track languages**: `Nederlands.srt`, `Español.srt` and
+      `heat.pt-BR.srt` read as their languages.
+    - **The rest**: a series add refuses an episode video another title
+      plays, as a movie add does; both sheets write every row as wide as
+      their header.
