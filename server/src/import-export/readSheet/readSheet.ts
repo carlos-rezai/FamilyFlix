@@ -395,7 +395,8 @@ async function openWorkbook(
  * is required — a sheet with none is the one refusal the reader makes, and it
  * is the sheet field's `400` upstream. A column it does not recognise is
  * ignored; a Movie or Series row with a blank title is skipped, and a path
- * cell that leaves its **Title folder** reads as blank: each is a
+ * cell that leaves its **Title folder** reads as blank, and a row repeating
+ * an earlier one's type, Folder key, season and episode is passed over: each is a
  * {@link SheetSkip} told to `onSkip`. `Video` is read unchecked.
  */
 export async function readSheet(
@@ -434,6 +435,8 @@ export async function readSheet(
   };
 
   const rows: SheetRow[] = [];
+  /** Each read row's type, Folder key (case folded, as `sameFolderKey` compares), season and episode. */
+  const seen = new Set<string>();
   sheet.eachRow({ includeEmpty: false }, (row, number) => {
     if (number === 1) {
       return;
@@ -460,6 +463,13 @@ export async function readSheet(
         : type === 'Episode' && season !== null && episode !== null
           ? `${folder} ${spellEpisodeTag(season, episode)}`
           : folder;
+    // The first of two rows naming one row is read; each repeat is reported.
+    const key = JSON.stringify([type, folder.toLowerCase(), season, episode]);
+    if (seen.has(key)) {
+      onSkip({ kind: 'duplicate', label });
+      return;
+    }
+    seen.add(key);
 
     /** The paths in a checked cell that stay in the Title folder; each other one is reported. */
     const contained = (

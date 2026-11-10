@@ -2280,16 +2280,21 @@ describe('createImporter — the awkward titles sit in a problem whole', () => {
   });
 });
 
-/** The form's **Resolve** of one of the two Heat rows, its film found in `folder`. */
-function heatForm(folder: string, video: string): ResolveForm {
+/** The form's **Resolve** of a row for `title`, its film found in `folder`. */
+function resolveForm(
+  title: string,
+  year: number,
+  folder: string,
+  video: string
+): ResolveForm {
   return {
-    title: 'Heat',
-    year: 1995,
+    title,
+    year,
     director: null,
     synopsis: null,
     rating: null,
     cast: [],
-    genres: ['Action'],
+    genres: ['Drama'],
     video: { found: join(folder, video) },
     poster: null,
     subtitles: [],
@@ -2345,45 +2350,54 @@ describe('createImporter — two matches with the same title and year', () => {
     );
   });
 
-  it('suffixes the second of two resolves with the same title and year, as the form does', async () => {
+  it('suffixes the second of two resolves the slug cannot tell apart, as the form does', async () => {
     const { storage, importer, media, root } = sandbox();
-    // Two rows for Heat and two folders for it, in two Library folders: each
-    // row sees both, so each is `ambiguous`, and the maintainer resolves one
-    // onto each folder.
-    const first = filmUnder(root, 'Heat (1995)', 'Heat.mp4');
+    // Two rows, two keys, one slug (`movie-1957`), and each title held in two
+    // Library folders: each row sees both of its folders, so each is
+    // `ambiguous`, and the maintainer resolves each onto one of them.
     const more = join(root, '..', 'more');
-    const second = join(more, 'Heat (1995)');
-    mkdirSync(second, { recursive: true });
-    cpSync(join(first, 'Heat.mp4'), join(second, 'Heat.1995.1080p.mp4'));
+    const throne = filmUnder(root, '蜘蛛巣城 (1957)', 'Throne.mp4');
+    mkdirSync(join(more, '蜘蛛巣城 (1957)'), { recursive: true });
+    cpSync(
+      join(throne, 'Throne.mp4'),
+      join(more, '蜘蛛巣城 (1957)', 'Throne.mp4')
+    );
+    const depths = join(more, 'どん底 (1957)');
+    mkdirSync(depths, { recursive: true });
+    cpSync(join(throne, 'Throne.mp4'), join(depths, 'Depths.mp4'));
+    mkdirSync(join(root, 'どん底 (1957)'));
+    cpSync(
+      join(throne, 'Throne.mp4'),
+      join(root, 'どん底 (1957)', 'Depths.mp4')
+    );
     storage.addLibraryFolder(more);
     const sheet = sheetOf(
       root,
-      `${FIXTURE_ROWS}Heat,1995,Action\nHeat,1995,Action\n`
+      `${FIXTURE_ROWS}蜘蛛巣城,1957,Drama\nどん底,1957,Drama\n`
     );
     await importer.start(sheet);
     const run = await untilReview(importer);
     expect(ofKind(run, 'ambiguous')).toHaveLength(2);
     const [one, two] = ofKind(run, 'ambiguous');
 
-    const mann = await importer.resolve(one.id, heatForm(first, 'Heat.mp4'));
-    const other = await importer.resolve(
+    const first = await importer.resolve(
+      one.id,
+      resolveForm('蜘蛛巣城', 1957, throne, 'Throne.mp4')
+    );
+    const second = await importer.resolve(
       two.id,
-      heatForm(second, 'Heat.1995.1080p.mp4')
+      resolveForm('どん底', 1957, depths, 'Depths.mp4')
     );
 
-    expect(mann.videoPath).toBe('heat-1995/Heat.mp4');
-    expect(other.videoPath).toBe('heat-1995-2/Heat.1995.1080p.mp4');
+    expect(first.videoPath).toBe('movie-1957/Throne.mp4');
+    expect(second.videoPath).toBe('movie-1957-2/Depths.mp4');
     expect(folders(media)).toEqual([
       'amelie-2001',
       'die-hard-1988',
-      'heat-1995',
-      'heat-1995-2',
+      'movie-1957',
+      'movie-1957-2',
     ]);
-    expect(
-      storage
-        .listMovies({ sort: 'a-z' })
-        .filter((movie) => movie.title === 'Heat')
-    ).toHaveLength(2);
+    expect(storage.listMovies({ sort: 'a-z' })).toHaveLength(4);
     expect(importer.current()?.problems).toEqual([]);
   });
 });
