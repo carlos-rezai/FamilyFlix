@@ -13,6 +13,7 @@ import {
   sameFolderKey,
   spellFolderKey,
 } from '../../media/folderKeyOf/folderKeyOf';
+import { sheetDialect } from '../sheetDialect/sheetDialect';
 
 /**
  * One row of the maintainer's spreadsheet, as the **Sheet reader** answers it:
@@ -280,13 +281,14 @@ const headerKey = (text: string): string =>
 
 /**
  * A number in a cell, or `null` for a cell that is not one — `unknown`,
- * `19x5`, nothing at all.
+ * `19x5`, nothing at all. A decimal comma reads as a decimal point, as a
+ * European Excel spells `8,5`.
  */
 function cellNumber(text: string): number | null {
-  if (text === '' || !/^-?\d+(\.\d+)?$/.test(text)) {
+  if (text === '' || !/^-?\d+([.,]\d+)?$/.test(text)) {
     return null;
   }
-  return Number(text);
+  return Number(text.replace(',', '.'));
 }
 
 /**
@@ -360,9 +362,14 @@ async function openWorkbook(
   if (extension === '.csv') {
     // `exceljs` would otherwise read `1988` as a number and a date-shaped cell
     // as a date; the reader owes the caller one shape for both formats, and
-    // that shape is text parsed here.
-    await workbook.csv.read(Readable.from([bytes]), {
+    // that shape is text parsed here. The bytes are decoded by their
+    // **Sheet dialect**, the decoder dropping a BOM, so a sheet a European
+    // Excel resaved, `;`-separated and cp1252, reads whole.
+    const dialect = sheetDialect(bytes);
+    const text = new TextDecoder(dialect.encoding).decode(bytes);
+    await workbook.csv.read(Readable.from([text]), {
       map: (value: string) => value,
+      parserOptions: { delimiter: dialect.separator },
     });
     return workbook;
   }
