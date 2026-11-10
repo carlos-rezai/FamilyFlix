@@ -4,7 +4,14 @@ import { Readable } from 'node:stream';
 
 import { ROW_TYPES, SHEET_PATH_SEPARATOR, type RowType } from '@/types';
 import { yearSpan } from '../../library/series/yearSpan/yearSpan';
-import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
+import {
+  isImageFilename,
+  isSubtitleFilename,
+} from '../../media/fileKinds/fileKinds';
+import {
+  sameFolderKey,
+  spellFolderKey,
+} from '../../media/folderKeyOf/folderKeyOf';
 
 /**
  * One row of the maintainer's spreadsheet, as the **Sheet reader** answers it:
@@ -55,6 +62,24 @@ export interface SheetRow {
   backdrop: string | null;
   still: string | null;
 }
+
+/**
+ * What the reader passes over and tells its caller about, so each can be a
+ * **Log line** rather than silence: a Movie or Series row with no title, or
+ * an **Unread cell**, a path cell read as blank because it leaves its row's
+ * **Title folder** or names the wrong kind of file.
+ */
+export type SheetSkip =
+  | { kind: 'blank-title'; rowNumber: number }
+  | {
+      kind: 'unread-cell';
+      /** The row's **Folder key**. */
+      label: string;
+      /** The column's header, as the **Sheet writer** spells it. */
+      column: string;
+      /** The cell's text, or the one `Subtitles` path, as the sheet spells it. */
+      text: string;
+    };
 
 /** The columns the reader knows, each under every header the maintainer may spell it by. */
 type Column =
@@ -141,6 +166,41 @@ const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
  */
 export const resolvePathCell = (base: string, cell: string): string =>
   join(base, ...cell.split('/'));
+
+/** The path cells the reader checks, each with its header and the kind of file it may name. */
+const CHECKED_PATHS = {
+  poster: { header: 'Poster', isKind: isImageFilename },
+  backdrop: { header: 'Backdrop', isKind: isImageFilename },
+  still: { header: 'Still', isKind: isImageFilename },
+  subtitles: { header: 'Subtitles', isKind: isSubtitleFilename },
+} as const;
+
+/**
+ * Whether a path cell stays inside its row's **Title folder**, checked
+ * lexically: its first segment the row's **Folder key** (by `sameFolderKey`,
+ * so another Excel's casing still reads), no segment empty, `.` or `..`,
+ * none holding a backslash or a colon, and the file naming its column's kind.
+ */
+function isContained(
+  cell: string,
+  folder: string,
+  isKind: (filename: string) => boolean
+): boolean {
+  const segments = cell.split('/');
+  return (
+    segments.length > 1 &&
+    sameFolderKey(segments[0], folder) &&
+    segments.every(
+      (segment) =>
+        segment !== '' &&
+        segment !== '.' &&
+        segment !== '..' &&
+        !segment.includes('\\') &&
+        !segment.includes(':')
+    ) &&
+    isKind(segments[segments.length - 1])
+  );
+}
 
 /**
  * Whether a row names a title, a Movie or a Series row, and so a **Title
@@ -300,13 +360,14 @@ async function openWorkbook(
  * is matched through the synonym table case-insensitively. Only a title column
  * is required — a sheet with none is the one refusal the reader makes, and it
  * is the sheet field's `400` upstream. A column it does not recognise is
- * ignored; a Movie or Series row with a blank title is skipped, and `onBlankTitle` is told
- * its row number so the skip can be a **Log line** rather than silence.
+ * ignored; a Movie or Series row with a blank title is skipped, and a path
+ * cell that leaves its **Title folder** reads as blank: each is a
+ * {@link SheetSkip} told to `onSkip`. `Video` is read unchecked.
  */
 export async function readSheet(
   bytes: Buffer,
   filename: string,
-  onBlankTitle: (rowNumber: number) => void = () => undefined
+  onSkip: (skip: SheetSkip) => void = () => undefined
 ): Promise<SheetRow[]> {
   const workbook = await openWorkbook(bytes, filename);
   const sheet = workbook.worksheets[0];
@@ -346,13 +407,37 @@ export async function readSheet(
     const type = cellType(read(row, 'type'));
     const title = read(row, 'title');
     if (title === '' && TITLED.has(type)) {
-      onBlankTitle(number);
+      onSkip({ kind: 'blank-title', rowNumber: number });
       return;
     }
     const span = yearSpan(read(row, 'year')) ?? { year: null, endYear: null };
+    const folder = read(row, 'folder') || spelledKey(title, span.year);
+
+    /** The paths in a checked cell that stay in the Title folder; each other one is reported. */
+    const contained = (
+      column: keyof typeof CHECKED_PATHS,
+      paths: string[]
+    ): string[] => {
+      const { header, isKind } = CHECKED_PATHS[column];
+      return paths.filter((text) => {
+        if (isContained(text, folder, isKind)) {
+          return true;
+        }
+        onSkip({ kind: 'unread-cell', label: folder, column: header, text });
+        return false;
+      });
+    };
+    /** A single checked path cell, or `null` for a blank or uncontained one. */
+    const containedOne = (
+      column: 'poster' | 'backdrop' | 'still'
+    ): string | null => {
+      const text = read(row, column);
+      return text === '' ? null : (contained(column, [text])[0] ?? null);
+    };
+
     rows.push({
       type,
-      folder: read(row, 'folder') || spelledKey(title, span.year),
+      folder,
       season: cellWhole(read(row, 'season')),
       episode: cellWhole(read(row, 'episode')),
       title,
@@ -369,10 +454,13 @@ export async function readSheet(
       tmdbId: cellWhole(read(row, 'tmdbId')),
       favorite: FAVORITE.has(read(row, 'favorite').toLowerCase()),
       video: cellOptional(read(row, 'video')),
-      subtitles: cellList(read(row, 'subtitles'), SHEET_PATH_SEPARATOR),
-      poster: cellOptional(read(row, 'poster')),
-      backdrop: cellOptional(read(row, 'backdrop')),
-      still: cellOptional(read(row, 'still')),
+      subtitles: contained(
+        'subtitles',
+        cellList(read(row, 'subtitles'), SHEET_PATH_SEPARATOR)
+      ),
+      poster: containedOne('poster'),
+      backdrop: containedOne('backdrop'),
+      still: containedOne('still'),
     });
   });
 

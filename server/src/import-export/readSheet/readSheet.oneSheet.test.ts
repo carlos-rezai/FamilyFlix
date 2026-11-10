@@ -248,9 +248,11 @@ describe.each([...EXPORT_FORMATS])(
       );
       const bytes = await writeSheet(table, format);
       const blank: number[] = [];
-      const rows = await readSheet(bytes, `library.${format}`, (row) =>
-        blank.push(row)
-      );
+      const rows = await readSheet(bytes, `library.${format}`, (skip) => {
+        if (skip.kind === 'blank-title') {
+          blank.push(skip.rowNumber);
+        }
+      });
       return { rows, blank, written: table.length - 1 };
     }
 

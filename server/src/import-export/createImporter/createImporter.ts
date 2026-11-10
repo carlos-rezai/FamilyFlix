@@ -498,9 +498,11 @@ async function checkSheet(sheetPath: string): Promise<SheetRead> {
 
   const blankTitleRows: number[] = [];
   try {
-    const rows = await readSheet(bytes, sheetPath, (rowNumber) =>
-      blankTitleRows.push(rowNumber)
-    );
+    const rows = await readSheet(bytes, sheetPath, (skip) => {
+      if (skip.kind === 'blank-title') {
+        blankTitleRows.push(skip.rowNumber);
+      }
+    });
     return { rows, blankTitleRows };
   } catch (error) {
     throw new ImportStartError(
