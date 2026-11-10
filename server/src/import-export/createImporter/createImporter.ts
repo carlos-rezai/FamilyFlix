@@ -638,8 +638,11 @@ interface ShowMatch {
    * series on it when it creates one, so _Resolve_ joins it.
    */
   unplaced: ImportProblem | null;
-  /** Whether the held series took **Sheet fills** this run. */
-  updated: boolean;
+  /**
+   * What the held series' **Sheet fills** took this run, as its `✓ Updated`
+   * line names them once its files are taken too.
+   */
+  filled: string[];
 }
 
 /**
@@ -659,6 +662,15 @@ interface GenreReader {
 interface Differing extends HeldTitle {
   proposed: SheetFill;
 }
+
+/** The files a held title takes, as its `✓ Updated` line names them, in order. */
+const TAKEN_ORDER = [
+  'poster',
+  'backdrop',
+  'season posters',
+  'stills',
+  'subtitles',
+] as const;
 
 /** The fields a fill names on its `✓ Updated` line, in the sheet's order. */
 const filledNames = (fill: SheetFill): string[] => [
@@ -1124,17 +1136,16 @@ export function createImporter({
   /**
    * A held title's **Sheet fills** written during the run, through
    * {@link writeSheetFill} — never a field raised as a difference, which is
-   * filed instead, and never its title. Only its `✓ Updated` line is written
-   * here: what took nothing is **Already in library** once the caller knows
-   * nothing else was added either. Answers whether it took any.
+   * filed instead, and never its title. Answers the names its `✓ Updated`
+   * line gives what it took.
    */
-  const fillHeld = (
+  const writeHeldFill = (
     current: ImportRun,
     held: HeldTitle,
     row: SheetRow,
     genres: GenreReader,
     episodeRows: SheetRow[] = []
-  ): boolean => {
+  ): string[] => {
     const movie = held.kind === 'movie' ? storage.getMovie(held.id) : null;
     const series = held.kind === 'series' ? storage.getSeries(held.id) : null;
     const values =
@@ -1144,7 +1155,7 @@ export function createImporter({
           ? heldSeriesValues(series)
           : null;
     if (values === null) {
-      return false;
+      return [];
     }
     const pooled = pooledRow(row, genres, current);
     const { fill, differences, proposed } = planSheetFields(
@@ -1156,8 +1167,26 @@ export function createImporter({
     writeSheetFill(held, fill);
     const episodes =
       held.kind === 'series' ? fillHeldEpisodes(held.id, episodeRows) : [];
-    return logUpdated(current, row, [...filledNames(fill), ...episodes]);
+    return [...filledNames(fill), ...episodes];
   };
+
+  /**
+   * {@link writeHeldFill}, and its `✓ Updated` line: what took nothing is
+   * **Already in library** once the caller knows nothing else was added
+   * either. Answers whether it took any.
+   */
+  const fillHeld = (
+    current: ImportRun,
+    held: HeldTitle,
+    row: SheetRow,
+    genres: GenreReader,
+    episodeRows: SheetRow[] = []
+  ): boolean =>
+    logUpdated(
+      current,
+      row,
+      writeHeldFill(current, held, row, genres, episodeRows)
+    );
 
   /**
    * The importer's one decision between link and copy, by the **Placed
@@ -1336,26 +1365,33 @@ export function createImporter({
     return copied;
   };
 
+  /**
+   * Answers what the title took, as its `✓ Updated` line names it: `poster`,
+   * `backdrop`, `season posters`, `stills`, `subtitles`.
+   */
   const fillHeldFiles = async (
     held: HeldFiles,
     into: string,
     copyArt: ArtCopy
-  ): Promise<void> => {
+  ): Promise<string[]> => {
+    const taken = new Set<string>();
     if (held.kind === 'movie') {
       const movie = storage.getMovie(held.id);
       if (movie === null) {
-        return;
+        return [];
       }
       if (movie.posterPath === null) {
         const posterPath = await copyArt(into, held.scan.poster);
         if (posterPath !== undefined) {
           storage.enrichMovie(held.id, { posterPath });
+          taken.add('poster');
         }
       }
       if (movie.backdropPath === null) {
         const backdropPath = await copyArt(into, held.scan.backdrop);
         if (backdropPath !== undefined) {
           storage.enrichMovie(held.id, { backdropPath });
+          taken.add('backdrop');
         }
       }
       const tracks = await copyTracks(
@@ -1365,25 +1401,28 @@ export function createImporter({
       );
       if (tracks.length > 0) {
         storage.addMovieSubtitles(held.id, tracks);
+        taken.add('subtitles');
       }
-      return;
+      return TAKEN_ORDER.filter((name) => taken.has(name));
     }
     const { show } = held;
     const detail = storage.getSeriesDetail(held.id);
     if (detail === null) {
-      return;
+      return [];
     }
     const id = detail.series.id;
     if (detail.series.posterPath === null) {
       const posterPath = await copyArt(into, show.poster);
       if (posterPath !== undefined) {
         storage.enrichSeries(id, { posterPath });
+        taken.add('poster');
       }
     }
     if (detail.series.backdropPath === null) {
       const backdropPath = await copyArt(into, show.backdrop);
       if (backdropPath !== undefined) {
         storage.enrichSeries(id, { backdropPath });
+        taken.add('backdrop');
       }
     }
     for (const season of detail.seasons) {
@@ -1395,6 +1434,7 @@ export function createImporter({
         );
         if (posterPath !== undefined) {
           storage.setSeasonPoster(id, season.number, posterPath);
+          taken.add('season posters');
         }
       }
       for (const episode of season.episodes) {
@@ -1408,6 +1448,7 @@ export function createImporter({
               stillPath,
               stillSource: 'picked',
             });
+            taken.add('stills');
           }
         }
         const tracks = await copyTracks(
@@ -1420,8 +1461,28 @@ export function createImporter({
         );
         if (tracks.length > 0) {
           storage.addEpisodeSubtitles(episode.id, tracks);
+          taken.add('subtitles');
         }
       }
+    }
+    return TAKEN_ORDER.filter((name) => taken.has(name));
+  };
+
+  /**
+   * A held show's `✓ Updated` line, naming its **Sheet fills** and the files
+   * it `took`; **Already in library** when it took nothing and the run copies
+   * none of its episodes.
+   */
+  const logHeldShow = (
+    current: ImportRun,
+    match: ShowMatch,
+    took: readonly string[]
+  ): void => {
+    if (
+      !logUpdated(current, match.row, [...match.filled, ...took]) &&
+      match.episodes.length === 0
+    ) {
+      logAlreadyHeld(current, match.row);
     }
   };
 
@@ -1505,27 +1566,13 @@ export function createImporter({
       }
     };
 
-    if (held !== null && held.folder !== null) {
-      try {
-        await fillHeldFiles(
-          { kind: 'series', id: held.series.id, show },
-          held.folder,
-          copyArt
-        );
-      } catch (error) {
-        if (signal.aborted) {
-          return null;
-        }
-        throw error;
+    // A held series with no Series folder takes no files, so with nothing new
+    // to copy it takes only what its Sheet fills gave it.
+    if (episodes.length === 0 && (held === null || held.folder === null)) {
+      if (held !== null) {
+        logHeldShow(current, match, []);
       }
-    }
-    if (episodes.length === 0) {
-      if (held !== null && !match.updated) {
-        logAlreadyHeld(current, row);
-      }
-      if (artFailures.length === 0) {
-        return held?.series.id ?? null;
-      }
+      return held?.series.id ?? null;
     }
     const folder = held?.folder ?? media.reserveFolder(row.title, row.year);
     let series: Series | null = held?.series ?? null;
@@ -1629,6 +1676,26 @@ export function createImporter({
         break;
       }
       current.done += 1;
+    }
+
+    // A held series' files are taken once the run's new episodes are in, so
+    // a season this run adds takes its Season poster on this scan.
+    if (held !== null && held.folder !== null && !signal.aborted) {
+      let taken: string[] = [];
+      try {
+        taken = await fillHeldFiles(
+          { kind: 'series', id: held.series.id, show },
+          held.folder,
+          copyArt
+        );
+      } catch (error) {
+        if (!signal.aborted) {
+          throw error;
+        }
+      }
+      if (!signal.aborted) {
+        logHeldShow(current, match, taken);
+      }
     }
 
     if (failures.length > 0 || artFailures.length > 0) {
@@ -1738,7 +1805,7 @@ export function createImporter({
                 !held.tags.has(spellEpisodeTag(episode.season, episode.episode))
             ),
       unplaced: null,
-      updated: false,
+      filled: [],
     };
   };
 
@@ -2370,7 +2437,7 @@ export function createImporter({
           episodeRowsOf(rows, match.row.folder)
         );
         if (joined.held !== null) {
-          joined.updated = fillHeld(
+          joined.filled = writeHeldFill(
             current,
             { kind: 'series', id: joined.held.series.id },
             match.row,
@@ -2626,8 +2693,9 @@ export function createImporter({
             foundAgain.push({ match: again, libraryFolder: folder });
           }
           const into = heldFolder('movie', heldId);
+          let taken: string[] = [];
           if (into !== null) {
-            await fillHeldFiles(
+            taken = await fillHeldFiles(
               {
                 kind: 'movie',
                 id: heldId,
@@ -2641,12 +2709,19 @@ export function createImporter({
             }
           }
           const filled =
-            sheetRow !== undefined &&
-            fillHeld(current, { kind: 'movie', id: heldId }, sheetRow, genres);
-          if (!filled && again === null) {
+            sheetRow === undefined
+              ? []
+              : writeHeldFill(
+                  current,
+                  { kind: 'movie', id: heldId },
+                  sheetRow,
+                  genres
+                );
+          const updated = logUpdated(current, row, [...filled, ...taken]);
+          if (!updated && again === null) {
             logAlreadyHeld(current, row);
           }
-          if (filled) {
+          if (filled.length > 0) {
             await fillTitleFolder(current, heldId);
           }
           continue;
@@ -2682,7 +2757,7 @@ export function createImporter({
           sheetRow === undefined ? [] : episodeRowsOf(rows, sheetRow.folder)
         );
         if (sheetRow !== undefined && match.held !== null) {
-          match.updated = fillHeld(
+          match.filled = writeHeldFill(
             current,
             { kind: 'series', id: match.held.series.id },
             sheetRow,
