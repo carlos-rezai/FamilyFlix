@@ -22,12 +22,8 @@ import {
   exportNameRefusal,
   type ExportNameRefusal,
 } from '../exportName/exportName';
-import {
-  exportRows,
-  type ExportFile,
-  type ExportTable,
-} from '../exportRows/exportRows';
-import { filePlan } from '../filePlan/filePlan';
+import { exportRows, type ExportTable } from '../exportRows/exportRows';
+import { filePlan, type ExportFile } from '../filePlan/filePlan';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The library an **Export** is written from. */

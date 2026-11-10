@@ -26,13 +26,8 @@ import { describe, expect, it } from 'vitest';
 import type { Episode, Movie, SeriesDetail, Subtitle } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
-import {
-  exportRows,
-  type ExportFile,
-  type ExportInclude,
-  type ExportTable,
-} from '../exportRows/exportRows';
-import { filePlan } from './filePlan';
+import { exportRows, type ExportTable } from '../exportRows/exportRows';
+import { filePlan, type ExportFile, type ExportInclude } from './filePlan';
 
 const ALL: ExportInclude = { images: true, subtitles: true };
 const IMAGES: ExportInclude = { images: true, subtitles: false };

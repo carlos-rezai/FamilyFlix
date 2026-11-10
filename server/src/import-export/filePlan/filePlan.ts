@@ -1,4 +1,4 @@
-import type { Subtitle } from '@/types';
+import type { StartExport, Subtitle } from '@/types';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import {
   IMAGES_FOLDER,
@@ -10,13 +10,23 @@ import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import {
   basenameOf,
   safeName,
-  type ExportFile,
-  type ExportInclude,
   type ImagePlace,
   type PathCells,
   type TracksPlace,
   videoCell,
 } from '../exportRows/exportRows';
+
+/**
+ * One file of the **File plan**: a **Stored path**, and the relative,
+ * forward-slash path it is written to inside the **Export folder**.
+ */
+export interface ExportFile {
+  storedPath: string;
+  path: string;
+}
+
+/** What travels beside the sheet: the two toggles of _Include_. */
+export type ExportInclude = Pick<StartExport, 'images' | 'subtitles'>;
 
 /** The Export's **File plan**: its **Path cells** and the files they planned. */
 export interface FilePlan {

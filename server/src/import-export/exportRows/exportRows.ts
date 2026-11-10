@@ -6,7 +6,6 @@ import {
   type SeasonSummary,
   type SeriesDetail,
   type SheetColumn,
-  type StartExport,
   type Subtitle,
   type WatchStatus,
 } from '@/types';
@@ -20,18 +19,6 @@ export type ExportCell = string | number | null;
 
 /** The one sheet of an **Export**: its header row first, then one row each. */
 export type ExportTable = ExportCell[][];
-
-/**
- * One file of the **File plan**: a **Stored path**, and the relative,
- * forward-slash path it is written to inside the **Export folder**.
- */
-export interface ExportFile {
-  storedPath: string;
-  path: string;
-}
-
-/** What travels beside the sheet: the two toggles of _Include_. */
-export type ExportInclude = Pick<StartExport, 'images' | 'subtitles'>;
 
 /** What `exportRows` answers: the one table and its Warning lines. */
 export interface ExportRows {
