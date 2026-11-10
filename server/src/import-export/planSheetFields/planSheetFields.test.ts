@@ -17,7 +17,7 @@ import { describe, expect, it } from 'vitest';
 
 import type { SheetRow } from '../readSheet/readSheet';
 import type { HeldValues } from '../heldValues/heldValues';
-import { planSheetFields } from './planSheetFields';
+import { marksWatched, planSheetFields } from './planSheetFields';
 
 /** A held title with nothing filled in. */
 const BARE: HeldValues = {
@@ -454,13 +454,6 @@ describe('planSheetFields: the title is never in play', () => {
 // `Watched` marks a held unwatched episode. None is ever a **Sheet
 // difference**.
 
-const episode = (current: Partial<HeldValues>, row: Partial<SheetRow>) =>
-  planSheetFields(
-    { ...BARE, title: 'Pilot', ...current },
-    { ...BLANK_ROW, type: 'Episode', title: 'Pilot', ...row },
-    'episode'
-  );
-
 describe('planSheetFields: TMDB id, TMDB rating and Runtime fill only where none', () => {
   it('fills a film’s empty TMDB id, TMDB rating and Runtime', () => {
     expect(film({}, { tmdbId: 562, tmdbScore: 7.8, runtime: 132 })).toEqual({
@@ -529,24 +522,28 @@ describe('planSheetFields: Favorite only hearts', () => {
   });
 });
 
-describe('planSheetFields: an Episode row’s Watched only marks', () => {
+describe('marksWatched: an Episode row’s Watched only marks', () => {
+  const episodeRow = (watched: boolean): SheetRow => ({
+    ...BLANK_ROW,
+    type: 'Episode',
+    title: 'Pilot',
+    watched,
+  });
+
   it('marks a held unwatched episode watched', () => {
-    expect(episode({ status: 'unwatched' }, { watched: true })).toEqual({
-      fill: { watched: true },
-      differences: [],
-      proposed: {},
-    });
+    expect(marksWatched('unwatched', episodeRow(true))).toBe(true);
   });
 
   it('leaves a watched or in-progress episode as it is, and never unmarks one', () => {
-    // Paired with the mark above, so the planner must know an episode.
-    expect(episode({ status: 'unwatched' }, { watched: true }).fill).toEqual({
-      watched: true,
-    });
-    expect(episode({ status: 'watched' }, { watched: true })).toEqual(NOTHING);
-    expect(episode({ status: 'in-progress' }, { watched: true })).toEqual(
-      NOTHING
-    );
-    expect(episode({ status: 'watched' }, { watched: false })).toEqual(NOTHING);
+    // Paired with the mark above, so the rule must read the status.
+    expect(marksWatched('unwatched', episodeRow(true))).toBe(true);
+    expect(marksWatched('watched', episodeRow(true))).toBe(false);
+    expect(marksWatched('in-progress', episodeRow(true))).toBe(false);
+    expect(marksWatched('watched', episodeRow(false))).toBe(false);
+  });
+
+  it('marks nothing for an In progress or Unwatched row', () => {
+    // Both read as not Watched, so neither marks an unwatched episode.
+    expect(marksWatched('unwatched', episodeRow(false))).toBe(false);
   });
 });

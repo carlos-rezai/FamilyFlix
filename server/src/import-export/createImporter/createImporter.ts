@@ -44,6 +44,7 @@ import {
   seriesSheetPatch,
 } from '../plannedSheetFill/plannedSheetFill';
 import {
+  marksWatched,
   planSheetFields,
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
@@ -1009,15 +1010,7 @@ export function createImporter({
       if (episode === undefined) {
         continue;
       }
-      const { fill } = planSheetFields(
-        {
-          ...heldSeriesValues(detail.series),
-          status: episode.status,
-        },
-        row,
-        'episode'
-      );
-      if (fill.watched === true) {
+      if (marksWatched(episode.status, row)) {
         storage.setEpisodeWatched(episode.id, true);
         marked.push(
           `${spellEpisodeTag(episode.season, episode.number)} watched`

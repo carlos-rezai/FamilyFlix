@@ -1,4 +1,4 @@
-import type { SheetDifference, SheetField } from '@/types';
+import type { SheetDifference, SheetField, WatchStatus } from '@/types';
 import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
 import type { HeldValues } from '../heldValues/heldValues';
 import type { SheetRow } from '../readSheet/readSheet';
@@ -7,9 +7,8 @@ import type { SheetRow } from '../readSheet/readSheet';
  * The **Sheet fills**: each empty held field the row fills, in the row's
  * values. A series' `year` brings its `endYear` with it — `null` an open run,
  * which a proposal carries so _Apply choices_ clears a held end year; `watched`
- * is only ever a mark on an unwatched film or episode, `favorite` only ever a
- * heart. The TMDB id, TMDB rating and Runtime are fills alone, never a
- * difference.
+ * is only ever a mark on an unwatched film, `favorite` only ever a heart. The
+ * TMDB id, TMDB rating and Runtime are fills alone, never a difference.
  */
 export interface SheetFill {
   synopsis?: string;
@@ -80,15 +79,27 @@ const sameSet = (a: string[], b: string[]): boolean => {
 };
 
 /**
+ * A row's Watched marks a title only when the title is unwatched: Watched
+ * only marks, never unmarks, and a watched or in-progress title is left as it
+ * is. A film's plan reads it, and so does a held episode, whose Watched is the
+ * one sheet value it can take.
+ */
+export function marksWatched(
+  status: WatchStatus,
+  row: Pick<SheetRow, 'watched'>
+): boolean {
+  return row.watched && status === 'unwatched';
+}
+
+/**
  * Plan what a **Sheet row** does to a title the library already holds: an
  * empty field the row fills is a **Sheet fill**; a field filled on both sides
  * that differs is a **Sheet difference**, never a fill. Text is compared
  * trimmed and case-blind, cast and genres as sets, the rating as a number,
  * a series' year as its spelled **Year range**. A film's year never differs,
- * the title is never in play, and Watched only marks an unwatched film or
- * episode. The TMDB id, TMDB rating and Runtime only fill where none is held,
- * and Favorite only hearts. An Episode row plans its Watched mark alone. The
- * row's genres arrive already read onto the **Genre pool**. Each difference's
+ * the title is never in play, and Watched only marks an unwatched film
+ * ({@link marksWatched}). The TMDB id, TMDB rating and Runtime only fill where
+ * none is held, and Favorite only hearts. The row's genres arrive already read onto the **Genre pool**. Each difference's
  * sheet side is also `proposed`, normalised exactly as a fill would be.
  * Every column a row carries plans here, so a title the **Round trip** scans
  * back from its sheet needs no second Sync.
@@ -96,18 +107,11 @@ const sameSet = (a: string[], b: string[]): boolean => {
 export function planSheetFields(
   current: HeldValues,
   row: SheetRow,
-  kind: 'movie' | 'series' | 'episode'
+  kind: 'movie' | 'series'
 ): SheetPlan {
   const fill: SheetFill = {};
   const differences: SheetDifference[] = [];
   const proposed: SheetFill = {};
-  const marksWatched = row.watched && current.status === 'unwatched';
-  if (kind === 'episode') {
-    if (marksWatched) {
-      fill.watched = true;
-    }
-    return { fill, differences, proposed };
-  }
   const differ = (field: SheetField, mine: string, sheet: string): void => {
     differences.push({
       field,
@@ -188,7 +192,7 @@ export function planSheetFields(
     }
   }
 
-  if (kind === 'movie' && marksWatched) {
+  if (kind === 'movie' && marksWatched(current.status, row)) {
     fill.watched = true;
   }
 
