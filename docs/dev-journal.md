@@ -11,6 +11,103 @@ Newest entry first.
 
 ---
 
+## 2026-11-10: Rebuild whole, the refactor (issue 561)
+
+Eighteen commits against
+`docs/refactor-plans/59-rebuild-whole-refactor.md`, one per plan commit.
+This is the initiative's closing round. **11582 tests pass across 739
+files**, against 11605 across 740 at the end of the build (`e0ece99b`). The
+count fell: the documents suite (14) and the two retirement suites (3) went,
+and `numberShow.test`'s 22 Season folder cases left it; `marksWatched` (3,
+one of them new), `resolvePathCell` (3) and the four Season folder names the
+shared table lacked (12, read by three suites) came in. `tsc -b --force` is
+clean. `eslint src server electron` reports 1 error and 137 warnings, down
+from 1 and 138.
+
+### What shipped before this round
+
+The build slices 548 to 559, RED and GREEN each: a scan imports a series
+whole, a new title takes every **Sheet column** and a held one fills only
+what is empty, the **Library sheet**'s **Path cells** come from a **Layout
+read** and the Export's from its **File plan**, a path cell fills an empty
+place, the importer runs the **Layout fill**, the **Show folder read** reads
+by `readSeasonFolders`, an **Orphaned row** is one Warning line, and a **New
+folder**'s sheet is never written. The documents followed (560).
+
+### What each group changed
+
+- **Group 1, the retired units' leftovers** (`53dad8c7`, `146ccab8`).
+  `executeScan` reads `foundFilms` and `foundShows`; `showUnder` answers a
+  named `PickedFolder`, and `readShowFolder` reads its one show without
+  wrapping it in an array.
+- **Group 2, one rule each** (`7f8d85fc` to `384f4d2a`). `fillHeldEpisodes`
+  spells its tag through `spellEpisodeTag`; `marksWatched` is the one
+  Watched rule and `planSheetFields` is back to two kinds; `FILL_ONLY_FIELDS`
+  sits beside the rule it lists; `HeldValues` calls the heart `favorite`;
+  `resolvePathCell` in `readSheet` is the one path cell resolver; `holdSheet`
+  is the one hold of a run's sheet; `scannedSeasonPoster` and `scannedStill`
+  name the importer's questions of a `ShowScan`.
+- **Group 3, the cell rules in `exportRows`** (`b11586ee`, `8715ee2a`).
+  `videoCell` and its `videoPath` live beside `VideoPlace`; `ExportFile` and
+  `ExportInclude` live in `filePlan`.
+- **Group 4, small seams** (`a5471a3d`). `readTitleFolders` is module-level
+  in `createLibrarySheet`.
+- **Group 5, suites that test behaviour** (`0c350ed8` to `58dfe0bb`). The
+  documents suite and the two retirement suites are gone; the Season folder
+  cases live in `seasonFolderCases` only; `pathCellFills.test` has its
+  header; `readShowFolder.test` names what it reads; the unused `cpSync`
+  went.
+- **Group 6, comments** (`3d31bb22`). Five docblocks rewrapped,
+  `importShow`'s made true, two `INSERT`s rewrapped.
+- **Group 7, the docs** (`e7f296de` and this commit). Step 42 and its row
+  ticked, the README's server tree, a Rebuild whole release smoke, the
+  glossary.
+
+### Where this round left the plan
+
+- **`readMetaSheet` lost its `folder` parameter.** Once it stopped holding,
+  nothing read it; keeping it would have been a new lint warning.
+- **`videoPath` spells the Season folder through `spellSeasonFolder`** in
+  `exportRows`, as `filePlan`'s private `seasonDir` does; `seasonDir` stays
+  `filePlan`'s, since only the File plan joins a Season folder for its own
+  files.
+- **`marksWatched` gained one case** the plan named but the old Episode
+  cases lacked: an `In progress` or `Unwatched` row marks nothing.
+- **Four of the 22 moved Season folder names were not in the table**
+  (`SEASON 02`, `Season 12`, `Season01`, `s01`); they joined it, so the
+  server reader, the client reader and the drift guard all read them.
+- **Scripted edits must open files as UTF-8.** Python on Windows reads
+  cp1252 by default, so a script could not find a `’` in a `describe`
+  title until it passed `encoding='utf-8'`.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: a shared importer harness,
+`importShow`'s shape, an absolute path cell in a hand-written sheet, the
+items carried from folder-layout, everything log 59 put out of scope, and
+the frozen `handoff-rebuild-whole/`. No wire, schema, Settings, copy or
+prototype change.
+
+### Follow-ups this refactor surfaced
+
+- **A shared importer harness**: `untilReview`, `sandbox`, `writeImage` and
+  `sheetOf` written out suite by suite, a round across every importer suite.
+- **An absolute path cell** in a hand-written sheet: `matchRows` joins it to
+  the Library folder and finds nothing; reading it as it stands is a `fix:`
+  issue of its own.
+- **`importShow`'s shape**: five positional parameters and two nested
+  helpers sharing its failure lists.
+- Carried from folder-layout: an options object for `createApiRouter`, a
+  discriminated library scope, `importPlaced`'s parameters as an object, and
+  the Sync's done summary still wording the retired Write targets.
+
+### The initiative
+
+**Rebuild whole is done**: the build slices (548 to 559), the documents
+(560) and this round (561). Issue 547, the epic, is shut with it.
+
+---
+
 ## 2026-11-09: Folder layout, the refactor (issue 545)
 
 Twenty-eight commits against
