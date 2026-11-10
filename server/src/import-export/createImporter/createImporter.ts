@@ -44,6 +44,7 @@ import {
   seriesSheetPatch,
 } from '../plannedSheetFill/plannedSheetFill';
 import {
+  FILL_ONLY_FIELDS,
   marksWatched,
   planSheetFields,
   type SheetFill,
@@ -598,9 +599,7 @@ interface Differing extends HeldTitle {
 /** The fields a fill names on its `✓ Updated` line, in the sheet's order. */
 const filledNames = (fill: SheetFill): string[] => [
   ...SHEET_FIELDS.filter((field) => fill[field] !== undefined),
-  ...(['runtime', 'tmdbScore', 'tmdbId'] as const).filter(
-    (field) => fill[field] !== undefined
-  ),
+  ...FILL_ONLY_FIELDS.filter((field) => fill[field] !== undefined),
   ...(fill.watched === true ? ['watched'] : []),
   ...(fill.favorite === true ? ['favorite'] : []),
 ];

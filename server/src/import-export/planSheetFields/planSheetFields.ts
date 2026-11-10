@@ -37,6 +37,13 @@ export interface SheetPlan {
   proposed: SheetFill;
 }
 
+/**
+ * The fields a row only ever fills, never raises as a **Sheet difference**, in
+ * the sheet's column order: a differing TMDB id is a Sync's business, not a
+ * choice for the family in review (log 59 Q9).
+ */
+export const FILL_ONLY_FIELDS = ['runtime', 'tmdbScore', 'tmdbId'] as const;
+
 const LABELS: Readonly<Record<SheetField, string>> = {
   synopsis: 'Synopsis',
   year: 'Year',
