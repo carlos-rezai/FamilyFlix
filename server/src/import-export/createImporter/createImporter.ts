@@ -831,7 +831,15 @@ export interface ImporterDeps {
  * year. It is never a **Match** — nothing is added for it, which is what
  * makes cancel-then-restart harmless — but it takes its row's **Sheet
  * fills** during the run and files its **Sheet differences** as one `differs`
- * **Problem**.
+ * **Problem**. On a **Folder scan** it also takes the files its folder holds
+ * that it lacks (`fillHeldFiles`), and its one `✓ Updated` line names those
+ * and its Sheet fills; a held series that took any is not logged _Already in
+ * library_.
+ *
+ * Both runs log every skip the **Sheet reader** reports (a titleless row, an
+ * **Unread cell**, a duplicate row) as one Warning line by `skipLine`. A
+ * Folder scan's Meta sheet that doesn't read is scanned without, and left as
+ * it is.
  *
  * Each match is imported by the **Movie form**'s own sequence: reserve the
  * **Movie folder**, copy in the video, the poster, the backdrop and each
@@ -1316,15 +1324,6 @@ export function createImporter({
   };
 
   /**
-   * A held title's empty art filled from its Title folder's read, never
-   * replacing art it has, and filing no **Problem**. A film takes its
-   * **Poster** and **Backdrop** (its **Path cells** already read into the
-   * places the read left empty); a series its **Poster**, **Backdrop**, each
-   * held season's **Season poster** and each held episode's **Still** (a
-   * picked one). A film, and each held episode, takes each track of a
-   * language it holds none of.
-   */
-  /**
    * A held film's art copy: a copy that fails is one **Warning line**, never
    * a Problem, and the run goes on; a cancel copies nothing more.
    */
@@ -1366,6 +1365,16 @@ export function createImporter({
   };
 
   /**
+   * A held title's empty places filled from its Title folder's read, never
+   * replacing what it has, and filing no **Problem**. A film takes its
+   * **Poster** and **Backdrop** (its **Path cells** already read into the
+   * places the read left empty); a series its **Poster**, **Backdrop**, each
+   * season's **Season poster** and each held episode's **Still**, run after
+   * the run's new episodes are in so a season the same run adds is filled on
+   * that scan. A film, and each held episode, takes each track of a language
+   * it holds none of, so a track the **Layout fill** wrote out is never read
+   * back as a second copy.
+   *
    * Answers what the title took, as its `✓ Updated` line names it: `poster`,
    * `backdrop`, `season posters`, `stills`, `subtitles`.
    */

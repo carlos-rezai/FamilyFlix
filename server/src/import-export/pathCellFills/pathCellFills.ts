@@ -36,10 +36,13 @@ async function fill(
 }
 
 /**
- * A film's scan with its **Sheet row**'s path cells read into the places the
- * folder's read left empty: the poster and backdrop when the read found none,
- * and each track the read did not find. The read always wins, a cell naming a
- * file that is not there fills nothing, and the `Video` cell is never read.
+ * A film's scan with its **Sheet row**'s **Path cells** read into the places
+ * the folder's read left empty: the poster and backdrop when the read found
+ * none, and each track the read did not find. The read always wins, a cell
+ * naming a file that is not there fills nothing, and the `Video` cell is
+ * never read. Every cell is already contained: the **Sheet reader** read any
+ * other as blank. A new film's import and a held film's `fillHeldFiles` both
+ * read their cells through it.
  */
 export async function filmWithCells(
   scan: FilmScan,
@@ -65,8 +68,8 @@ export async function filmWithCells(
 }
 
 /**
- * A show's scan with its sheet's path cells read into the places the
- * folder's read left empty: the Series row's poster and backdrop, each Season
+ * A show's scan with its sheet's **Path cells**, each already contained, read
+ * into the places the folder's read left empty: the Series row's poster and backdrop, each Season
  * row's **Season poster** and each Episode row's **Still**. `rows` are the
  * show's Season and Episode rows. The read always wins, and a cell naming a
  * file that is not there fills nothing.

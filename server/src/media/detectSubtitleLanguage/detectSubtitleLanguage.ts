@@ -64,9 +64,9 @@ function fold(name: string): string {
 }
 
 /**
- * A subtitle's language, read off its filename tag onto one of the form's
- * seven names — `die-hard.pt.srt` is Portuguese — and `English` when nothing
- * in the name says otherwise.
+ * A subtitle's language, read off its filename tag onto one of the **Language
+ * pool**'s seven names (`die-hard.pt.srt` is Portuguese), and `English` when
+ * nothing in the name says otherwise.
  *
  * The tag is the last piece before the extension, split on dots, underscores
  * and hyphens, so a word of the title is never read as one: `it-follows.srt`
@@ -74,8 +74,10 @@ function fold(name: string): string {
  * offer — Japanese, Swedish — is `English` too: the maintainer corrects it on
  * the form rather than the importer inventing an eighth name.
  *
- * A language's own name reads too, diacritics folded (`Español`), and a
- * two-letter region after a known code reads as the code (`pt-BR`, `en_GB`).
+ * A pool language's own name reads too, diacritics folded (`Español`,
+ * `Nederlands`), and a two-letter region after a known code reads as the
+ * code (`pt-BR`, `en_GB`, `nl.be`). No language library: the pool's names
+ * only.
  */
 export function detectSubtitleLanguage(filename: string): string {
   const name = filename.split(/[/\\]/).pop() ?? '';

@@ -36,9 +36,12 @@ const PATH_COLUMNS: ReadonlySet<string> = new Set<SheetColumn>([
  * no styling (no bold header, no widths, no frozen panes), and each Poster,
  * Backdrop and Still cell holding a path a hyperlink whose text is that path.
  *
- * A csv written with the `;` separator writes its numbers with a decimal
- * comma, the convention that goes with it, so `7.9` writes as `7,9`; a field
- * holding `;` is quoted. Either way, every csv row has its header's width.
+ * The separator is `,` unless given; the **Library sheet writer** gives a
+ * sheet's own **Sheet dialect**'s, and an Export never gives one. A csv
+ * written with the `;` separator writes its numbers with a decimal comma,
+ * the convention that goes with it, so `7.9` writes as `7,9`; a field
+ * holding `;` is quoted. Either way, every csv row is padded to its header's
+ * width, so a Season row has every column.
  */
 export async function writeSheet(
   table: ExportTable,

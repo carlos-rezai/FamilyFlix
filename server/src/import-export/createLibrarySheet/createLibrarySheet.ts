@@ -105,13 +105,15 @@ async function readTitleFolders(
  * `layoutCells`), through a temporary file in `Meta/` and a rename, behind its
  * BOM; a sheet whose bytes already match is left alone. A sheet on disk
  * keeps its **Sheet dialect**'s separator (a `;` sheet is rewritten `;`, with
- * decimal commas), always rewritten UTF-8; a brand-new sheet is `,`. A library scanned
- * back from its sheet writes that sheet again byte for byte: the **Round
- * trip**. A folder no longer listed (a **Factory reset**'s), a **New folder**
- * or an **Unreachable** one is skipped, as is a sheet on disk the **Sheet
- * reader** refuses, left until it reads or is removed; a later touch that finds it scanned
- * and reachable writes it. The one replacer inside a Library folder, and only
- * of that one file.
+ * decimal commas), always rewritten UTF-8; a brand-new sheet is `,`. Every
+ * row is as wide as its header, so a sheet written short before is rewritten
+ * once at its next touch and then stays still. A library scanned back from
+ * its sheet writes that sheet again byte for byte: the **Round trip**. A
+ * folder no longer listed (a **Factory reset**'s), a **New folder** or an
+ * **Unreachable** one is skipped, as is a sheet on disk the **Sheet reader**
+ * refuses, left until it reads or is removed; a later touch that finds it
+ * scanned and reachable writes it. The one replacer inside a Library folder,
+ * and only of that one file.
  */
 export function createLibrarySheet({
   storage,

@@ -67,15 +67,21 @@ export interface SheetRow {
 
 /**
  * What the reader passes over and tells its caller about, so each can be a
- * **Log line** rather than silence: a Movie or Series row with no title, or
- * an **Unread cell**, a path cell read as blank because it leaves its row's
- * **Title folder** or names the wrong kind of file.
+ * **Log line** (by {@link skipLine}) rather than silence: a Movie or Series
+ * row with no title; an **Unread cell**, a filled cell read as blank (a
+ * number, date or Type that doesn't parse, a Status or Favorite on neither
+ * list, an Episode row's Synopsis, a path cell that isn't contained under
+ * **Path cells**' rule); or a row repeating an earlier one, the first read.
  */
 export type SheetSkip =
   | { kind: 'blank-title'; rowNumber: number }
   | {
       kind: 'unread-cell';
-      /** The row's **Folder key**. */
+      /**
+       * The row as its line names it: a Movie or Series row by its **Folder
+       * key**, a Season row by its season (`Tidewater (2018) Season 1`), an
+       * Episode row by its tag (`Tidewater (2018) S01E02`).
+       */
       label: string;
       /** The column's header, as the **Sheet writer** spells it. */
       column: string;
@@ -84,7 +90,7 @@ export type SheetSkip =
     }
   | {
       kind: 'duplicate';
-      /** The **Folder key** the sheet names twice. */
+      /** The repeated row, named as an `unread-cell`'s label names it. */
       label: string;
     };
 
@@ -394,10 +400,17 @@ async function openWorkbook(
  * is matched through the synonym table case-insensitively. Only a title column
  * is required — a sheet with none is the one refusal the reader makes, and it
  * is the sheet field's `400` upstream. A column it does not recognise is
- * ignored; a Movie or Series row with a blank title is skipped, and a path
- * cell that leaves its **Title folder** reads as blank, and a row repeating
- * an earlier one's type, Folder key, season and episode is passed over: each is a
- * {@link SheetSkip} told to `onSkip`. `Video` is read unchecked.
+ * ignored.
+ *
+ * A csv is decoded by its **Sheet dialect** (`sheetDialect`: UTF-8 or
+ * cp1252, `,` or `;`); an xlsx opens as it is. A number cell takes a decimal
+ * comma in any sheet, so `8,5` reads as 8.5.
+ *
+ * Three things are passed over, each a {@link SheetSkip} told to `onSkip`: a
+ * Movie or Series row with a blank title; an **Unread cell**, read as blank;
+ * and a row repeating an earlier one's type, **Folder key**, season and
+ * episode, the first row read. A path cell reads only when it is contained,
+ * under **Path cells**' rule; `Video` is read unchecked.
  */
 export async function readSheet(
   bytes: Buffer,

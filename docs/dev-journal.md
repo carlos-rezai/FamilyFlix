@@ -11,6 +11,51 @@ Newest entry first.
 
 ---
 
+## 2026-11-10: Rebuild edges, the build (issues 564 to 578)
+
+Fourteen slices, each a RED and a GREEN commit run unattended by
+`issue-loop`, then this documents slice (578). **11786 tests pass across 761
+files**, one skipped; `tsc -b --force` is clean. Step 43 stays 🔜 until the
+refactor.
+
+### Where the build moved off the plan
+
+- **The Resolve suffix test lost its two identical rows** (571). Two
+  `Heat,1995` rows are now one row and a `duplicate` skip, so the test of
+  story 97's Resolve half builds its collision from two titles that slug
+  alike (`蜘蛛巣城` and `どん底`, both 1957), as its sibling test does.
+- **No test reads source text** (572). The RED step wrote two tests that
+  grepped `createImporter.ts` for `fillHeldArt` and `fillHeldFiles`; they
+  pinned a private name, not behaviour, and were dropped. The rename was
+  checked at review by a grep and the typecheck.
+- **A Rating off its 0 to 10 scale is an Unread cell** (570). The reader
+  already read `11` as blank; reporting every filled cell read as blank
+  reports it too. No acceptance criterion asked for it; the glossary now
+  says it.
+- **A held film's failed art copy is a Warning line, not a Problem** (572),
+  so "no review row" holds even when a copy fails. No test covers it.
+
+### Follow-ups for the refactor
+
+- **`addMovieSubtitles` and `addEpisodeSubtitles` have no tests of their
+  own** (573). They append tracks after the held ones, keeping their ids,
+  because `updateMovie` replaces the whole list; only the importer's held
+  tracks suite reaches them.
+- **A held film Found again that also takes art logs two `✓ Updated`
+  lines** (574), the files line and the `video` line. Check it against the
+  handoff's _Copy_ table; one line is likely what it means.
+- **A held film's Layout fill runs only when it took Sheet fills** (574),
+  not when it took only files.
+- **Slice 574 was too thick**: its RED step used 105k tokens against the
+  100k a step is budgeted. Season poster timing and the `✓ Updated` wording
+  were two slices.
+- **The held-file suites stub the Library folder resolver differently.**
+  `heldOneScan` needs a real one (with `() => null` a linked film reads as
+  missing on the second scan); `heldTracks` and `heldSeriesArt` stub it. One
+  sandbox would serve all three.
+
+---
+
 ## 2026-11-10: Rebuild edges, the grill-me (log 60)
 
 A second QA pass after step 42 (issue 562, kept whole in

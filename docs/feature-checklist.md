@@ -467,26 +467,39 @@ overwritten, and a held film never took art put into its folder later.
 Settled in a grill-me on 2026-11-10 (design log 60, handoff
 `docs/handoff/handoff-rebuild-edges/`, which keeps the QA ticket):
 
-43. 🔲 **Rebuild edges**: a hand-kept sheet and a growing folder reach the
-    library whole and safely.
+43. 🔜 **Rebuild edges**: a hand-kept sheet and a growing folder reach the
+    library whole and safely. Built in issues 564 to 577; the refactor is
+    still to come.
     - **Contained path cells**: a path cell is read only when it lies inside
-      its own row's Title folder and names its kind (an image for Poster,
-      Backdrop and Still, a subtitle for Subtitles); any other is an
-      **Unread cell**. _Import from spreadsheet_ reads by the same rule.
+      its own row's Title folder (its first segment the row's Folder key, in
+      any casing, and no empty, `.` or `..` segment, `\` or `:`) and names
+      its kind (an image for Poster, Backdrop and Still, a subtitle for each
+      Subtitles path); any other is an **Unread cell**. Both _Import from
+      spreadsheet_ and the Folder scan read by the same rule, so the Ronin
+      repro copies nothing and writes nothing.
     - **The Sheet dialect**: a sheet saved by any Excel reads back, UTF-8 or
-      cp1252, `,` or `;`, decimal comma or point, and the Library sheet is
-      rewritten in the dialect it was found in. A sheet that still doesn't
-      read is never replaced; the scan says so.
-    - **Unread cells**: every cell the reader can't take (a rating of `8½`, a
-      Favorite of `ja`, a path outside its folder) is one Warning line before
-      the rewrite on close erases it; two rows for one title read the first,
-      and say so. An Episode row has no Synopsis.
+      cp1252, `,` or `;`, decimal comma or point (`sheetDialect` reads it off
+      the bytes), and the Library sheet is rewritten in the separator it was
+      found in, always UTF-8 behind a BOM; a new sheet and every Export are
+      `,`. A sheet that still doesn't read is never replaced, and the scan
+      logs that it scanned without it and left it as it is.
+    - **Unread cells**: every filled cell the reader can't take (a rating of
+      `8½` or `11`, a Status of `half`, a Favorite of `ja`, an unknown Type,
+      a path outside its folder) is one Warning line in both runs before the
+      rewrite on close erases it; two rows for one title read the first, and
+      say so. An Episode row's Synopsis is an Unread cell, and the written
+      sheet keeps the column blank on Episode rows.
     - **Held files**: a held film takes the poster, backdrop and tracks put
-      into its folder later, as a held series does, and a season the run adds
-      takes its Season poster on that run. A held title's `✓ Updated` line
-      names the files it took.
+      into its folder later, as a held series does (`fillHeldFiles`), never
+      replacing what it has and adding no review row; a track of a language
+      it already holds is never added. A held series takes its files after
+      the run's new episodes, so a season the run adds takes its Season
+      poster on that run. A held title's `✓ Updated` line names the files it
+      took beside its Sheet fills.
     - **Track languages**: `Nederlands.srt`, `Español.srt` and
-      `heat.pt-BR.srt` read as their languages.
+      `heat.pt-BR.srt` read as their languages, from the seven pool names
+      only.
     - **The rest**: a series add refuses an episode video another title
-      plays, as a movie add does; both sheets write every row as wide as
-      their header.
+      plays, as a movie add does, through one `heldVideoRefusal`; both sheets
+      write every row as wide as their header, so each Library sheet is
+      rewritten once at its next touch and then stays still.
