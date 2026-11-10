@@ -12,6 +12,10 @@
 // as a European Excel saves it, comes back the same library and is rewritten
 // byte for byte `;`, its **Sheet dialect** kept.
 //
+// 60, Rebuild edges, Phase 14 (issue #577): the sheet the Round trip reads and
+// rewrites byte for byte, `,` and `;`, has every row as wide as its header, a
+// Season row's trailing blanks written as empty fields.
+//
 // The run is real: Die Hard from the importer's fixture and Tidewater from its
 // series fixture, copied into a sandboxed Library folder with art at every
 // place of the **Folder layout** (the series' poster and backdrop, its Season
@@ -47,7 +51,7 @@ import {
 } from '../createLibrarySheet/createLibrarySheet';
 import type { ExportTable } from '../exportRows/exportRows';
 import { writeSheet } from '../writeSheet/writeSheet';
-import type { ImportRun, Subtitle } from '@/types';
+import { SHEET_COLUMNS, type ImportRun, type Subtitle } from '@/types';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
 // remove a sandbox holding an open database file.
@@ -333,13 +337,26 @@ describe('createImporter.scan: the Round trip', () => {
       });
     }
   });
+
+  it('writes at close, byte for byte, a sheet whose every row is as wide as its header', async () => {
+    const box = sandbox();
+    await originalLibrary(box);
+    const read = sheetBytes(box);
+
+    await rebuild(box);
+
+    const widths = rowWidths(sheetBytes(box), ',');
+    expect(widths.length).toBeGreaterThan(4);
+    expect(widths).toEqual(widths.map(() => SHEET_COLUMNS.length));
+    expect(sheetBytes(box).equals(read)).toBe(true);
+  });
 });
 
 /**
- * A `,` csv's text split into its rows of cells, each quoted cell unquoted,
- * so the table it was written from can be written again in another dialect.
+ * A csv's text split into its rows of cells, each quoted cell unquoted, so
+ * the table it was written from can be written again in another dialect.
  */
-function csvTable(text: string): string[][] {
+function csvTable(text: string, separator: ',' | ';' = ','): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
   let cell = '';
@@ -357,7 +374,7 @@ function csvTable(text: string): string[][] {
       }
     } else if (char === '"') {
       quoted = true;
-    } else if (char === ',') {
+    } else if (char === separator) {
       row.push(cell);
       cell = '';
     } else if (char === '\n') {
@@ -374,6 +391,13 @@ function csvTable(text: string): string[][] {
     rows.push(row);
   }
   return rows;
+}
+
+/** Each row's field count of a sheet's bytes, its BOM dropped. */
+function rowWidths(sheet: Buffer, separator: ',' | ';'): number[] {
+  return csvTable(sheet.subarray(3).toString('utf8'), separator).map(
+    (row) => row.length
+  );
 }
 
 /**
@@ -418,6 +442,18 @@ describe('createImporter.scan: the Round trip over a `;` sheet', () => {
     await rebuild(box);
 
     expect(sheetBytes(box).toString('utf8')).toBe(read.toString('utf8'));
+    expect(sheetBytes(box).equals(read)).toBe(true);
+  });
+
+  it('rewrites the `;` sheet byte for byte with every row as wide as its header', async () => {
+    const box = sandbox();
+    const read = await semicolonLibrary(box);
+
+    await rebuild(box);
+
+    const widths = rowWidths(sheetBytes(box), ';');
+    expect(widths.length).toBeGreaterThan(4);
+    expect(widths).toEqual(widths.map(() => SHEET_COLUMNS.length));
     expect(sheetBytes(box).equals(read)).toBe(true);
   });
 });
