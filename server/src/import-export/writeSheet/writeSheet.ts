@@ -3,6 +3,9 @@ import ExcelJS from 'exceljs';
 import type { ExportFormat, SheetColumn } from '@/types';
 import type { ExportTable } from '../exportRows/exportRows';
 
+/** The field separator a csv sheet is written with; xlsx has none. */
+export type SheetSeparator = ',' | ';';
+
 /** The bytes Excel expects ahead of a UTF-8 CSV, so a diacritic opens as itself. */
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
@@ -32,10 +35,15 @@ const PATH_COLUMNS: ReadonlySet<string> = new Set<SheetColumn>([
  * workbook of one worksheet, `Library`: a number where a number was stored,
  * no styling (no bold header, no widths, no frozen panes), and each Poster,
  * Backdrop and Still cell holding a path a hyperlink whose text is that path.
+ *
+ * A csv written with the `;` separator writes its numbers with a decimal
+ * comma, the convention that goes with it, so `7.9` writes as `7,9`; a field
+ * holding `;` is quoted. The `,` default writes what it always wrote.
  */
 export async function writeSheet(
   table: ExportTable,
-  format: ExportFormat
+  format: ExportFormat,
+  separator: SheetSeparator = ','
 ): Promise<Buffer> {
   // `exceljs` declares its own `Buffer`, a bare `ArrayBuffer` shape, for
   // what is a Node `Buffer` at runtime, the same mismatch the reader notes.
@@ -44,9 +52,24 @@ export async function writeSheet(
     addSheet(workbook, WORKSHEET, table, true);
     return (await workbook.xlsx.writeBuffer()) as unknown as Buffer;
   }
-  addSheet(workbook, WORKSHEET, table);
-  const csv = (await workbook.csv.writeBuffer()) as unknown as Buffer;
+  addSheet(
+    workbook,
+    WORKSHEET,
+    separator === ';' ? withDecimalCommas(table) : table
+  );
+  const csv = (await workbook.csv.writeBuffer({
+    formatterOptions: { delimiter: separator },
+  })) as unknown as Buffer;
   return Buffer.concat([UTF8_BOM, csv]);
+}
+
+/** `table` with every number cell written with a decimal comma. */
+function withDecimalCommas(table: ExportTable): ExportTable {
+  return table.map((row) =>
+    row.map((cell) =>
+      typeof cell === 'number' ? String(cell).replace('.', ',') : cell
+    )
+  );
 }
 
 /**
