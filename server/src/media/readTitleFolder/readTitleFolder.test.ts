@@ -181,6 +181,25 @@ describe('readTitleFolder: tracks', () => {
     ]);
   });
 
+  // 60, Rebuild edges, Phase 12 (issue #575): a track named in its own
+  // language reads as that language, not the English fallback.
+  it('reads English.srt and Nederlands.srt as one English and one Dutch track', async () => {
+    const dir = titleFolder('Heat (1995)', [
+      'Heat.mkv',
+      'Subtitles/English.srt',
+      'Subtitles/Nederlands.srt',
+    ]);
+
+    const scan = await filmIn(dir);
+
+    expect(
+      [...scan.subtitles].sort((a, b) => a.path.localeCompare(b.path))
+    ).toEqual([
+      { path: join(dir, 'Subtitles', 'English.srt'), language: 'English' },
+      { path: join(dir, 'Subtitles', 'Nederlands.srt'), language: 'Dutch' },
+    ]);
+  });
+
   it('does not read a track lying loose beside the video', async () => {
     const dir = titleFolder('Heat (1995)', ['Heat.mkv', 'Heat.en.srt']);
 

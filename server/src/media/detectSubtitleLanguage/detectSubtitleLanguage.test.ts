@@ -113,3 +113,73 @@ describe('detectSubtitleLanguage — the shared tuple', () => {
     );
   });
 });
+
+// 60, Rebuild edges, Phase 12 (issue #575): a track named in its own language.
+// Each pool language is read by its own name too (`español`, `français`,
+// `deutsch`, `português`, `italiano`, `nederlands`), matched with diacritics
+// folded, and a two-letter region after a known code reads as the code
+// (`pt-BR`, `en_GB`). The seven pool names only, no language library.
+describe('detectSubtitleLanguage: the endonyms', () => {
+  const ENDONYMS: [language: string, names: string[]][] = [
+    ['Spanish', ['español', 'Espanol', 'ESPAÑOL']],
+    ['French', ['français', 'Francais', 'FRANÇAIS']],
+    ['German', ['deutsch', 'Deutsch']],
+    ['Portuguese', ['português', 'Portugues']],
+    ['Italian', ['italiano', 'Italiano']],
+    ['Dutch', ['nederlands', 'Nederlands']],
+  ];
+
+  describe.each(ENDONYMS)('%s', (language, names) => {
+    it.each(names)('reads %s.srt as its language', (endonym) => {
+      expect(detectSubtitleLanguage(`${endonym}.srt`)).toBe(language);
+    });
+
+    it.each(names)('reads the tag in heat.%s.srt', (endonym) => {
+      expect(detectSubtitleLanguage(`heat.${endonym}.srt`)).toBe(language);
+    });
+  });
+
+  it('reads English by its own name, as it always has', () => {
+    expect(detectSubtitleLanguage('English.srt')).toBe('English');
+  });
+
+  it('folds a decomposed diacritic as well as a composed one', () => {
+    expect(detectSubtitleLanguage('heat.español.srt')).toBe('Spanish');
+    expect(detectSubtitleLanguage('heat.français.srt')).toBe('French');
+  });
+});
+
+describe('detectSubtitleLanguage: a region after a known code', () => {
+  it('reads pt-BR as Portuguese and en_GB as English', () => {
+    expect(detectSubtitleLanguage('heat.pt-BR.srt')).toBe('Portuguese');
+    expect(detectSubtitleLanguage('heat.en_GB.srt')).toBe('English');
+  });
+
+  it('reads a region after any known code, in any case and separator', () => {
+    expect(detectSubtitleLanguage('heat.es-MX.srt')).toBe('Spanish');
+    expect(detectSubtitleLanguage('heat.fr_CA.srt')).toBe('French');
+    expect(detectSubtitleLanguage('heat.nl.be.srt')).toBe('Dutch');
+    expect(detectSubtitleLanguage('heat.DE-at.vtt')).toBe('German');
+  });
+});
+
+describe('detectSubtitleLanguage: today’s cases unchanged', () => {
+  it('still answers English for a tag the form does not offer, region or not', () => {
+    expect(detectSubtitleLanguage('heat.ja.srt')).toBe('English');
+    expect(detectSubtitleLanguage('heat.ja-JP.srt')).toBe('English');
+    expect(detectSubtitleLanguage('heat.svenska.srt')).toBe('English');
+  });
+
+  it('still reads only the last piece, never a word of the title', () => {
+    expect(detectSubtitleLanguage('it-follows.srt')).toBe('English');
+    expect(detectSubtitleLanguage('de-lift.1983.srt')).toBe('English');
+    expect(detectSubtitleLanguage('Die.Hard.1988.1080p.srt')).toBe('English');
+  });
+
+  it('still reads the codes and English names it read before', () => {
+    expect(detectSubtitleLanguage('die-hard.pt.srt')).toBe('Portuguese');
+    expect(detectSubtitleLanguage('die-hard_nld.srt')).toBe('Dutch');
+    expect(detectSubtitleLanguage('Die.Hard.German.srt')).toBe('German');
+    expect(detectSubtitleLanguage('die-hard.srt')).toBe('English');
+  });
+});
