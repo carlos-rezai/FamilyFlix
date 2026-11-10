@@ -41,6 +41,12 @@ export interface ShowFolderContext {
   titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
 
+/** What a pick holds: its numbered show, or its loose videos. */
+interface PickedFolder {
+  show: ShowScan | null;
+  loose: string[];
+}
+
 /**
  * What a pick holds: a picked **Season folder** its own season, numbered as
  * its show; a folder of loose videos those videos, not descended; any other
@@ -50,7 +56,7 @@ export interface ShowFolderContext {
 async function showUnder(
   dir: string,
   showFolder: string
-): Promise<{ show: ShowScan | null; loose: string[] }> {
+): Promise<PickedFolder> {
   const number = (seasons: SeasonFolderScan[]): ShowScan =>
     numberShow({
       dir: showFolder,
@@ -104,15 +110,13 @@ export async function readShowFolder(
   // The Show folder is each episode's Source folder, so a video's path
   // inside it is its **Source file**.
   const showFolder = showFolderOf(dir);
-  let read: { show: ShowScan | null; loose: string[] };
+  let read: PickedFolder;
   try {
     read = await showUnder(dir, showFolder);
   } catch {
     return { kind: 'refused', refusal: 'unreadable' };
   }
-  const shows = read.show === null ? [] : [read.show];
-  const episodes: ShowFolderEpisode[] = shows
-    .flatMap((show) => show.episodes)
+  const episodes: ShowFolderEpisode[] = (read.show?.episodes ?? [])
     .map((episode) => ({
       season: episode.season,
       number: episode.episode,
@@ -125,7 +129,7 @@ export async function readShowFolder(
       })),
     }))
     .sort((a, b) => a.season - b.season || a.number - b.number);
-  const unplaced = [...shows.flatMap((show) => show.unplaced), ...read.loose];
+  const unplaced = [...(read.show?.unplaced ?? []), ...read.loose];
   if (episodes.length === 0 && unplaced.length === 0) {
     return { kind: 'refused', refusal: 'empty' };
   }
@@ -155,10 +159,7 @@ export async function readShowFolder(
         video,
         relativePath: sourceFileOf(showFolder, video),
       })),
-      straySubtitles: shows.reduce(
-        (count, show) => count + show.straySubtitles.length,
-        0
-      ),
+      straySubtitles: read.show?.straySubtitles.length ?? 0,
     },
   };
 }
