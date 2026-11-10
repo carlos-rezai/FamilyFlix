@@ -90,6 +90,8 @@ const sameSet = (a: string[], b: string[]): boolean => {
  * and Favorite only hearts. An Episode row plans its Watched mark alone. The
  * row's genres arrive already read onto the **Genre pool**. Each difference's
  * sheet side is also `proposed`, normalised exactly as a fill would be.
+ * Every column a row carries plans here, so a title the **Round trip** scans
+ * back from its sheet needs no second Sync.
  */
 export function planSheetFields(
   current: HeldValues,

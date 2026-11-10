@@ -82,8 +82,8 @@ async function showUnder(
  *
  * Its `libraryFolderId` is the listed **Library folder** it lies inside, by
  * `listedFolderOf`, or `null`. A folder that is already a held series's
- * **Show folder** — the folder on record under that Library folder, as
- * `heldSeriesAt` answers — is still read, its `heldSeriesId` set to that
+ * **Show folder** (the folder on record under that Library folder, as
+ * `heldSeriesAt` answers) is still read, its `heldSeriesId` set to that
  * series's id; the form draws the refusal. So is a folder any one of whose
  * videos a held series plays, by the **Held video** rule (`titleHolding`): a
  * renamed show's folder reads as its series. A folder under no Library folder

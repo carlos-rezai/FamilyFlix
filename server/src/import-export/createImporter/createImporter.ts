@@ -2399,6 +2399,14 @@ export function createImporter({
    * else off its own folder. **Already in library** is the sheet run's rules
    * in order; a held title a row names takes its **Sheet fills** and files
    * its **Sheet differences**. A held show still gains the episodes it lacks.
+   *
+   * Every column of a row is read back onto the title it names (its TMDB
+   * match and score, its heart, each episode's Watched) and its **Path
+   * cells** resolved inside its Title folder, so a library written to its
+   * sheet, Factory reset and scanned back is the same library, and the sheet
+   * rewritten on close the same sheet: the **Round trip**. A row whose Folder
+   * key no Title folder holds is an **Orphaned row**: one Warning line, never
+   * a Problem, and the sheet written on close drops it.
    */
   const executeScan = async (
     current: ImportRun,

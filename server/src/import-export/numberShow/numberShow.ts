@@ -69,7 +69,9 @@ export const showFolderOf = (dir: string): string =>
  * whose folder numbers no placed episode is a stray. A video no rule
  * numbers, or a second one claiming a number already taken, is **Unplaced**.
  * The series' **Poster**, **Backdrop** and each **Season poster** travel
- * with it.
+ * with it. The one numberer of a show: a **Folder scan** numbers each series'
+ * Title folder by it, and a **Show folder read** numbers a picked folder by
+ * it too, so the form and the scan never number a show apart.
  */
 export function numberShow(series: NumberableSeries): ShowScan {
   const seasons = [...series.seasons].sort((a, b) => a.number - b.number);

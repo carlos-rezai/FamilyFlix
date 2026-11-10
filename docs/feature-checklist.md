@@ -434,17 +434,18 @@ match, hearts and episode Status, and the sheet rewritten when the scan closed
 erased what it had skipped. Settled in a grill-me on 2026-11-09 (design log
 59, handoff `docs/handoff/handoff-rebuild-whole/`, which keeps the QA ticket):
 
-42. 🔲 **Rebuild whole**: a Library folder gives its whole library back. A
+42. 🔜 **Rebuild whole**: a Library folder gives its whole library back. A
     scan imports a series' poster, backdrop, Season posters and Stills from
     its Title folder, and a rescan fills them in for a series already held
     without them. Every sheet column is read: a title comes back with its
     TMDB match and score, its heart and each episode's Watched, so it needs
     no second Sync, and a sheet written, reset and scanned back is the same
-    sheet byte for byte. The sheet's file cells name the files the folder
-    really holds, an episode's video as it lies. A show folder picked in the
-    form reads exactly as the scan reads it, a title folder whose seasons
-    hold no video is one warning line, and so is a sheet row whose folder is
-    gone. A scan fills each title folder's empty art places, as a save
+    sheet byte for byte, the **Round trip**. The sheet's **Path cells** name
+    the files the folder really holds, as `readTitleFolder` reads them, an
+    episode's video as it lies. A show folder picked in the form reads
+    exactly as the scan reads it, by `numberShow`, a title folder whose
+    seasons hold no video is one warning line, and so is an
+    **Orphaned row**, a sheet row whose folder is gone. A scan fills each title folder's empty art places, as a save
     does. A folder FamilyFlix has not scanned yet never has its sheet
     rewritten, so adding it back after a Factory reset can't erase the
     sheet that will rebuild it, and every scan rewrites the sheets it read

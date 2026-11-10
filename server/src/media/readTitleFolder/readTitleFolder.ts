@@ -225,6 +225,8 @@ export async function readSeasonFolders(
  * is left out, with the reason the walk words as its **Layout warning**;
  * Season folders that all hold no video are as good as none, `empty`.
  * `Extras/` and anything else the layout doesn't name is passed in silence.
+ * What it answers is the folder's **Layout read**: a scan imports by it, and
+ * the **Library sheet**'s path cells name what it found (`layoutCells`).
  */
 export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
   const name = basename(dir);

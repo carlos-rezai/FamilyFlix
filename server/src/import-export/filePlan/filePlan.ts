@@ -83,8 +83,8 @@ export const videoCell = (
 
 /**
  * The Export's **File plan** (log 59): the **Path cells** `exportRows` fills
- * its path cells from, each answer the place's path in the **Folder layout**
- * relative to the **Export folder**, and the files those answers planned.
+ * its path cells from, each answer the **Layout place**'s path in the
+ * **Folder layout** relative to the **Export folder**, and the files those answers planned.
  * The layout less the videos (log 58, Q19): art under each **Title folder**'s
  * or Season folder's `Images/`, Stills (Frame stills too) under
  * `Season NN/Images/Stills/` by **Episode tag**, a film's tracks under
