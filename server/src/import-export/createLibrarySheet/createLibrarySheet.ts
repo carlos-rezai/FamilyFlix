@@ -65,6 +65,26 @@ async function sameBytes(path: string, bytes: Uint8Array): Promise<boolean> {
 }
 
 /**
+ * The **Layout read** of each recorded **Title folder** under `root`, by its
+ * own name; a folder that cannot be read has none, so its path cells are
+ * blank.
+ */
+async function readTitleFolders(
+  root: string,
+  names: Iterable<string>
+): Promise<Map<string, TitleFolderScan>> {
+  const reads = new Map<string, TitleFolderScan>();
+  for (const name of new Set(names)) {
+    try {
+      reads.set(name, await readTitleFolder(join(root, name)));
+    } catch {
+      // An unreadable Title folder keeps every cell but its paths.
+    }
+  }
+  return reads;
+}
+
+/**
  * The **Library sheet writer**: touches debounced by
  * {@link LIBRARY_SHEET_DELAY_MS} after the last, then each touched folder's
  * {@link LIBRARY_SHEET} rewritten from the library under the **Sheet
@@ -120,25 +140,6 @@ export function createLibrarySheet({
     };
   }
 
-  /**
-   * The **Layout read** of each recorded **Title folder**, by its own name;
-   * a folder that cannot be read has none, so its path cells are blank.
-   */
-  async function readFolders(
-    root: string,
-    sourceFolders: ReadonlyMap<string, string>
-  ): Promise<Map<string, TitleFolderScan>> {
-    const reads = new Map<string, TitleFolderScan>();
-    for (const name of new Set(sourceFolders.values())) {
-      try {
-        reads.set(name, await readTitleFolder(join(root, name)));
-      } catch {
-        // An unreadable Title folder keeps every cell but its paths.
-      }
-    }
-    return reads;
-  }
-
   async function writeOne(folderId: string): Promise<void> {
     const folder = storage
       .libraryFolders()
@@ -151,7 +152,7 @@ export function createLibrarySheet({
       return;
     }
     const { movies, series, sourceFolders } = contentOf(folderId);
-    const reads = await readFolders(folder.path, sourceFolders);
+    const reads = await readTitleFolders(folder.path, sourceFolders.values());
     const { table } = exportRows(
       movies,
       series,
