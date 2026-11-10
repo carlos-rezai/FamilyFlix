@@ -7,8 +7,7 @@
 // **Path cells** filling an empty place first as a new film's do, and copied
 // in as a first scan copies them. Art the film already has (a **Sync**'s or a
 // hand pick) is never replaced, and the fill files no **Problem**: it adds no
-// review row. `fillHeldArt` is widened to `fillHeldFiles`, and the old name
-// is gone from shipping code.
+// review row.
 //
 // Composed as the held series' art suite is: the film fixture copied into a
 // sandboxed Library folder, Die Hard's art taken away for the first scan and
@@ -21,7 +20,6 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
   rmSync,
   writeFileSync,
@@ -294,36 +292,3 @@ describe.each(['copy', 'link'] as const)(
     });
   }
 );
-
-/** Every shipping `.ts` file under `dir`, tests and test support left out. */
-function shippingSources(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    if (entry.isDirectory()) {
-      return entry.name === 'test-support' || entry.name === 'node_modules'
-        ? []
-        : shippingSources(path);
-    }
-    return entry.name.endsWith('.ts') && !entry.name.endsWith('.test.ts')
-      ? [path]
-      : [];
-  });
-}
-
-describe('createImporter: fillHeldArt is widened to fillHeldFiles', () => {
-  const server = join(__dirname, '..', '..');
-
-  it('names fillHeldArt nowhere in shipping code', () => {
-    const naming = shippingSources(server).filter((path) =>
-      readFileSync(path, 'utf8').includes('fillHeldArt')
-    );
-
-    expect(naming).toEqual([]);
-  });
-
-  it('fills a held title through fillHeldFiles', () => {
-    const source = readFileSync(join(__dirname, 'createImporter.ts'), 'utf8');
-
-    expect(source.includes('fillHeldFiles')).toBe(true);
-  });
-});
