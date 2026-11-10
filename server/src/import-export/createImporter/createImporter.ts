@@ -50,7 +50,13 @@ import {
   type SheetFill,
 } from '../planSheetFields/planSheetFields';
 import type { LibrarySheet } from '../createLibrarySheet/createLibrarySheet';
-import { isTitleRow, readSheet, type SheetRow } from '../readSheet/readSheet';
+import {
+  isTitleRow,
+  readSheet,
+  skipLine,
+  type SheetRow,
+  type SheetSkip,
+} from '../readSheet/readSheet';
 import type { LayoutFill } from '../createLayoutFill/createLayoutFill';
 import {
   readShowFolder,
@@ -462,11 +468,11 @@ const REFUSAL = {
 /** A count as the prototype prints it: `1,234`. */
 const count = (n: number): string => n.toLocaleString('en-US');
 
-/** What the sheet check answers: the rows, and the rows it left out for a blank title. */
+/** What the sheet check answers: the rows, and every skip the reader reported. */
 interface SheetRead {
   rows: SheetRow[];
-  /** The sheet's own row numbers, so the line can name what to look at. */
-  blankTitleRows: number[];
+  /** Each a **Log line** once the run exists, by `skipLine`. */
+  skips: SheetSkip[];
 }
 
 /**
@@ -496,14 +502,12 @@ async function checkSheet(sheetPath: string): Promise<SheetRead> {
     );
   }
 
-  const blankTitleRows: number[] = [];
+  const skips: SheetSkip[] = [];
   try {
     const rows = await readSheet(bytes, sheetPath, (skip) => {
-      if (skip.kind === 'blank-title') {
-        blankTitleRows.push(skip.rowNumber);
-      }
+      skips.push(skip);
     });
-    return { rows, blankTitleRows };
+    return { rows, skips };
   } catch (error) {
     throw new ImportStartError(
       'sheet',
@@ -2176,7 +2180,7 @@ export function createImporter({
    */
   const execute = async (
     current: ImportRun,
-    { rows, blankTitleRows }: SheetRead,
+    { rows, skips }: SheetRead,
     folders: StoredLibraryFolder[],
     signal: AbortSignal
   ): Promise<void> => {
@@ -2191,8 +2195,8 @@ export function createImporter({
       return;
     }
     const { walked, read } = walk;
-    for (const rowNumber of blankTitleRows) {
-      log(current, `⚠ Row ${rowNumber} has no title, skipped`, 'warning');
+    for (const skip of skips) {
+      log(current, skipLine(skip), 'warning');
     }
 
     // A show is matched by the film's own rule, over a scan standing for it —
@@ -2382,15 +2386,18 @@ export function createImporter({
   /**
    * A Library folder's `Meta/` sheet, read for a **Folder scan**. The walk
    * already held the folder, so the **Library sheet** keeps the values the run
-   * reads until it closes. A sheet that cannot be read is a **Warning line**,
-   * and the folder is scanned by its layout alone.
+   * reads until it closes. Each skip the reader reports is a **Warning line**
+   * by `skipLine`, as an upload logs it; a sheet that cannot be read is one
+   * too, and the folder is scanned by its layout alone.
    */
   const readMetaSheet = async (
     current: ImportRun,
     sheetPath: string
   ): Promise<SheetRow[]> => {
     try {
-      return await readSheet(await readFile(sheetPath), sheetPath);
+      return await readSheet(await readFile(sheetPath), sheetPath, (skip) => {
+        log(current, skipLine(skip), 'warning');
+      });
     } catch {
       log(
         current,

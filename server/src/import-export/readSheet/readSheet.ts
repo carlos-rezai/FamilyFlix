@@ -8,6 +8,7 @@ import {
   isImageFilename,
   isSubtitleFilename,
 } from '../../media/fileKinds/fileKinds';
+import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import {
   sameFolderKey,
   spellFolderKey,
@@ -79,7 +80,24 @@ export type SheetSkip =
       column: string;
       /** The cell's text, or the one `Subtitles` path, as the sheet spells it. */
       text: string;
+    }
+  | {
+      kind: 'duplicate';
+      /** The **Folder key** the sheet names twice. */
+      label: string;
     };
+
+/** A skip's **Log line** text, as the handoff's _Copy_ table spells it. */
+export function skipLine(skip: SheetSkip): string {
+  switch (skip.kind) {
+    case 'blank-title':
+      return `⚠ Row ${skip.rowNumber} has no title, skipped`;
+    case 'unread-cell':
+      return `⚠ ${skip.label}: ${skip.column} "${skip.text}" not read`;
+    case 'duplicate':
+      return `⚠ ${skip.label} is in the sheet twice, the first row read`;
+  }
+}
 
 /** The columns the reader knows, each under every header the maintainer may spell it by. */
 type Column =
@@ -412,6 +430,15 @@ export async function readSheet(
     }
     const span = yearSpan(read(row, 'year')) ?? { year: null, endYear: null };
     const folder = read(row, 'folder') || spelledKey(title, span.year);
+    const season = cellWhole(read(row, 'season'));
+    const episode = cellWhole(read(row, 'episode'));
+    /** The row as a skip names it: a Season by its season, an Episode by its tag. */
+    const label =
+      type === 'Season' && season !== null
+        ? `${folder} Season ${season}`
+        : type === 'Episode' && season !== null && episode !== null
+          ? `${folder} ${spellEpisodeTag(season, episode)}`
+          : folder;
 
     /** The paths in a checked cell that stay in the Title folder; each other one is reported. */
     const contained = (
@@ -423,7 +450,7 @@ export async function readSheet(
         if (isContained(text, folder, isKind)) {
           return true;
         }
-        onSkip({ kind: 'unread-cell', label: folder, column: header, text });
+        onSkip({ kind: 'unread-cell', label, column: header, text });
         return false;
       });
     };
@@ -438,8 +465,8 @@ export async function readSheet(
     rows.push({
       type,
       folder,
-      season: cellWhole(read(row, 'season')),
-      episode: cellWhole(read(row, 'episode')),
+      season,
+      episode,
       title,
       ...span,
       genres: cellList(read(row, 'genres'), GENRE_SEPARATORS),
