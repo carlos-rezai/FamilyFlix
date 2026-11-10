@@ -14,6 +14,7 @@ import {
 } from '../../media/readTitleFolder/readTitleFolder';
 import { exportRows } from '../exportRows/exportRows';
 import { layoutCells } from '../layoutCells/layoutCells';
+import { sheetDialect } from '../sheetDialect/sheetDialect';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The **Library sheet**'s path inside its Library folder. */
@@ -55,12 +56,12 @@ export interface LibrarySheet {
   release(folderId: string): void;
 }
 
-/** Whether the file at `path` already holds exactly `bytes`. */
-async function sameBytes(path: string, bytes: Uint8Array): Promise<boolean> {
+/** The bytes of the file at `path`, or `null` when there is none to read. */
+async function bytesAt(path: string): Promise<Buffer | null> {
   try {
-    return (await readFile(path)).equals(bytes);
+    return await readFile(path);
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -91,7 +92,9 @@ async function readTitleFolders(
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
  * own name, its **Path cells** from each Title folder's **Layout read**,
  * `layoutCells`), through a temporary file in `Meta/` and a rename, behind its
- * BOM; a sheet whose bytes already match is left alone. A library scanned
+ * BOM; a sheet whose bytes already match is left alone. A sheet on disk
+ * keeps its **Sheet dialect**'s separator (a `;` sheet is rewritten `;`, with
+ * decimal commas), always rewritten UTF-8; a brand-new sheet is `,`. A library scanned
  * back from its sheet writes that sheet again byte for byte: the **Round
  * trip**. A folder no longer listed (a **Factory reset**'s), a **New folder**
  * or an **Unreachable** one is skipped; a later touch that finds it scanned
@@ -159,9 +162,11 @@ export function createLibrarySheet({
       layoutCells(reads, folder.path),
       (titleId) => sourceFolders.get(titleId) ?? null
     );
-    const bytes = await writeSheet(table, 'csv');
     const sheet = join(folder.path, LIBRARY_SHEET);
-    if (await sameBytes(sheet, bytes)) {
+    const onDisk = await bytesAt(sheet);
+    const separator = onDisk ? sheetDialect(onDisk).separator : ',';
+    const bytes = await writeSheet(table, 'csv', separator);
+    if (onDisk?.equals(bytes)) {
       return;
     }
     const temporary = join(folder.path, TEMPORARY_SHEET);
