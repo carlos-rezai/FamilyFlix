@@ -8,6 +8,10 @@
 // writes is, byte for byte, the sheet the scan read; and a second and third
 // rebuild give the same again.
 //
+// 60, Rebuild edges, Phase 5 (issue #568): a `;` sheet with decimal commas,
+// as a European Excel saves it, comes back the same library and is rewritten
+// byte for byte `;`, its **Sheet dialect** kept.
+//
 // The run is real: Die Hard from the importer's fixture and Tidewater from its
 // series fixture, copied into a sandboxed Library folder with art at every
 // place of the **Folder layout** (the series' poster and backdrop, its Season
@@ -16,7 +20,7 @@
 // `LibraryStorage.onChange` as the server wires it.
 
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, readFileSync } from 'node:fs';
+import { cpSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { isAbsolute, join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -41,6 +45,8 @@ import {
   createLibrarySheet,
   type LibrarySheet,
 } from '../createLibrarySheet/createLibrarySheet';
+import type { ExportTable } from '../exportRows/exportRows';
+import { writeSheet } from '../writeSheet/writeSheet';
 import type { ImportRun, Subtitle } from '@/types';
 
 // Registered after the helpers' own hooks, so it runs first: Windows will not
@@ -326,5 +332,92 @@ describe('createImporter.scan: the Round trip', () => {
         sheet: read.toString('utf8'),
       });
     }
+  });
+});
+
+/**
+ * A `,` csv's text split into its rows of cells, each quoted cell unquoted,
+ * so the table it was written from can be written again in another dialect.
+ */
+function csvTable(text: string): string[][] {
+  const rows: string[][] = [];
+  let row: string[] = [];
+  let cell = '';
+  let quoted = false;
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    if (quoted) {
+      if (char === '"' && text[index + 1] === '"') {
+        cell += '"';
+        index += 1;
+      } else if (char === '"') {
+        quoted = false;
+      } else {
+        cell += char;
+      }
+    } else if (char === '"') {
+      quoted = true;
+    } else if (char === ',') {
+      row.push(cell);
+      cell = '';
+    } else if (char === '\n') {
+      row.push(cell.replace(/\r$/, ''));
+      rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += char;
+    }
+  }
+  if (cell !== '' || row.length > 0) {
+    row.push(cell);
+    rows.push(row);
+  }
+  return rows;
+}
+
+/**
+ * The library's own `,` sheet as a European Excel saves it: the same table
+ * written `;`, every decimal with a comma, UTF-8 behind its BOM, written by
+ * the **Sheet writer** so its quoting is the writer's own.
+ */
+async function semicolonSheet(commaSheet: Buffer): Promise<Buffer> {
+  const text = commaSheet.subarray(3).toString('utf8');
+  const table: ExportTable = csvTable(text).map((row) =>
+    row.map((cell) =>
+      cell === '' ? null : /^-?\d+\.\d+$/.test(cell) ? Number(cell) : cell
+    )
+  );
+  return writeSheet(table, 'csv', ';');
+}
+
+describe('createImporter.scan: the Round trip over a `;` sheet', () => {
+  /** The original library, its sheet then saved `;` over the `,` one. */
+  async function semicolonLibrary(box: Sandbox): Promise<Buffer> {
+    await originalLibrary(box);
+    const sheet = await semicolonSheet(sheetBytes(box));
+    expect(sheet.toString('utf8').split(/[;\n]/)).toContain('7,8');
+    writeFileSync(join(box.root, 'Meta', 'familyflix-library.csv'), sheet);
+    return sheet;
+  }
+
+  it('rebuilds the same library from a `;` sheet with decimal commas', async () => {
+    const box = sandbox();
+    await semicolonLibrary(box);
+    const original = libraryOf(box);
+
+    await rebuild(box);
+
+    expect(libraryOf(box)).toEqual(original);
+  });
+
+  it('rewrites the `;` sheet at close byte for byte `;`', async () => {
+    const box = sandbox();
+    const read = await semicolonLibrary(box);
+
+    await rebuild(box);
+
+    expect(sheetBytes(box).toString('utf8')).toBe(read.toString('utf8'));
+    expect(sheetBytes(box).equals(read)).toBe(true);
   });
 });
