@@ -17,7 +17,6 @@
 // a fixture JPEG with its own name appended, so a copy is known by its bytes.
 
 import {
-  cpSync,
   existsSync,
   mkdirSync,
   readdirSync,

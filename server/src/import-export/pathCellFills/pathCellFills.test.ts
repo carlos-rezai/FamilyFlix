@@ -1,4 +1,15 @@
 // @vitest-environment node
+//
+// 59, Rebuild whole, Phase 8 (issue #555): a path cell fills an empty place.
+//
+// `filmWithCells` and `showWithCells` read a **Sheet row**'s **Path cells**
+// into the places a Title folder's read left empty: a poster, a backdrop, a
+// **Season poster**, a **Still**, a track. The read always wins, a track is
+// never added twice, and a cell naming a file that is not there fills
+// nothing.
+//
+// Against real files under `sandboxRoot`.
+
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -56,7 +67,7 @@ const film = (root: string, cells: Partial<FilmScan> = {}): FilmScan => ({
   ...cells,
 });
 
-describe('filmWithCells', () => {
+describe('filmWithCells: a film’s empty places', () => {
   it('fills an empty place from a cell naming a file that is there', async () => {
     const root = library('heat.jpg', 'heat.fr.srt');
     const filled = await filmWithCells(
@@ -93,7 +104,7 @@ describe('filmWithCells', () => {
   });
 });
 
-describe('showWithCells', () => {
+describe('showWithCells: a series’ empty places', () => {
   it('fills a Season poster and a Still from their rows', async () => {
     const root = library('cover.jpg', 'still.jpg');
     const show: ShowScan = {

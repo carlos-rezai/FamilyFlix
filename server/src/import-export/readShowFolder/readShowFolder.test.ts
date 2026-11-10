@@ -3,7 +3,7 @@
 // 48 — Add a show folder, Phase 1 (issue #417): the **Show folder read**.
 //
 // `readShowFolder` reads one absolute folder the maintainer picked on the
-// series add — walked with `walkLibraryFolder`, grouped with `groupShows`, so
+// series add — read with `readSeasonFolders`, numbered with `numberShow`, so
 // there is no second numbering rule — and answers a `ShowFolderRead`: its
 // episodes season by season (a **Season folder**'s number beating the
 // filename's), each episode's tracks from its `Subtitles/S01E01/` folder in
@@ -16,8 +16,8 @@
 // The context is the listed Library folders and the held series on record at
 // a folder under one — `noLibrary` when a case asks only the folder.
 //
-// Against real trees under `sandboxRoot`, `groupShows`' and
-// `walkLibraryFolder`'s prior art.
+// Against real trees under `sandboxRoot`, `numberShow`'s and
+// `readSeasonFolders`' prior art.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -229,12 +229,12 @@ describe('readShowFolder — the refusals', () => {
   });
 });
 
-// 48 — Add a show folder, Phase 4 (issue #420): the edges. A folder
-// `groupShows` reads as a film answers every video as **Unplaced** — the
-// maintainer said it is a show; the subtitles no episode's stem claims are
-// counted; and a folder that is already a held series's **Show folder**
-// answers that series's id as `heldSeriesId`, from the held Show folders the
-// caller passes.
+// 48 — Add a show folder, Phase 4 (issue #420): the edges. A folder of loose
+// videos, no Season folder for `readSeasonFolders` to read nor `numberShow`
+// to number, answers every video as **Unplaced** — the maintainer said it is
+// a show; the subtitles no episode's stem claims are counted; and a folder
+// that is already a held series's **Show folder** answers that series's id as
+// `heldSeriesId`, from the held Show folders the caller passes.
 
 describe('readShowFolder — a folder read as a film', () => {
   it('answers every video as Unplaced, and no episodes', async () => {

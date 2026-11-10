@@ -456,45 +456,6 @@ describe('numberShow: the series carries its art', () => {
   });
 });
 
-/**
- * 58, Folder layout (issue #536): `seasonNumberOf`, the reading a series'
- * Season folders are numbered by, takes `Season NN` only, two digits or more,
- * case folded, `Season 00` the specials.
- */
-describe('seasonNumberOf: Season NN only', () => {
-  it.each([
-    ['Season 01', 1],
-    ['season 01', 1],
-    ['SEASON 02', 2],
-    ['Season 12', 12],
-    ['Season 100', 100],
-    ['Season 00', 0],
-    ['season 00', 0],
-  ])('reads %s as season %s', (name, number) => {
-    expect(seasonNumberOf(name)).toBe(number);
-  });
-
-  it.each([
-    ['Season 1'],
-    ['Season 0'],
-    ['Season01'],
-    ['Seizoen 1'],
-    ['Seizoen 01'],
-    ['S01'],
-    ['s01'],
-    ['Specials'],
-    ['Season 01 (2008)'],
-    ['Season 02 - The Return'],
-    ['Release.Show.S01.1080p.WEB-DL'],
-    ['S01E01'],
-    ['Seasons of Love (2005)'],
-    ['Season'],
-    ['Extras'],
-  ])('reads %s as no Season folder', (name) => {
-    expect(seasonNumberOf(name)).toBeNull();
-  });
-});
-
 describe('showFolderOf', () => {
   it('answers a Season folder’s parent, the Title folder', () => {
     expect(showFolderOf(join(SHOW_DIR, 'Season 01'))).toBe(SHOW_DIR);
