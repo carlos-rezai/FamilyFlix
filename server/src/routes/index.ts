@@ -48,6 +48,7 @@ import { leftOutEntries } from '../import-export/leftOutEntries/leftOutEntries';
 import { placeFoundVideos } from '../import-export/placeFoundVideo/placeFoundVideo';
 import { placeShowFolder } from '../import-export/placeShowFolder/placeShowFolder';
 import { foundPathRefusal } from './foundPathRefusal/foundPathRefusal';
+import { heldVideoRefusal } from './heldVideoRefusal/heldVideoRefusal';
 import type { ShowFolderRefusal } from '../import-export/readShowFolder/readShowFolder';
 import {
   writeExport,
@@ -1040,6 +1041,14 @@ export function createApiRouter(
       return;
     }
     const { placed } = placing;
+    // An episode video a held title already plays is refused by the **Held
+    // video** rule, as the movie add's is, before anything is written.
+    const held = heldVideoRefusal(storage, placed);
+    if (held !== null) {
+      rollback();
+      res.status(409).json({ error: held });
+      return;
+    }
     const firstFound = read.episodes.find(
       (episode) => episode.video === undefined
     )?.videoPath;
@@ -1580,19 +1589,10 @@ export function createApiRouter(
     const [placed] = placing.placed;
     // A linked video a held title already plays is refused by the **Held
     // video** rule, naming the holder, the way a held Show folder is.
-    const held =
-      placed?.videoFolderId == null
-        ? null
-        : storage.titleHolding(placed.videoFolderId, placed.videoPath);
+    const held = heldVideoRefusal(storage, [placed]);
     if (held !== null) {
-      const holder =
-        held.kind === 'movie'
-          ? storage.getMovie(held.id)
-          : storage.getSeries(held.id);
       rollback();
-      res.status(409).json({
-        error: `${holder?.title ?? 'A title'} already plays this file.`,
-      });
+      res.status(409).json({ error: held });
       return;
     }
     // The **Source folder** is recorded in both modes for a found video under
