@@ -2428,7 +2428,12 @@ export function createImporter({
     const films: Placed<Match>[] = [];
     const shows: Placed<ShowMatch>[] = [];
     const foundAgain: Placed<FoundAgain>[] = [];
-    for (const { folder, films: found, shows: grouped, sheet } of walked) {
+    for (const {
+      folder,
+      films: foundFilms,
+      shows: foundShows,
+      sheet,
+    } of walked) {
       const rows =
         sheet === null ? [] : await readMetaSheet(current, folder, sheet);
       if (signal.aborted) {
@@ -2436,14 +2441,17 @@ export function createImporter({
       }
       // A show is matched by the film's own rule, over a scan standing for it.
       const showOf = new Map<FilmScan, ShowScan>();
-      for (const show of grouped) {
+      for (const show of foundShows) {
         showOf.set(asMatchable(show), show);
       }
       // Each folder a row names, with that row, its path cells resolved.
       const named = new Map<FilmScan, SheetRow>();
       const titleRows = rows.filter(isTitleRow);
       if (titleRows.length > 0) {
-        const verdicts = matchRows(titleRows, [...found, ...showOf.keys()]);
+        const verdicts = matchRows(titleRows, [
+          ...foundFilms,
+          ...showOf.keys(),
+        ]);
         for (const match of verdicts.matched) {
           named.set(match.folder, match.row);
         }
@@ -2461,7 +2469,7 @@ export function createImporter({
         }
       }
 
-      for (const scan of found) {
+      for (const scan of foundFilms) {
         const sheetRow = named.get(scan);
         const row = sheetRow ?? guessedRow(scan.name);
         const heldId = heldFilm(filmsByKey, missing, folder, scan, row);
