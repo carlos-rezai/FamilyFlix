@@ -2388,7 +2388,7 @@ export function createImporter({
    * already held the folder, so the **Library sheet** keeps the values the run
    * reads until it closes. Each skip the reader reports is a **Warning line**
    * by `skipLine`, as an upload logs it; a sheet that cannot be read is one
-   * too, and the folder is scanned by its layout alone.
+   * too: the folder is scanned by its layout alone and the sheet left as it is.
    */
   const readMetaSheet = async (
     current: ImportRun,
@@ -2401,7 +2401,7 @@ export function createImporter({
     } catch {
       log(
         current,
-        `⚠ Could not read ${sheetPath}, scanned without it`,
+        `⚠ Could not read ${sheetPath}, scanned without it and left as it is`,
         'warning'
       );
       return [];

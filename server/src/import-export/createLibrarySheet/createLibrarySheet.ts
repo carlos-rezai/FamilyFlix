@@ -14,6 +14,7 @@ import {
 } from '../../media/readTitleFolder/readTitleFolder';
 import { exportRows } from '../exportRows/exportRows';
 import { layoutCells } from '../layoutCells/layoutCells';
+import { readSheet } from '../readSheet/readSheet';
 import { sheetDialect } from '../sheetDialect/sheetDialect';
 import { writeSheet } from '../writeSheet/writeSheet';
 
@@ -65,6 +66,16 @@ async function bytesAt(path: string): Promise<Buffer | null> {
   }
 }
 
+/** Whether the **Sheet reader** takes `bytes` as the Library sheet. */
+async function sheetReads(bytes: Buffer): Promise<boolean> {
+  try {
+    await readSheet(bytes, LIBRARY_SHEET);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /**
  * The **Layout read** of each recorded **Title folder** under `root`, by its
  * own name; a folder that cannot be read has none, so its path cells are
@@ -97,7 +108,8 @@ async function readTitleFolders(
  * decimal commas), always rewritten UTF-8; a brand-new sheet is `,`. A library scanned
  * back from its sheet writes that sheet again byte for byte: the **Round
  * trip**. A folder no longer listed (a **Factory reset**'s), a **New folder**
- * or an **Unreachable** one is skipped; a later touch that finds it scanned
+ * or an **Unreachable** one is skipped, as is a sheet on disk the **Sheet
+ * reader** refuses, left until it reads or is removed; a later touch that finds it scanned
  * and reachable writes it. The one replacer inside a Library folder, and only
  * of that one file.
  */
@@ -164,6 +176,9 @@ export function createLibrarySheet({
     );
     const sheet = join(folder.path, LIBRARY_SHEET);
     const onDisk = await bytesAt(sheet);
+    if (onDisk && !(await sheetReads(onDisk))) {
+      return;
+    }
     const separator = onDisk ? sheetDialect(onDisk).separator : ',';
     const bytes = await writeSheet(table, 'csv', separator);
     if (onDisk?.equals(bytes)) {
