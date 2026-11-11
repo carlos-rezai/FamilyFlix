@@ -391,6 +391,65 @@ const spelledKey = (title: string, year: number | null): string =>
 const cellOptional = (text: string): string | null =>
   text === '' ? null : text;
 
+/** Tells of a filled cell the reader can't take, under its writer's header. */
+type ReportCell = (column: SheetColumn, text: string) => void;
+
+/** A cell parsed by `parse`; a filled cell that answers nothing is reported. */
+function parsedCell<T>(
+  text: string,
+  column: SheetColumn,
+  parse: (text: string) => T | null,
+  report: ReportCell
+): T | null {
+  const value = parse(text);
+  if (value === null && text !== '') {
+    report(column, text);
+  }
+  return value;
+}
+
+/**
+ * A yes/no cell by its two lists, case folded; a value on neither is
+ * reported, and read as no.
+ */
+function flagCell(
+  text: string,
+  column: SheetColumn,
+  yes: ReadonlySet<string>,
+  no: ReadonlySet<string>,
+  report: ReportCell
+): boolean {
+  const folded = text.toLowerCase();
+  if (text !== '' && !yes.has(folded) && !no.has(folded)) {
+    report(column, text);
+  }
+  return yes.has(folded);
+}
+
+/**
+ * The paths of a checked cell that stay in the row's **Title folder**
+ * (`isContained`), each other one reported; a blank one names nothing. A
+ * single path cell is a list of one.
+ */
+function containedPaths(
+  paths: string[],
+  folder: string,
+  column: keyof typeof CHECKED_PATHS,
+  report: ReportCell
+): string[] {
+  const { header, isKind } = CHECKED_PATHS[column];
+  return paths.filter((text) => {
+    if (text === '') {
+      return false;
+    }
+    if (isContained(text, folder, isKind)) {
+      return true;
+    }
+    report(header, text);
+    return false;
+  });
+}
+
 /**
  * Open the bytes as the format the extension says, or refuse them.
  *
@@ -487,27 +546,38 @@ export async function readSheet(
   };
 
   const rows: SheetRow[] = [];
-  /** Each read row's type, Folder key (case folded, as `sameFolderKey` compares), season and episode. */
+  /** Each read row's {@link rowKey}. */
   const seen = new Set<string>();
   sheet.eachRow({ includeEmpty: false }, (row, number) => {
     if (number === 1) {
       return;
     }
-    const typeText = read(row, 'type');
+    // A row's Unread cells wait until the row is read, then are told under
+    // its label: a row passed over whole is one skip, not one per cell.
+    const unread: { column: SheetColumn; text: string }[] = [];
+    const report: ReportCell = (column, text) => {
+      unread.push({ column, text });
+    };
     // A blank or unknown Type reads as a Movie; an unknown one is reported.
-    const type = cellType(typeText) ?? 'Movie';
+    const type =
+      parsedCell(read(row, 'type'), 'Type', cellType, report) ?? 'Movie';
     const title = read(row, 'title');
     if (title === '' && TITLED.has(type)) {
       onSkip({ kind: 'blank-title', rowNumber: number });
       return;
     }
-    const yearText = read(row, 'year');
-    const span = yearSpan(yearText) ?? { year: null, endYear: null };
+    const span = parsedCell(read(row, 'year'), 'Year', yearSpan, report) ?? {
+      year: null,
+      endYear: null,
+    };
     const folder = read(row, 'folder') || spelledKey(title, span.year);
-    const seasonText = read(row, 'season');
-    const season = cellWhole(seasonText);
-    const episodeText = read(row, 'episode');
-    const episode = cellWhole(episodeText);
+    const season = parsedCell(read(row, 'season'), 'Season', cellWhole, report);
+    const episode = parsedCell(
+      read(row, 'episode'),
+      'Episode',
+      cellWhole,
+      report
+    );
     const label = skipLabel(type, folder, season, episode);
     // The first of two rows naming one row is read; each repeat is reported.
     const key = rowKey(type, folder, season, episode);
@@ -517,76 +587,10 @@ export async function readSheet(
     }
     seen.add(key);
 
-    /** The paths in a checked cell that stay in the Title folder; each other one is reported. */
-    const contained = (
-      column: keyof typeof CHECKED_PATHS,
-      paths: string[]
-    ): string[] => {
-      const { header, isKind } = CHECKED_PATHS[column];
-      return paths.filter((text) => {
-        if (isContained(text, folder, isKind)) {
-          return true;
-        }
-        onSkip({ kind: 'unread-cell', label, column: header, text });
-        return false;
-      });
-    };
-    /** A single checked path cell, or `null` for a blank or uncontained one. */
-    const containedOne = (
-      column: 'poster' | 'backdrop' | 'still'
-    ): string | null => {
-      const text = read(row, column);
-      return text === '' ? null : (contained(column, [text])[0] ?? null);
-    };
-
-    /** Report a filled cell the reader can't take, under its writer's header. */
-    const unread = (header: SheetColumn, text: string): void => {
-      onSkip({ kind: 'unread-cell', label, column: header, text });
-    };
-    /** A cell parsed by `parse`; a filled one that doesn't parse is reported. */
-    const parsed = <T>(
-      column: Column,
-      header: SheetColumn,
-      parse: (text: string) => T | null
-    ): T | null => {
-      const text = read(row, column);
-      const value = parse(text);
-      if (value === null && text !== '') {
-        unread(header, text);
-      }
-      return value;
-    };
-    /** A yes/no cell by its two lists; a value on neither is reported, read as no. */
-    const flag = (
-      column: Column,
-      header: SheetColumn,
-      yes: ReadonlySet<string>,
-      no: ReadonlySet<string>
-    ): boolean => {
-      const text = read(row, column);
-      const folded = text.toLowerCase();
-      if (text !== '' && !yes.has(folded) && !no.has(folded)) {
-        unread(header, text);
-      }
-      return yes.has(folded);
-    };
-
-    if (typeText !== '' && cellType(typeText) === null) {
-      unread('Type', typeText);
-    }
-    if (yearText !== '' && span.year === null) {
-      unread('Year', yearText);
-    }
-    if (seasonText !== '' && season === null) {
-      unread('Season', seasonText);
-    }
-    if (episodeText !== '' && episode === null) {
-      unread('Episode', episodeText);
-    }
     // A synopsis is not an episode's field: an Episode row's is reported.
     const synopsisText = read(row, 'synopsis');
     if (type === 'Episode' && synopsisText !== '') {
-      unread('Synopsis', synopsisText);
+      report('Synopsis', synopsisText);
     }
 
     rows.push({
@@ -600,22 +604,54 @@ export async function readSheet(
       director: cellOptional(read(row, 'director')),
       cast: cellList(read(row, 'cast'), CAST_SEPARATORS),
       synopsis: type === 'Episode' ? null : cellOptional(synopsisText),
-      rating: parsed('rating', 'Rating', cellRating),
-      watched: flag('watched', 'Status', WATCHED, UNWATCHED),
-      airDate: parsed('airDate', 'Air date', cellDate),
-      runtime: parsed('runtime', 'Runtime', cellWhole),
-      tmdbScore: parsed('tmdbScore', 'TMDB rating', cellNumber),
-      tmdbId: parsed('tmdbId', 'TMDB id', cellWhole),
-      favorite: flag('favorite', 'Favorite', FAVORITE, NOT_FAVORITE),
-      video: cellOptional(read(row, 'video')),
-      subtitles: contained(
-        'subtitles',
-        cellList(read(row, 'subtitles'), SHEET_PATH_SEPARATOR)
+      rating: parsedCell(read(row, 'rating'), 'Rating', cellRating, report),
+      watched: flagCell(
+        read(row, 'watched'),
+        'Status',
+        WATCHED,
+        UNWATCHED,
+        report
       ),
-      poster: containedOne('poster'),
-      backdrop: containedOne('backdrop'),
-      still: containedOne('still'),
+      airDate: parsedCell(read(row, 'airDate'), 'Air date', cellDate, report),
+      runtime: parsedCell(read(row, 'runtime'), 'Runtime', cellWhole, report),
+      tmdbScore: parsedCell(
+        read(row, 'tmdbScore'),
+        'TMDB rating',
+        cellNumber,
+        report
+      ),
+      tmdbId: parsedCell(read(row, 'tmdbId'), 'TMDB id', cellWhole, report),
+      favorite: flagCell(
+        read(row, 'favorite'),
+        'Favorite',
+        FAVORITE,
+        NOT_FAVORITE,
+        report
+      ),
+      video: cellOptional(read(row, 'video')),
+      subtitles: containedPaths(
+        cellList(read(row, 'subtitles'), SHEET_PATH_SEPARATOR),
+        folder,
+        'subtitles',
+        report
+      ),
+      poster:
+        containedPaths([read(row, 'poster')], folder, 'poster', report)[0] ??
+        null,
+      backdrop:
+        containedPaths(
+          [read(row, 'backdrop')],
+          folder,
+          'backdrop',
+          report
+        )[0] ?? null,
+      still:
+        containedPaths([read(row, 'still')], folder, 'still', report)[0] ??
+        null,
     });
+    for (const { column, text } of unread) {
+      onSkip({ kind: 'unread-cell', label, column, text });
+    }
   });
 
   return rows;
