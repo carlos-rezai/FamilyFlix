@@ -11,6 +11,104 @@ Newest entry first.
 
 ---
 
+## 2026-11-11: Rebuild edges, the refactor (issue 579)
+
+Sixteen commits against
+`docs/refactor-plans/60-rebuild-edges-refactor.md`, one per plan commit.
+This is the initiative's closing round. **11794 tests pass across 761
+files** (one skipped), against 11786 at the end of the build (`1a1a355b`):
+the eight are the two track writes' characterization (commit 11). `tsc -b
+--force` is clean. `eslint src server electron` reports 1 error and 137
+warnings, down from 3 and 138, rebuild-whole's close.
+
+### What shipped before this round
+
+The build slices 564 to 577, RED and GREEN each: a path cell stays inside
+its Title folder, both runs log every skip, any Excel's sheet reads, the
+Sheet writer takes a separator and the Library sheet keeps its dialect, a
+sheet that doesn't read is left alone, every Unread cell is named, two rows
+for one title read the first, a held film's empty art is filled and a held
+title takes the tracks it lacks on one scan, a track named in its own
+language reads right, the series add refuses a held video, and every sheet
+row is as wide as its header. The documents followed (578).
+
+### What each group changed
+
+- **Group 1, one home for the Sheet dialect** (`a1d862ef`, `c591d739`).
+  `writeSheet` takes `SheetDialect['separator']`; `SheetSeparator` is gone.
+  `sheetDialect` exports `UTF8_BOM`, recognises it by `equals`, and the
+  writer writes it.
+- **Group 2, the reader's row checks at module level** (`0a12c57c` to
+  `d67b58d1`). A skip's column is a `SheetColumn`; `skipLabel` and `rowKey`
+  name and key a row; `parsedCell`, `flagCell` and `containedPaths` are the
+  five closures, module-level, each taking a `ReportCell`. The Type, Year,
+  Season and Episode read through `parsedCell` once each.
+- **Group 3, one fill per held place** (`f9fccf23` to `8a7a5596`).
+  `scannedEpisode` is the one lookup under `scannedStill` and
+  `scannedTracks`; `TakenFile` types what a title took; `fillEmpty` and
+  `takeTracks` say `fillHeldFiles`' rule once, each place one call.
+- **Group 4, the convention's types** (`f27ec527`, `b91b418f`).
+  `heldVideoRefusal` reads storage by a `Pick`; `detectSubtitleLanguage`'s
+  tail has braces and `!== undefined`.
+- **Group 5, suites** (`e0bdadad` to `9d7b5f77`). `addMovieSubtitles` and
+  `addEpisodeSubtitles` have suites of their own over a real `:memory:`
+  database; the `unreadCells` and `duplicates` headers say Phases 7 and 8;
+  the BOM is stripped by `UTF8_BOM`'s length and the unused `readFileSync`
+  went.
+- **Group 6, comments** (`384fe358`). Five docblocks rewrapped,
+  `importShow`'s made true, the held film's Layout fill guard given its
+  reason, two `SELECT`s rewrapped.
+- **Group 7, the docs** (`31bc5d66`). Step 43 and its row ticked, the
+  README's server tree, a Rebuild edges release smoke, the glossary.
+
+### Where this round left the plan
+
+- **A row's Unread cells wait for the row to be read.** The plan had the
+  callback build its `report` once from `onSkip` and the label, but the
+  label needs the Type, Season and Episode that `parsedCell` reads, and a
+  blank-title or duplicate row must stay one skip. So `report` holds the
+  row's cells and the callback tells them under its label after the
+  duplicate check: each cell parsed once, every skip in its old order.
+- **`containedPaths` passes a blank path unreported**, so a single path
+  cell reads as `[text]` with no `containedOne`; a Subtitles list never
+  holds a blank, since `cellList` drops them.
+- **`readSheet.unreadCells`' `unreadOnHeat` takes a `SheetColumn`** (commit
+  3), so its fake skips type; no assertion changed.
+- **`writeSheet.separator`'s BOM assertion spreads `UTF8_BOM`**, the
+  dialect's `Buffer` now, to compare the same three bytes it compared as a
+  local array.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: two `✓ Updated` lines for a Found
+again film that takes files, a held series' failed file copy as a Problem,
+one sandbox for the held suites, the double decode of a csv, `importShow`'s
+shape, the items carried from folder-layout, everything log 60 put out of
+scope, and the frozen `handoff-rebuild-edges/`. No wire, schema, Settings,
+copy or prototype change.
+
+### Follow-ups this refactor surfaced
+
+- **One `✓ Updated` line for a Found again film that takes files**: its
+  files' line during the scan and its `video` line at import are two; a
+  `fix:` issue of its own.
+- **A held series' failed file copy as a Warning line**, as a held film's
+  is, rather than on the show's `failed` Problem; a `fix:` issue of its own.
+- **A shared importer harness**: `heldOneScan` needs a real Library folder
+  resolver where `heldTracks` and `heldSeriesArt` stub it.
+- **`importShow`'s shape**, now also handing its `copyArt` to
+  `fillHeldFiles`.
+- Carried from folder-layout: an options object for `createApiRouter`, a
+  discriminated library scope, `importPlaced`'s parameters as an object, and
+  the Sync's done summary still wording the retired Write targets.
+
+### The initiative
+
+**Rebuild edges is done**: the build slices (564 to 577), the documents
+(578) and this round (579). Issue 563, the epic, is shut with it.
+
+---
+
 ## 2026-11-10: Rebuild edges, the build (issues 564 to 578)
 
 Fourteen slices, each a RED and a GREEN commit run unattended by
