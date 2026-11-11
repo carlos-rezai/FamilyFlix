@@ -869,3 +869,77 @@ describe('series write: the fields a sheet gives a new title', () => {
     ).toMatchObject({ watched: true, status: 'watched' });
   });
 });
+
+// 60, Rebuild edges (issue #579): `addEpisodeSubtitles`, the write a held
+// episode takes the tracks of languages it lacks through, appending after
+// its held tracks and never touching them.
+describe('series write: addEpisodeSubtitles', () => {
+  /** A series of one episode holding `subtitles`, and how to read it back. */
+  function heldEpisode(subtitles: { path: string; language: string }[]) {
+    const storage = freshStorage();
+    const series = storage.addSeries({ title: 'Harbor & Vine' }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'harbor-vine/season-01/S01E01.mp4',
+        subtitles,
+      },
+    ]);
+    const [episode] = storage.listEpisodes(series.id);
+    /** The episode's tracks, as a fresh read assembles them. */
+    const tracks = () => storage.listEpisodes(series.id)[0].subtitles;
+    return { storage, episode, tracks };
+  }
+
+  it('appends the tracks after the held ones, in the order given', () => {
+    const { storage, episode, tracks } = heldEpisode([
+      { path: 'harbor-vine/season-01/S01E01.en.srt', language: 'English' },
+    ]);
+
+    storage.addEpisodeSubtitles(episode.id, [
+      { path: 'harbor-vine/season-01/S01E01.fr.srt', language: 'French' },
+      { path: 'harbor-vine/season-01/S01E01.nl.srt', language: 'Dutch' },
+    ]);
+
+    expect(tracks().map((s) => [s.path, s.language, s.position])).toEqual([
+      ['harbor-vine/season-01/S01E01.en.srt', 'English', 0],
+      ['harbor-vine/season-01/S01E01.fr.srt', 'French', 1],
+      ['harbor-vine/season-01/S01E01.nl.srt', 'Dutch', 2],
+    ]);
+  });
+
+  it('leaves the held tracks their ids and positions', () => {
+    const { storage, episode, tracks } = heldEpisode([
+      { path: 'harbor-vine/season-01/S01E01.en.srt', language: 'English' },
+      { path: 'harbor-vine/season-01/S01E01.pt.srt', language: 'Portuguese' },
+    ]);
+
+    storage.addEpisodeSubtitles(episode.id, [
+      { path: 'harbor-vine/season-01/S01E01.fr.srt', language: 'French' },
+    ]);
+
+    expect(tracks().slice(0, 2)).toEqual(episode.subtitles);
+  });
+
+  it('starts at position 0 for an episode with no tracks', () => {
+    const { storage, episode, tracks } = heldEpisode([]);
+
+    storage.addEpisodeSubtitles(episode.id, [
+      { path: 'harbor-vine/season-01/S01E01.en.srt', language: 'English' },
+    ]);
+
+    expect(tracks().map((s) => [s.path, s.position])).toEqual([
+      ['harbor-vine/season-01/S01E01.en.srt', 0],
+    ]);
+  });
+
+  it('writes nothing for an empty list', () => {
+    const { storage, episode, tracks } = heldEpisode([
+      { path: 'harbor-vine/season-01/S01E01.en.srt', language: 'English' },
+    ]);
+
+    storage.addEpisodeSubtitles(episode.id, []);
+
+    expect(tracks()).toEqual(episode.subtitles);
+  });
+});

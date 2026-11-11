@@ -633,3 +633,61 @@ describe('library: deleteMovie', () => {
     expect(storage.getMovie(kept.id)).not.toBeNull();
   });
 });
+
+// 60, Rebuild edges (issue #579): `addMovieSubtitles`, the write a held film
+// takes the tracks of languages it lacks through, appending after its held
+// tracks and never touching them.
+describe('library: addMovieSubtitles', () => {
+  it('appends the tracks after the held ones, in the order given', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie());
+
+    storage.addMovieSubtitles(added.id, [
+      { path: 'Northwind (2018)/fr.srt', language: 'French' },
+      { path: 'Northwind (2018)/nl.srt', language: 'Dutch' },
+    ]);
+
+    const tracks = storage.getMovie(added.id)?.subtitles ?? [];
+    expect(tracks.map((s) => [s.path, s.language, s.position])).toEqual([
+      ['Northwind (2018)/en.srt', 'English', 0],
+      ['Northwind (2018)/de.srt', 'German', 1],
+      ['Northwind (2018)/fr.srt', 'French', 2],
+      ['Northwind (2018)/nl.srt', 'Dutch', 3],
+    ]);
+  });
+
+  it('leaves the held tracks their ids and positions', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie());
+
+    storage.addMovieSubtitles(added.id, [
+      { path: 'Northwind (2018)/fr.srt', language: 'French' },
+    ]);
+
+    const tracks = storage.getMovie(added.id)?.subtitles ?? [];
+    expect(tracks.slice(0, 2)).toEqual(added.subtitles);
+  });
+
+  it('starts at position 0 for a film with no tracks', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(newMovie({ title: 'Bare' }));
+
+    storage.addMovieSubtitles(added.id, [
+      { path: 'Bare/en.srt', language: 'English' },
+    ]);
+
+    const tracks = storage.getMovie(added.id)?.subtitles ?? [];
+    expect(tracks.map((s) => [s.path, s.position])).toEqual([
+      ['Bare/en.srt', 0],
+    ]);
+  });
+
+  it('writes nothing for an empty list', () => {
+    const storage = freshStorage();
+    const added = storage.addMovie(fullMovie());
+
+    storage.addMovieSubtitles(added.id, []);
+
+    expect(storage.getMovie(added.id)).toEqual(added);
+  });
+});
