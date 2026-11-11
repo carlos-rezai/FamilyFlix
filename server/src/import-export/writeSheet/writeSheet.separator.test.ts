@@ -13,9 +13,8 @@ import { describe, expect, it } from 'vitest';
 import { SHEET_COLUMNS } from '@/types';
 import type { SheetColumn } from '@/types';
 import type { ExportCell, ExportTable } from '../exportRows/exportRows';
+import { UTF8_BOM } from '../sheetDialect/sheetDialect';
 import { writeSheet } from './writeSheet';
-
-const UTF8_BOM = [0xef, 0xbb, 0xbf];
 
 /** One sheet row, every column not named left blank. */
 const rowOf = (cells: Partial<Record<SheetColumn, ExportCell>>): ExportCell[] =>
@@ -52,8 +51,8 @@ const TABLE: ExportTable = [[...SHEET_COLUMNS], AMELIE, DIE_HARD];
 async function linesOf(separator?: ',' | ';'): Promise<string[]> {
   const bytes = await writeSheet(TABLE, 'csv', separator);
   return bytes
+    .subarray(UTF8_BOM.length)
     .toString('utf8')
-    .replace(/^﻿/, '')
     .split(/\r?\n/)
     .filter((line) => line !== '');
 }
@@ -100,8 +99,8 @@ describe('writeSheet: the `,` default', () => {
 
     expect(given.equals(byDefault)).toBe(true);
     const [header, amelie] = byDefault
+      .subarray(UTF8_BOM.length)
       .toString('utf8')
-      .replace(/^﻿/, '')
       .split(/\r?\n/);
     expect(header).toBe(SHEET_COLUMNS.join(','));
     expect(amelie).toContain(',7.9,');
@@ -114,7 +113,7 @@ describe('writeSheet: the encoding', () => {
     for (const separator of [',', ';'] as const) {
       const bytes = await writeSheet(TABLE, 'csv', separator);
 
-      expect([...bytes.subarray(0, 3)]).toEqual(UTF8_BOM);
+      expect([...bytes.subarray(0, 3)]).toEqual([...UTF8_BOM]);
       const text = new TextDecoder('utf-8', { fatal: true }).decode(
         bytes.subarray(3)
       );

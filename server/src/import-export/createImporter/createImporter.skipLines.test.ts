@@ -16,13 +16,7 @@
 // sandbox Managed media directory, the absent **Playback component**, an
 // idle **Library sheet writer** and the real **Layout fill**.
 
-import {
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  statSync,
-  writeFileSync,
-} from 'node:fs';
+import { mkdirSync, readdirSync, statSync, writeFileSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
