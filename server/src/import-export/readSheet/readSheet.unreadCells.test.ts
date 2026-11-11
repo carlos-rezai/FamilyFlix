@@ -15,6 +15,7 @@
 
 import { describe, expect, it } from 'vitest';
 
+import type { SheetColumn } from '@/types';
 import { readSheet, type SheetRow, type SheetSkip } from './readSheet';
 
 /** A sheet typed in place, as the bytes a CSV file would hold. */
@@ -45,7 +46,7 @@ const heatWith = (column: string, cell: string): string[] => [
 ];
 
 /** An unread cell on Heat's row, as the reader reports it. */
-const unreadOnHeat = (column: string, text: string): SheetSkip => ({
+const unreadOnHeat = (column: SheetColumn, text: string): SheetSkip => ({
   kind: 'unread-cell',
   label: HEAT,
   column,

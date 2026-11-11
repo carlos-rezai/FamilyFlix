@@ -2,7 +2,12 @@ import ExcelJS from 'exceljs';
 import { extname, join } from 'node:path';
 import { Readable } from 'node:stream';
 
-import { ROW_TYPES, SHEET_PATH_SEPARATOR, type RowType } from '@/types';
+import {
+  ROW_TYPES,
+  SHEET_PATH_SEPARATOR,
+  type RowType,
+  type SheetColumn,
+} from '@/types';
 import { yearSpan } from '../../library/series/yearSpan/yearSpan';
 import {
   isImageFilename,
@@ -84,7 +89,7 @@ export type SheetSkip =
        */
       label: string;
       /** The column's header, as the **Sheet writer** spells it. */
-      column: string;
+      column: SheetColumn;
       /** The cell's text, or the one `Subtitles` path, as the sheet spells it. */
       text: string;
     }
@@ -207,7 +212,10 @@ const CHECKED_PATHS = {
   backdrop: { header: 'Backdrop', isKind: isImageFilename },
   still: { header: 'Still', isKind: isImageFilename },
   subtitles: { header: 'Subtitles', isKind: isSubtitleFilename },
-} as const;
+} as const satisfies Record<
+  string,
+  { header: SheetColumn; isKind: (filename: string) => boolean }
+>;
 
 /**
  * Whether a path cell stays inside its row's **Title folder**, checked
@@ -507,13 +515,13 @@ export async function readSheet(
     };
 
     /** Report a filled cell the reader can't take, under its writer's header. */
-    const unread = (header: string, text: string): void => {
+    const unread = (header: SheetColumn, text: string): void => {
       onSkip({ kind: 'unread-cell', label, column: header, text });
     };
     /** A cell parsed by `parse`; a filled one that doesn't parse is reported. */
     const parsed = <T>(
       column: Column,
-      header: string,
+      header: SheetColumn,
       parse: (text: string) => T | null
     ): T | null => {
       const text = read(row, column);
@@ -526,7 +534,7 @@ export async function readSheet(
     /** A yes/no cell by its two lists; a value on neither is reported, read as no. */
     const flag = (
       column: Column,
-      header: string,
+      header: SheetColumn,
       yes: ReadonlySet<string>,
       no: ReadonlySet<string>
     ): boolean => {
