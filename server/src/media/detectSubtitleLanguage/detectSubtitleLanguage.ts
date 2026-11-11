@@ -85,7 +85,9 @@ export function detectSubtitleLanguage(filename: string): string {
   const pieces = fold(stem).split(/[._-]/);
   const tag = pieces[pieces.length - 1] ?? '';
   const byTag = BY_TAG.get(tag);
-  if (byTag) return byTag;
+  if (byTag !== undefined) {
+    return byTag;
+  }
   const code = pieces.length > 1 ? pieces[pieces.length - 2] : undefined;
   const byCode =
     code !== undefined && REGION.test(tag) ? BY_CODE.get(code) : undefined;
