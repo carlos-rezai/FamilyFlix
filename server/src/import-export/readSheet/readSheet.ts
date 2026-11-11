@@ -250,6 +250,37 @@ function isContained(
  */
 export const isTitleRow = (row: SheetRow): boolean => TITLED.has(row.type);
 
+/**
+ * A row as a skip names it: a Season row by its season
+ * (`Tidewater (2018) Season 1`), an Episode row by its tag
+ * (`Tidewater (2018) S01E02`), any other by its **Folder key**.
+ */
+function skipLabel(
+  type: RowType,
+  folder: string,
+  season: number | null,
+  episode: number | null
+): string {
+  if (type === 'Season' && season !== null) {
+    return `${folder} Season ${season}`;
+  }
+  if (type === 'Episode' && season !== null && episode !== null) {
+    return `${folder} ${spellEpisodeTag(season, episode)}`;
+  }
+  return folder;
+}
+
+/**
+ * The key two rows naming one row share: its type, **Folder key**, season
+ * and episode, the key case folded, as `sameFolderKey` compares.
+ */
+const rowKey = (
+  type: RowType,
+  folder: string,
+  season: number | null,
+  episode: number | null
+): string => JSON.stringify([type, folder.toLowerCase(), season, episode]);
+
 /** The rating column's own scale — the same ten the library stores. */
 const MAX_RATING = 10;
 
@@ -477,15 +508,9 @@ export async function readSheet(
     const season = cellWhole(seasonText);
     const episodeText = read(row, 'episode');
     const episode = cellWhole(episodeText);
-    /** The row as a skip names it: a Season by its season, an Episode by its tag. */
-    const label =
-      type === 'Season' && season !== null
-        ? `${folder} Season ${season}`
-        : type === 'Episode' && season !== null && episode !== null
-          ? `${folder} ${spellEpisodeTag(season, episode)}`
-          : folder;
+    const label = skipLabel(type, folder, season, episode);
     // The first of two rows naming one row is read; each repeat is reported.
-    const key = JSON.stringify([type, folder.toLowerCase(), season, episode]);
+    const key = rowKey(type, folder, season, episode);
     if (seen.has(key)) {
       onSkip({ kind: 'duplicate', label });
       return;
