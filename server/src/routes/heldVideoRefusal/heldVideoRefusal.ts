@@ -1,12 +1,5 @@
-import type { HeldTitle } from '../../library';
-import type { Movie, Series, StoredVideo } from '@/types';
-
-/** What the **Held video** rule reads of the library. */
-export interface HoldingStorage {
-  titleHolding(folderId: string, videoPath: string): HeldTitle | null;
-  getMovie(id: string): Movie | null;
-  getSeries(id: string): Series | null;
-}
+import type { LibraryStorage } from '../../library';
+import type { StoredVideo } from '@/types';
 
 /**
  * The **Held video** rule's `409` sentence for an add: given its placed
@@ -16,7 +9,7 @@ export interface HoldingStorage {
  * Both adds call it before anything is written.
  */
 export function heldVideoRefusal(
-  storage: HoldingStorage,
+  storage: Pick<LibraryStorage, 'titleHolding' | 'getMovie' | 'getSeries'>,
   placed: readonly (StoredVideo | null)[]
 ): string | null {
   for (const video of placed) {
