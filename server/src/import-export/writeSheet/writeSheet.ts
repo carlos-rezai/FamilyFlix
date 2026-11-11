@@ -2,10 +2,7 @@ import ExcelJS from 'exceljs';
 
 import type { ExportFormat, SheetColumn } from '@/types';
 import type { ExportTable } from '../exportRows/exportRows';
-import type { SheetDialect } from '../sheetDialect/sheetDialect';
-
-/** The bytes Excel expects ahead of a UTF-8 CSV, so a diacritic opens as itself. */
-const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
+import { UTF8_BOM, type SheetDialect } from '../sheetDialect/sheetDialect';
 
 /** The one worksheet of an xlsx sheet. */
 const WORKSHEET = 'Library';

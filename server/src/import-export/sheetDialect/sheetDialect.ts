@@ -7,11 +7,11 @@ export interface SheetDialect {
   separator: ',' | ';';
 }
 
-/** A UTF-8 byte order mark, as Excel and the **Sheet writer** put it. */
-const BOM = [0xef, 0xbb, 0xbf];
-
-const hasBom = (bytes: Buffer): boolean =>
-  BOM.every((byte, index) => bytes[index] === byte);
+/**
+ * The UTF-8 byte order mark: the bytes Excel and the **Sheet writer** put
+ * ahead of a UTF-8 csv, so a diacritic opens as itself.
+ */
+export const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
 
 /** Whether the bytes decode as UTF-8 without a single malformed sequence. */
 function isUtf8(bytes: Buffer): boolean {
@@ -49,7 +49,10 @@ function separatorOf(text: string): SheetDialect['separator'] {
  * outside quotes, else `,`; a European Excel saves `;`.
  */
 export function sheetDialect(bytes: Buffer): SheetDialect {
-  const encoding = hasBom(bytes) || isUtf8(bytes) ? 'utf-8' : 'windows-1252';
+  const encoding =
+    bytes.subarray(0, 3).equals(UTF8_BOM) || isUtf8(bytes)
+      ? 'utf-8'
+      : 'windows-1252';
   const text = new TextDecoder(encoding).decode(bytes);
   return { encoding, separator: separatorOf(text) };
 }
