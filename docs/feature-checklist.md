@@ -72,7 +72,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Tidy into folders: each loose video its own folder  | ❌ Dropped |
 | Folder layout: one shape to scan, sync and export   | ✅ Done    |
 | Rebuild whole: every sheet field and series art     | ✅ Done    |
-| Rebuild edges: hand-kept sheets, growing folders    | 🔲 Planned |
+| Rebuild edges: hand-kept sheets, growing folders    | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -464,12 +464,15 @@ Step 43 came out of the second end-to-end QA pass, after step 42: the round
 trip held, and its edges did not. A sheet's path cell could reach outside its
 title's folder, a sheet resaved by a Dutch Excel was lost and then
 overwritten, and a held film never took art put into its folder later.
-Settled in a grill-me on 2026-11-10 (design log 60, handoff
+Settled in a grill-me on 2026-11-10, it is done (design log 60, handoff
 `docs/handoff/handoff-rebuild-edges/`, which keeps the QA ticket):
 
-43. 🔜 **Rebuild edges**: a hand-kept sheet and a growing folder reach the
-    library whole and safely. Built in issues 564 to 577; the refactor is
-    still to come.
+43. ✅ **Rebuild edges**: a hand-kept sheet and a growing folder reach the
+    library whole and safely. Built in issues 564 to 577; the closing round
+    (issue 579) gave each concept the build had spelled twice one home: the
+    Sheet dialect's separator and BOM in `sheetDialect`, the reader's cell
+    checks beside its other cell rules, one fill per held place in
+    `fillHeldFiles`.
     - **Contained path cells**: a path cell is read only when it lies inside
       its own row's Title folder (its first segment the row's Folder key, in
       any casing, and no empty, `.` or `..` segment, `\` or `:`) and names

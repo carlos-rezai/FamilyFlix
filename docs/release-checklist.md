@@ -186,6 +186,12 @@ Quit the app. Open a Command Prompt in the install directory,
       list the folder again, _Scan new folders_, then _Done_: the series
       comes back with all three pieces of art, the heart and the Watched,
       and the sheet's size and modified time are unchanged.
+- [ ] Rebuild edges, over the sandbox Library folder in the shell: open
+      `<sandbox>\Meta\familyflix-library.csv` in a Dutch or German Excel,
+      change one rating to `8,5` and give one title a diacritic, and save it
+      as plain _CSV_ (`;`, cp1252). _Scan new folders_, then _Done_: the
+      rating reads 9, the title spells its diacritic, and the sheet is
+      rewritten `;` with decimal commas.
 
 ## 9. Back on the dev machine
 
