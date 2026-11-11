@@ -1372,6 +1372,48 @@ export function createImporter({
   };
 
   /**
+   * One empty place filled: when the title `has` nothing there, `file` copied
+   * `into` by `copy` and, when it copied, its path written. Answers whether
+   * it took anything.
+   */
+  const fillEmpty = async (
+    has: string | null,
+    into: string,
+    file: string | null,
+    copy: ArtCopy,
+    write: (path: string) => void
+  ): Promise<boolean> => {
+    if (has !== null) {
+      return false;
+    }
+    const path = await copy(into, file);
+    if (path === undefined) {
+      return false;
+    }
+    write(path);
+    return true;
+  };
+
+  /**
+   * The tracks of `found` that `held` lacks (`lackingTracks`), copied `into`
+   * by `copy` and, when any copied, written. Answers whether it took any.
+   */
+  const takeTracks = async (
+    held: readonly { language: string }[],
+    found: readonly SubtitleFound[],
+    into: string,
+    copy: ArtCopy,
+    write: (tracks: NewSubtitle[]) => void
+  ): Promise<boolean> => {
+    const tracks = await copyTracks(into, lackingTracks(held, found), copy);
+    if (tracks.length === 0) {
+      return false;
+    }
+    write(tracks);
+    return true;
+  };
+
+  /**
    * A held title's empty places filled from its Title folder's read, never
    * replacing what it has, and filing no **Problem**. A film takes its
    * **Poster** and **Backdrop** (its **Path cells** already read into the
@@ -1396,27 +1438,34 @@ export function createImporter({
       if (movie === null) {
         return [];
       }
-      if (movie.posterPath === null) {
-        const posterPath = await copyArt(into, held.scan.poster);
-        if (posterPath !== undefined) {
-          storage.enrichMovie(held.id, { posterPath });
-          taken.add('poster');
-        }
+      const { scan } = held;
+      if (
+        await fillEmpty(movie.posterPath, into, scan.poster, copyArt, (path) =>
+          storage.enrichMovie(held.id, { posterPath: path })
+        )
+      ) {
+        taken.add('poster');
       }
-      if (movie.backdropPath === null) {
-        const backdropPath = await copyArt(into, held.scan.backdrop);
-        if (backdropPath !== undefined) {
-          storage.enrichMovie(held.id, { backdropPath });
-          taken.add('backdrop');
-        }
+      if (
+        await fillEmpty(
+          movie.backdropPath,
+          into,
+          scan.backdrop,
+          copyArt,
+          (path) => storage.enrichMovie(held.id, { backdropPath: path })
+        )
+      ) {
+        taken.add('backdrop');
       }
-      const tracks = await copyTracks(
-        into,
-        lackingTracks(movie.subtitles, held.scan.subtitles),
-        copyArt
-      );
-      if (tracks.length > 0) {
-        storage.addMovieSubtitles(held.id, tracks);
+      if (
+        await takeTracks(
+          movie.subtitles,
+          scan.subtitles,
+          into,
+          copyArt,
+          (tracks) => storage.addMovieSubtitles(held.id, tracks)
+        )
+      ) {
         taken.add('subtitles');
       }
       return TAKEN_ORDER.filter((name) => taken.has(name));
@@ -1426,57 +1475,63 @@ export function createImporter({
     if (detail === null) {
       return [];
     }
-    const id = detail.series.id;
-    if (detail.series.posterPath === null) {
-      const posterPath = await copyArt(into, show.poster);
-      if (posterPath !== undefined) {
-        storage.enrichSeries(id, { posterPath });
-        taken.add('poster');
-      }
+    const { series, seasons } = detail;
+    if (
+      await fillEmpty(series.posterPath, into, show.poster, copyArt, (path) =>
+        storage.enrichSeries(series.id, { posterPath: path })
+      )
+    ) {
+      taken.add('poster');
     }
-    if (detail.series.backdropPath === null) {
-      const backdropPath = await copyArt(into, show.backdrop);
-      if (backdropPath !== undefined) {
-        storage.enrichSeries(id, { backdropPath });
-        taken.add('backdrop');
-      }
+    if (
+      await fillEmpty(
+        series.backdropPath,
+        into,
+        show.backdrop,
+        copyArt,
+        (path) => storage.enrichSeries(series.id, { backdropPath: path })
+      )
+    ) {
+      taken.add('backdrop');
     }
-    for (const season of detail.seasons) {
+    for (const season of seasons) {
       const seasonFolder = media.seasonFolder(into, season.number);
-      if (season.posterPath === null) {
-        const posterPath = await copyArt(
+      if (
+        await fillEmpty(
+          season.posterPath,
           seasonFolder,
-          scannedSeasonPoster(show, season.number)
-        );
-        if (posterPath !== undefined) {
-          storage.setSeasonPoster(id, season.number, posterPath);
-          taken.add('season posters');
-        }
+          scannedSeasonPoster(show, season.number),
+          copyArt,
+          (path) => storage.setSeasonPoster(series.id, season.number, path)
+        )
+      ) {
+        taken.add('season posters');
       }
       for (const episode of season.episodes) {
-        if (episode.stillPath === null) {
-          const stillPath = await copyArt(
+        if (
+          await fillEmpty(
+            episode.stillPath,
             seasonFolder,
-            scannedStill(show, episode.season, episode.number)
-          );
-          if (stillPath !== undefined) {
-            storage.enrichEpisode(episode.id, {
-              stillPath,
-              stillSource: 'picked',
-            });
-            taken.add('stills');
-          }
+            scannedStill(show, episode.season, episode.number),
+            copyArt,
+            (path) =>
+              storage.enrichEpisode(episode.id, {
+                stillPath: path,
+                stillSource: 'picked',
+              })
+          )
+        ) {
+          taken.add('stills');
         }
-        const tracks = await copyTracks(
-          seasonFolder,
-          lackingTracks(
+        if (
+          await takeTracks(
             episode.subtitles,
-            scannedTracks(show, episode.season, episode.number)
-          ),
-          copyArt
-        );
-        if (tracks.length > 0) {
-          storage.addEpisodeSubtitles(episode.id, tracks);
+            scannedTracks(show, episode.season, episode.number),
+            seasonFolder,
+            copyArt,
+            (tracks) => storage.addEpisodeSubtitles(episode.id, tracks)
+          )
+        ) {
           taken.add('subtitles');
         }
       }
