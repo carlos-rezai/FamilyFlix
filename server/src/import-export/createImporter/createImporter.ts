@@ -425,25 +425,29 @@ const episodeRowsOf = (rows: readonly SheetRow[], key: string): SheetRow[] =>
 const scannedSeasonPoster = (show: ShowScan, season: number): string | null =>
   show.seasons.find((scanned) => scanned.number === season)?.poster ?? null;
 
+/** The episode a show's scan found by season and number, or `null`. */
+const scannedEpisode = (
+  show: ShowScan,
+  season: number,
+  episode: number
+): ShowScan['episodes'][number] | null =>
+  show.episodes.find(
+    (scanned) => scanned.season === season && scanned.episode === episode
+  ) ?? null;
+
 /** The Still a show's scan found for an episode, or `null`. */
 const scannedStill = (
   show: ShowScan,
   season: number,
   episode: number
-): string | null =>
-  show.episodes.find(
-    (scanned) => scanned.season === season && scanned.episode === episode
-  )?.still ?? null;
+): string | null => scannedEpisode(show, season, episode)?.still ?? null;
 
 /** The tracks a show's scan found for an episode, or none. */
 const scannedTracks = (
   show: ShowScan,
   season: number,
   episode: number
-): SubtitleFound[] =>
-  show.episodes.find(
-    (scanned) => scanned.season === season && scanned.episode === episode
-  )?.subtitles ?? [];
+): SubtitleFound[] => scannedEpisode(show, season, episode)?.subtitles ?? [];
 
 /**
  * The tracks of `found` whose language `held` holds none of, the first of
