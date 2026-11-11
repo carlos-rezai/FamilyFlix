@@ -676,6 +676,9 @@ const TAKEN_ORDER = [
   'subtitles',
 ] as const;
 
+/** One of the files a held title takes, as its `✓ Updated` line names it. */
+type TakenFile = (typeof TAKEN_ORDER)[number];
+
 /** The fields a fill names on its `✓ Updated` line, in the sheet's order. */
 const filledNames = (fill: SheetFill): string[] => [
   ...SHEET_FIELDS.filter((field) => fill[field] !== undefined),
@@ -1386,8 +1389,8 @@ export function createImporter({
     held: HeldFiles,
     into: string,
     copyArt: ArtCopy
-  ): Promise<string[]> => {
-    const taken = new Set<string>();
+  ): Promise<TakenFile[]> => {
+    const taken = new Set<TakenFile>();
     if (held.kind === 'movie') {
       const movie = storage.getMovie(held.id);
       if (movie === null) {
@@ -1694,7 +1697,7 @@ export function createImporter({
     // A held series' files are taken once the run's new episodes are in, so
     // a season this run adds takes its Season poster on this scan.
     if (held !== null && held.folder !== null && !signal.aborted) {
-      let taken: string[] = [];
+      let taken: TakenFile[] = [];
       try {
         taken = await fillHeldFiles(
           { kind: 'series', id: held.series.id, show },
@@ -2706,7 +2709,7 @@ export function createImporter({
             foundAgain.push({ match: again, libraryFolder: folder });
           }
           const into = heldFolder('movie', heldId);
-          let taken: string[] = [];
+          let taken: TakenFile[] = [];
           if (into !== null) {
             taken = await fillHeldFiles(
               {
