@@ -13,7 +13,8 @@ import { describe, expect, it } from 'vitest';
 import { SHEET_COLUMNS } from '@/types';
 import type { SheetColumn } from '@/types';
 import type { ExportCell, ExportTable } from '../exportRows/exportRows';
-import { writeSheet, type SheetSeparator } from './writeSheet';
+import type { SheetDialect } from '../sheetDialect/sheetDialect';
+import { writeSheet } from './writeSheet';
 
 /** One sheet row, every column not named left blank. */
 const rowOf = (cells: Partial<Record<SheetColumn, ExportCell>>): ExportCell[] =>
@@ -47,7 +48,10 @@ const TABLE: ExportTable = [
 ];
 
 /** A csv line's fields, a quoted field's separators its own. */
-function fieldsOf(line: string, separator: SheetSeparator): string[] {
+function fieldsOf(
+  line: string,
+  separator: SheetDialect['separator']
+): string[] {
   const fields: string[] = [];
   let field = '';
   let quoted = false;
@@ -76,7 +80,9 @@ function fieldsOf(line: string, separator: SheetSeparator): string[] {
 }
 
 /** The csv's lines, its BOM stripped. */
-async function linesOf(separator: SheetSeparator): Promise<string[]> {
+async function linesOf(
+  separator: SheetDialect['separator']
+): Promise<string[]> {
   const bytes = await writeSheet(TABLE, 'csv', separator);
   return bytes
     .subarray(3)

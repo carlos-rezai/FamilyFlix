@@ -2,9 +2,7 @@ import ExcelJS from 'exceljs';
 
 import type { ExportFormat, SheetColumn } from '@/types';
 import type { ExportTable } from '../exportRows/exportRows';
-
-/** The field separator a csv sheet is written with; xlsx has none. */
-export type SheetSeparator = ',' | ';';
+import type { SheetDialect } from '../sheetDialect/sheetDialect';
 
 /** The bytes Excel expects ahead of a UTF-8 CSV, so a diacritic opens as itself. */
 const UTF8_BOM = Buffer.from([0xef, 0xbb, 0xbf]);
@@ -46,7 +44,7 @@ const PATH_COLUMNS: ReadonlySet<string> = new Set<SheetColumn>([
 export async function writeSheet(
   table: ExportTable,
   format: ExportFormat,
-  separator: SheetSeparator = ','
+  separator: SheetDialect['separator'] = ','
 ): Promise<Buffer> {
   // `exceljs` declares its own `Buffer`, a bare `ArrayBuffer` shape, for
   // what is a Node `Buffer` at runtime, the same mismatch the reader notes.
