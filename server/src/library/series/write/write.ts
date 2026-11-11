@@ -230,9 +230,10 @@ export function createSeriesWrite(
   );
 
   const deleteSeriesRow = db.prepare('DELETE FROM series WHERE id = ?');
-  const nextEpisodeSubtitlePosition = db.prepare(
-    'SELECT COALESCE(MAX(position) + 1, 0) AS next FROM episode_subtitles WHERE episode_id = ?'
-  );
+  const nextEpisodeSubtitlePosition = db.prepare(`
+    SELECT COALESCE(MAX(position) + 1, 0) AS next
+    FROM episode_subtitles WHERE episode_id = ?
+  `);
   const addEpisodeSubtitles = db.transaction(
     (id: string, subtitles: readonly NewSubtitle[]) => {
       const { next } = nextEpisodeSubtitlePosition.get(id) as { next: number };

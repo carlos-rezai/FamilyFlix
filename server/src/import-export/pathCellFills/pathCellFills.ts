@@ -69,10 +69,10 @@ export async function filmWithCells(
 
 /**
  * A show's scan with its sheet's **Path cells**, each already contained, read
- * into the places the folder's read left empty: the Series row's poster and backdrop, each Season
- * row's **Season poster** and each Episode row's **Still**. `rows` are the
- * show's Season and Episode rows. The read always wins, and a cell naming a
- * file that is not there fills nothing.
+ * into the places the folder's read left empty: the Series row's poster and
+ * backdrop, each Season row's **Season poster** and each Episode row's
+ * **Still**. `rows` are the show's Season and Episode rows. The read always
+ * wins, and a cell naming a file that is not there fills nothing.
  */
 export async function showWithCells(
   show: ShowScan,

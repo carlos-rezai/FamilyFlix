@@ -82,9 +82,10 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
     'DELETE FROM subtitles WHERE movie_id = ?'
   );
   const deleteMovieRow = db.prepare('DELETE FROM movies WHERE id = ?');
-  const nextSubtitlePosition = db.prepare(
-    'SELECT COALESCE(MAX(position) + 1, 0) AS next FROM subtitles WHERE movie_id = ?'
-  );
+  const nextSubtitlePosition = db.prepare(`
+    SELECT COALESCE(MAX(position) + 1, 0) AS next
+    FROM subtitles WHERE movie_id = ?
+  `);
 
   const addMovieSubtitles = db.transaction(
     (id: string, subtitles: readonly NewSubtitle[]) => {

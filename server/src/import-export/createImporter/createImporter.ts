@@ -516,7 +516,10 @@ const REFUSAL = {
 /** A count as the prototype prints it: `1,234`. */
 const count = (n: number): string => n.toLocaleString('en-US');
 
-/** What the sheet check answers: the rows, and every skip the reader reported. */
+/**
+ * What the sheet check answers: the rows, and every skip the reader
+ * reported.
+ */
 interface SheetRead {
   rows: SheetRow[];
   /** Each a **Log line** once the run exists, by `skipLine`. */
@@ -667,7 +670,10 @@ interface Differing extends HeldTitle {
   proposed: SheetFill;
 }
 
-/** The files a held title takes, as its `✓ Updated` line names them, in order. */
+/**
+ * The files a held title takes, as its `✓ Updated` line names them, in
+ * order.
+ */
 const TAKEN_ORDER = [
   'poster',
   'backdrop',
@@ -1581,9 +1587,12 @@ export function createImporter({
    *
    * A show **Already in library** joins the series it matched: only its
    * `episodes` — those with no held `(season, episode)` — are copied, into
-   * the Series folder the held episodes already live in. Its empty art is
-   * filled from the scan, never replaced. One with nothing new says so and
-   * adds nothing.
+   * the Series folder the held episodes already live in. Once the run's new
+   * episodes are in, its empty art is filled from the scan and each held
+   * episode takes the tracks of languages it lacks (`fillHeldFiles`), so a
+   * season this run adds takes its **Season poster**; nothing is replaced.
+   * What it took is named on its `✓ Updated` line; it is _Already in
+   * library_ only when it took nothing and copies nothing.
    *
    * Answers the series' id, or `null` when nothing was made or held.
    */
@@ -2792,6 +2801,8 @@ export function createImporter({
           if (!updated && again === null) {
             logAlreadyHeld(current, row);
           }
+          // The Layout fill runs after Sheet fills only: every file
+          // `fillHeldFiles` took was read out of this Title folder already.
           if (filled.length > 0) {
             await fillTitleFolder(current, heldId);
           }

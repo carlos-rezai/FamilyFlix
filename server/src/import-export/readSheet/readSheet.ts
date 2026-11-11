@@ -90,7 +90,9 @@ export type SheetSkip =
       label: string;
       /** The column's header, as the **Sheet writer** spells it. */
       column: SheetColumn;
-      /** The cell's text, or the one `Subtitles` path, as the sheet spells it. */
+      /**
+       * The cell's text, or the one `Subtitles` path, as the sheet spells it.
+       */
       text: string;
     }
   | {
@@ -206,7 +208,10 @@ const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
 export const resolvePathCell = (base: string, cell: string): string =>
   join(base, ...cell.split('/'));
 
-/** The path cells the reader checks, each with its header and the kind of file it may name. */
+/**
+ * The path cells the reader checks, each with its header and the kind of
+ * file it may name.
+ */
 const CHECKED_PATHS = {
   poster: { header: 'Poster', isKind: isImageFilename },
   backdrop: { header: 'Backdrop', isKind: isImageFilename },
