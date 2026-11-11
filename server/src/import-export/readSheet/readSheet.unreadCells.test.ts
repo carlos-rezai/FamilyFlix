@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 60, Rebuild edges, Phase 4 (issue #570): every cell the reader can't take
+// 60, Rebuild edges, Phase 7 (issue #570): every cell the reader can't take
 // is named.
 //
 // The **Sheet reader** reports an **Unread cell** (an `unread-cell` skip) for

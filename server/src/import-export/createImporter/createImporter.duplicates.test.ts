@@ -1,6 +1,6 @@
 // @vitest-environment node
 //
-// 60, Rebuild edges, Phase 4 (issue #571): two rows for one title, the first
+// 60, Rebuild edges, Phase 8 (issue #571): two rows for one title, the first
 // read.
 //
 // _Import from spreadsheet_ and the **Folder scan**'s Meta sheet read both
