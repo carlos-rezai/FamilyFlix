@@ -74,6 +74,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Rebuild whole: every sheet field and series art     | ✅ Done    |
 | Rebuild edges: hand-kept sheets, growing folders    | ✅ Done    |
 | Export round trip: an Export gives it all back      | ✅ Done    |
+| Welcome tune: a jingle in sync with the intro       | 🔲 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -549,3 +550,12 @@ Settled in a grill-me on 2026-11-12, it is done (design log 61, handoff
       and a path cell typed NFC reaches the NFD folder's files; _Play_ on a
       show with specials offers the next regular episode, a special only when
       part-watched or when the show holds nothing but specials.
+
+Step 45 reopens a scope call of log 55, which shipped the intro with no
+sound. To be settled in a grill-me:
+
+45. 🔲 **Welcome tune**: a short, catchy tune plays with the Welcome splash
+    on a Cold start, its notes in sync with the animation: the Fs landing,
+    the letters rising, the light sweeping, and a closing chord as the
+    wordmark glides into the header. No mute control for now; one can come
+    later.
