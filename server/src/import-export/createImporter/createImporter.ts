@@ -2540,22 +2540,15 @@ export function createImporter({
         resolve(sheet) !== resolve(sheetPath)
     );
     if (unscanned.length > 0) {
-      const index = heldIndex();
-      const placed: PlacedTitles = { films: [], shows: [], foundAgain: [] };
-      for (const walkedFolder of unscanned) {
-        const titles = await placeFolder(
-          current,
-          walkedFolder,
-          index,
-          genres,
-          signal
-        );
-        if (titles === null) {
-          return;
-        }
-        placed.films.push(...titles.films);
-        placed.shows.push(...titles.shows);
-        placed.foundAgain.push(...titles.foundAgain);
+      const placed = await placeFolders(
+        current,
+        unscanned,
+        heldIndex(),
+        genres,
+        signal
+      );
+      if (placed === null) {
+        return;
       }
       const imported = await importTitles(
         current,
@@ -2812,21 +2805,9 @@ export function createImporter({
     }
     const { walked, read } = walk;
 
-    const placed: PlacedTitles = { films: [], shows: [], foundAgain: [] };
-    for (const walkedFolder of walked) {
-      const titles = await placeFolder(
-        current,
-        walkedFolder,
-        index,
-        genres,
-        signal
-      );
-      if (titles === null) {
-        return;
-      }
-      placed.films.push(...titles.films);
-      placed.shows.push(...titles.shows);
-      placed.foundAgain.push(...titles.foundAgain);
+    const placed = await placeFolders(current, walked, index, genres, signal);
+    if (placed === null) {
+      return;
     }
 
     await importPlaced(current, placed, read, 'Scan', signal, genres);
@@ -2842,6 +2823,37 @@ export function createImporter({
       held,
       seriesByKey: heldSeriesByKey(held),
     };
+  };
+
+  /**
+   * Each walked folder placed in order (`placeFolder`), their titles gathered
+   * into one for the Import phase: the Folder scan's whole walk, the sheet
+   * run's unscanned folders. `null` once the run was cancelled.
+   */
+  const placeFolders = async (
+    current: ImportRun,
+    walked: readonly WalkedFolder[],
+    index: HeldIndex,
+    genres: GenreReader,
+    signal: AbortSignal
+  ): Promise<PlacedTitles | null> => {
+    const placed: PlacedTitles = { films: [], shows: [], foundAgain: [] };
+    for (const walkedFolder of walked) {
+      const titles = await placeFolder(
+        current,
+        walkedFolder,
+        index,
+        genres,
+        signal
+      );
+      if (titles === null) {
+        return null;
+      }
+      placed.films.push(...titles.films);
+      placed.shows.push(...titles.shows);
+      placed.foundAgain.push(...titles.foundAgain);
+    }
+    return placed;
   };
 
   /**
