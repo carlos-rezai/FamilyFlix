@@ -139,3 +139,65 @@ describe('nextEpisodeOf', () => {
     expect(nextEpisodeOf([])).toBeNull();
   });
 });
+
+describe('nextEpisodeOf: specials last (Season 0, issue #588)', () => {
+  it('offers S01E03 for the ticket’s show: S01E01 and S01E02 watched, one special', () => {
+    const next = nextEpisodeOf([
+      episode(0, 1),
+      episode(1, 1, 'watched'),
+      episode(1, 2, 'watched'),
+      episode(1, 3),
+    ]);
+
+    expect(next?.id).toBe('s1e3');
+  });
+
+  it('offers a part-watched special', () => {
+    const next = nextEpisodeOf([
+      episode(0, 1, 'in-progress'),
+      episode(1, 1, 'watched'),
+      episode(1, 2),
+    ]);
+
+    expect(next?.id).toBe('s0e1');
+  });
+
+  it('offers the first regular episode once every regular episode is watched', () => {
+    const next = nextEpisodeOf([
+      episode(0, 1),
+      episode(1, 1, 'watched'),
+      episode(1, 2, 'watched'),
+    ]);
+
+    expect(next?.id).toBe('s1e1');
+  });
+
+  it('offers the first regular episode once the whole show, specials too, is watched', () => {
+    const next = nextEpisodeOf([
+      episode(0, 1, 'watched'),
+      episode(1, 1, 'watched'),
+      episode(2, 1, 'watched'),
+    ]);
+
+    expect(next?.id).toBe('s1e1');
+  });
+
+  it('keeps today’s rule over a specials-only list: the first unwatched', () => {
+    const next = nextEpisodeOf([
+      episode(0, 1, 'watched'),
+      episode(0, 2),
+      episode(0, 3),
+    ]);
+
+    expect(next?.id).toBe('s0e2');
+  });
+
+  it('keeps today’s rule over a specials-only list: the first, all watched', () => {
+    const next = nextEpisodeOf([
+      episode(0, 1, 'watched'),
+      episode(0, 2, 'watched'),
+    ]);
+
+    expect(next?.id).toBe('s0e1');
+  });
+});

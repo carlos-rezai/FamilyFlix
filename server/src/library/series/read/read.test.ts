@@ -169,6 +169,37 @@ describe('series read: getSeriesDetail', () => {
     expect(tag(detail?.next ?? null)).toBe('S01E01');
   });
 
+  it('answers the ticket’s show a series next and season nexts that agree, specials last', () => {
+    // QA ticket 580: S01E01 and S01E02 watched, one special. Play offers
+    // S01E03 on the series page and on Season 1; the Season 0 page, a
+    // specials-only list, keeps today's rule and offers its special.
+    const storage = freshStorage();
+    const series = storage.addSeries({ title: 'Tidewater', year: 2018 });
+    for (const [season, number] of [
+      [0, 1],
+      [1, 1],
+      [1, 2],
+      [1, 3],
+    ]) {
+      storage.addEpisode(series.id, {
+        season,
+        number,
+        videoPath: `tidewater-2018/season-0${season}/e${number}.mp4`,
+      });
+    }
+    const [, s1e1, s1e2] = storage.listEpisodes(series.id);
+    storage.setEpisodeWatched(s1e1.id, true);
+    storage.setEpisodeWatched(s1e2.id, true);
+
+    const detail = storage.getSeriesDetail(series.id);
+
+    expect(tag(detail?.next ?? null)).toBe('S01E03');
+    expect(detail?.seasons.map((season) => tag(season.next))).toEqual([
+      'S00E01',
+      'S01E03',
+    ]);
+  });
+
   it('answers a series with no episodes as no seasons and no next episode', () => {
     const storage = freshStorage();
     const series = storage.addSeries({ title: 'Lighthouse Keepers' });
