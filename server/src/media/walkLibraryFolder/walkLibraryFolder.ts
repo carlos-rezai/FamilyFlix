@@ -1,11 +1,13 @@
 import type { Dirent } from 'node:fs';
 import { readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 
+import { spellEpisodeTag } from '../episodeTag/episodeTag';
 import { isVideoFilename } from '../fileKinds/fileKinds';
 import { LIBRARY_SHEET_STEM, META_FOLDER } from '../folderLayout/folderLayout';
 import {
   readTitleFolder,
+  type DoubledPlace,
   type FilmFolderScan,
   type LeftOutReason,
   type SeriesFolderScan,
@@ -34,6 +36,35 @@ const WARNING: Record<LeftOutReason, (name: string) => string> = {
   empty: (name) => `⚠ ${name} holds no video or Season folder, left out`,
   mixed: (name) => `⚠ ${name} holds loose videos and Season folders, left out`,
 };
+
+/** A **Doubled place**'s noun, plural, and where in the title it lies. */
+const doubledWhere = (place: DoubledPlace): [string, string] => {
+  switch (place.place) {
+    case 'poster':
+      return ['posters', ''];
+    case 'backdrop':
+      return ['backdrops', ''];
+    case 'season-poster':
+      return ['posters', ` Season ${place.season ?? 0}`];
+    case 'still':
+      return [
+        'Stills',
+        ` ${spellEpisodeTag(place.season ?? 0, place.episode ?? 0)}`,
+      ];
+  }
+};
+
+/** A **Layout warning**'s text for a **Doubled place** of title `name`. */
+const doubledWarning = (name: string, place: DoubledPlace): string => {
+  const [noun, where] = doubledWhere(place);
+  return `⚠ ${name}${where} holds ${place.count} ${noun}, ${basename(place.read)} read`;
+};
+
+/** Each **Doubled place** of a title, its seasons' after its own. */
+const doubledIn = (title: WalkedTitle): DoubledPlace[] =>
+  title.kind === 'series'
+    ? [...title.doubled, ...title.seasons.flatMap((season) => season.doubled)]
+    : title.doubled;
 
 /** A system folder: a dot or dollar name, or `System Volume Information`. */
 const isSystemFolder = (name: string): boolean =>
@@ -76,8 +107,9 @@ async function sheetIn(root: string): Promise<string | null> {
  * are read, each folder by `readTitleFolder`, a **Title folder** when its
  * name is a **Folder key**. A folder left out of the layout is one **Layout
  * warning**, and the root's loose videos one line for the whole folder.
- * `Meta/`, an **Export folder** (a folder holding `Meta/`) and system folders
- * pass in silence; nothing inside a Title folder warns.
+ * Each **Doubled place** a Title folder's read reports is one Layout warning
+ * too. `Meta/`, an **Export folder** (a folder holding `Meta/`) and system
+ * folders pass in silence; nothing else inside a Title folder warns.
  *
  * `onFound` is told of each Title folder as it is read. A Title folder that
  * cannot be read is told to `onUnreadable` and skipped; the root itself is
@@ -114,6 +146,9 @@ export async function walkLibraryFolder(
     if (scan.kind === 'left-out') {
       warnings.push(WARNING[scan.reason](scan.name));
       continue;
+    }
+    for (const place of doubledIn(scan)) {
+      warnings.push(doubledWarning(scan.name, place));
     }
     titles.push(scan);
     onFound(scan);

@@ -50,8 +50,14 @@ export interface ShowScan {
   seasons: ShowSeason[];
 }
 
-/** What {@link numberShow} reads of a series: all but its **Folder key**. */
-export type NumberableSeries = Omit<SeriesFolderScan, 'kind' | 'key'>;
+/**
+ * What {@link numberShow} reads of a series: all but its **Folder key** and
+ * its own **Doubled places**.
+ */
+export type NumberableSeries = Omit<
+  SeriesFolderScan,
+  'kind' | 'key' | 'doubled'
+>;
 
 /**
  * The **Show folder** a folder of episode videos belongs to: a **Season

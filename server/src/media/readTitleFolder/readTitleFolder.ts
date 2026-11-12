@@ -37,6 +37,19 @@ export interface FolderScan {
   subtitles: SubtitleFound[];
 }
 
+/**
+ * A **Layout place** two files or more fill, a **Doubled place**: the role,
+ * the season and episode it belongs to when it has one, the file read (the
+ * first by name order) and how many fill it. The walk words it.
+ */
+export interface DoubledPlace {
+  place: 'poster' | 'backdrop' | 'season-poster' | 'still';
+  season?: number;
+  episode?: number;
+  read: string;
+  count: number;
+}
+
 /** A folder read as a film's: its videos and tracks, its **Poster** and **Backdrop**. */
 export interface FilmScan extends FolderScan {
   poster: string | null;
@@ -52,6 +65,8 @@ export interface FilmScan extends FolderScan {
 export interface FilmFolderScan extends FilmScan {
   kind: 'film';
   key: FolderKey;
+  /** Its poster and backdrop places two files or more fill. */
+  doubled: DoubledPlace[];
 }
 
 /**
@@ -65,6 +80,8 @@ export interface SeasonFolderScan extends FolderScan {
   poster: string | null;
   /** Each Still by the tag it carries, spelled `S01E01`. */
   stills: Record<string, string>;
+  /** Its Season poster and Stills places two files or more fill. */
+  doubled: DoubledPlace[];
 }
 
 /**
@@ -79,6 +96,8 @@ export interface SeriesFolderScan {
   poster: string | null;
   backdrop: string | null;
   seasons: SeasonFolderScan[];
+  /** Its own poster and backdrop places two files or more fill. */
+  doubled: DoubledPlace[];
 }
 
 /**
@@ -142,15 +161,21 @@ export async function readLooseFiles(dir: string): Promise<FolderScan> {
   return looseFilesIn(dir, await entriesOf(dir));
 }
 
-/** The first image in `dir` that is the art of `role` by its name. */
-const imageByRole = (
-  dir: string,
-  images: string[],
-  role: string
-): string | null => {
-  const found = images.find((file) => endsInRole(file, role));
-  return found === undefined ? null : join(dir, found);
-};
+/**
+ * The images in `dir` that are the art of `role` by their names, in name
+ * order: the first is the one read.
+ */
+const imagesByRole = (dir: string, images: string[], role: string): string[] =>
+  images
+    .filter((file) => endsInRole(file, role))
+    .map((file) => join(dir, file));
+
+/** The place `files` fill, doubled when two or more do, else none. */
+const doubledOf = (
+  files: string[],
+  place: Omit<DoubledPlace, 'read' | 'count'>
+): DoubledPlace[] =>
+  files.length > 1 ? [{ ...place, read: files[0], count: files.length }] : [];
 
 /**
  * Read one **Season folder**: its videos loose in name order, its **Season
@@ -166,12 +191,29 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
   const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
 
   const stillsDir = join(imagesDir, STILLS_FOLDER);
-  const stills: Record<string, string> = {};
+  const stillsByTag = new Map<string, string[]>();
   for (const file of filesIn(await entriesOf(stillsDir))) {
     const tag = tagOf(file);
-    if (isImageFilename(file) && tag !== null && !(tag in stills)) {
-      stills[tag] = join(stillsDir, file);
+    if (isImageFilename(file) && tag !== null) {
+      stillsByTag.set(tag, [
+        ...(stillsByTag.get(tag) ?? []),
+        join(stillsDir, file),
+      ]);
     }
+  }
+  const number = seasonNumberOf(name) as number;
+  const posters = imagesByRole(imagesDir, images, 'poster');
+  const stills: Record<string, string> = {};
+  const doubled = doubledOf(posters, {
+    place: 'season-poster',
+    season: number,
+  });
+  for (const [tag, files] of stillsByTag) {
+    stills[tag] = files[0];
+    const episode = episodeTag(tag)?.episode;
+    doubled.push(
+      ...doubledOf(files, { place: 'still', season: number, episode })
+    );
   }
 
   const subtitlesDir = join(dir, SUBTITLES_FOLDER);
@@ -189,11 +231,12 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
   return {
     dir,
     name,
-    number: seasonNumberOf(name) as number,
+    number,
     videos,
     subtitles,
-    poster: imageByRole(imagesDir, images, 'poster'),
+    poster: posters[0] ?? null,
     stills,
+    doubled,
   };
 }
 
@@ -250,11 +293,26 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
 
   const imagesDir = join(dir, IMAGES_FOLDER);
   const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
-  const poster = imageByRole(imagesDir, images, 'poster');
-  const backdrop = imageByRole(imagesDir, images, 'backdrop');
+  const posters = imagesByRole(imagesDir, images, 'poster');
+  const backdrops = imagesByRole(imagesDir, images, 'backdrop');
+  const poster = posters[0] ?? null;
+  const backdrop = backdrops[0] ?? null;
+  const doubled = [
+    ...doubledOf(posters, { place: 'poster' }),
+    ...doubledOf(backdrops, { place: 'backdrop' }),
+  ];
 
   if (seasons.length > 0) {
-    return { kind: 'series', dir, name, key, poster, backdrop, seasons };
+    return {
+      kind: 'series',
+      dir,
+      name,
+      key,
+      poster,
+      backdrop,
+      seasons,
+      doubled,
+    };
   }
 
   return {
@@ -265,6 +323,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     videos,
     poster,
     backdrop,
+    doubled,
     subtitles: (await readLooseFiles(join(dir, SUBTITLES_FOLDER))).subtitles,
   };
 }

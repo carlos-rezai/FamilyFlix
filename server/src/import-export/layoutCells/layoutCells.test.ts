@@ -52,6 +52,7 @@ const dieHard: FilmFolderScan = {
       language: 'Portuguese',
     },
   ],
+  doubled: [],
 };
 
 /** Tidewater: a Season poster, one episode's Still and its tracks. */
@@ -103,8 +104,10 @@ const tidewater: SeriesFolderScan = {
           language: 'French',
         },
       ],
+      doubled: [],
     },
   ],
+  doubled: [],
 };
 
 const reads = (...scans: TitleFolderScan[]): Map<string, TitleFolderScan> =>

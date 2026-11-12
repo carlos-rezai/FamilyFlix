@@ -69,6 +69,7 @@ function season(
         join(images, 'Stills', file),
       ])
     ),
+    doubled: [],
   };
 }
 
@@ -86,6 +87,7 @@ function series(
     poster: art.poster === undefined ? null : join(images, art.poster),
     backdrop: art.backdrop === undefined ? null : join(images, art.backdrop),
     seasons,
+    doubled: [],
   };
 }
 
