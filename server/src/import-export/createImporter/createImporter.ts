@@ -1,7 +1,14 @@
 import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { setImmediate as nextTurn } from 'node:timers/promises';
-import { basename, dirname, extname, isAbsolute, relative } from 'node:path';
+import {
+  basename,
+  dirname,
+  extname,
+  isAbsolute,
+  relative,
+  resolve,
+} from 'node:path';
 
 import type {
   HeldTitle,
@@ -700,6 +707,21 @@ const filledNames = (fill: SheetFill): string[] => [
 interface Placed<M> {
   match: M;
   libraryFolder: StoredLibraryFolder;
+}
+
+/** What a run's placing step answers: the titles its Import phase takes. */
+interface PlacedTitles {
+  films: Placed<Match>[];
+  shows: Placed<ShowMatch>[];
+  foundAgain: Placed<FoundAgain>[];
+}
+
+/** The library as a run's placing reads it, taken once per pass. */
+interface HeldIndex {
+  filmsByKey: Map<string, Movie>;
+  missing: Map<string, Movie>;
+  held: HeldSeries[];
+  seriesByKey: Map<string, HeldSeries>;
 }
 
 /**
@@ -2077,29 +2099,60 @@ export function createImporter({
   };
 
   /**
-   * The **Import phase** both runs end in: each placed film, then each placed
-   * show, imported against the folder it was found under, and the completion
-   * line — `✓ Import complete` for a sheet, `✓ Scan complete` for a **Folder
-   * scan**. A sheet's films are named by its rows; a scan's by their folders.
-   * A cancel stops it where it is, and the run never reaches review. Reaching
-   * review marks every folder the walk `read` as scanned, in the same step.
+   * The **Import phase** both runs end in: the placed titles imported by
+   * {@link importTitles}, and the completion line — `✓ Import complete` for
+   * a sheet, `✓ Scan complete` for a **Folder scan**. `earlier` counts the
+   * titles a sheet run already imported from its unscanned folders' own
+   * sheets. A cancel stops it where it is, and the run never reaches review.
+   * Reaching review marks every folder the walk `read` as scanned, in the
+   * same step.
    */
   const importPlaced = async (
     current: ImportRun,
-    films: Placed<Match>[],
-    shows: Placed<ShowMatch>[],
-    foundAgain: Placed<FoundAgain>[],
+    placed: PlacedTitles,
     read: StoredLibraryFolder[],
     verb: 'Import' | 'Scan',
     signal: AbortSignal,
-    genres: GenreReader = genreReader()
+    genres: GenreReader,
+    earlier = 0
   ): Promise<void> => {
+    const imported = await importTitles(current, placed, verb, signal, genres);
+    if (imported === null) {
+      return;
+    }
+
+    current.currentItem = '';
+    log(
+      current,
+      `✓ ${verb} complete: ${count(earlier + imported)} imported, ${count(current.problems.length)} need attention.`,
+      'success'
+    );
+    storage.markScanned(
+      read.map((folder) => folder.id),
+      new Date().toISOString()
+    );
+    current.phase = 'review';
+  };
+
+  /**
+   * Each placed film, then each placed show, imported against the folder it
+   * was found under, on the run's progress bar. A sheet's films are named by
+   * its rows (`Import`); a scan's by their folders (`Scan`). Answers how many
+   * titles were imported, or `null` once the run was cancelled.
+   */
+  const importTitles = async (
+    current: ImportRun,
+    { films, shows, foundAgain }: PlacedTitles,
+    verb: 'Import' | 'Scan',
+    signal: AbortSignal,
+    genres: GenreReader
+  ): Promise<number | null> => {
     // Only new imports count: a held show taking episodes is not one, nor a
     // film found again.
-    current.matched =
+    current.matched +=
       films.length + shows.filter(({ match }) => match.held === null).length;
     // Each episode is one item on the bar, as each film is.
-    current.total =
+    current.total +=
       films.length +
       foundAgain.length +
       shows.reduce((sum, { match }) => sum + match.episodes.length, 0);
@@ -2110,7 +2163,7 @@ export function createImporter({
       current.currentItem = match.movie.title;
       await placeFoundAgain(current, match, libraryFolder, signal);
       if (signal.aborted) {
-        return;
+        return null;
       }
       current.done += 1;
     }
@@ -2132,7 +2185,7 @@ export function createImporter({
         libraryFolder
       );
       if (signal.aborted) {
-        return;
+        return null;
       }
       if (added !== null) {
         imported += 1;
@@ -2154,7 +2207,7 @@ export function createImporter({
         libraryFolder
       );
       if (signal.aborted) {
-        return;
+        return null;
       }
       // A new series is one title imported; a held one gaining episodes none.
       if (seriesId !== null && match.held === null) {
@@ -2165,17 +2218,7 @@ export function createImporter({
       }
     }
 
-    current.currentItem = '';
-    log(
-      current,
-      `✓ ${verb} complete: ${count(imported)} imported, ${count(current.problems.length)} need attention.`,
-      'success'
-    );
-    storage.markScanned(
-      read.map((folder) => folder.id),
-      new Date().toISOString()
-    );
-    current.phase = 'review';
+    return imported;
   };
 
   /**
@@ -2452,18 +2495,20 @@ export function createImporter({
 
   /**
    * A sheet run: every listed folder walked, each **Sheet row** naming its
-   * folder through `matchRows`, in whichever listed folder it lies.
+   * folder through `matchRows`, in whichever listed folder it lies. A folder
+   * never scanned that holds a **Library sheet** other than the upload is
+   * first placed and imported
+   * by its own sheet, as a **Folder scan** would, so the uploaded rows meet
+   * its titles as held ones: a **Sheet fill** for a cell a title lacks, a
+   * **Sheet difference** for one the two sheets disagree on.
    */
   const execute = async (
     current: ImportRun,
     { rows, skips }: SheetRead,
+    sheetPath: string,
     folders: StoredLibraryFolder[],
     signal: AbortSignal
   ): Promise<void> => {
-    const filmsByKey = heldFilmsByKey();
-    const missing = missingFilms(filmsByKey);
-    const held = heldSeriesList();
-    const seriesByKey = heldSeriesByKey(held);
     const genres = genreReader();
 
     const walk = await walkListed(current, folders, signal);
@@ -2474,6 +2519,51 @@ export function createImporter({
     for (const skip of skips) {
       log(current, skipLine(skip), 'warning');
     }
+
+    let earlier = 0;
+    // The uploaded sheet is read once: a folder whose own sheet it is was
+    // read by the upload already.
+    const unscanned = walked.filter(
+      ({ folder, sheet }) =>
+        folder.scannedAt === null &&
+        sheet !== null &&
+        resolve(sheet) !== resolve(sheetPath)
+    );
+    if (unscanned.length > 0) {
+      const index = heldIndex();
+      const placed: PlacedTitles = { films: [], shows: [], foundAgain: [] };
+      for (const walkedFolder of unscanned) {
+        const titles = await placeFolder(
+          current,
+          walkedFolder,
+          index,
+          genres,
+          signal
+        );
+        if (titles === null) {
+          return;
+        }
+        placed.films.push(...titles.films);
+        placed.shows.push(...titles.shows);
+        placed.foundAgain.push(...titles.foundAgain);
+      }
+      const imported = await importTitles(
+        current,
+        placed,
+        'Scan',
+        signal,
+        genres
+      );
+      if (imported === null) {
+        return;
+      }
+      earlier = imported;
+    }
+
+    const filmsByKey = heldFilmsByKey();
+    const missing = missingFilms(filmsByKey);
+    const held = heldSeriesList();
+    const seriesByKey = heldSeriesByKey(held);
 
     // A show is matched by the film's own rule, over a scan standing for it —
     // and told apart again once matched. Every scan remembers its folder.
@@ -2649,13 +2739,12 @@ export function createImporter({
     }
     await importPlaced(
       current,
-      matched,
-      matchedShows,
-      foundAgain,
+      { films: matched, shows: matchedShows, foundAgain },
       read,
       'Import',
       signal,
-      genres
+      genres,
+      earlier
     );
   };
 
@@ -2704,10 +2793,7 @@ export function createImporter({
     folders: StoredLibraryFolder[],
     signal: AbortSignal
   ): Promise<void> => {
-    const filmsByKey = heldFilmsByKey();
-    const missing = missingFilms(filmsByKey);
-    const held = heldSeriesList();
-    const seriesByKey = heldSeriesByKey(held);
+    const index = heldIndex();
     const genres = genreReader();
 
     const walk = await walkListed(current, folders, signal);
@@ -2716,152 +2802,178 @@ export function createImporter({
     }
     const { walked, read } = walk;
 
+    const placed: PlacedTitles = { films: [], shows: [], foundAgain: [] };
+    for (const walkedFolder of walked) {
+      const titles = await placeFolder(
+        current,
+        walkedFolder,
+        index,
+        genres,
+        signal
+      );
+      if (titles === null) {
+        return;
+      }
+      placed.films.push(...titles.films);
+      placed.shows.push(...titles.shows);
+      placed.foundAgain.push(...titles.foundAgain);
+    }
+
+    await importPlaced(current, placed, read, 'Scan', signal, genres);
+  };
+
+  /** The library's held films and series, as a placing pass reads them. */
+  const heldIndex = (): HeldIndex => {
+    const filmsByKey = heldFilmsByKey();
+    const held = heldSeriesList();
+    return {
+      filmsByKey,
+      missing: missingFilms(filmsByKey),
+      held,
+      seriesByKey: heldSeriesByKey(held),
+    };
+  };
+
+  /**
+   * One walked folder placed as a **Folder scan** places it: every film and
+   * show named by the folder's own `Meta/` sheet, through `matchRows`, else
+   * off its own folder. A held title is linked, takes its **Sheet fills** and
+   * files its **Sheet differences** here; the rest are answered for the
+   * Import phase. `null` once the run was cancelled.
+   */
+  const placeFolder = async (
+    current: ImportRun,
+    { folder, films: foundFilms, shows: foundShows, sheet }: WalkedFolder,
+    { filmsByKey, missing, held, seriesByKey }: HeldIndex,
+    genres: GenreReader,
+    signal: AbortSignal
+  ): Promise<PlacedTitles | null> => {
     const films: Placed<Match>[] = [];
     const shows: Placed<ShowMatch>[] = [];
     const foundAgain: Placed<FoundAgain>[] = [];
-    for (const {
-      folder,
-      films: foundFilms,
-      shows: foundShows,
-      sheet,
-    } of walked) {
-      const rows = sheet === null ? [] : await readMetaSheet(current, sheet);
-      if (signal.aborted) {
-        return;
+    const rows = sheet === null ? [] : await readMetaSheet(current, sheet);
+    if (signal.aborted) {
+      return null;
+    }
+    // A show is matched by the film's own rule, over a scan standing for it.
+    const showOf = new Map<FilmScan, ShowScan>();
+    for (const show of foundShows) {
+      showOf.set(asMatchable(show), show);
+    }
+    // Each folder a row names, with that row, its path cells resolved.
+    const named = new Map<FilmScan, SheetRow>();
+    const titleRows = rows.filter(isTitleRow);
+    if (titleRows.length > 0) {
+      const verdicts = matchRows(titleRows, [...foundFilms, ...showOf.keys()]);
+      for (const match of verdicts.matched) {
+        named.set(match.folder, match.row);
       }
-      // A show is matched by the film's own rule, over a scan standing for it.
-      const showOf = new Map<FilmScan, ShowScan>();
-      for (const show of foundShows) {
-        showOf.set(asMatchable(show), show);
-      }
-      // Each folder a row names, with that row, its path cells resolved.
-      const named = new Map<FilmScan, SheetRow>();
-      const titleRows = rows.filter(isTitleRow);
-      if (titleRows.length > 0) {
-        const verdicts = matchRows(titleRows, [
-          ...foundFilms,
-          ...showOf.keys(),
-        ]);
-        for (const match of verdicts.matched) {
-          named.set(match.folder, match.row);
-        }
-        // An **Orphaned row**: a Folder key no Title folder holds is one
-        // **Warning line**, never a Problem, its Season and Episode rows with
-        // it; the sheet written on close no longer holds it.
-        for (const { kind, row } of verdicts.problems) {
-          if (kind === 'no-folder') {
-            log(
-              current,
-              `⚠ ${row.folder} is in the sheet but has no folder, left out`,
-              'warning'
-            );
-          }
-        }
-      }
-
-      for (const scan of foundFilms) {
-        const sheetRow = named.get(scan);
-        const row = sheetRow ?? guessedRow(scan.name);
-        const heldId = heldFilm(filmsByKey, missing, folder, scan, row);
-        if (heldId !== null) {
-          // Held: linked to where it was found, and nothing is added; a film
-          // whose video is missing is **Found again**, in the Import phase.
-          // A row naming it fills its empty fields.
-          const again = foundAgainOf(missing, heldId, scan);
-          linkHeld(heldId, folder, scan);
-          if (again !== null) {
-            foundAgain.push({ match: again, libraryFolder: folder });
-          }
-          const into = heldFolder('movie', heldId);
-          let taken: TakenFile[] = [];
-          if (into !== null) {
-            taken = await fillHeldFiles(
-              {
-                kind: 'movie',
-                id: heldId,
-                scan: await filmWithCells(scan, row),
-              },
-              into,
-              heldArtCopy(current, row.title, signal)
-            );
-            if (signal.aborted) {
-              return;
-            }
-          }
-          const filled =
-            sheetRow === undefined
-              ? []
-              : writeHeldFill(
-                  current,
-                  { kind: 'movie', id: heldId },
-                  sheetRow,
-                  genres
-                );
-          const updated = logUpdated(current, row, [...filled, ...taken]);
-          if (!updated && again === null) {
-            logAlreadyHeld(current, row);
-          }
-          // The Layout fill runs after Sheet fills only: every file
-          // `fillHeldFiles` took was read out of this Title folder already.
-          if (filled.length > 0) {
-            await fillTitleFolder(current, heldId);
-          }
-          continue;
-        }
-        if (scan.videos.length > 1) {
-          // One film beside its extras: the maintainer picks, on the
-          // Found-file choice, as a sheet run's matcher already asks.
-          file(
+      // An **Orphaned row**: a Folder key no Title folder holds is one
+      // **Warning line**, never a Problem, its Season and Episode rows with
+      // it; the sheet written on close no longer holds it.
+      for (const { kind, row } of verdicts.problems) {
+        if (kind === 'no-folder') {
+          log(
             current,
-            problemOf('no-video', row.title, MATCH_REASON.manyVideos),
-            { row: null, folder: scan, candidates: [] }
-          );
-          continue;
-        }
-        films.push({
-          match: { row, folder: await filmWithCells(scan, row) },
-          libraryFolder: folder,
-        });
-      }
-      for (const [matchable, show] of showOf) {
-        const sheetRow = named.get(matchable);
-        const row = sheetRow ?? guessedRow(show.name);
-        const match = showMatch(
-          row,
-          sheetRow === undefined
-            ? show
-            : await showWithCells(
-                show,
-                sheetRow,
-                partRowsOf(rows, sheetRow.folder)
-              ),
-          heldShow(held, seriesByKey, folder, show, row),
-          sheetRow === undefined ? [] : episodeRowsOf(rows, sheetRow.folder)
-        );
-        if (sheetRow !== undefined && match.held !== null) {
-          match.filled = writeHeldFill(
-            current,
-            { kind: 'series', id: match.held.series.id },
-            sheetRow,
-            genres,
-            match.sheetEpisodes
+            `⚠ ${row.folder} is in the sheet but has no folder, left out`,
+            'warning'
           );
         }
-        fileUnplaced(current, match);
-        shows.push({ match, libraryFolder: folder });
       }
     }
 
-    await importPlaced(
-      current,
-      films,
-      shows,
-      foundAgain,
-      read,
-      'Scan',
-      signal,
-      genres
-    );
+    for (const scan of foundFilms) {
+      const sheetRow = named.get(scan);
+      const row = sheetRow ?? guessedRow(scan.name);
+      const heldId = heldFilm(filmsByKey, missing, folder, scan, row);
+      if (heldId !== null) {
+        // Held: linked to where it was found, and nothing is added; a film
+        // whose video is missing is **Found again**, in the Import phase.
+        // A row naming it fills its empty fields.
+        const again = foundAgainOf(missing, heldId, scan);
+        linkHeld(heldId, folder, scan);
+        if (again !== null) {
+          foundAgain.push({ match: again, libraryFolder: folder });
+        }
+        const into = heldFolder('movie', heldId);
+        let taken: TakenFile[] = [];
+        if (into !== null) {
+          taken = await fillHeldFiles(
+            {
+              kind: 'movie',
+              id: heldId,
+              scan: await filmWithCells(scan, row),
+            },
+            into,
+            heldArtCopy(current, row.title, signal)
+          );
+          if (signal.aborted) {
+            return null;
+          }
+        }
+        const filled =
+          sheetRow === undefined
+            ? []
+            : writeHeldFill(
+                current,
+                { kind: 'movie', id: heldId },
+                sheetRow,
+                genres
+              );
+        const updated = logUpdated(current, row, [...filled, ...taken]);
+        if (!updated && again === null) {
+          logAlreadyHeld(current, row);
+        }
+        // The Layout fill runs after Sheet fills only: every file
+        // `fillHeldFiles` took was read out of this Title folder already.
+        if (filled.length > 0) {
+          await fillTitleFolder(current, heldId);
+        }
+        continue;
+      }
+      if (scan.videos.length > 1) {
+        // One film beside its extras: the maintainer picks, on the
+        // Found-file choice, as a sheet run's matcher already asks.
+        file(
+          current,
+          problemOf('no-video', row.title, MATCH_REASON.manyVideos),
+          { row: null, folder: scan, candidates: [] }
+        );
+        continue;
+      }
+      films.push({
+        match: { row, folder: await filmWithCells(scan, row) },
+        libraryFolder: folder,
+      });
+    }
+    for (const [matchable, show] of showOf) {
+      const sheetRow = named.get(matchable);
+      const row = sheetRow ?? guessedRow(show.name);
+      const match = showMatch(
+        row,
+        sheetRow === undefined
+          ? show
+          : await showWithCells(
+              show,
+              sheetRow,
+              partRowsOf(rows, sheetRow.folder)
+            ),
+        heldShow(held, seriesByKey, folder, show, row),
+        sheetRow === undefined ? [] : episodeRowsOf(rows, sheetRow.folder)
+      );
+      if (sheetRow !== undefined && match.held !== null) {
+        match.filled = writeHeldFill(
+          current,
+          { kind: 'series', id: match.held.series.id },
+          sheetRow,
+          genres,
+          match.sheetEpisodes
+        );
+      }
+      fileUnplaced(current, match);
+      shows.push({ match, libraryFolder: folder });
+    }
+    return { films, shows, foundAgain };
   };
 
   /** A run's first state, from its source and the flag it carries. */
@@ -2950,7 +3062,7 @@ export function createImporter({
 
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
-      running = execute(current, sheet, folders, stop.signal);
+      running = execute(current, sheet, sheetPath, folders, stop.signal);
 
       return snapshot() as ImportRun;
     },
