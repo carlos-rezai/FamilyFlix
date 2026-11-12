@@ -538,3 +538,42 @@ describe('exportRows: the path cells it is given', () => {
     });
   });
 });
+
+// 61, Export round trip, Phase 5 (issue #586): `claimFolder` folds NFC, then
+// lower case, so two Source folder keys spelling one name composed and
+// decomposed are numbered as one key.
+describe('exportRows: two keys differing only in NFC and NFD', () => {
+  /** `Amélie (2001)` composed (NFC). */
+  const NFC = 'Am\u00e9lie (2001)';
+  /** `Amélie (2001)` decomposed (NFD). */
+  const NFD = 'Ame\u0301lie (2001)';
+
+  const SOURCE: Record<string, string> = { composed: NFC, decomposed: NFD };
+
+  const exported = exportRows(
+    [
+      makeMovie({ id: 'composed', title: 'Amelie', year: 2001 }),
+      makeMovie({ id: 'decomposed', title: 'Amelie', year: 2001 }),
+    ],
+    [],
+    filePlan(OFF).cells,
+    (titleId) => SOURCE[titleId] ?? null
+  );
+
+  /** The Folder cell of each Movie row. */
+  const folders = ((): string[] => {
+    const [header = [], ...body] = exported.table.map((row) => row.map(text));
+    const column = header.indexOf('Folder');
+    return body.map((row) => row[column] ?? '');
+  })();
+
+  it('numbers the second as (1), as one key', () => {
+    expect(folders).toHaveLength(2);
+    expect(folders.filter((folder) => folder.endsWith(' (1)'))).toHaveLength(1);
+  });
+
+  it('logs one Warning line for the shared key', () => {
+    expect(exported.warnings).toHaveLength(1);
+    expect(exported.warnings[0]).toMatch(/^⚠ Two titles share the folder /);
+  });
+});

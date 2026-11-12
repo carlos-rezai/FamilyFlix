@@ -125,3 +125,26 @@ describe('readSheet: rows that only look alike', () => {
     expect(skips).toEqual([]);
   });
 });
+
+// 61, Export round trip, Phase 5 (issue #586): the duplicate key folds NFC,
+// then lower case, so a row Excel saved composed and one copied from a Mac
+// decomposed are one title.
+
+/** `Amélie (2001)` composed (NFC). */
+const AMELIE_NFC = 'Am\u00e9lie (2001)';
+/** `Amélie (2001)` decomposed (NFD). */
+const AMELIE_NFD = 'Ame\u0301lie (2001)';
+
+describe('readSheet: two rows differing only in normalisation', () => {
+  it('reads the first and reports one duplicate skip', async () => {
+    const { rows, skips } = await readWithSkips([
+      'Type,Folder,Title,Year,Rating',
+      `Movie,${AMELIE_NFC},Amelie,2001,8`,
+      `Movie,${AMELIE_NFD},Amelie,2001,3`,
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].rating).toBe(8);
+    expect(skips).toEqual([expect.objectContaining({ kind: 'duplicate' })]);
+  });
+});
