@@ -73,6 +73,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Folder layout: one shape to scan, sync and export   | ✅ Done    |
 | Rebuild whole: every sheet field and series art     | ✅ Done    |
 | Rebuild edges: hand-kept sheets, growing folders    | ✅ Done    |
+| Export round trip: an Export gives it all back      | 🔲 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -506,3 +507,27 @@ Settled in a grill-me on 2026-11-10, it is done (design log 60, handoff
       plays, as a movie add does, through one `heldVideoRefusal`; both sheets
       write every row as wide as their header, so each Library sheet is
       rewritten once at its next touch and then stays still.
+
+Step 44 came out of the third end-to-end QA pass, after step 43: the Library
+sheet's round trip held, and the Export's did not. An Export named each Title
+folder after its title, so a renamed title never came back from it, and an
+older Export uploaded after a Factory reset erased the newer `Meta/` sheet.
+Settled in a grill-me on 2026-11-12 (design log 61, handoff
+`docs/handoff/handoff-export-round-trip/`, which keeps the QA ticket):
+
+44. 🔲 **Export round trip**: an Export gives the library back whole,
+    uploaded after a Factory reset or copied over a Library folder of videos,
+    and never erases a newer record.
+    - **Folder keys by Source folder**: an Export names each title's Title
+      folder as the Library sheet does, by its Source folder, so a title
+      renamed in the app or by a Sync comes back from it.
+    - **The folder's own sheet first**: an upload into a Library folder never
+      scanned places it by its own `Meta/` sheet first, and each cell the
+      upload disagrees on waits in review as _Yours | Spreadsheet_.
+    - **Doubled places**: a Title folder holding two posters, backdrops,
+      Season posters, Stills or tracks of one language reads one and says so
+      in one Layout warning line; a title never holds two tracks of one
+      language.
+    - **The rest**: Folder keys compare in any Unicode normalisation, so a
+      folder copied from a Mac matches its sheet; _Play_ on a show with
+      specials offers the next regular episode.

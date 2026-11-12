@@ -11,6 +11,26 @@ Newest entry first.
 
 ---
 
+## 2026-11-12: Export round trip, the grill-me (log 61)
+
+A third QA pass after step 43 (issue 580, kept whole in
+`docs/handoff/handoff-export-round-trip/` and deleted after the session)
+opened step 44, settled in `docs/design-logs/61-export-round-trip.md`. The
+ticket's _Initiative_ line said `rebuild-edges`; step 43 is Done with its
+refactor, so log 61 Q1 makes it a step of its own, as log 60 Q1 did.
+
+### What a later session should know
+
+- **Log 58 Q19 and Q20 assumed the Export spells a Folder key as the Library
+  sheet does.** It never did: `writeExport` handed `exportRows` no
+  `sourceFolderOf`, so the Export spelled every key from the title. Read
+  those answers with log 61 Q3 beside them.
+- **This is the third QA pass in a row, each finding less.** Unless a later
+  pass finds something High, its findings are better filed as issues under
+  this step's refactor than opened as a step 45.
+
+---
+
 ## 2026-11-11: Rebuild edges, the refactor (issue 579)
 
 Sixteen commits against
