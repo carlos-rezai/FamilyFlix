@@ -172,6 +172,19 @@ const imagesByRole = (dir: string, images: string[], role: string): string[] =>
     .filter((file) => endsInRole(file, role))
     .map((file) => join(dir, file));
 
+/** `items` grouped by the key `keyOf` gives each, in first-seen order. */
+function groupedBy<T>(
+  items: readonly T[],
+  keyOf: (item: T) => string
+): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+  for (const item of items) {
+    const key = keyOf(item);
+    groups.set(key, [...(groups.get(key) ?? []), item]);
+  }
+  return groups;
+}
+
 /** The place `files` fill, doubled when two or more do, else none. */
 const doubledOf = (
   files: string[],
@@ -188,16 +201,12 @@ const oneTrackPerLanguage = (
   tracks: SubtitleFound[],
   place: Pick<DoubledPlace, 'season' | 'episode'>
 ): { subtitles: SubtitleFound[]; doubled: DoubledPlace[] } => {
-  const byLanguage = new Map<string, SubtitleFound[]>();
-  for (const track of tracks) {
-    byLanguage.set(track.language, [
-      ...(byLanguage.get(track.language) ?? []),
-      track,
-    ]);
-  }
   const subtitles: SubtitleFound[] = [];
   const doubled: DoubledPlace[] = [];
-  for (const [language, found] of byLanguage) {
+  for (const [language, found] of groupedBy(
+    tracks,
+    (track) => track.language
+  )) {
     subtitles.push(found[0]);
     doubled.push(
       ...doubledOf(
@@ -224,16 +233,13 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
   const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
 
   const stillsDir = join(imagesDir, STILLS_FOLDER);
-  const stillsByTag = new Map<string, string[]>();
-  for (const file of filesIn(await entriesOf(stillsDir))) {
-    const tag = tagOf(file);
-    if (isImageFilename(file) && tag !== null) {
-      stillsByTag.set(tag, [
-        ...(stillsByTag.get(tag) ?? []),
-        join(stillsDir, file),
-      ]);
-    }
-  }
+  const stillsByTag = groupedBy(
+    filesIn(await entriesOf(stillsDir)).flatMap((file) => {
+      const tag = isImageFilename(file) ? tagOf(file) : null;
+      return tag === null ? [] : [{ tag, path: join(stillsDir, file) }];
+    }),
+    (still) => still.tag
+  );
   const number = seasonNumberOf(name) as number;
   const posters = imagesByRole(imagesDir, images, 'poster');
   const stills: Record<string, string> = {};
@@ -241,7 +247,8 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
     place: 'season-poster',
     season: number,
   });
-  for (const [tag, files] of stillsByTag) {
+  for (const [tag, found] of stillsByTag) {
+    const files = found.map((still) => still.path);
     stills[tag] = files[0];
     const episode = episodeTag(tag)?.episode;
     doubled.push(
