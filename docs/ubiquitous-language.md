@@ -1047,6 +1047,21 @@ library back whole and never erases a newer record.
 | **Next episode** (updated)   | Since log 61, a special (Season 0) is offered only when part-watched or when nothing outside Season 0 is left: the first part-watched, else the first unwatched outside Season 0, else the first outside it, else today's rule over the specials.                                                                                                                                                                         |                        |
 | **Layout warning** (updated) | Since log 61, also one line per **Doubled place**, worded as the handoff's _Copy_ table: `⚠ Heat (1995) holds 2 posters, heat-1995-POSTER.png read`, `Season 1 holds 2 posters`, `S01E02 holds 2 Stills`, `holds 2 Dutch tracks, Dutch.srt read`; an episode's track line names its tag, `⚠ Tidewater (2018) S01E01 holds 2 Dutch tracks, Dutch.srt read`. Never a **Problem**; deleting the extras quiets the next scan. |                        |
 
+## Welcome tune
+
+Design log 62: step 45, initiative `welcome-tune`. The **Welcome splash**
+gains a short synthesised tune in F, its notes on what the animation draws;
+its score is `docs/handoff/handoff-welcome-tune/README.md`.
+
+| Term                           | Definition                                                                                                                                                                                                                                                                                                                                   | Aliases to avoid                   |
+| ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **Welcome tune** (new)         | The tune the **Welcome splash** plays on a **Cold start**: notes synthesised with Web Audio from a score in the code (`src/App/welcomeScore/`), timed off the welcome's one timeline (`src/App/welcomeTimeline/`). Two cues, the **Intro cue** and the **Closing chord**; silent where the window has no sound to give. No mute control yet. | jingle, intro music, startup sound |
+| **Intro cue** (new)            | The **Welcome tune**'s notes with the **Welcome intro**: a pluck on each F's landing, one on each letter's rise, and a swell with the light's sweep, all died away by the intro's end. Not played under reduced motion.                                                                                                                      | intro sound, opening notes         |
+| **Closing chord** (new)        | The **Welcome tune**'s F major chord, struck as the **Wordmark handoff** starts and left to ring under the arriving home; never played after a skip.                                                                                                                                                                                         | final chord, outro, sting          |
+| **Welcome splash** (updated)   | As before, and plays the **Welcome tune** (log 62).                                                                                                                                                                                                                                                                                          |                                    |
+| **Welcome hold** (updated)     | As before, and silent: the **Intro cue** has died away and the **Closing chord** waits for the handoff.                                                                                                                                                                                                                                      |                                    |
+| **Wordmark handoff** (updated) | As before, and strikes the **Closing chord** at its start, the reduced handoff included.                                                                                                                                                                                                                                                     |                                    |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1243,6 +1258,7 @@ library back whole and never erases a newer record.
 - A **New folder**'s **Library sheet** is never written; the run that marks it scanned writes it on close (log 59 Q20).
 - A run that reaches review touches every **Library folder** its walk read, so a sheet a crash left behind catches up at the next scan (log 59 Q19).
 - A sheet's path cell fills only a **Layout place** the Title folder left empty; the folder wins, and the `Video` cell is never read (log 59 Q14).
+- A **Cold start** plays at most one **Welcome tune**, with its **Welcome splash**; a skip fades it over 150ms, and only a **Wordmark handoff** strikes its **Closing chord** (log 62).
 
 ## Example dialogue
 
@@ -2002,6 +2018,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "The sheet isn't touched. `E:\Movies` is a **New folder** until a scan reads it, so the **Library sheet writer** leaves the sheet that will rebuild it alone."
 > **Dev:** "He renamed `Heat (1995)` to `Heat`. What happens to its row?"
 > **Domain expert:** "It's an **Orphaned row**: one Warning line, _Heat (1995) is in the sheet but has no folder, left out_, and the sheet written on close no longer holds it. `Heat` itself is a **Layout warning**, since it isn't named Title (Year)."
+
+> **Dev:** "Mum opens FamilyFlix with the speakers on. What does she hear?"
+> **Domain expert:** "The **Welcome tune**. The **Intro cue** plucks an F as each F lands, runs up with the letters and swells with the light; then the **Closing chord** rings as the **Wordmark handoff** glides _FamilyFlix_ home."
+> **Dev:** "Her Start tab read is slow and the welcome holds. Does the chord wait?"
+> **Domain expert:** "Yes. The **Welcome hold** is silent; the chord comes with the handoff, whenever that is. If she presses a key instead, the tune fades out with the skip and no chord plays."
+> **Dev:** "And Dad, with reduced motion on?"
+> **Domain expert:** "Only the **Closing chord**, as the fades hand over. The Intro cue marks motion his welcome doesn't draw."
 
 ## Flagged ambiguities
 
@@ -2989,3 +3012,4 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Fill" adds, "rewrite" replaces (new):** the **Layout fill** only creates a file where its slot is empty; the **Library sheet writer** is the one replacer, and only of `Meta/familyflix-library.csv`. Never say "sync to disk" or "write-back" for either.
 - **"Path cell" names a file that is there (new):** in an **Export file** a path cell names where the **File plan** put a file; in a **Library sheet** it names what the **Layout read** found. Never call a Library sheet's cell "planned", and never fill it from storage's own paths (log 59).
 - **"Export round trip" is not "Round trip" (new):** the **Round trip** is a Library folder's own sheet rebuilding it after a Factory reset; the **Export round trip** is an **Export**, uploaded or copied over, doing the same from outside the Library folder.
+- **"Jingle" names nothing (new):** the checklist row's word for the **Welcome tune**. Say **Welcome tune** for the whole, **Intro cue** or **Closing chord** for its parts; never "sound" alone, which the player's audio tracks already answer to.

@@ -552,10 +552,21 @@ Settled in a grill-me on 2026-11-12, it is done (design log 61, handoff
       part-watched or when the show holds nothing but specials.
 
 Step 45 reopens a scope call of log 55, which shipped the intro with no
-sound. To be settled in a grill-me:
+sound. Settled in a grill-me on 2026-11-12 (design log 62, handoff
+`docs/handoff/handoff-welcome-tune/`, whose README is the score):
 
 45. 🔲 **Welcome tune**: a short, catchy tune plays with the Welcome splash
     on a Cold start, its notes in sync with the animation: the Fs landing,
     the letters rising, the light sweeping, and a closing chord as the
     wordmark glides into the header. No mute control for now; one can come
     later.
+    - **Synthesised, in F**: a dozen notes played with Web Audio from a score
+      in the code, no audio file; the two Fs land on F, the letters run up
+      the F major pentatonic, the sweep swells, and an F major chord rings
+      under the arriving home.
+    - **In sync by construction**: the splash, its clock and the score read
+      one timeline, and the Closing chord waits for the Wordmark handoff, so
+      a held welcome stays silent until the home is ready.
+    - **Every path**: a skip fades the tune over 150ms; reduced motion plays
+      the chord alone; a window with no sound to give is silent and the
+      welcome unchanged.

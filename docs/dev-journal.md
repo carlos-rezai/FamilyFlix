@@ -11,6 +11,29 @@ Newest entry first.
 
 ---
 
+## 2026-11-12: Welcome tune, the grill-me (log 62)
+
+Step 45, settled in `docs/design-logs/62-welcome-tune.md`, with its score as
+the handoff (`docs/handoff/handoff-welcome-tune/README.md`). It reopens one
+scope call of log 55, _no sound_, for the Welcome splash alone.
+
+### What a later session should know
+
+- **The welcome's numbers are split today.** The clock's (`INTRO_MS` and the
+  rest) sit in `WelcomeProvider.tsx`, the drop's, letters' and sweeps' are
+  literals in `WelcomeSplash.styles.ts`. Log 62 Q8 lifts them into one
+  `welcomeTimeline` before the score reads them; retune the animation there,
+  or the tune drifts.
+- **The shell's autoplay was never chosen, only defaulted.** Electron's
+  `autoplayPolicy` default, `no-user-gesture-required`, is what lets the
+  player start a film and the tune sound unasked; log 62 Q16 spells it in
+  `main.ts`. A browser tab refuses both, so the tune is only heard in the
+  shell.
+- **The `INTRO_MS` docblock's rule is untested today** (the intro outlasting
+  the last letter's sweep); `welcomeTimeline`'s test is where it lands.
+
+---
+
 ## 2026-11-12: Export round trip, the refactor (issue 590)
 
 Twelve commits against
