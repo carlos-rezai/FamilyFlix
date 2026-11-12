@@ -38,19 +38,23 @@ export interface FolderScan {
 }
 
 /**
- * A **Layout place** two files or more fill, a **Doubled place**: the role,
- * the season and episode it belongs to when it has one, the file read (the
- * first by name order) and how many fill it. The walk words it.
+ * Where a **Doubled place** lies, by its role: a title's poster or backdrop,
+ * a season's poster, an episode's Still, or a language's tracks, a film's or
+ * an episode's.
  */
-export interface DoubledPlace {
-  place: 'poster' | 'backdrop' | 'season-poster' | 'still' | 'track';
-  season?: number;
-  episode?: number;
-  /** A `track` place's language. */
-  language?: string;
-  read: string;
-  count: number;
-}
+type DoubledWhere =
+  | { place: 'poster' | 'backdrop' }
+  | { place: 'season-poster'; season: number }
+  | { place: 'still'; season: number; episode: number }
+  | { place: 'track'; language: string }
+  | { place: 'track'; language: string; season: number; episode: number };
+
+/**
+ * A **Layout place** two files or more fill, a **Doubled place**: where it
+ * lies, the file read (the first by name order) and how many fill it. The
+ * walk words it.
+ */
+export type DoubledPlace = DoubledWhere & { read: string; count: number };
 
 /** A folder read as a film's: its videos and tracks, its **Poster** and **Backdrop**. */
 export interface FilmScan extends FolderScan {
@@ -118,10 +122,19 @@ export interface LeftOutFolder {
 /** What one folder in a Library folder's root reads as. */
 export type TitleFolderScan = FilmFolderScan | SeriesFolderScan | LeftOutFolder;
 
-/** A name read as an **Episode tag**'s folder or Still: the tag, spelled. */
-const tagOf = (name: string): string | null => {
+/** A name read as an **Episode tag**'s folder or Still. */
+interface TagRead {
+  /** The tag, spelled `S01E01`. */
+  tag: string;
+  episode: number;
+}
+
+/** A name read as an **Episode tag**'s folder or Still, or `null`. */
+const tagOf = (name: string): TagRead | null => {
   const tag = episodeTag(name);
-  return tag === null ? null : spellEpisodeTag(tag.season, tag.episode);
+  return tag === null
+    ? null
+    : { tag: spellEpisodeTag(tag.season, tag.episode), episode: tag.episode };
 };
 
 /** A folder's entries, none when it is not there or cannot be read. */
@@ -186,20 +199,23 @@ function groupedBy<T>(
 }
 
 /** The place `files` fill, doubled when two or more do, else none. */
-const doubledOf = (
-  files: string[],
-  place: Omit<DoubledPlace, 'read' | 'count'>
-): DoubledPlace[] =>
+const doubledOf = (files: string[], place: DoubledWhere): DoubledPlace[] =>
   files.length > 1 ? [{ ...place, read: files[0], count: files.length }] : [];
+
+/** The season and episode an episode's tracks belong to. */
+interface EpisodePlace {
+  season: number;
+  episode: number;
+}
 
 /**
  * One track per language of a **Subtitles folder**'s tracks in name order,
  * the first of each, and each language two tracks or more fill as a `track`
- * **Doubled place** of `place` (the season and episode it belongs to).
+ * **Doubled place**: an episode's when `episode` is given, else a film's.
  */
 const oneTrackPerLanguage = (
   tracks: SubtitleFound[],
-  place: Pick<DoubledPlace, 'season' | 'episode'>
+  episode: EpisodePlace | null
 ): { subtitles: SubtitleFound[]; doubled: DoubledPlace[] } => {
   const subtitles: SubtitleFound[] = [];
   const doubled: DoubledPlace[] = [];
@@ -211,7 +227,9 @@ const oneTrackPerLanguage = (
     doubled.push(
       ...doubledOf(
         found.map((track) => track.path),
-        { place: 'track', ...place, language }
+        episode === null
+          ? { place: 'track', language }
+          : { place: 'track', language, ...episode }
       )
     );
   }
@@ -235,8 +253,8 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
   const stillsDir = join(imagesDir, STILLS_FOLDER);
   const stillsByTag = groupedBy(
     filesIn(await entriesOf(stillsDir)).flatMap((file) => {
-      const tag = isImageFilename(file) ? tagOf(file) : null;
-      return tag === null ? [] : [{ tag, path: join(stillsDir, file) }];
+      const read = isImageFilename(file) ? tagOf(file) : null;
+      return read === null ? [] : [{ ...read, path: join(stillsDir, file) }];
     }),
     (still) => still.tag
   );
@@ -250,22 +268,27 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
   for (const [tag, found] of stillsByTag) {
     const files = found.map((still) => still.path);
     stills[tag] = files[0];
-    const episode = episodeTag(tag)?.episode;
     doubled.push(
-      ...doubledOf(files, { place: 'still', season: number, episode })
+      ...doubledOf(files, {
+        place: 'still',
+        season: number,
+        episode: found[0].episode,
+      })
     );
   }
 
   const subtitlesDir = join(dir, SUBTITLES_FOLDER);
   const subtitles: SubtitleFound[] = [];
   const tagFolders = (await entriesOf(subtitlesDir))
-    .filter((entry) => entry.isDirectory() && tagOf(entry.name) !== null)
-    .map((entry) => entry.name)
-    .sort((a, b) => a.localeCompare(b));
+    .flatMap((entry) => {
+      const read = entry.isDirectory() ? tagOf(entry.name) : null;
+      return read === null ? [] : [{ name: entry.name, episode: read.episode }];
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
   for (const folder of tagFolders) {
     const read = oneTrackPerLanguage(
-      (await readLooseFiles(join(subtitlesDir, folder))).subtitles,
-      { season: number, episode: episodeTag(folder)?.episode }
+      (await readLooseFiles(join(subtitlesDir, folder.name))).subtitles,
+      { season: number, episode: folder.episode }
     );
     subtitles.push(...read.subtitles);
     doubled.push(...read.doubled);
@@ -362,7 +385,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
 
   const tracks = oneTrackPerLanguage(
     (await readLooseFiles(join(dir, SUBTITLES_FOLDER))).subtitles,
-    {}
+    null
   );
   return {
     kind: 'film',

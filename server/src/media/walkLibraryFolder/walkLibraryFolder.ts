@@ -45,18 +45,15 @@ const doubledWhere = (place: DoubledPlace): [string, string] => {
     case 'backdrop':
       return ['backdrops', ''];
     case 'season-poster':
-      return ['posters', ` Season ${place.season ?? 0}`];
+      return ['posters', ` Season ${place.season}`];
     case 'still':
-      return [
-        'Stills',
-        ` ${spellEpisodeTag(place.season ?? 0, place.episode ?? 0)}`,
-      ];
+      return ['Stills', ` ${spellEpisodeTag(place.season, place.episode)}`];
     case 'track':
       return [
-        `${place.language ?? ''} tracks`,
-        place.season === undefined
-          ? ''
-          : ` ${spellEpisodeTag(place.season, place.episode ?? 0)}`,
+        `${place.language} tracks`,
+        'season' in place
+          ? ` ${spellEpisodeTag(place.season, place.episode)}`
+          : '',
       ];
   }
 };
