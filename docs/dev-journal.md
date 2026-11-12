@@ -11,6 +11,107 @@ Newest entry first.
 
 ---
 
+## 2026-11-12: Export round trip, the refactor (issue 590)
+
+Twelve commits against
+`docs/refactor-plans/61-export-round-trip-refactor.md`, one per plan commit.
+This is the initiative's closing round. **11859 tests pass across 772
+files** (one skipped), the same as at the end of the build (`9ad1de2d`): the
+round added and removed no test. `tsc -b --force` is clean. `eslint src
+server electron` reports 1 error and 137 warnings, down from 3 and 137 at
+`9ad1de2d`, rebuild-edges' close.
+
+### What shipped before this round
+
+The build slices 582 to 588, RED and GREEN each: an Export names each Title
+folder and `Folder` cell by the title's Source folder (`sourceFoldersOf`),
+an upload into a Library folder never scanned places that folder by its own
+`Meta/` sheet first (`placeFolder`), every Doubled place is one Layout
+warning and a Subtitles folder reads one track per language, Folder keys
+compare folded (`foldFolderKey`) and a path cell reaches an NFD folder, and
+_Play_ offers specials last. The documents followed (589).
+
+### What each group changed
+
+- **Group 1, one naming rule the Export cannot skip** (`500fccbf`,
+  `7f872431`). `exportRows` takes `sourceFolders: ReadonlyMap<string,
+string>`, required, in place of a `sourceFolderOf` callback defaulting to
+  none; `ExportContent.sourceFolders` is required, and both sheets hand
+  their map over as it is. Suites that built content without one pass
+  `new Map()`.
+- **Group 2, one placing loop** (`fa2facbc`, `a0e0c0ca`). `placeFolders`
+  places each walked folder in order and gathers their titles, `null` once
+  cancelled; `executeScan` and the sheet run's first pass both call it. The
+  second pass destructures `heldIndex()` in place of four hand-built
+  lookups.
+- **Group 3, a Doubled place typed by its place** (`4b547b2e`, `bcd98273`).
+  `readTitleFolder` groups tracks and Stills through a private `groupedBy`;
+  `DoubledPlace` is a union discriminated by `place`, each member carrying
+  only what its line names, so the walk's `doubledWhere` lost its `?? 0` and
+  `?? ''`. The season reader keeps each Still's and tag folder's episode
+  from the one `tagOf` parse that admitted it.
+- **Group 4, a path cell resolved against its Title folder** (`80b2c162`).
+  `resolvePathCell(dir, cell)` takes the matched Title folder's path; its
+  parent and name are derived inside, and `matchRows`, `filmWithCells` and
+  `showWithCells` stop splitting the path.
+- **Group 5, suites** (`d64c35f9`, `856c42b1`). The `oneTrack` and `tracks`
+  headers say Phase 4; the two new suites strip the BOM by `UTF8_BOM`'s
+  length, ending the round's two lint errors.
+- **Group 6, comments** (`981f7f30`). Three docblocks rewrapped, and
+  `exportRows`' and `writeExport`'s say the Source folders are required, the
+  one rule for both sheets.
+- **Group 7, the docs** (`9a0f2a46`). Step 44 and its row ticked, the
+  README's server tree names `sourceFoldersOf` and the folded compare, an
+  Export round trip release smoke. The glossary already said what the code
+  does.
+
+### Where this round left the plan
+
+- **A film's track and an episode's track share `place: 'track'`**, so the
+  walk tells them apart by `'season' in place` under that case, not by
+  `place`. `oneTrackPerLanguage` takes an `EpisodePlace | null` in place of
+  a partial place, and `tagOf` answers a `TagRead` (the spelled tag and its
+  episode).
+- **`ExportContent.sourceFolders`' docblock was rewritten in commit 2**, not
+  10, since the words it dropped stopped being true there.
+- **`readSheet.oneSheet`'s `resolvePathCell` describe blocks keep their
+  titles**; only the four calls changed, each passing a Title folder path.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: a Still or track whose tag names
+another season, the upload's own-sheet path compare, a shared `sheetRows`
+helper, `importPlaced`'s parameters, the items carried from rebuild-edges
+and folder-layout, the route's import order, everything log 61 put out of
+scope, and the frozen `handoff-export-round-trip/`. No wire, schema,
+Settings, copy or prototype change.
+
+### Follow-ups this refactor surfaced
+
+- **A Still or track whose tag names another season** (`S02E03.png` in
+  `Season 01/Images/Stills/`) is reported under the folder's season, its
+  line reading `S01E03`; a `fix:` issue of its own.
+- **The upload's own-sheet compare by `resolve`d path** is case-sensitive on
+  Windows; a `fix:` issue only if a case is ever found to differ.
+- **A shared importer harness**, with one `sheetRows` reader for the four
+  suites that read a sheet their own way.
+- **`importPlaced`'s parameters as an object**, now eight.
+- Carried from rebuild-edges: one `✓ Updated` line for a Found again film
+  that takes files, a held series' failed file copy as a Warning line,
+  `importShow`'s shape, one decode of a sheet's bytes. Carried from
+  folder-layout: an options object for `createApiRouter`, a discriminated
+  library scope, and the Sync's done summary still wording the retired
+  Write targets.
+- **Process**: slice 582 ran over its token budget; the next plan should
+  split a new pure unit from the acceptance test that needs it.
+
+### The initiative
+
+**Export round trip is done**: the build slices (582 to 588), the documents
+(589) and this round (590). Issue 581, the epic, is shut with it.
+
+---
+
 ## 2026-11-12: Export round trip, the build (issues 582 to 589)
 
 Seven slices, each a RED and a GREEN commit run unattended by `issue-loop`,
