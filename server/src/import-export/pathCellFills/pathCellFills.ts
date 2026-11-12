@@ -7,11 +7,12 @@ import type { ShowScan } from '../numberShow/numberShow';
 import { resolvePathCell, type SheetRow } from '../readSheet/readSheet';
 
 /**
- * A path cell against the **Library folder** `base`, by `resolvePathCell`;
- * a cell the matcher already resolved is absolute, and stands as it is.
+ * A path cell against the **Library folder** `base`, under the **Title
+ * folder**'s name on disk `name`, by `resolvePathCell`; a cell the matcher
+ * already resolved is absolute, and stands as it is.
  */
-const resolvedCell = (base: string, cell: string): string =>
-  isAbsolute(cell) ? cell : resolvePathCell(base, cell);
+const resolvedCell = (base: string, cell: string, name: string): string =>
+  isAbsolute(cell) ? cell : resolvePathCell(base, cell, name);
 
 /** Whether `path` is a file that is there. */
 async function isFile(path: string): Promise<boolean> {
@@ -22,16 +23,20 @@ async function isFile(path: string): Promise<boolean> {
   }
 }
 
-/** The file a cell names, when it is there and the place is empty. */
+/**
+ * The file a cell names under the Title folder named `name`, when it is
+ * there and the place is empty.
+ */
 async function fill(
   found: string | null,
   base: string,
+  name: string,
   cell: string | null
 ): Promise<string | null> {
   if (found !== null || cell === null || cell === '') {
     return found;
   }
-  const path = resolvedCell(base, cell);
+  const path = resolvedCell(base, cell, name);
   return (await isFile(path)) ? path : null;
 }
 
@@ -49,10 +54,11 @@ export async function filmWithCells(
   row: SheetRow
 ): Promise<FilmScan> {
   const base = dirname(scan.dir);
+  const name = basename(scan.dir);
   const held = new Set(scan.subtitles.map(({ path }) => resolve(path)));
   const subtitles = [...scan.subtitles];
   for (const cell of row.subtitles) {
-    const path = resolvedCell(base, cell);
+    const path = resolvedCell(base, cell, name);
     if (held.has(resolve(path)) || !(await isFile(path))) {
       continue;
     }
@@ -61,8 +67,8 @@ export async function filmWithCells(
   }
   return {
     ...scan,
-    poster: await fill(scan.poster, base, row.poster),
-    backdrop: await fill(scan.backdrop, base, row.backdrop),
+    poster: await fill(scan.poster, base, name, row.poster),
+    backdrop: await fill(scan.backdrop, base, name, row.backdrop),
     subtitles,
   };
 }
@@ -80,6 +86,7 @@ export async function showWithCells(
   rows: readonly SheetRow[]
 ): Promise<ShowScan> {
   const base = dirname(show.dir);
+  const name = basename(show.dir);
   const rowOf = (
     type: SheetRow['type'],
     season: number,
@@ -98,6 +105,7 @@ export async function showWithCells(
       poster: await fill(
         season.poster,
         base,
+        name,
         rowOf('Season', season.number, null)?.poster ?? null
       ),
     });
@@ -109,14 +117,15 @@ export async function showWithCells(
       still: await fill(
         episode.still,
         base,
+        name,
         rowOf('Episode', episode.season, episode.episode)?.still ?? null
       ),
     });
   }
   return {
     ...show,
-    poster: await fill(show.poster, base, row.poster),
-    backdrop: await fill(show.backdrop, base, row.backdrop),
+    poster: await fill(show.poster, base, name, row.poster),
+    backdrop: await fill(show.backdrop, base, name, row.backdrop),
     seasons,
     episodes,
   };

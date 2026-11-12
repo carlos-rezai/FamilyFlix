@@ -205,9 +205,19 @@ const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
 /**
  * A **Path cell** as the file it names: the cell, relative with forward
  * slashes as the sheet spells it, joined to its **Library folder** `base`.
+ * Under `name`, the matched **Title folder**'s name on disk, a first segment
+ * that is the same **Folder key** (by `sameFolderKey`) is spelled as the
+ * disk spells it, so an NFC cell reaches an NFD folder.
  */
-export const resolvePathCell = (base: string, cell: string): string =>
-  join(base, ...cell.split('/'));
+export function resolvePathCell(
+  base: string,
+  cell: string,
+  name?: string
+): string {
+  const [first, ...rest] = cell.split('/');
+  const head = name !== undefined && sameFolderKey(first, name) ? name : first;
+  return join(base, head, ...rest);
+}
 
 /**
  * The path cells the reader checks, each with its header and the kind of

@@ -1,4 +1,4 @@
-import { dirname } from 'node:path';
+import { basename, dirname } from 'node:path';
 
 import { sameFolderKey } from '../../media/folderKeyOf/folderKeyOf';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
@@ -54,12 +54,13 @@ export const MATCH_REASON = {
  */
 function resolvedRow(row: SheetRow, folder: FilmScan): SheetRow {
   const base = dirname(folder.dir);
+  const name = basename(folder.dir);
   const one = (cell: string | null): string | null =>
-    cell === null ? null : resolvePathCell(base, cell);
+    cell === null ? null : resolvePathCell(base, cell, name);
   return {
     ...row,
     video: one(row.video),
-    subtitles: row.subtitles.map((cell) => resolvePathCell(base, cell)),
+    subtitles: row.subtitles.map((cell) => resolvePathCell(base, cell, name)),
     poster: one(row.poster),
     backdrop: one(row.backdrop),
     still: one(row.still),
