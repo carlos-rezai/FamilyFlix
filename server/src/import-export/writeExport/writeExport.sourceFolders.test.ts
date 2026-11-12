@@ -28,6 +28,7 @@ import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { UTF8_BOM } from '../sheetDialect/sheetDialect';
 import { writeExport } from './writeExport';
 
 const NAME = 'familyflix-collection_12-11-2026';
@@ -130,7 +131,9 @@ async function sheetRows(
   const path = join(destination, NAME, 'Meta', 'familyflix-library.csv');
   const workbook = new ExcelJS.Workbook();
   await workbook.csv.read(
-    Readable.from([readFileSync(path, 'utf8').replace(/^﻿/, '')]),
+    Readable.from([
+      readFileSync(path).subarray(UTF8_BOM.length).toString('utf8'),
+    ]),
     { map: (value: string) => value }
   );
   const rows: string[][] = [];

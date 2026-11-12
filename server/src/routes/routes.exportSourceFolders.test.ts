@@ -34,6 +34,7 @@ import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { SHEET_COLUMNS } from '@/types';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
+import { UTF8_BOM } from '../import-export/sheetDialect/sheetDialect';
 
 const NAME = 'familyflix-collection_12-11-2026';
 
@@ -171,7 +172,9 @@ async function sheetRows(
   const path = join(destination, NAME, 'Meta', 'familyflix-library.csv');
   const workbook = new ExcelJS.Workbook();
   await workbook.csv.read(
-    Readable.from([readFileSync(path, 'utf8').replace(/^﻿/, '')]),
+    Readable.from([
+      readFileSync(path).subarray(UTF8_BOM.length).toString('utf8'),
+    ]),
     { map: (value: string) => value }
   );
   const rows: string[][] = [];
