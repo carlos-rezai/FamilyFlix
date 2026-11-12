@@ -2563,10 +2563,8 @@ export function createImporter({
       earlier = imported;
     }
 
-    const filmsByKey = heldFilmsByKey();
-    const missing = missingFilms(filmsByKey);
-    const held = heldSeriesList();
-    const seriesByKey = heldSeriesByKey(held);
+    // Read after the first pass, so the uploaded rows meet the titles it placed.
+    const { filmsByKey, missing, held, seriesByKey } = heldIndex();
 
     // A show is matched by the film's own rule, over a scan standing for it —
     // and told apart again once matched. Every scan remembers its folder.
