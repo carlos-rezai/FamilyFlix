@@ -73,7 +73,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Folder layout: one shape to scan, sync and export   | ✅ Done    |
 | Rebuild whole: every sheet field and series art     | ✅ Done    |
 | Rebuild edges: hand-kept sheets, growing folders    | ✅ Done    |
-| Export round trip: an Export gives it all back      | 🔲 Planned |
+| Export round trip: an Export gives it all back      | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -512,13 +512,16 @@ Step 44 came out of the third end-to-end QA pass, after step 43: the Library
 sheet's round trip held, and the Export's did not. An Export named each Title
 folder after its title, so a renamed title never came back from it, and an
 older Export uploaded after a Factory reset erased the newer `Meta/` sheet.
-Settled in a grill-me on 2026-11-12 (design log 61, handoff
+Settled in a grill-me on 2026-11-12, it is done (design log 61, handoff
 `docs/handoff/handoff-export-round-trip/`, which keeps the QA ticket):
 
-44. 🔜 **Export round trip**: an Export gives the library back whole,
+44. ✅ **Export round trip**: an Export gives the library back whole,
     uploaded after a Factory reset or copied over a Library folder of videos,
-    and never erases a newer record. Built in issues 582 to 588; the refactor
-    is still to come.
+    and never erases a newer record. Built in issues 582 to 588; the closing
+    round (issue 590) made the Source folders a map both sheets must be
+    given, ran both scans through one placing loop (`placeFolders`), typed
+    each Doubled place by its place, and resolved a path cell against its
+    Title folder.
     - **Folder keys by Source folder**: an Export names each title's Title
       folder and `Folder` cell as the Library sheet does, by its Source folder
       (`sourceFoldersOf`, the one rule for both), while its `Title` cell keeps

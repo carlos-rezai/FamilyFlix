@@ -192,6 +192,12 @@ Quit the app. Open a Command Prompt in the install directory,
       as plain _CSV_ (`;`, cp1252). _Scan new folders_, then _Done_: the
       rating reads 9, the title spells its diacritic, and the sheet is
       rewritten `;` with decimal commas.
+- [ ] Export round trip, over the sandbox Library folder in the shell: rename
+      one title in the app and rate it, then _Export_ to a folder outside the
+      sandbox. Settings → _Factory reset_, list the sandbox again, then
+      _Import from spreadsheet_ with the Export's
+      `Meta\familyflix-library.csv`: the title comes back under its new
+      name with its rating, and review lists no Problem.
 
 ## 9. Back on the dev machine
 
