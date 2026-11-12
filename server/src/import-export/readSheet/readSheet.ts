@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { extname, join } from 'node:path';
+import { basename, dirname, extname, join } from 'node:path';
 import { Readable } from 'node:stream';
 
 import {
@@ -203,20 +203,17 @@ const NOT_FAVORITE = new Set(['no', 'false', '0']);
 const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
 
 /**
- * A **Path cell** as the file it names: the cell, relative with forward
- * slashes as the sheet spells it, joined to its **Library folder** `base`.
- * Under `name`, the matched **Title folder**'s name on disk, a first segment
- * that is the same **Folder key** (by `sameFolderKey`) is spelled as the
- * disk spells it, so an NFC cell reaches an NFD folder.
+ * A **Path cell** as the file it names, resolved against `dir`, the **Title
+ * folder** its row was matched to: the cell, relative with forward slashes as
+ * the sheet spells it, joined to the folder's parent, its first segment
+ * spelled as the folder's own name when it is the same **Folder key** (by
+ * `sameFolderKey`), so an NFC cell reaches an NFD folder.
  */
-export function resolvePathCell(
-  base: string,
-  cell: string,
-  name?: string
-): string {
+export function resolvePathCell(dir: string, cell: string): string {
+  const name = basename(dir);
   const [first, ...rest] = cell.split('/');
-  const head = name !== undefined && sameFolderKey(first, name) ? name : first;
-  return join(base, head, ...rest);
+  const head = sameFolderKey(first, name) ? name : first;
+  return join(dirname(dir), head, ...rest);
 }
 
 /**

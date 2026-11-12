@@ -355,7 +355,7 @@ describe('resolvePathCell: a path cell joined to its Library folder', () => {
   it('joins a nested cell segment by segment', () => {
     expect(
       resolvePathCell(
-        join('library'),
+        join('library', 'Tidewater (2018)'),
         'Tidewater (2018)/Season 01/Subtitles/S01E01/en.srt'
       )
     ).toBe(
@@ -371,13 +371,19 @@ describe('resolvePathCell: a path cell joined to its Library folder', () => {
   });
 
   it('keeps a space in a cell', () => {
-    expect(resolvePathCell('library', 'Die Hard (1988)/Die Hard.mkv')).toBe(
-      join('library', 'Die Hard (1988)', 'Die Hard.mkv')
-    );
+    expect(
+      resolvePathCell(
+        join('library', 'Die Hard (1988)'),
+        'Die Hard (1988)/Die Hard.mkv'
+      )
+    ).toBe(join('library', 'Die Hard (1988)', 'Die Hard.mkv'));
   });
 
   it('keeps a Windows root in the Library folder', () => {
-    const resolved = resolvePathCell('D:\\Movies', 'Heat (1995)/poster.jpg');
+    const resolved = resolvePathCell(
+      join('D:\\Movies', 'Heat (1995)'),
+      'Heat (1995)/poster.jpg'
+    );
 
     expect(resolved).toBe(join('D:\\Movies', 'Heat (1995)', 'poster.jpg'));
     expect(resolved.startsWith('D:\\Movies')).toBe(true);
@@ -392,7 +398,10 @@ describe('resolvePathCell: under the matched folder’s name on disk', () => {
 
   it('replaces an NFC first segment with the disk’s NFD name', () => {
     expect(
-      resolvePathCell('library', `${AMELIE_NFC}/Images/poster.jpg`, AMELIE_NFD)
+      resolvePathCell(
+        join('library', AMELIE_NFD),
+        `${AMELIE_NFC}/Images/poster.jpg`
+      )
     ).toBe(join('library', AMELIE_NFD, 'Images', 'poster.jpg'));
   });
 });
