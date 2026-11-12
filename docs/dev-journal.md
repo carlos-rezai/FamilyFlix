@@ -11,6 +11,52 @@ Newest entry first.
 
 ---
 
+## 2026-11-12: Export round trip, the build (issues 582 to 589)
+
+Seven slices, each a RED and a GREEN commit run unattended by `issue-loop`,
+then this documents slice (589). **11859 tests pass across 772 files**, one
+skipped; `tsc -b --force` is clean. The Round trip and the new Export round
+trip test both pass. Step 44 stays 🔜 until the refactor.
+
+### Where the build moved off the plan
+
+- **The Export test's rename workaround is gone** (582).
+  `routes.export.test.ts` renamed its fixture's `Amelie (2001)` to
+  `Amélie (2001)` (`keyedAsExported`) so the Export's spelled key would
+  match; now the Export writes the Source folder itself, so the rename was
+  what broke the match and was dropped.
+- **An upload never reads its own sheet twice** (583). A walked folder whose
+  `Meta/` sheet is the uploaded file is skipped in the first pass; without
+  it the duplicates and Unread cell suites logged every Warning line twice.
+  No acceptance criterion asked for it.
+- **The Import phase split in two** (583): `importTitles` imports and counts,
+  `importPlaced` writes the one complete line and moves to review, and
+  `matched` and `total` now add up across both passes of a sheet run.
+- **`doubled` is a required field of every scan** (584), so `NumberableSeries`
+  omits it and the hand-built scans in `numberShow.test.ts` and
+  `layoutCells.test.ts` carry `doubled: []`.
+- **An episode's doubled track line was not in the handoff** (585). It was
+  worded by analogy with the Still line,
+  `⚠ Tidewater (2018) S01E01 holds 2 Dutch tracks, Dutch.srt read`; the
+  glossary's **Layout warning** now spells it.
+- **Some new tests passed at RED** (582, 583, 587, 588): the parts of each
+  criterion today's code already held (a title with no Source folder, a
+  scanned folder unchanged, a match #586's fold already made, a specials-only
+  list). Each is kept as a guard.
+
+### Follow-ups for the refactor
+
+- **`ExportContent.sourceFolders` is optional** (582) so the older
+  `writeExport` fixtures needed no change; the route always passes it. Making
+  it required says the Export has one naming rule.
+- **`resolvePathCell`'s folder name is optional** (587) for the same reason:
+  both callers pass it, only three unit tests don't.
+- **Slice 582 was too thick**: its RED step used 120k tokens against the
+  100k a step is budgeted. `sourceFoldersOf` and the Export round trip test
+  were two slices.
+
+---
+
 ## 2026-11-12: Export round trip, the grill-me (log 61)
 
 A third QA pass after step 43 (issue 580, kept whole in

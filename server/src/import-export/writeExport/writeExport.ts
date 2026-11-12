@@ -199,7 +199,10 @@ const reasonOf = (error: unknown): string =>
  * each file the **File plan** names into it — piped out of
  * `Media.readStored`, the only way a stored file is read, one that cannot be
  * read skipped and its cell blanked, then write the one sheet last, as
- * `Meta/familyflix-library.<csv|xlsx>` whatever the Export name. Anything
+ * `Meta/familyflix-library.<csv|xlsx>` whatever the Export name. Each Title
+ * folder and `Folder` cell is named by the title's **Source folder**
+ * (`sourceFolders`), so a renamed title comes back from it: the **Export
+ * round trip** (log 61). Anything
  * else that fails takes the folder back out, best-effort, and answers
  * `failed` with the error's reason.
  */

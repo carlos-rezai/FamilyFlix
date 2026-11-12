@@ -515,19 +515,34 @@ older Export uploaded after a Factory reset erased the newer `Meta/` sheet.
 Settled in a grill-me on 2026-11-12 (design log 61, handoff
 `docs/handoff/handoff-export-round-trip/`, which keeps the QA ticket):
 
-44. 🔲 **Export round trip**: an Export gives the library back whole,
+44. 🔜 **Export round trip**: an Export gives the library back whole,
     uploaded after a Factory reset or copied over a Library folder of videos,
-    and never erases a newer record.
+    and never erases a newer record. Built in issues 582 to 588; the refactor
+    is still to come.
     - **Folder keys by Source folder**: an Export names each title's Title
-      folder as the Library sheet does, by its Source folder, so a title
-      renamed in the app or by a Sync comes back from it.
+      folder and `Folder` cell as the Library sheet does, by its Source folder
+      (`sourceFoldersOf`, the one rule for both), while its `Title` cell keeps
+      the library's title, so a title renamed in the app or by a Sync comes
+      back from it. A title in no Library folder is still spelled
+      `Title (Year)`. The Export round trip test beside the Round trip takes
+      the Amélie repro back whole both ways: uploaded after a Factory reset,
+      and copied over a folder of bare videos and scanned.
     - **The folder's own sheet first**: an upload into a Library folder never
-      scanned places it by its own `Meta/` sheet first, and each cell the
-      upload disagrees on waits in review as _Yours | Spreadsheet_.
+      scanned places it by its own `Meta/` sheet first, by the Folder scan's
+      own per-folder step (`placeFolder`), so the upload meets its titles as
+      held ones: a blank cell is a Sheet fill, and each cell the two sheets
+      disagree on waits in review as _Yours | Spreadsheet_. The Heat repro
+      keeps its 9 and its heart, and the `Meta/` sheet is not rewritten to 5.
+      Still one run, one complete line, one review.
     - **Doubled places**: a Title folder holding two posters, backdrops,
-      Season posters, Stills or tracks of one language reads one and says so
-      in one Layout warning line; a title never holds two tracks of one
-      language.
-    - **The rest**: Folder keys compare in any Unicode normalisation, so a
-      folder copied from a Mac matches its sheet; _Play_ on a show with
-      specials offers the next regular episode.
+      Season posters, Stills for one episode or tracks of one language reads
+      the first by name order and says so in one Layout warning line,
+      `⚠ Heat (1995) holds 2 posters, heat-1995-POSTER.png read`; a title
+      never holds two tracks of one language, and the Library sheet's path
+      cell names the file read.
+    - **The rest**: Folder keys compare folded, NFC then case
+      (`foldFolderKey`), in the scan, the sheet reader's duplicate rows and
+      the Export's numbering, so a folder copied from a Mac matches its sheet,
+      and a path cell typed NFC reaches the NFD folder's files; _Play_ on a
+      show with specials offers the next regular episode, a special only when
+      part-watched or when the show holds nothing but specials.

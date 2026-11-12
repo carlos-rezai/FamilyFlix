@@ -213,8 +213,9 @@ const oneTrackPerLanguage = (
  * Read one **Season folder**: its videos loose in name order, its **Season
  * poster** by role from `Images/`, each **Still** in `Images/Stills/` by the
  * **Episode tag** its name carries (a name carrying none is passed), and the
- * tracks of each `Subtitles/` folder named by a tag (a track anywhere else is
- * passed).
+ * tracks of each `Subtitles/` folder named by a tag, one per language (a
+ * track anywhere else is passed). Each Season poster, Still or track place
+ * two files or more fill is a **Doubled place** of the season.
  */
 export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
   const { name, videos } = await readLooseFiles(dir);
@@ -298,8 +299,10 @@ export async function readSeasonFolders(
  * Read one **Title folder** by the **Folder layout**. One loose video or more
  * and no **Season folder** is a film: its art read by role from `Images/` (a
  * stem, case folded, ending in `poster` or `backdrop`, the first by name
- * order), its tracks from `Subtitles/` under any name. Season folders and no
- * loose video is a series. Both, neither, or a name that is no **Folder key**
+ * order), its tracks from `Subtitles/` under any name, one per language. A
+ * place two files or more fill reads the first by name order and is reported
+ * as a **Doubled place** (log 61). Season folders and no loose video is a
+ * series. Both, neither, or a name that is no **Folder key**
  * is left out, with the reason the walk words as its **Layout warning**;
  * Season folders that all hold no video are as good as none, `empty`.
  * `Extras/` and anything else the layout doesn't name is passed in silence.

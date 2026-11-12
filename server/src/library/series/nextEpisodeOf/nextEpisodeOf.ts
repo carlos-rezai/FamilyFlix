@@ -3,7 +3,7 @@ import type { Episode } from '@/types';
 /**
  * The **Next episode** over a list already in season, then episode order: the
  * first part-watched episode of any season, else the first unwatched outside
- * Season 0, else the first outside Season 0 (specials last, issue #588). A
+ * Season 0, else the first outside Season 0 (specials last, log 61). A
  * list of only Season 0 episodes keeps the plain rule: the first part-watched,
  * else the first unwatched, else the first. What _Resume_ / _Play_ plays.
  * `null` for an empty list.

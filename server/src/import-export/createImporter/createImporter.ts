@@ -876,6 +876,16 @@ export interface ImporterDeps {
  * Folder scan's Meta sheet that doesn't read is scanned without, and left as
  * it is.
  *
+ * The **Export round trip** (log 61): an upload into a Library folder never
+ * scanned places that folder by its own **Library sheet** first, through the
+ * Folder scan's one per-folder step (`placeFolder`), so the uploaded rows
+ * meet its titles as held ones and an older Export never erases the newer
+ * sheet; still one run, one complete line, one review. A row meets its
+ * folder by **Folder key** folded (`sameFolderKey`), so a folder a Mac named
+ * in NFD matches a row typed in NFC, and its path cells reach that folder's
+ * files under the name on disk. Each **Doubled place** the walk finds is one
+ * **Layout warning** line, and the scan imports the file read.
+ *
  * Each match is imported by the **Movie form**'s own sequence: reserve the
  * **Movie folder**, copy in the video, the poster, the backdrop and each
  * subtitle, derive the runtime, `addMovie` with `tmdbId` null. A match whose
@@ -2497,10 +2507,10 @@ export function createImporter({
    * A sheet run: every listed folder walked, each **Sheet row** naming its
    * folder through `matchRows`, in whichever listed folder it lies. A folder
    * never scanned that holds a **Library sheet** other than the upload is
-   * first placed and imported
-   * by its own sheet, as a **Folder scan** would, so the uploaded rows meet
-   * its titles as held ones: a **Sheet fill** for a cell a title lacks, a
-   * **Sheet difference** for one the two sheets disagree on.
+   * first placed and imported by its own sheet, as a **Folder scan** would,
+   * so the uploaded rows meet its titles as held ones: a **Sheet fill** for a
+   * cell a title lacks, a **Sheet difference** for one the two sheets
+   * disagree on (the **Export round trip**).
    */
   const execute = async (
     current: ImportRun,

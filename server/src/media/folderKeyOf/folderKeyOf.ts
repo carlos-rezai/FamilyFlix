@@ -26,7 +26,8 @@ export function folderKeyOf(name: string): FolderKey | null {
 
 /**
  * A **Folder key** folded for comparison: NFC, then lower case, so a name a
- * Mac spelled decomposed and one Excel saved composed fold equal.
+ * Mac spelled decomposed and one Excel saved composed fold equal (log 61).
+ * Only compared by: a sheet or an Export still writes the folder's own bytes.
  */
 export const foldFolderKey = (name: string): string =>
   name.normalize('NFC').toLowerCase();

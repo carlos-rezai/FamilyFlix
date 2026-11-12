@@ -102,8 +102,9 @@ async function readTitleFolders(
  * {@link LIBRARY_SHEET_DELAY_MS} after the last, then each touched folder's
  * {@link LIBRARY_SHEET} rewritten from the library under the **Sheet
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
- * own name, its **Path cells** from each Title folder's **Layout read**,
- * `layoutCells`), through a temporary file in `Meta/` and a rename, behind its
+ * own name by `sourceFoldersOf`, the Export's rule too since log 61, its
+ * **Path cells** from each Title folder's **Layout read**, `layoutCells`),
+ * through a temporary file in `Meta/` and a rename, behind its
  * BOM; a sheet whose bytes already match is left alone. A sheet on disk
  * keeps its **Sheet dialect**'s separator (a `;` sheet is rewritten `;`, with
  * decimal commas), always rewritten UTF-8; a brand-new sheet is `,`. Every
