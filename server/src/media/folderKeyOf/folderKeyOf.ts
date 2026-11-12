@@ -24,9 +24,16 @@ export function folderKeyOf(name: string): FolderKey | null {
   return { name, title: found[1], year: Number(found[2]) };
 }
 
-/** Whether two **Folder keys** are one: compared case folded. */
+/**
+ * A **Folder key** folded for comparison: NFC, then lower case, so a name a
+ * Mac spelled decomposed and one Excel saved composed fold equal.
+ */
+export const foldFolderKey = (name: string): string =>
+  name.normalize('NFC').toLowerCase();
+
+/** Whether two **Folder keys** are one: compared by their folds. */
 export const sameFolderKey = (a: string, b: string): boolean =>
-  a.toLowerCase() === b.toLowerCase();
+  foldFolderKey(a) === foldFolderKey(b);
 
 /** A title and its year spelled as a **Title folder**'s name, `Title (Year)`. */
 export const spellFolderKey = (title: string, year: number): string =>

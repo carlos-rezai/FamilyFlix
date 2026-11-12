@@ -10,7 +10,10 @@ import {
   type WatchStatus,
 } from '@/types';
 import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
-import { spellFolderKey } from '../../media/folderKeyOf/folderKeyOf';
+import {
+  foldFolderKey,
+  spellFolderKey,
+} from '../../media/folderKeyOf/folderKeyOf';
 import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
 
@@ -123,12 +126,13 @@ export const basenameOf = (storedPath: string): string =>
 
 /**
  * Claim `base` as a Title folder, or the first of `base (1)`, `base (2)`, …
- * not yet taken, compared without regard to case, as Windows compares names.
+ * not yet taken, compared by their folds (NFC, then case), as Windows
+ * compares names.
  */
 function claimFolder(base: string, taken: Set<string>): string {
   for (let n = 0; ; n += 1) {
     const name = n === 0 ? base : `${base} (${n})`;
-    const key = name.toLowerCase();
+    const key = foldFolderKey(name);
     if (!taken.has(key)) {
       taken.add(key);
       return name;

@@ -15,6 +15,7 @@ import {
 } from '../../media/fileKinds/fileKinds';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import {
+  foldFolderKey,
   sameFolderKey,
   spellFolderKey,
 } from '../../media/folderKeyOf/folderKeyOf';
@@ -277,14 +278,14 @@ function skipLabel(
 
 /**
  * The key two rows naming one row share: its type, **Folder key**, season
- * and episode, the key case folded, as `sameFolderKey` compares.
+ * and episode, the key folded, as `sameFolderKey` compares.
  */
 const rowKey = (
   type: RowType,
   folder: string,
   season: number | null,
   episode: number | null
-): string => JSON.stringify([type, folder.toLowerCase(), season, episode]);
+): string => JSON.stringify([type, foldFolderKey(folder), season, episode]);
 
 /** The rating column's own scale — the same ten the library stores. */
 const MAX_RATING = 10;
