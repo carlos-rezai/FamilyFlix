@@ -383,6 +383,19 @@ describe('resolvePathCell: a path cell joined to its Library folder', () => {
   });
 });
 
+describe('resolvePathCell: under the matched folder’s name on disk', () => {
+  /** `Amélie (2001)` composed (NFC), as Excel saves it. */
+  const AMELIE_NFC = 'Am\u00e9lie (2001)';
+  /** `Amélie (2001)` decomposed (NFD), as a folder copied from a Mac names it. */
+  const AMELIE_NFD = 'Ame\u0301lie (2001)';
+
+  it('replaces an NFC first segment with the disk’s NFD name', () => {
+    expect(
+      resolvePathCell('library', `${AMELIE_NFC}/Images/poster.jpg`, AMELIE_NFD)
+    ).toBe(join('library', AMELIE_NFD, 'Images', 'poster.jpg'));
+  });
+});
+
 describe('readSheet: the Folder cell', () => {
   it('reads the Folder cell as the row’s Folder key, whatever the title', async () => {
     const rows = await readSheet(
