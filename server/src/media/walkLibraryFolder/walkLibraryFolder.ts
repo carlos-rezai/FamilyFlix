@@ -51,6 +51,13 @@ const doubledWhere = (place: DoubledPlace): [string, string] => {
         'Stills',
         ` ${spellEpisodeTag(place.season ?? 0, place.episode ?? 0)}`,
       ];
+    case 'track':
+      return [
+        `${place.language ?? ''} tracks`,
+        place.season === undefined
+          ? ''
+          : ` ${spellEpisodeTag(place.season, place.episode ?? 0)}`,
+      ];
   }
 };
 
