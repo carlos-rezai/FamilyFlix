@@ -332,9 +332,9 @@ export async function readSeasonFolders(
  * order), its tracks from `Subtitles/` under any name, one per language. A
  * place two files or more fill reads the first by name order and is reported
  * as a **Doubled place** (log 61). Season folders and no loose video is a
- * series. Both, neither, or a name that is no **Folder key**
- * is left out, with the reason the walk words as its **Layout warning**;
- * Season folders that all hold no video are as good as none, `empty`.
+ * series. Both, neither, or a name that is no **Folder key** is left out,
+ * with the reason the walk words as its **Layout warning**; Season folders
+ * that all hold no video are as good as none, `empty`.
  * `Extras/` and anything else the layout doesn't name is passed in silence.
  * What it answers is the folder's **Layout read**: a scan imports by it, and
  * the **Library sheet**'s path cells name what it found (`layoutCells`).

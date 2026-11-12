@@ -104,10 +104,10 @@ async function readTitleFolders(
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
  * own name by `sourceFoldersOf`, the Export's rule too since log 61, its
  * **Path cells** from each Title folder's **Layout read**, `layoutCells`),
- * through a temporary file in `Meta/` and a rename, behind its
- * BOM; a sheet whose bytes already match is left alone. A sheet on disk
- * keeps its **Sheet dialect**'s separator (a `;` sheet is rewritten `;`, with
- * decimal commas), always rewritten UTF-8; a brand-new sheet is `,`. Every
+ * through a temporary file in `Meta/` and a rename, behind its BOM; a sheet
+ * whose bytes already match is left alone. A sheet on disk keeps its
+ * **Sheet dialect**'s separator (a `;` sheet is rewritten `;`, with decimal
+ * commas), always rewritten UTF-8; a brand-new sheet is `,`. Every
  * row is as wide as its header, so a sheet written short before is rewritten
  * once at its next touch and then stays still. A library scanned back from
  * its sheet writes that sheet again byte for byte: the **Round trip**. A
