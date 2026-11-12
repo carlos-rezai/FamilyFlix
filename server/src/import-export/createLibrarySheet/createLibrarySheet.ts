@@ -16,6 +16,7 @@ import { exportRows } from '../exportRows/exportRows';
 import { layoutCells } from '../layoutCells/layoutCells';
 import { readSheet } from '../readSheet/readSheet';
 import { sheetDialect } from '../sheetDialect/sheetDialect';
+import { sourceFoldersOf } from '../sourceFoldersOf/sourceFoldersOf';
 import { writeSheet } from '../writeSheet/writeSheet';
 
 /** The **Library sheet**'s path inside its Library folder. */
@@ -126,34 +127,15 @@ export function createLibrarySheet({
   /** The titles recorded against a folder, as its sheet is written. */
   function contentOf(folderId: string): FolderContent {
     const titles = storage.libraryTitles();
-    const recorded = <
-      T extends {
-        id: string;
-        libraryFolderId: string | null;
-        sourceFolder: string | null;
-      },
-    >(
-      list: readonly T[]
-    ): (T & { sourceFolder: string })[] =>
-      list.filter(
-        (title): title is T & { sourceFolder: string } =>
-          title.libraryFolderId === folderId && title.sourceFolder !== null
-      );
-    const sourceFolders = new Map<string, string>();
-    for (const title of [
-      ...recorded(titles.movies),
-      ...recorded(titles.series),
-    ]) {
-      sourceFolders.set(title.id, title.sourceFolder);
-    }
+    const sourceFolders = sourceFoldersOf(titles, folderId);
     return {
       sourceFolders,
-      movies: recorded(titles.movies).flatMap(
-        (movie) => storage.getMovie(movie.id) ?? []
-      ),
-      series: recorded(titles.series).flatMap(
-        (series) => storage.getSeriesDetail(series.id) ?? []
-      ),
+      movies: titles.movies
+        .filter((movie) => sourceFolders.has(movie.id))
+        .flatMap((movie) => storage.getMovie(movie.id) ?? []),
+      series: titles.series
+        .filter((series) => sourceFolders.has(series.id))
+        .flatMap((series) => storage.getSeriesDetail(series.id) ?? []),
     };
   }
 

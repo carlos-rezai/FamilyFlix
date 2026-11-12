@@ -54,6 +54,7 @@ import {
   writeExport,
   type ExportRefusal,
 } from '../import-export/writeExport/writeExport';
+import { sourceFoldersOf } from '../import-export/sourceFoldersOf/sourceFoldersOf';
 import type { Media } from '../media/createMedia/createMedia';
 import { libraryTitleList } from '../media/libraryTitleList/libraryTitleList';
 import { readableFolder } from '../media/readableFolder/readableFolder';
@@ -3478,6 +3479,7 @@ export function createApiRouter(
       series: storage
         .getSeriesHome({ sort: 'a-z' })
         .series.flatMap((each) => storage.getSeriesDetail(each.id) ?? []),
+      sourceFolders: sourceFoldersOf(storage.libraryTitles()),
     });
     if (outcome.kind === 'refused') {
       const { status, field, error } = EXPORT_REFUSALS[outcome.refusal];

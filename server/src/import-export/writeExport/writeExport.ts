@@ -31,6 +31,11 @@ export interface ExportContent {
   movies: readonly Movie[];
   /** Each series' detail — its seasons and their episodes with it. */
   series: readonly SeriesDetail[];
+  /**
+   * Each title's **Source folder** by its id, as `sourceFoldersOf` answers
+   * it: a title found here is named by it, any other spelled `Title (Year)`.
+   */
+  sourceFolders?: ReadonlyMap<string, string>;
 }
 
 /**
@@ -217,7 +222,8 @@ export async function writeExport(
     const { table, warnings } = exportRows(
       content.movies,
       content.series,
-      cells
+      cells,
+      (titleId) => content.sourceFolders?.get(titleId) ?? null
     );
     const skipped = await copyPlanned(media, folder, files);
     const bytes = await writeSheet(blanked(table, skipped), request.format);
