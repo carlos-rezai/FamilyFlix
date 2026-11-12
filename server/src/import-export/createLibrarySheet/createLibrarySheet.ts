@@ -157,7 +157,7 @@ export function createLibrarySheet({
       movies,
       series,
       layoutCells(reads, folder.path),
-      (titleId) => sourceFolders.get(titleId) ?? null
+      sourceFolders
     );
     const sheet = join(folder.path, LIBRARY_SHEET);
     const onDisk = await bytesAt(sheet);

@@ -41,7 +41,7 @@ function exported(
   include: ExportInclude
 ): { table: ExportTable; files: ExportFile[]; warnings: string[] } {
   const plan = filePlan(include);
-  const { table, warnings } = exportRows(movies, series, plan.cells);
+  const { table, warnings } = exportRows(movies, series, plan.cells, new Map());
   return { table, files: plan.files, warnings };
 }
 

@@ -279,10 +279,10 @@ const byKey = (a: Planned, b: Planned): number =>
  * Each path cell is what `cells`, the **Path cells**, answers for its
  * **Layout place** (log 59): the Export hands it its **File plan**
  * (`filePlan`), the Library sheet the cells of each Title folder's **Layout
- * read** (`layoutCells`). `sourceFolderOf` names a title's Folder key by its
+ * read** (`layoutCells`). `sourceFolders` names a title's Folder key by its
  * **Source folder** (`sourceFoldersOf`), for the Library sheet and, since
  * the **Export round trip** (log 61), for the Export too; a title it doesn't
- * know is spelled from its title and year. Two titles sharing a Folder key,
+ * hold is spelled from its title and year. Two titles sharing a Folder key,
  * compared folded (NFC, then case), are numbered `(1)`, `(2)`, … in sheet
  * order, each with a Warning line.
  */
@@ -290,19 +290,20 @@ export function exportRows(
   movies: readonly Movie[],
   series: readonly SeriesDetail[],
   cells: PathCells,
-  sourceFolderOf: (titleId: string) => string | null = () => null
+  sourceFolders: ReadonlyMap<string, string>
 ): ExportRows {
   const planned: Planned[] = [
     ...movies.map(
       (movie): Planned => ({
-        key: sourceFolderOf(movie.id) ?? folderKeyName(movie.title, movie.year),
+        key:
+          sourceFolders.get(movie.id) ?? folderKeyName(movie.title, movie.year),
         rows: movieRows(movie),
       })
     ),
     ...series.map(
       (detail): Planned => ({
         key:
-          sourceFolderOf(detail.series.id) ??
+          sourceFolders.get(detail.series.id) ??
           folderKeyName(detail.series.title, detail.series.year),
         rows: seriesRows(detail),
       })

@@ -244,7 +244,8 @@ describe.each([...EXPORT_FORMATS])(
       const { table } = exportRows(
         [HEAT],
         [SEVERANCE],
-        filePlan({ images: true, subtitles: true }).cells
+        filePlan({ images: true, subtitles: true }).cells,
+        new Map()
       );
       const bytes = await writeSheet(table, format);
       const blank: number[] = [];

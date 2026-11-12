@@ -37,8 +37,8 @@ function table(
   movies: readonly Movie[],
   series: readonly SeriesDetail[]
 ): string[][] {
-  return exportRows(movies, series, filePlan(OFF).cells).table.map((row) =>
-    row.map(text)
+  return exportRows(movies, series, filePlan(OFF).cells, new Map()).table.map(
+    (row) => row.map(text)
   );
 }
 
@@ -176,7 +176,8 @@ describe('exportRows: one table', () => {
       { images: true, subtitles: false },
     ]) {
       expect(
-        exportRows([HEAT], [SEVERANCE], filePlan(include).cells).table[0]
+        exportRows([HEAT], [SEVERANCE], filePlan(include).cells, new Map())
+          .table[0]
       ).toEqual([...SHEET_COLUMNS]);
     }
   });
@@ -476,7 +477,12 @@ describe('exportRows: the path cells it is given', () => {
 
   /** The rows by column name, read through the fake. */
   function faked(): Record<string, string>[] {
-    const [header = [], ...body] = exportRows([FILM], [SHOW], FAKE).table;
+    const [header = [], ...body] = exportRows(
+      [FILM],
+      [SHOW],
+      FAKE,
+      new Map()
+    ).table;
     return body.map((row) =>
       Object.fromEntries(
         header.map((name, index) => [text(name), text(row[index])])
@@ -548,7 +554,10 @@ describe('exportRows: two keys differing only in NFC and NFD', () => {
   /** `Amélie (2001)` decomposed (NFD). */
   const NFD = 'Ame\u0301lie (2001)';
 
-  const SOURCE: Record<string, string> = { composed: NFC, decomposed: NFD };
+  const SOURCE = new Map([
+    ['composed', NFC],
+    ['decomposed', NFD],
+  ]);
 
   const exported = exportRows(
     [
@@ -557,7 +566,7 @@ describe('exportRows: two keys differing only in NFC and NFD', () => {
     ],
     [],
     filePlan(OFF).cells,
-    (titleId) => SOURCE[titleId] ?? null
+    SOURCE
   );
 
   /** The Folder cell of each Movie row. */

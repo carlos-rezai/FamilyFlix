@@ -226,7 +226,7 @@ export async function writeExport(
       content.movies,
       content.series,
       cells,
-      (titleId) => content.sourceFolders?.get(titleId) ?? null
+      content.sourceFolders ?? new Map()
     );
     const skipped = await copyPlanned(media, folder, files);
     const bytes = await writeSheet(blanked(table, skipped), request.format);

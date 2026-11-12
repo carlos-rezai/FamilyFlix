@@ -82,7 +82,8 @@ const TIDEWATER: SeriesDetail = ((): SeriesDetail => {
 const TABLE: ExportTable = exportRows(
   [AMELIE],
   [TIDEWATER],
-  filePlan(ALL).cells
+  filePlan(ALL).cells,
+  new Map()
 ).table;
 
 async function open(
@@ -135,7 +136,7 @@ describe.each(FORMATS)('writeSheet: the one table (%s)', (format) => {
 
   it('writes the header alone for a library of none', async () => {
     const bytes = await writeSheet(
-      exportRows([], [], filePlan(ALL).cells).table,
+      exportRows([], [], filePlan(ALL).cells, new Map()).table,
       format
     );
 
