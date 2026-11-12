@@ -104,7 +104,11 @@ const SEVERANCE: SeriesDetail = ((): SeriesDetail => {
   };
 })();
 
-const CONTENT = { movies: [HEAT], series: [SEVERANCE] };
+const CONTENT = {
+  movies: [HEAT],
+  series: [SEVERANCE],
+  sourceFolders: new Map(),
+};
 
 interface Sandbox {
   media: Media;
@@ -349,6 +353,7 @@ describe('writeExport: the sheet in Meta', () => {
     await writeExport(media, request(destination), {
       movies: [gone],
       series: [SEVERANCE],
+      sourceFolders: new Map(),
     });
 
     const rows = await sheetRows(
@@ -377,6 +382,7 @@ describe('writeExport: two titles sharing a Folder key', () => {
     await writeExport(media, request(destination), {
       movies: [HEAT, OTHER_HEAT],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
@@ -390,6 +396,7 @@ describe('writeExport: two titles sharing a Folder key', () => {
     const outcome = await writeExport(media, request(destination), {
       movies: [HEAT, OTHER_HEAT],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome.kind).toBe('written');

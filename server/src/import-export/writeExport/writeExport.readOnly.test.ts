@@ -85,6 +85,7 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
     const outcome = await writeExport(media, request(destination), {
       movies: [makeMovie({ title: 'Zephyr', year: 2020 })],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'read-only' });
@@ -96,6 +97,7 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
     await writeExport(media, request(destination), {
       movies: [makeMovie({ title: 'Zephyr', year: 2020 })],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(readdirSync(destination)).toEqual([]);
@@ -109,6 +111,7 @@ describe('writeExport — a folder FamilyFlix can’t write to', () => {
     const outcome = await writeExport(media, request(missing), {
       movies: [],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });

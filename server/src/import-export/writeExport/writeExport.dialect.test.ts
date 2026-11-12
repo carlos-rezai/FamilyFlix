@@ -47,6 +47,7 @@ describe('writeExport: the Sheet dialect', () => {
       {
         movies: [makeMovie({ id: 'heat', title: 'Heat', tmdbScore: 7.9 })],
         series: [],
+        sourceFolders: new Map(),
       }
     );
 

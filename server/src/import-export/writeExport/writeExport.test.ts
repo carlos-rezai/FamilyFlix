@@ -69,6 +69,7 @@ describe('writeExport — a valid destination', () => {
     const outcome = await writeExport(media, request(destination), {
       movies: FILMS,
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({
@@ -86,6 +87,7 @@ describe('writeExport — a valid destination', () => {
     await writeExport(media, request(destination), {
       movies: FILMS,
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(readdirSync(destination)).toEqual([NAME]);
@@ -97,6 +99,7 @@ describe('writeExport — a valid destination', () => {
     await writeExport(media, request(destination), {
       movies: FILMS,
       series: [],
+      sourceFolders: new Map(),
     });
 
     const sheet = join(destination, NAME, 'Meta', 'familyflix-library.csv');
@@ -111,6 +114,7 @@ describe('writeExport — a valid destination', () => {
     await writeExport(media, request(destination, { format: 'xlsx' }), {
       movies: FILMS,
       series: [],
+      sourceFolders: new Map(),
     });
 
     const sheet = join(destination, NAME, 'Meta', 'familyflix-library.xlsx');
@@ -128,6 +132,7 @@ describe('writeExport — a valid destination', () => {
     await writeExport(media, request(destination), {
       movies: FILMS,
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(readdirSync(join(destination, NAME))).toEqual(['Meta']);
@@ -141,6 +146,7 @@ describe('writeExport — a relative destination', () => {
     const outcome = await writeExport(media, request('exports-276-relative'), {
       movies: FILMS,
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'relative' });
@@ -152,6 +158,7 @@ describe('writeExport — a relative destination', () => {
     await writeExport(media, request('exports-276-relative'), {
       movies: FILMS,
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(existsSync(resolve('exports-276-relative'))).toBe(false);
@@ -162,7 +169,11 @@ describe('writeExport — a relative destination', () => {
     const { media } = sandbox();
 
     await expect(
-      writeExport(media, request(''), { movies: FILMS, series: [] })
+      writeExport(media, request(''), {
+        movies: FILMS,
+        series: [],
+        sourceFolders: new Map(),
+      })
     ).resolves.toMatchObject({ kind: 'refused' });
   });
 });

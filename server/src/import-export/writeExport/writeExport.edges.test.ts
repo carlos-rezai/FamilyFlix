@@ -129,6 +129,7 @@ describe('writeExport — a destination that is not a folder', () => {
     const outcome = await writeExport(media, request(missing), {
       movies: [ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
@@ -143,6 +144,7 @@ describe('writeExport — a destination that is not a folder', () => {
     const outcome = await writeExport(media, request(file), {
       movies: [ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({ kind: 'refused', refusal: 'missing' });
@@ -172,6 +174,7 @@ describe('writeExport — a taken Export name', () => {
     const outcome = await writeExport(media, request(destination), {
       movies: [ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toMatchObject({
@@ -190,6 +193,7 @@ describe('writeExport — a taken Export name', () => {
     await writeExport(media, request(destination), {
       movies: [ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(tree(join(destination, NAME))).toEqual(before);
@@ -203,6 +207,7 @@ describe('writeExport — a taken Export name', () => {
     const outcome = await writeExport(media, request(destination), {
       movies: [ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toMatchObject({
@@ -220,6 +225,7 @@ describe('writeExport — a stored file that can’t be read', () => {
     const outcome = await writeExport(media, request(destination), {
       movies: [HEAT, ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({
@@ -237,6 +243,7 @@ describe('writeExport — a stored file that can’t be read', () => {
     await writeExport(media, request(destination), {
       movies: [HEAT, ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     const heat = join(destination, NAME, 'Heat (1995)', 'Images');
@@ -258,6 +265,7 @@ describe('writeExport — a stored file that can’t be read', () => {
     await writeExport(media, request(destination), {
       movies: [HEAT, ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     const sheet = readFileSync(
@@ -295,7 +303,7 @@ describe('writeExport — any other failure', () => {
     const outcome = await writeExport(
       breakingMedia(media),
       request(destination),
-      { movies: [ZEPHYR], series: [] }
+      { movies: [ZEPHYR], series: [], sourceFolders: new Map() }
     );
 
     expect(outcome).toEqual({
@@ -310,6 +318,7 @@ describe('writeExport — any other failure', () => {
     await writeExport(breakingMedia(media), request(destination), {
       movies: [ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(readdirSync(destination)).toEqual([]);
@@ -323,6 +332,7 @@ describe('writeExport — any other failure', () => {
     await writeExport(breakingMedia(media), request(destination), {
       movies: [ZEPHYR],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(readdirSync(destination)).toEqual([NAME]);
@@ -339,6 +349,7 @@ describe('writeExport — zero titles', () => {
     const outcome = await writeExport(media, request(destination), {
       movies: [],
       series: [],
+      sourceFolders: new Map(),
     });
 
     expect(outcome).toEqual({
@@ -353,7 +364,11 @@ describe('writeExport — zero titles', () => {
   it('writes the one csv sheet in Meta holding its header row alone', async () => {
     const { media, destination } = sandbox();
 
-    await writeExport(media, request(destination), { movies: [], series: [] });
+    await writeExport(media, request(destination), {
+      movies: [],
+      series: [],
+      sourceFolders: new Map(),
+    });
 
     const folder = join(destination, NAME);
     expect(readdirSync(folder)).toEqual(['Meta']);
@@ -371,6 +386,7 @@ describe('writeExport — zero titles', () => {
     await writeExport(media, request(destination, { format: 'xlsx' }), {
       movies: [],
       series: [],
+      sourceFolders: new Map(),
     });
 
     const folder = join(destination, NAME, 'Meta');

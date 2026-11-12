@@ -24,7 +24,7 @@ import { writeExport } from './writeExport';
 
 const ZEPHYR: Movie = makeMovie({ id: 'zephyr', title: 'Zephyr', year: 2020 });
 
-const CONTENT = { movies: [ZEPHYR], series: [] };
+const CONTENT = { movies: [ZEPHYR], series: [], sourceFolders: new Map() };
 
 interface Sandbox {
   media: Media;

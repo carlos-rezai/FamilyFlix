@@ -446,7 +446,7 @@ describe('an Export of a show holding a frame', () => {
         images: true,
         subtitles: false,
       },
-      { movies: [], series: [detail] }
+      { movies: [], series: [detail], sourceFolders: new Map() }
     );
     expect(outcome.kind).not.toBe('refused');
 
