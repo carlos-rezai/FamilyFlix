@@ -16,12 +16,19 @@ export interface WelcomeTune {
 const MASTER_LEVEL = 0.3;
 
 /** A bell's rise, in s, and its octave partial's share of its level. */
-const BELL_RISE = 0.01;
-const BELL_OCTAVE = 0.25;
+const BELL_RISE = 0.08;
+const BELL_OCTAVE = 0.1;
 
 /** A pluck's rise and a swell's, in s (log 62 Q6). */
-const PLUCK_RISE = 0.005;
+const PLUCK_RISE = 0.012;
 const SWELL_RISE = 0.35;
+
+/**
+ * The lowpass the master sounds through, in Hz, and its Q: it softens the
+ * tune's top (the handoff's Voices).
+ */
+const BRIGHTNESS_HZ = 4700;
+const BRIGHTNESS_Q = 0.5;
 
 /** Where an exponential fall ends, as a share of its peak: inaudible. */
 const FLOOR = 1e-4;
@@ -97,7 +104,7 @@ function strike(
     sound(context, master, type, shape, hz, level, start, end);
   switch (note.voice) {
     case 'pluck':
-      at('triangle', struck(PLUCK_RISE), frequency, note.level);
+      at('sine', struck(PLUCK_RISE), frequency, note.level);
       return;
     case 'swell':
       at('sine', swelled, frequency, note.level);
@@ -137,7 +144,12 @@ export function createWelcomeTune(): WelcomeTune {
     }
     master = context.createGain();
     master.gain.value = MASTER_LEVEL;
-    master.connect(context.destination);
+    const brightness = context.createBiquadFilter();
+    brightness.type = 'lowpass';
+    brightness.frequency.value = BRIGHTNESS_HZ;
+    brightness.Q.value = BRIGHTNESS_Q;
+    master.connect(brightness);
+    brightness.connect(context.destination);
     return { context, master };
   }
 

@@ -35,11 +35,11 @@ import { WelcomeProvider } from './WelcomeProvider';
  * A **Cold start**'s **Wordmark handoff** strikes the chord at its start,
  * whether it follows the intro straight away or a **Welcome hold**. At `done`
  * the tune finishes: the context closes once the chord has died away, its
- * 1800ms after the handoff's start, and not before. An unmount closes it at
+ * 2600ms after the handoff's start, and not before. An unmount closes it at
  * once. A reload and a deep link play no welcome and make no context at all.
  *
  * The chord is told by what starts at the handoff's moment on the context's
- * clock: F2 C3 F3 A3 C4 F4, each with its octave partial.
+ * clock: C3 F3 A3 C4 F4 A4, each with its octave partial.
  */
 
 stubScrollMetrics(6390);
@@ -47,15 +47,15 @@ const audio = stubAudioContext();
 
 const INTRO = 1950;
 const HANDOFF = 500;
-/** The chord rings 1800ms from the handoff's start. */
-const CHORD_MS = 1800;
+/** The chord rings 2600ms from the handoff's start. */
+const CHORD_MS = 2600;
 
 const WELCOMED_KEY = 'familyflix.welcomed';
 
 const hz = (pitch: number) => 440 * 2 ** ((pitch - 69) / 12);
 
 /** Every frequency the chord sounds: each pitch and its octave, ascending. */
-const CHORD_HZ = [41, 48, 53, 57, 60, 65]
+const CHORD_HZ = [48, 53, 57, 60, 65, 69]
   .flatMap((pitch) => [hz(pitch), 2 * hz(pitch)])
   .sort((a, b) => a - b);
 
@@ -297,7 +297,8 @@ const skips: Array<[string, Skip]> = [
 ];
 
 function masterOf(context: FakeAudioContext): FakeAudioNode {
-  const masters = context.inputsOf(context.destination);
+  const [filter] = context.inputsOf(context.destination);
+  const masters = context.inputsOf(filter);
   expect(masters).toHaveLength(1);
   return masters[0];
 }

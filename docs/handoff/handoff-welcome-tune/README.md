@@ -27,22 +27,27 @@ A retune by ear amends this score first.
 ## Voices
 
 Every note is one oscillator through its own envelope into one master gain at
-**0.3**.
+**0.3**, and the master through one lowpass filter at **4700Hz** (Q 0.5) that
+softens the tune's top.
 
-| Voice | Wave                                      | Rise          | Fall                               |
-| ----- | ----------------------------------------- | ------------- | ---------------------------------- |
-| pluck | triangle                                  | 5ms           | exponential, to silence by its end |
-| bell  | sine, plus a sine an octave up at ¼ level | 10ms          | exponential, to silence by its end |
-| swell | sine                                      | linear, 350ms | linear, to silence by its end      |
+| Voice | Wave                                        | Rise          | Fall                               |
+| ----- | ------------------------------------------- | ------------- | ---------------------------------- |
+| pluck | sine                                        | 12ms          | exponential, to silence by its end |
+| bell  | sine, plus a sine an octave up at 0.1 level | 80ms          | exponential, to silence by its end |
+| swell | sine                                        | linear, 350ms | linear, to silence by its end      |
+
+Retuned by ear in the live walk (issue 600), from a triangle pluck at 5ms, a
+bell at 10ms with its octave at a quarter, no filter, and the chord below
+from F2.
 
 ## The Intro cue (ms from the welcome's start)
 
-| What it marks           | At         | Notes (pitch, MIDI)                                                              | Length | Voice | Level |
-| ----------------------- | ---------- | -------------------------------------------------------------------------------- | ------ | ----- | ----- |
-| F1 lands (`drop` 55%)   | 286        | F3 (53)                                                                          | 400    | pluck | 0.8   |
-| F2 lands                | 436        | F4 (65)                                                                          | 400    | pluck | 0.8   |
-| Letter i rises (0 to 9) | 520 + i·40 | _Family_ F4 G4 A4 C5 D5 F5 (65 67 69 72 74 77), _Flix_ A5 C6 D6 F6 (81 84 86 89) | 200    | pluck | 0.35  |
-| The light sweeps        | 1000       | C6 and F6 (84, 89), at their height at 1350, the mark sweep's middle             | 950    | swell | 0.25  |
+| What it marks           | At         | Notes (pitch, MIDI)                                                               | Length | Voice | Level |
+| ----------------------- | ---------- | --------------------------------------------------------------------------------- | ------ | ----- | ----- |
+| F1 lands (`drop` 55%)   | 286        | F3 (53)                                                                           | 400    | pluck | 0.8   |
+| F2 lands                | 436        | F4 (65)                                                                           | 400    | pluck | 0.8   |
+| Letter i rises (0 to 9) | 520 + i·40 | _Family_ F4 G4 A4 B♭4 C5 D5 (65 67 69 70 72 74), _Flix_ E5 F5 G5 A5 (76 77 79 81) | 200    | pluck | 0.3   |
+| The light sweeps        | 1000       | C6 and F6 (84, 89), at their height at 1350, the mark sweep's middle              | 950    | swell | 0.13  |
 
 Every Intro cue note has died away by 1950ms, the **Welcome intro**'s end.
 
@@ -50,7 +55,7 @@ Every Intro cue note has died away by 1950ms, the **Welcome intro**'s end.
 
 | What it marks            | At  | Notes (pitch, MIDI)                   | Length | Voice | Level |
 | ------------------------ | --- | ------------------------------------- | ------ | ----- | ----- |
-| The wordmark glides home | 0   | F2 C3 F3 A3 C4 F4 (41 48 53 57 60 65) | 1800   | bell  | 0.3   |
+| The wordmark glides home | 0   | C3 F3 A3 C4 F4 A4 (48 53 57 60 65 69) | 2600   | bell  | 0.3   |
 
 The chord outlives the 500ms handoff and rings on under the home; the tune's
 context closes once it has died away.
@@ -62,5 +67,5 @@ context closes once it has died away.
   `INTRO_MS`), never typed as a number of its own.
 - At no instant do the levels sounding, a bell counting its octave, times the
   master level, reach full scale.
-- Everything is in F major, as the mark: the two Fs land on F, the run ends
-  on F, the chord is F.
+- Everything is in F major, as the mark: the two Fs land on F, the run climbs
+  the F major scale, the chord is F.

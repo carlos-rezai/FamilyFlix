@@ -28,11 +28,11 @@ export interface WelcomeNote {
   level: number;
 }
 
-/** The chord's notes: F2 C3 F3 A3 C4 F4. */
-const CHORD_PITCHES = [41, 48, 53, 57, 60, 65];
+/** The chord's notes: C3 F3 A3 C4 F4 A4. */
+const CHORD_PITCHES = [48, 53, 57, 60, 65, 69];
 
 /** The chord rings on under the home, past the 500ms handoff. */
-const CHORD_MS = 1800;
+const CHORD_MS = 2600;
 
 /**
  * The **Closing chord**: F major as bells, struck together at the
@@ -45,8 +45,8 @@ export const CLOSING_CHORD: readonly WelcomeNote[] = CHORD_PITCHES.map(
 /** F3 on the first F's landing, F4 on the accent one's. */
 const LANDING_PITCHES = [53, 65];
 
-/** F4 G4 A4 C5 D5 F5 A5 C6 D6 F6, one per letter of _FamilyFlix_. */
-const LETTER_PITCHES = [65, 67, 69, 72, 74, 77, 81, 84, 86, 89];
+/** F4 up the F major scale to A5, one per letter of _FamilyFlix_. */
+const LETTER_PITCHES = [65, 67, 69, 70, 72, 74, 76, 77, 79, 81];
 
 /** C6 and F6. */
 const SWELL_PITCHES = [84, 89];
@@ -54,8 +54,8 @@ const SWELL_PITCHES = [84, 89];
 /** A swell's rise, in ms: it peaks at the mark sweep's middle (log 62 Q6). */
 const SWELL_RISE_MS = 350;
 
-/** The swell dies away 900ms after it starts, before the intro's end. */
-const SWELL_MS = 900;
+/** The swell dies away 950ms after it starts, as the intro ends. */
+const SWELL_MS = 950;
 
 /**
  * The **Intro cue**: a pluck on each F's landing, one per letter as it
@@ -78,7 +78,7 @@ export const INTRO_CUE: readonly WelcomeNote[] = [
       pitch,
       length: 200,
       voice: 'pluck',
-      level: 0.35,
+      level: 0.3,
     })
   ),
   ...SWELL_PITCHES.map(
@@ -87,7 +87,7 @@ export const INTRO_CUE: readonly WelcomeNote[] = [
       pitch,
       length: SWELL_MS,
       voice: 'swell',
-      level: 0.25,
+      level: 0.13,
     })
   ),
 ];

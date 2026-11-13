@@ -19,9 +19,10 @@ import { createWelcomeTune } from './createWelcomeTune';
  * 62, Welcome tune, Phase 1 (issue #594): the player, with the bell voice.
  *
  * `play(CLOSING_CHORD)` strikes every note from the context's `currentTime`:
- * a sine at its pitch's frequency and one an octave up at a quarter of its
- * level, rising in 10ms and falling exponentially to its end, every one into
- * one master gain at 0.3. `finish()` closes the context once the last note
+ * a sine at its pitch's frequency and one an octave up at 0.1 of its level,
+ * rising in 80ms and falling exponentially to its end, every one into one
+ * master gain at 0.3, and the master through one lowpass at 4700Hz (retuned by
+ * ear in issue #600). `finish()` closes the context once the last note
  * has died away, never before. With no `AudioContext` in the window the tune
  * is silent: every call does nothing, and none throws.
  *
@@ -34,11 +35,11 @@ const NOW = 12.5;
 
 /** The master level and a bell's octave partial (log 62 Q6, Q7). */
 const MASTER = 0.3;
-const OCTAVE_LEVEL = 0.25;
+const OCTAVE_LEVEL = 0.1;
 
 /** The bell's rise, and the chord's length, in s. */
-const RISE = 0.01;
-const LENGTH = 1.8;
+const RISE = 0.08;
+const LENGTH = 2.6;
 
 const hz = (pitch: number) => 440 * 2 ** ((pitch - 69) / 12);
 
@@ -98,7 +99,7 @@ describe('createWelcomeTune: the Closing chord', () => {
     }
   });
 
-  it('peaks each note at its level and its octave at a quarter of it, through the master', () => {
+  it('peaks each note at its level and its octave at 0.1 of it, through the master', () => {
     const { oscillators } = playChord();
 
     const heard = oscillators
@@ -118,10 +119,17 @@ describe('createWelcomeTune: the Closing chord', () => {
     });
   });
 
-  it('feeds everything to the destination through one master gain at 0.3', () => {
+  it('feeds everything to the destination through one master gain at 0.3 and one 4700Hz lowpass', () => {
     const { context } = playChord();
 
-    const masters = context.inputsOf(context.destination);
+    const filters = context.inputsOf(context.destination);
+    expect(filters).toHaveLength(1);
+    const filter = context.filters.find((node) => node === filters[0]);
+    expect(filter?.type).toBe('lowpass');
+    expect(filter?.frequency.valueAt(NOW)).toBe(4700);
+    expect(filter?.Q.valueAt(NOW)).toBe(0.5);
+
+    const masters = filter ? context.inputsOf(filter) : [];
     expect(masters).toHaveLength(1);
     const master = context.gains.find((gain) => gain === masters[0]);
     expect(master).toBeDefined();
@@ -132,7 +140,7 @@ describe('createWelcomeTune: the Closing chord', () => {
     }
   });
 
-  it('rises from silence to its peak in 10ms', () => {
+  it('rises from silence to its peak in 80ms', () => {
     const { oscillators } = playChord();
 
     for (const oscillator of oscillators) {
@@ -228,7 +236,7 @@ describe('createWelcomeTune: no AudioContext in the window', () => {
  * 62, Welcome tune, Phase 3 (issue #596): the pluck and swell voices, and the
  * **Intro cue** played.
  *
- * A pluck is one triangle at its pitch, rising from silence in 5ms and falling
+ * A pluck is one sine at its pitch, rising from silence in 12ms and falling
  * exponentially to nothing at its end; a swell is one sine, rising linearly
  * for 350ms and falling linearly to silence at its end. Each is started at the
  * context's `currentTime + at / 1000`. Played whole, the Intro cue is silent
@@ -237,7 +245,7 @@ describe('createWelcomeTune: no AudioContext in the window', () => {
  */
 
 /** The pluck's rise and the swell's, in s (log 62 Q6). */
-const PLUCK_RISE = 0.005;
+const PLUCK_RISE = 0.012;
 const SWELL_RISE = 0.35;
 
 const PLUCK: WelcomeNote = {
@@ -278,16 +286,16 @@ describe('createWelcomeTune: the pluck voice', () => {
     return context.oscillators[0];
   }
 
-  it('sounds one triangle at its pitch, started at currentTime + at / 1000', () => {
+  it('sounds one sine at its pitch, started at currentTime + at / 1000', () => {
     const oscillator = playPluck();
 
-    expect(oscillator.type).toBe('triangle');
+    expect(oscillator.type).toBe('sine');
     expect(oscillator.frequency.valueAt(START)).toBeCloseTo(hz(PLUCK.pitch), 3);
     expect(oscillator.startedAt).toBeCloseTo(START, 6);
     expect(levelAt(oscillator, START - 0.001)).toBe(0);
   });
 
-  it('rises from silence to its level, through the master, in 5ms', () => {
+  it('rises from silence to its level, through the master, in 12ms', () => {
     const oscillator = playPluck();
 
     expect(levelAt(oscillator, START)).toBeCloseTo(0, 6);
@@ -462,7 +470,7 @@ describe('createWelcomeTune: fadeOut()', () => {
     await vi.advanceTimersByTimeAsync(300);
     const from = context.currentTime;
     tune.fadeOut(FADE);
-    const [master] = context.inputsOf(context.destination);
+    const [master] = context.inputsOf(context.filters[0]);
     return { context, master, from };
   }
 

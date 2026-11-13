@@ -144,6 +144,22 @@ export class FakeGainNode extends FakeAudioNode {
   }
 }
 
+/**
+ * A filter in the fake graph. It records its settings and passes every level
+ * through unchanged: `levelAt` measures loudness, not timbre.
+ */
+export class FakeBiquadFilterNode extends FakeAudioNode {
+  type: BiquadFilterType = 'lowpass';
+  readonly frequency: FakeAudioParam;
+  readonly Q: FakeAudioParam;
+
+  constructor(context: FakeAudioContext) {
+    super(context);
+    this.frequency = new FakeAudioParam(context, 350);
+    this.Q = new FakeAudioParam(context, 1);
+  }
+}
+
 export class FakeOscillatorNode extends FakeAudioNode {
   type: OscillatorType = 'sine';
   readonly frequency: FakeAudioParam;
@@ -192,6 +208,7 @@ export class FakeAudioContext {
   readonly destination: FakeAudioNode;
   readonly oscillators: FakeOscillatorNode[] = [];
   readonly gains: FakeGainNode[] = [];
+  readonly filters: FakeBiquadFilterNode[] = [];
   state: AudioContextState = 'running';
   /** The context's `currentTime` when `close()` was first called. */
   closedAt: number | null = null;
@@ -223,6 +240,12 @@ export class FakeAudioContext {
     return node;
   }
 
+  createBiquadFilter(): FakeBiquadFilterNode {
+    const node = new FakeBiquadFilterNode(this);
+    this.filters.push(node);
+    return node;
+  }
+
   resume(): Promise<void> {
     this.resumed = true;
     return Promise.resolve();
@@ -236,8 +259,8 @@ export class FakeAudioContext {
 
   /** Every node feeding `node` directly. */
   inputsOf(node: FakeAudioNode): FakeAudioNode[] {
-    return [...this.oscillators, ...this.gains].filter((input) =>
-      input.outputs.includes(node)
+    return [...this.oscillators, ...this.gains, ...this.filters].filter(
+      (input) => input.outputs.includes(node)
     );
   }
 
@@ -291,7 +314,7 @@ export interface StubAudioOptions {
 /**
  * jsdom has no Web Audio. Call this inside the `describe` that needs it (or at
  * a file's top), and for each test `window.AudioContext` is a recording fake:
- * every context made, its oscillators and gains, how they connect, and what
+ * every context made, its oscillators, gains and filters, how they connect, and what
  * each param does over time. Cleanup removes it, so the next file's window has
  * no `AudioContext` again, as jsdom's own doesn't. It follows
  * `stubMediaElement` in shape.
