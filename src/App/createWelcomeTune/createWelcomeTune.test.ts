@@ -436,3 +436,62 @@ describe('createWelcomeTune: the Intro cue, played', () => {
     expect(loudest).toBeLessThan(1);
   });
 });
+
+/**
+ * 62, Welcome tune, Phase 4 (issue #597): `fadeOut(ms)` ramps the master from
+ * its level to silence over `ms`, then closes the context, and not before.
+ */
+describe('createWelcomeTune: fadeOut()', () => {
+  const audio = stubAudioContext({ startTime: NOW });
+
+  /** The fade a skip asks for, in ms (`SKIP_MS`). */
+  const FADE = 150;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  async function fadeMidChord() {
+    const tune = createWelcomeTune();
+    tune.play(CLOSING_CHORD);
+    const [context] = audio.contexts();
+    await vi.advanceTimersByTimeAsync(300);
+    const from = context.currentTime;
+    tune.fadeOut(FADE);
+    const [master] = context.inputsOf(context.destination);
+    return { context, master, from };
+  }
+
+  it('ramps the master from its level to 0 over 150ms', async () => {
+    const { master, from } = await fadeMidChord();
+
+    expect(levelAt(master, from)).toBeCloseTo(MASTER, 6);
+    expect(levelAt(master, from + FADE / 2000)).toBeCloseTo(MASTER / 2, 6);
+    expect(levelAt(master, from + FADE / 1000)).toBeCloseTo(0, 6);
+    expect(levelAt(master, from + FADE / 1000 + 0.05)).toBeCloseTo(0, 6);
+  });
+
+  it('silences every ringing note by the fade’s end', async () => {
+    const { context, from } = await fadeMidChord();
+
+    for (const oscillator of context.oscillators) {
+      expect(levelAt(oscillator, from)).toBeGreaterThan(0);
+      expect(levelAt(oscillator, from + FADE / 1000)).toBeCloseTo(0, 6);
+    }
+  });
+
+  it('closes the context after the fade, not before', async () => {
+    const { context, from } = await fadeMidChord();
+
+    await vi.advanceTimersByTimeAsync(FADE - 1);
+    expect(context.state).not.toBe('closed');
+
+    await vi.advanceTimersByTimeAsync(101);
+    expect(context.state).toBe('closed');
+    expect(context.closedAt).toBeGreaterThanOrEqual(from + FADE / 1000);
+  });
+});

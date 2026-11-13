@@ -1,5 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { act, render, type RenderResult } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  type RenderResult,
+} from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from 'styled-components';
 
@@ -11,8 +16,10 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { makeSettings } from '@/test-support/makeSettings/makeSettings';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 import {
+  levelAt,
   stubAudioContext,
   type FakeAudioContext,
+  type FakeAudioNode,
 } from '@/test-support/stubAudioContext/stubAudioContext';
 
 import { INTRO_CUE } from '@/App/welcomeScore/welcomeScore';
@@ -264,5 +271,130 @@ describe('WelcomeProvider: a Cold start plays the Intro cue, then the chord', ()
         oscillator.startedAt !== null && oscillator.startedAt < handoff - 1e-6
     );
     expect(intro).toHaveLength(INTRO_CUE.length);
+  });
+});
+
+/**
+ * 62, Welcome tune, Phase 4 (issue #597): a skip fades, and the hold is
+ * silent.
+ *
+ * A skip ramps the master from its level to silence over the skip's 150ms and
+ * closes the context after. A skip from the intro or the hold never reaches
+ * the handoff, so it plays no chord; a skip during the handoff fades the
+ * chord already ringing. A **Welcome hold** sounds nothing between the
+ * **Intro cue** and the **Closing chord**.
+ */
+const SKIP = 150;
+const MASTER = 0.3;
+
+type Skip = (target: Element) => void;
+
+const skips: Array<[string, Skip]> = [
+  ['a click', (target) => fireEvent.pointerDown(target)],
+  ['a key', (target) => fireEvent.keyDown(target, { key: 'Enter' })],
+];
+
+function masterOf(context: FakeAudioContext): FakeAudioNode {
+  const masters = context.inputsOf(context.destination);
+  expect(masters).toHaveLength(1);
+  return masters[0];
+}
+
+/** The master falls from its level to silence over 150ms from `from`. */
+function expectFadeFrom(context: FakeAudioContext, from: number) {
+  const master = masterOf(context);
+  expect(levelAt(master, from)).toBeCloseTo(MASTER, 6);
+  expect(levelAt(master, from + SKIP / 2000)).toBeCloseTo(MASTER / 2, 6);
+  expect(levelAt(master, from + SKIP / 1000)).toBeCloseTo(0, 6);
+}
+
+/** Closed after the fade, not before. */
+async function expectClosedAfterFade(context: FakeAudioContext) {
+  await advanceClock(SKIP - 1);
+  expect(context.state).not.toBe('closed');
+  await advanceClock(101);
+  expect(context.state).toBe('closed');
+}
+
+describe('WelcomeProvider: a skip fades the tune', () => {
+  describe.each(skips)('%s', (_, skip) => {
+    it('during the intro fades the master over 150ms, closes after, and plays no chord', async () => {
+      renderWelcome();
+      await advanceClock(100);
+      const context = onlyContext();
+
+      act(() => {
+        skip(document.body);
+      });
+      const from = context.currentTime;
+
+      expectFadeFrom(context, from);
+      await expectClosedAfterFade(context);
+      await advanceClock(INTRO + HANDOFF + CHORD_MS);
+      expect(context.oscillators).toHaveLength(INTRO_CUE.length);
+    });
+
+    it('during the hold fades once the home is ready, and plays no chord', async () => {
+      serveSlowHome();
+      renderWelcome();
+      await advanceClock(INTRO + 200);
+      const context = onlyContext();
+
+      act(() => {
+        skip(document.body);
+      });
+      await ready();
+      const from = context.currentTime;
+
+      expectFadeFrom(context, from);
+      await expectClosedAfterFade(context);
+      expect(context.oscillators).toHaveLength(INTRO_CUE.length);
+    });
+
+    it('during the handoff fades the ringing chord to silence', async () => {
+      renderWelcome();
+      await advanceClock(100);
+      await advanceClock(INTRO - 100 + 200);
+      const context = onlyContext();
+      const chord = context.oscillators.slice(INTRO_CUE.length);
+      expect(chord).toHaveLength(CHORD_HZ.length);
+
+      act(() => {
+        skip(document.body);
+      });
+      const from = context.currentTime;
+
+      expectFadeFrom(context, from);
+      for (const oscillator of chord) {
+        expect(levelAt(oscillator, from)).toBeGreaterThan(0);
+        expect(levelAt(oscillator, from + SKIP / 1000)).toBeCloseTo(0, 6);
+      }
+      await expectClosedAfterFade(context);
+    });
+  });
+});
+
+describe('WelcomeProvider: the Welcome hold is silent', () => {
+  it('schedules nothing between the Intro cue and the chord', async () => {
+    serveSlowHome();
+    renderWelcome();
+    await advanceClock(INTRO + 1000);
+    const context = onlyContext();
+    expect(context.oscillators).toHaveLength(INTRO_CUE.length);
+
+    await ready();
+    const chordAt = context.currentTime;
+
+    const between = context.oscillators.filter(
+      (oscillator) =>
+        oscillator.startedAt !== null &&
+        oscillator.startedAt > INTRO / 1000 + 1e-6 &&
+        oscillator.startedAt < chordAt - 1e-6
+    );
+    expect(between).toHaveLength(0);
+    expectChord(startedAt(context, chordAt));
+    expect(context.oscillators).toHaveLength(
+      INTRO_CUE.length + CHORD_HZ.length
+    );
   });
 });
