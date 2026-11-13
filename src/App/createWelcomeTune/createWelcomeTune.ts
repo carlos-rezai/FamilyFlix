@@ -1,4 +1,7 @@
-import type { WelcomeNote } from '@/App/welcomeScore/welcomeScore';
+import type {
+  WelcomeNote,
+  WelcomeVoice,
+} from '@/App/welcomeScore/welcomeScore';
 import { MARK_SWEEP_MS } from '@/App/welcomeTimeline/welcomeTimeline';
 
 /** The **Welcome tune**'s player. */
@@ -72,11 +75,32 @@ const swelled: Shape = (gain, level, start, end) => {
   gain.linearRampToValueAtTime(0, end);
 };
 
-/** One oscillator at `frequency`, shaped to peak at `level`, into `master`. */
+/** One sine of a voice: its frequency and level as shares of its note's. */
+interface VoicePartial {
+  ratio: number;
+  share: number;
+  shape: Shape;
+}
+
+/** Each voice as the partials it sounds (log 62 Q6). */
+const VOICES: Record<WelcomeVoice, readonly VoicePartial[]> = {
+  pluck: [{ ratio: 1, share: 1, shape: struck(PLUCK_RISE) }],
+  swell: [{ ratio: 1, share: 1, shape: swelled }],
+  bell: [
+    { ratio: 1, share: 1, shape: struck(BELL_RISE) },
+    { ratio: 2, share: BELL_OCTAVE, shape: struck(BELL_RISE) },
+  ],
+};
+
+/** The graph a note sounds into: the context and its master gain. */
+interface Graph {
+  context: AudioContext;
+  master: AudioNode;
+}
+
+/** One sine at `frequency`, shaped to peak at `level`, into the master. */
 function sound(
-  context: AudioContext,
-  master: AudioNode,
-  type: OscillatorType,
+  { context, master }: Graph,
   shape: Shape,
   frequency: number,
   level: number,
@@ -84,7 +108,7 @@ function sound(
   end: number
 ): void {
   const oscillator = context.createOscillator();
-  oscillator.type = type;
+  oscillator.type = 'sine';
   oscillator.frequency.value = frequency;
   const envelope = context.createGain();
   shape(envelope.gain, level, start, end);
@@ -96,26 +120,14 @@ function sound(
 
 /** Sounds `note` in its voice, from `start` to `end` on the context's clock. */
 function strike(
-  context: AudioContext,
-  master: AudioNode,
+  graph: Graph,
   note: WelcomeNote,
   start: number,
   end: number
 ): void {
   const frequency = frequencyOf(note.pitch);
-  const at = (type: OscillatorType, shape: Shape, hz: number, level: number) =>
-    sound(context, master, type, shape, hz, level, start, end);
-  switch (note.voice) {
-    case 'pluck':
-      at('sine', struck(PLUCK_RISE), frequency, note.level);
-      return;
-    case 'swell':
-      at('sine', swelled, frequency, note.level);
-      return;
-    case 'bell':
-      at('sine', struck(BELL_RISE), frequency, note.level);
-      at('sine', struck(BELL_RISE), 2 * frequency, note.level * BELL_OCTAVE);
-      return;
+  for (const { ratio, share, shape } of VOICES[note.voice]) {
+    sound(graph, shape, ratio * frequency, share * note.level, start, end);
   }
 }
 
@@ -143,6 +155,7 @@ export function createWelcomeTune(): WelcomeTune {
   brightness.Q.value = BRIGHTNESS_Q;
   master.connect(brightness);
   brightness.connect(context.destination);
+  const graph: Graph = { context, master };
 
   let lastEnd = 0;
   let closing: ReturnType<typeof setTimeout> | undefined;
@@ -169,7 +182,7 @@ export function createWelcomeTune(): WelcomeTune {
       for (const note of cue) {
         const start = now + note.at / 1000;
         const end = start + note.length / 1000;
-        strike(context, master, note, start, end);
+        strike(graph, note, start, end);
         lastEnd = Math.max(lastEnd, end);
       }
     },
