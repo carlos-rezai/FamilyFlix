@@ -11,6 +11,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
 import LibraryPage from './LibraryPage';
+import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/DisplayPreferenceProvider';
 import { theme } from '@/styles/theme';
 import type {
   HomePayload,
@@ -807,5 +808,119 @@ describe('LibraryPage: the launch on the Start tab', () => {
     expect(await screen.findByText('0 series · 0 episodes')).toBeDefined();
     expect(pill('Series').getAttribute('aria-pressed')).toBe('true');
     expect(homeRequests()).toBe(0);
+  });
+});
+
+/**
+ * 63, Row view, Phase 2 (issue #609): the **Row view switch** in the header's
+ * end slot, after `LibraryFilters`, showing the current tab's own **Row
+ * view**. Mounted under the app's `DisplayPreferenceProvider`, as `App` does,
+ * the household storing Movies By genre and Series All.
+ */
+describe('LibraryPage: the Row view switch', () => {
+  const NO_SERIES: SeriesHomePayload = {
+    series: [],
+    episodeCount: 0,
+    continueWatching: [],
+  };
+
+  beforeEach(() => {
+    fetchMock.mockImplementation((input) => {
+      const url = String(input);
+      if (url === '/api/settings') {
+        return Promise.resolve(
+          okResponse(
+            makeSettings({ movieRowView: 'genre', seriesRowView: 'all' })
+          )
+        );
+      }
+      if (url === '/api/settings/movie-row-view') {
+        return Promise.resolve(okResponse({ value: 'all' }));
+      }
+      if (url.includes('/api/genres') || url.includes('/api/series/genres')) {
+        return Promise.resolve(genreListResponse());
+      }
+      if (url.includes('/api/series')) {
+        return Promise.resolve(okResponse(NO_SERIES));
+      }
+      if (url.includes('/api/home')) {
+        return Promise.resolve(homeResponse(HOME_PAYLOAD));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+  });
+
+  async function renderWithPreferences(url = '/') {
+    const view = render(
+      <MemoryRouter initialEntries={[url]}>
+        <ThemeProvider theme={theme}>
+          <DisplayPreferenceProvider>
+            <LibraryPage />
+          </DisplayPreferenceProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+    await screen.findByRole('banner');
+    return view;
+  }
+
+  const tabs = () => screen.getByRole('group', { name: 'Library' });
+  const viewPill = (value: string) =>
+    screen.findByRole('button', { name: `View: ${value}` });
+
+  it('draws the switch after the filters, Sort last among them', async () => {
+    await renderWithPreferences();
+
+    const view = await viewPill('By genre');
+    const sort = screen.getByRole('button', { name: 'Sort: Recently Added' });
+    const genre = screen.getByRole('button', { name: 'Genre: All Genres' });
+
+    expect(comesBefore(genre, view)).toBe(true);
+    expect(comesBefore(sort, view)).toBe(true);
+    expect(
+      within(screen.getByRole('banner')).getByRole('button', {
+        name: 'View: By genre',
+      })
+    ).toBe(view);
+  });
+
+  it('shows each tab’s own value as the tabs switch', async () => {
+    await renderWithPreferences();
+    expect(await viewPill('By genre')).toBeDefined();
+
+    act(() => {
+      within(tabs()).getByRole('button', { name: 'Series' }).click();
+    });
+    expect(await viewPill('All')).toBeDefined();
+
+    act(() => {
+      within(tabs()).getByRole('button', { name: 'Movies' }).click();
+    });
+    expect(await viewPill('By genre')).toBeDefined();
+  });
+
+  it('keeps the search text and the genre, rating and sort pills through a choice', async () => {
+    await renderWithPreferences(
+      '/?q=northwind&genre=Action&rating=6&sort=year'
+    );
+    const control = await viewPill('By genre');
+
+    act(() => control.focus());
+    fireEvent.click(control);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'All' }));
+
+    expect(await viewPill('All')).toBeDefined();
+    expect(searchBox().value).toBe('northwind');
+    expect(screen.getByRole('button', { name: 'Genre: Action' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Minimum rating: 3+ stars' })
+    ).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Sort: Year' })).toBeDefined();
+  });
+
+  it('opens on Series showing Series’ own value', async () => {
+    await renderWithPreferences('/?tab=series');
+
+    expect(await viewPill('All')).toBeDefined();
   });
 });

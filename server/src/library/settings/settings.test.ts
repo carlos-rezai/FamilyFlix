@@ -806,3 +806,123 @@ describe('library: startTab / setStartTab, the Start tab preference', () => {
     expect(storage.settings().startTab).toBe('movies');
   });
 });
+
+// 63, Row view, Phase 2 (issue #609): the **Row view**, one per **Library
+// tab**. Two more choices under `movie-row-view` and `series-row-view`, read
+// with `choiceOf` over `ROW_VIEWS`: Movies **By genre** (`'genre'`) and Series
+// **All** (`'all'`) until changed, an off-list stored value reading as the
+// default. Each written one key at a time, `setStartTab`'s upsert.
+describe('library: movieRowView / seriesRowView, the Row view per tab', () => {
+  /** A migrated in-memory handle and the repository over it. */
+  function repositoryOverRawDb() {
+    const db = track(openDatabase(':memory:'));
+    return { db, repository: createSettings(db) };
+  }
+
+  /** The value stored under `key`, or `null` when no row is. */
+  function storedUnder(db: SqliteDatabase, key: string): string | null {
+    const row = db
+      .prepare('SELECT value FROM settings WHERE key = ?')
+      .get(key) as { value: string } | undefined;
+    return row?.value ?? null;
+  }
+
+  it('reads Movies By genre and Series All on a fresh database', () => {
+    const storage = freshStorage();
+
+    expect(storage.settings().movieRowView).toBe('genre');
+    expect(storage.settings().seriesRowView).toBe('all');
+  });
+
+  it('writes Movies All and reads it back', () => {
+    const storage = freshStorage();
+
+    storage.setMovieRowView('all');
+
+    expect(storage.settings().movieRowView).toBe('all');
+  });
+
+  it('writes Series By genre and reads it back', () => {
+    const storage = freshStorage();
+
+    storage.setSeriesRowView('genre');
+
+    expect(storage.settings().seriesRowView).toBe('genre');
+  });
+
+  it('round-trips each tab back to its default', () => {
+    const storage = freshStorage();
+    storage.setMovieRowView('all');
+    storage.setSeriesRowView('genre');
+
+    storage.setMovieRowView('genre');
+    storage.setSeriesRowView('all');
+
+    expect(storage.settings().movieRowView).toBe('genre');
+    expect(storage.settings().seriesRowView).toBe('all');
+  });
+
+  it.each(['grid', 'Genre', 'ALL', ''])(
+    'reads a hand-stored %j as each tab’s default',
+    (nonsense) => {
+      const { db, repository } = repositoryOverRawDb();
+      const insert = db.prepare(
+        'INSERT INTO settings (key, value) VALUES (?, ?)'
+      );
+      insert.run('movie-row-view', nonsense);
+      insert.run('series-row-view', nonsense);
+
+      expect(repository.settings().movieRowView).toBe('genre');
+      expect(repository.settings().seriesRowView).toBe('all');
+    }
+  );
+
+  it("a Movies write touches 'movie-row-view' alone", () => {
+    const { db, repository } = repositoryOverRawDb();
+    repository.setStartTab('series');
+
+    repository.setMovieRowView('all');
+
+    expect(storedUnder(db, 'movie-row-view')).toBe('all');
+    expect(storedUnder(db, 'series-row-view')).toBeNull();
+    expect(repository.settings().seriesRowView).toBe('all');
+    expect(repository.settings().startTab).toBe('series');
+  });
+
+  it("a Series write touches 'series-row-view' alone", () => {
+    const { db, repository } = repositoryOverRawDb();
+    repository.setMovieRowView('all');
+
+    repository.setSeriesRowView('genre');
+
+    expect(storedUnder(db, 'series-row-view')).toBe('genre');
+    expect(storedUnder(db, 'movie-row-view')).toBe('all');
+    expect(repository.settings().movieRowView).toBe('all');
+  });
+
+  it('upserts a repeated write rather than failing on the key', () => {
+    const { db, repository } = repositoryOverRawDb();
+    repository.setMovieRowView('all');
+
+    expect(() => repository.setMovieRowView('all')).not.toThrow();
+    const count = (
+      db
+        .prepare('SELECT COUNT(*) AS count FROM settings WHERE key = ?')
+        .get('movie-row-view') as { count: number }
+    ).count;
+    expect(count).toBe(1);
+  });
+
+  it('survives closing and reopening the database: it is in the backup', () => {
+    const path = tempDbPath();
+    const first = track(createSqliteStorage(path));
+    first.setMovieRowView('all');
+    first.setSeriesRowView('genre');
+    first.close();
+
+    const second = track(createSqliteStorage(path));
+
+    expect(second.settings().movieRowView).toBe('all');
+    expect(second.settings().seriesRowView).toBe('genre');
+  });
+});

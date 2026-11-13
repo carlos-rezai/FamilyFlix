@@ -1685,3 +1685,92 @@ describe('POST /api/settings/start-tab', () => {
     expect(storage.settings().startTab).toBe('series');
   });
 });
+
+// 63, Row view, Phase 2 (issue #609): the **Row view** per **Library tab** on
+// the same pair. `GET /api/settings` carries `movieRowView` and
+// `seriesRowView`, Movies By genre and Series All when no row is stored; each
+// is written by its own **Single-signal write**, `start-tab`'s sibling,
+// answering `200 { value }` for one of `ROW_VIEWS` and `400` for anything
+// else, leaving the stored value as it was.
+
+/** The Row view write for one tab, with whatever body the test wants. */
+const postRowView = (
+  baseUrl: string,
+  route: 'movie-row-view' | 'series-row-view',
+  body: unknown
+) =>
+  fetch(`${baseUrl}/api/settings/${route}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+describe('GET /api/settings: movieRowView and seriesRowView', () => {
+  it('answers Movies By genre and Series All when no row is stored', async () => {
+    const { baseUrl } = freshApi();
+
+    const settings = await readSettings(baseUrl);
+
+    expect(settings.movieRowView).toBe('genre');
+    expect(settings.seriesRowView).toBe('all');
+  });
+
+  it('answers the stored views when the rows are there', async () => {
+    const { storage, baseUrl } = freshApi();
+    storage.setMovieRowView('all');
+    storage.setSeriesRowView('genre');
+
+    const settings = await readSettings(baseUrl);
+
+    expect(settings.movieRowView).toBe('all');
+    expect(settings.seriesRowView).toBe('genre');
+  });
+});
+
+describe.each([
+  ['movie-row-view', 'movieRowView', 'seriesRowView'],
+  ['series-row-view', 'seriesRowView', 'movieRowView'],
+] as const)('POST /api/settings/%s', (route, field, otherField) => {
+  it.each(['all', 'genre'])('echoes %s as JSON', async (value) => {
+    const { baseUrl } = freshApi();
+
+    const response = await postRowView(baseUrl, route, { value });
+
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('application/json');
+    expect(await response.json()).toEqual({ value });
+  });
+
+  it('shows each value on the next GET, and leaves the other tab’s alone', async () => {
+    const { baseUrl } = freshApi();
+    const before = await readSettings(baseUrl);
+
+    await postRowView(baseUrl, route, { value: 'all' });
+    expect((await readSettings(baseUrl))[field]).toBe('all');
+
+    await postRowView(baseUrl, route, { value: 'genre' });
+    const after = await readSettings(baseUrl);
+    expect(after[field]).toBe('genre');
+    expect(after[otherField]).toBe(before[otherField]);
+  });
+
+  it.each([
+    ['a missing value', {}],
+    ['an unknown view', { value: 'grid' }],
+    ['a different case', { value: 'All' }],
+    ['an empty string', { value: '' }],
+    ['a number', { value: 1 }],
+    ['a null', { value: null }],
+  ])('answers 400 with an error for %s, storing nothing', async (_, body) => {
+    const { baseUrl } = freshApi();
+    await postRowView(baseUrl, route, { value: 'all' });
+
+    const response = await postRowView(baseUrl, route, body);
+
+    expect(response.status).toBe(400);
+    const payload = (await response.json()) as { error: unknown };
+    expect(typeof payload.error).toBe('string');
+    expect((payload.error as string).length).toBeGreaterThan(0);
+    expect((await readSettings(baseUrl))[field]).toBe('all');
+  });
+});

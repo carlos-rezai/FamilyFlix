@@ -641,3 +641,161 @@ describe('DisplayPreferenceProvider, setStartTab', () => {
     expect(result.current.startTab).toBe('movies');
   });
 });
+
+/**
+ * 63, Row view, Phase 2 (issue #609).
+ *
+ * The provider's one read lands the two **Row view**s too, Movies' and
+ * Series', and the hook answers `movieRowView` / `setMovieRowView` and
+ * `seriesRowView` / `setSeriesRowView` beside the rest. Each setter keeps
+ * `useHeldValue`'s bargain over its own route: shown at once, posted, the echo
+ * kept, the previous view put back on refusal, never rejecting. No snackbar:
+ * the provider is mounted here with no `SnackbarProvider` above it.
+ */
+
+const MOVIE_ROW_VIEW_ROUTE = '/api/settings/movie-row-view';
+const SERIES_ROW_VIEW_ROUTE = '/api/settings/series-row-view';
+
+const DEFAULT_VIEWS = makeSettings({
+  movieRowView: 'genre',
+  seriesRowView: 'all',
+});
+const SWAPPED_VIEWS = makeSettings({
+  movieRowView: 'all',
+  seriesRowView: 'genre',
+});
+
+/** The values posted to one route so far. */
+function postedTo(route: string): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) => String(input) === route && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+/** The hook under the provider, its read already landed as `read`. */
+async function renderRowViewsLanded(read: Settings) {
+  const rendered = renderPreference();
+  await waitFor(() =>
+    expect(rendered.result.current.movieRowView).toBe(read.movieRowView)
+  );
+  return rendered;
+}
+
+describe('DisplayPreferenceProvider, the Row views, the read', () => {
+  it('holds both null until the read lands', () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+
+    const { result } = renderPreference();
+
+    expect(result.current.movieRowView).toBeNull();
+    expect(result.current.seriesRowView).toBeNull();
+  });
+
+  it('lands both views from the one read', async () => {
+    const read = held();
+    fetchMock.mockImplementation(() => read.pending);
+    const { result } = renderPreference();
+
+    await act(async () => {
+      read.settle(okResponse(SWAPPED_VIEWS));
+    });
+
+    await waitFor(() => expect(result.current.movieRowView).toBe('all'));
+    expect(result.current.seriesRowView).toBe('genre');
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('lands the defaults when those are what is stored', async () => {
+    fetchMock.mockResolvedValue(okResponse(DEFAULT_VIEWS));
+
+    const { result } = renderPreference();
+
+    await waitFor(() => expect(result.current.movieRowView).toBe('genre'));
+    expect(result.current.seriesRowView).toBe('all');
+  });
+});
+
+describe.each([
+  [
+    'setMovieRowView',
+    'movieRowView',
+    'seriesRowView',
+    MOVIE_ROW_VIEW_ROUTE,
+    SERIES_ROW_VIEW_ROUTE,
+    'genre',
+    'all',
+  ],
+  [
+    'setSeriesRowView',
+    'seriesRowView',
+    'movieRowView',
+    SERIES_ROW_VIEW_ROUTE,
+    MOVIE_ROW_VIEW_ROUTE,
+    'all',
+    'genre',
+  ],
+] as const)(
+  'DisplayPreferenceProvider, %s',
+  (setter, field, otherField, route, otherRoute, stored, chosen) => {
+    it('shows the new view at once, before the post has answered', async () => {
+      settledReadHeldWrite(DEFAULT_VIEWS);
+      const { result } = await renderRowViewsLanded(DEFAULT_VIEWS);
+
+      act(() => {
+        void result.current[setter](chosen);
+      });
+
+      expect(result.current[field]).toBe(chosen);
+      expect(result.current[otherField]).toBe(DEFAULT_VIEWS[otherField]);
+    });
+
+    it('posts the view to its own route, and to no other', async () => {
+      settledReadHeldWrite(DEFAULT_VIEWS);
+      const { result } = await renderRowViewsLanded(DEFAULT_VIEWS);
+
+      act(() => {
+        void result.current[setter](chosen);
+      });
+
+      await waitFor(() => expect(postedTo(route)).toEqual([chosen]));
+      expect(postedTo(otherRoute)).toEqual([]);
+      expect(postedTo(START_TAB_ROUTE)).toEqual([]);
+    });
+
+    it('keeps the echo once the route answers', async () => {
+      const write = settledReadHeldWrite(DEFAULT_VIEWS);
+      const { result } = await renderRowViewsLanded(DEFAULT_VIEWS);
+
+      await act(async () => {
+        const set = result.current[setter](chosen);
+        write.settle(okResponse({ value: chosen }));
+        await set;
+      });
+
+      expect(result.current[field]).toBe(chosen);
+    });
+
+    it('puts the previous view back when the route refuses, without rejecting', async () => {
+      const write = settledReadHeldWrite(DEFAULT_VIEWS);
+      const { result } = await renderRowViewsLanded(DEFAULT_VIEWS);
+
+      let outcome: Promise<void> = Promise.resolve();
+      act(() => {
+        outcome = result.current[setter](chosen);
+      });
+      expect(result.current[field]).toBe(chosen);
+
+      await act(async () => {
+        write.settle(serverErrorResponse());
+        await expect(outcome).resolves.toBeUndefined();
+      });
+
+      expect(result.current[field]).toBe(stored);
+    });
+  }
+);
