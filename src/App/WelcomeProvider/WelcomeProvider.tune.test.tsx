@@ -15,6 +15,8 @@ import {
   type FakeAudioContext,
 } from '@/test-support/stubAudioContext/stubAudioContext';
 
+import { INTRO_CUE } from '@/App/welcomeScore/welcomeScore';
+
 import { WelcomeProvider } from './WelcomeProvider';
 
 /**
@@ -211,5 +213,56 @@ describe('WelcomeProvider: no welcome, no tune', () => {
     await advanceClock(INTRO + HANDOFF + CHORD_MS);
 
     expect(audio.contexts()).toHaveLength(0);
+  });
+});
+
+/**
+ * 62, Welcome tune, Phase 3 (issue #596): a **Cold start** plays the
+ * **Intro cue** from the welcome's start, each note at its `at` on the
+ * context's clock from the moment the welcome mounts, then the **Closing
+ * chord** at the handoff.
+ */
+describe('WelcomeProvider: a Cold start plays the Intro cue, then the chord', () => {
+  /** Every Intro cue note's start and frequency, ascending. */
+  const introNotes = (from: number) =>
+    INTRO_CUE.map(({ at, pitch }) => ({
+      start: from + at / 1000,
+      frequency: hz(pitch),
+    })).sort((a, b) => a.start - b.start || a.frequency - b.frequency);
+
+  it('starts the Intro cue’s notes from the welcome’s start', async () => {
+    renderWelcome();
+    await advanceClock(0);
+
+    const context = onlyContext();
+    const heard = context.oscillators
+      .map((oscillator) => ({
+        start: oscillator.startedAt ?? -1,
+        frequency: oscillator.frequency.valueAt(oscillator.startedAt ?? 0),
+      }))
+      .sort((a, b) => a.start - b.start || a.frequency - b.frequency);
+    const expected = introNotes(0);
+
+    expect(heard).toHaveLength(expected.length);
+    heard.forEach(({ start, frequency }, i) => {
+      expect(start).toBeCloseTo(expected[i].start, 6);
+      expect(frequency).toBeCloseTo(expected[i].frequency, 3);
+    });
+  });
+
+  it('then strikes the chord at the handoff, after every Intro cue note', async () => {
+    renderWelcome();
+    await advanceClock(INTRO);
+
+    const context = onlyContext();
+    const handoff = context.currentTime;
+    expect(handoff).toBeCloseTo(INTRO / 1000, 6);
+    expectChord(startedAt(context, handoff));
+
+    const intro = context.oscillators.filter(
+      (oscillator) =>
+        oscillator.startedAt !== null && oscillator.startedAt < handoff - 1e-6
+    );
+    expect(intro).toHaveLength(INTRO_CUE.length);
   });
 });

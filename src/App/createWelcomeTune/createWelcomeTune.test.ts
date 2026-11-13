@@ -6,7 +6,12 @@ import {
   type FakeAudioContext,
   type FakeOscillatorNode,
 } from '@/test-support/stubAudioContext/stubAudioContext';
-import { CLOSING_CHORD } from '@/App/welcomeScore/welcomeScore';
+import {
+  CLOSING_CHORD,
+  INTRO_CUE,
+  type WelcomeNote,
+} from '@/App/welcomeScore/welcomeScore';
+import { INTRO_MS } from '@/App/welcomeTimeline/welcomeTimeline';
 
 import { createWelcomeTune } from './createWelcomeTune';
 
@@ -216,5 +221,218 @@ describe('createWelcomeTune: no AudioContext in the window', () => {
     expect(() => tune.close()).not.toThrow();
 
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+/**
+ * 62, Welcome tune, Phase 3 (issue #596): the pluck and swell voices, and the
+ * **Intro cue** played.
+ *
+ * A pluck is one triangle at its pitch, rising from silence in 5ms and falling
+ * exponentially to nothing at its end; a swell is one sine, rising linearly
+ * for 350ms and falling linearly to silence at its end. Each is started at the
+ * context's `currentTime + at / 1000`. Played whole, the Intro cue is silent
+ * by `INTRO_MS`, and every note it sounds at once, summed through the master,
+ * stays under full scale.
+ */
+
+/** The pluck's rise and the swell's, in s (log 62 Q6). */
+const PLUCK_RISE = 0.005;
+const SWELL_RISE = 0.35;
+
+const PLUCK: WelcomeNote = {
+  at: 300,
+  pitch: 69,
+  length: 200,
+  voice: 'pluck',
+  level: 0.5,
+};
+
+const SWELL: WelcomeNote = {
+  at: 1000,
+  pitch: 84,
+  length: 900,
+  voice: 'swell',
+  level: 0.25,
+};
+
+describe('createWelcomeTune: the pluck voice', () => {
+  const audio = stubAudioContext({ startTime: NOW });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const START = NOW + PLUCK.at / 1000;
+  const END = START + PLUCK.length / 1000;
+  const PEAK = PLUCK.level * MASTER;
+
+  function playPluck(): FakeOscillatorNode {
+    createWelcomeTune().play([PLUCK]);
+    const [context] = audio.contexts();
+    expect(context.oscillators).toHaveLength(1);
+    return context.oscillators[0];
+  }
+
+  it('sounds one triangle at its pitch, started at currentTime + at / 1000', () => {
+    const oscillator = playPluck();
+
+    expect(oscillator.type).toBe('triangle');
+    expect(oscillator.frequency.valueAt(START)).toBeCloseTo(hz(PLUCK.pitch), 3);
+    expect(oscillator.startedAt).toBeCloseTo(START, 6);
+    expect(levelAt(oscillator, START - 0.001)).toBe(0);
+  });
+
+  it('rises from silence to its level, through the master, in 5ms', () => {
+    const oscillator = playPluck();
+
+    expect(levelAt(oscillator, START)).toBeCloseTo(0, 6);
+    expect(levelAt(oscillator, START + PLUCK_RISE / 2)).toBeGreaterThan(0);
+    expect(levelAt(oscillator, START + PLUCK_RISE / 2)).toBeLessThan(PEAK);
+    expect(levelAt(oscillator, START + PLUCK_RISE)).toBeCloseTo(PEAK, 6);
+  });
+
+  it('falls exponentially from its peak to nothing at its end', () => {
+    const oscillator = playPluck();
+    const fall = END - START - PLUCK_RISE;
+    const at = (k: number) => START + PLUCK_RISE + (fall * k) / 4;
+
+    const [l1, l2, l3] = [1, 2, 3].map((k) => levelAt(oscillator, at(k)));
+    expect(l1 / l2).toBeCloseTo(l2 / l3, 3);
+    expect(l1).toBeLessThan(PEAK);
+    expect(levelAt(oscillator, END - 1e-6)).toBeLessThan(PEAK / 100);
+    expect(levelAt(oscillator, END + 0.01)).toBe(0);
+  });
+});
+
+describe('createWelcomeTune: the swell voice', () => {
+  const audio = stubAudioContext({ startTime: NOW });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const START = NOW + SWELL.at / 1000;
+  const END = START + SWELL.length / 1000;
+  const PEAK = SWELL.level * MASTER;
+
+  function playSwell(): FakeOscillatorNode {
+    createWelcomeTune().play([SWELL]);
+    const [context] = audio.contexts();
+    expect(context.oscillators).toHaveLength(1);
+    return context.oscillators[0];
+  }
+
+  it('sounds one sine at its pitch, started at currentTime + at / 1000', () => {
+    const oscillator = playSwell();
+
+    expect(oscillator.type).toBe('sine');
+    expect(oscillator.frequency.valueAt(START)).toBeCloseTo(hz(SWELL.pitch), 3);
+    expect(oscillator.startedAt).toBeCloseTo(START, 6);
+    expect(levelAt(oscillator, START - 0.001)).toBe(0);
+  });
+
+  it('rises linearly from silence to its level, through the master, over 350ms', () => {
+    const oscillator = playSwell();
+
+    expect(levelAt(oscillator, START)).toBeCloseTo(0, 6);
+    expect(levelAt(oscillator, START + SWELL_RISE / 4)).toBeCloseTo(
+      PEAK / 4,
+      6
+    );
+    expect(levelAt(oscillator, START + SWELL_RISE / 2)).toBeCloseTo(
+      PEAK / 2,
+      6
+    );
+    expect(levelAt(oscillator, START + SWELL_RISE)).toBeCloseTo(PEAK, 6);
+  });
+
+  it('falls linearly from its peak to silence at its end', () => {
+    const oscillator = playSwell();
+    const fall = END - START - SWELL_RISE;
+
+    expect(levelAt(oscillator, START + SWELL_RISE + fall / 4)).toBeCloseTo(
+      (PEAK * 3) / 4,
+      6
+    );
+    expect(levelAt(oscillator, START + SWELL_RISE + fall / 2)).toBeCloseTo(
+      PEAK / 2,
+      6
+    );
+    expect(levelAt(oscillator, END - 1e-6)).toBeCloseTo(0, 4);
+    expect(levelAt(oscillator, END + 0.01)).toBe(0);
+  });
+});
+
+describe('createWelcomeTune: the Intro cue, played', () => {
+  const audio = stubAudioContext({ startTime: NOW });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  function playIntro(): FakeOscillatorNode[] {
+    createWelcomeTune().play(INTRO_CUE);
+    const [context] = audio.contexts();
+    return context.oscillators;
+  }
+
+  it('starts one oscillator per note, each at currentTime + at / 1000 at its pitch', () => {
+    const oscillators = playIntro();
+
+    expect(oscillators).toHaveLength(INTRO_CUE.length);
+    const heard = oscillators
+      .map((oscillator) => ({
+        start: oscillator.startedAt ?? -1,
+        frequency: oscillator.frequency.valueAt(NOW),
+      }))
+      .sort((a, b) => a.start - b.start || a.frequency - b.frequency);
+    const expected = INTRO_CUE.map(({ at, pitch }) => ({
+      start: NOW + at / 1000,
+      frequency: hz(pitch),
+    })).sort((a, b) => a.start - b.start || a.frequency - b.frequency);
+
+    heard.forEach(({ start, frequency }, i) => {
+      expect(start).toBeCloseTo(expected[i].start, 6);
+      expect(frequency).toBeCloseTo(expected[i].frequency, 3);
+    });
+  });
+
+  it('is silent by INTRO_MS', () => {
+    const oscillators = playIntro();
+    const end = NOW + INTRO_MS / 1000;
+
+    for (const oscillator of oscillators) {
+      expect(levelAt(oscillator, end)).toBe(0);
+    }
+  });
+
+  it('peaks under full scale, every note sounding at once summed through the master', () => {
+    const oscillators = playIntro();
+
+    let loudest = 0;
+    for (let ms = 0; ms <= INTRO_MS; ms += 1) {
+      const time = NOW + ms / 1000;
+      const summed = oscillators.reduce(
+        (sum, oscillator) => sum + levelAt(oscillator, time),
+        0
+      );
+      loudest = Math.max(loudest, summed);
+    }
+
+    expect(loudest).toBeGreaterThan(0);
+    expect(loudest).toBeLessThan(1);
   });
 });
