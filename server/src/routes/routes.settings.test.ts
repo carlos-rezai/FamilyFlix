@@ -394,6 +394,8 @@ describe('GET /api/settings', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
     expect(DEFAULT_SUBTITLE_LANGUAGE).toBe('English');
   });
@@ -408,6 +410,8 @@ describe('GET /api/settings', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 });
@@ -435,6 +439,8 @@ describe('POST /api/settings/subtitle-language', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -451,6 +457,8 @@ describe('POST /api/settings/subtitle-language', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -468,6 +476,8 @@ describe('POST /api/settings/subtitle-language', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -484,6 +494,8 @@ describe('POST /api/settings/subtitle-language', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -544,6 +556,8 @@ describe('GET /api/settings — ultrawideMargins', () => {
       ultrawideMargins: true,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 });
@@ -588,6 +602,8 @@ describe('POST /api/settings/ultrawide-margins', () => {
       ultrawideMargins: true,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -658,6 +674,8 @@ describe('GET /api/settings — tmdbRatings', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -718,6 +736,8 @@ describe('POST /api/settings/tmdb-ratings', () => {
       ultrawideMargins: true,
       tmdbRatings: false,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -797,6 +817,8 @@ describe('GET /api/settings — audioLanguage', () => {
       'ultrawideMargins',
       'tmdbRatings',
       'startTab',
+      'movieRowView',
+      'seriesRowView',
     ]);
   });
 });
@@ -845,6 +867,8 @@ describe('POST /api/settings/audio-language', () => {
       ultrawideMargins: true,
       tmdbRatings: false,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -1604,6 +1628,8 @@ describe('GET /api/settings: startTab', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 

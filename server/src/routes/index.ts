@@ -103,6 +103,7 @@ import {
   DEFAULT_MOVIE_SORT,
   LIBRARY_TABS,
   MOVIE_SORTS,
+  ROW_VIEWS,
   type DeleteFacts,
   type EpisodeRead,
   type ExportField,
@@ -113,6 +114,7 @@ import {
   type LibraryFolderView,
   type LibraryQuery,
   type LibraryTab,
+  type RowView,
   type Movie,
   type MovieSort,
   type NewEpisode,
@@ -435,7 +437,7 @@ function queryString(value: unknown): string | undefined {
 
 /**
  * Whether a query parameter names a sort this API accepts, and whether a body
- * names one of the **Library tabs**.
+ * names one of the **Library tabs** or a **Row view**.
  *
  * Each list is the shared one, so a value the repository can store can never
  * be one this layer rejects. The guards themselves stay local rather than
@@ -452,6 +454,13 @@ function isLibraryTab(value: unknown): value is LibraryTab {
   return (
     typeof value === 'string' &&
     (LIBRARY_TABS as readonly string[]).includes(value)
+  );
+}
+
+function isRowView(value: unknown): value is RowView {
+  return (
+    typeof value === 'string' &&
+    (ROW_VIEWS as readonly string[]).includes(value)
   );
 }
 
@@ -2215,6 +2224,27 @@ export function createApiRouter(
     storage.setStartTab(value);
     res.json({ value });
   });
+
+  // The **Row view** of each **Library tab**: `start-tab`'s siblings, one
+  // Single-signal write per tab, refusing anything but one of `ROW_VIEWS`.
+  const rowViewWrites = [
+    ['/settings/movie-row-view', storage.setMovieRowView],
+    ['/settings/series-row-view', storage.setSeriesRowView],
+  ] as const;
+  for (const [path, write] of rowViewWrites) {
+    router.post(path, (req: Request, res: Response) => {
+      const { value } = (req.body ?? {}) as { value?: unknown };
+      if (!isRowView(value)) {
+        res
+          .status(400)
+          .json({ error: `Body must be { value: ${ROW_VIEWS.join(' | ')} }` });
+        return;
+      }
+
+      write(value);
+      res.json({ value });
+    });
+  }
 
   // The series add's **Show folder pick**: the **Show folder read** of the
   // folder the dialog answered, or one sentence per refusal.

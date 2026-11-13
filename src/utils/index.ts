@@ -25,6 +25,7 @@ export { toScalarPercent } from './toScalarPercent/toScalarPercent';
 export { toRuntimeSeconds } from './toRuntimeSeconds/toRuntimeSeconds';
 export { isMovieSort } from './isMovieSort/isMovieSort';
 export { isLibraryTab } from './isLibraryTab/isLibraryTab';
+export { isRowView } from './isRowView/isRowView';
 export {
   isLaunchEntry,
   type EntryLocation,

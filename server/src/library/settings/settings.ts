@@ -1,12 +1,16 @@
 import type { SqliteDatabase } from '../../db';
 import {
   DEFAULT_AUDIO_LANGUAGE,
+  DEFAULT_MOVIE_ROW_VIEW,
+  DEFAULT_SERIES_ROW_VIEW,
   DEFAULT_START_TAB,
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
   LIBRARY_TABS,
+  ROW_VIEWS,
   type LibraryTab,
+  type RowView,
   type Settings,
 } from '@/types';
 
@@ -20,6 +24,10 @@ const ULTRAWIDE_MARGINS_KEY = 'ultrawide-margins';
 const TMDB_RATINGS_KEY = 'tmdb-ratings';
 /** The **Start tab**, stored as the tab's own name. */
 const START_TAB_KEY = 'start-tab';
+/** The Movies tab's **Row view**, stored as the view's own name. */
+const MOVIE_ROW_VIEW_KEY = 'movie-row-view';
+/** The Series tab's **Row view**, stored as the view's own name. */
+const SERIES_ROW_VIEW_KEY = 'series-row-view';
 /** The maintainer's TMDB key — beside the preferences, never one of them. */
 const TMDB_KEY = 'tmdb-api-key';
 /** When a Sync last reached review — the library's, not a preference. */
@@ -37,6 +45,8 @@ export interface SettingsRepository {
   setUltrawideMargins(on: boolean): void;
   setTmdbRatings(on: boolean): void;
   setStartTab(tab: LibraryTab): void;
+  setMovieRowView(view: RowView): void;
+  setSeriesRowView(view: RowView): void;
   tmdbKey(): string | null;
   setTmdbKey(key: string): void;
   enrichmentLastSyncedAt(): string | null;
@@ -94,6 +104,16 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
       ),
       tmdbRatings: flagOf(TMDB_RATINGS_KEY, DEFAULT_TMDB_RATINGS),
       startTab: choiceOf(START_TAB_KEY, LIBRARY_TABS, DEFAULT_START_TAB),
+      movieRowView: choiceOf(
+        MOVIE_ROW_VIEW_KEY,
+        ROW_VIEWS,
+        DEFAULT_MOVIE_ROW_VIEW
+      ),
+      seriesRowView: choiceOf(
+        SERIES_ROW_VIEW_KEY,
+        ROW_VIEWS,
+        DEFAULT_SERIES_ROW_VIEW
+      ),
     };
   }
 
@@ -107,6 +127,14 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
 
   function setStartTab(tab: LibraryTab): void {
     upsertValue.run(START_TAB_KEY, tab);
+  }
+
+  function setMovieRowView(view: RowView): void {
+    upsertValue.run(MOVIE_ROW_VIEW_KEY, view);
+  }
+
+  function setSeriesRowView(view: RowView): void {
+    upsertValue.run(SERIES_ROW_VIEW_KEY, view);
   }
 
   function setSubtitleLanguage(language: string): void {
@@ -140,6 +168,8 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     setUltrawideMargins,
     setTmdbRatings,
     setStartTab,
+    setMovieRowView,
+    setSeriesRowView,
     tmdbKey,
     setTmdbKey,
     enrichmentLastSyncedAt,

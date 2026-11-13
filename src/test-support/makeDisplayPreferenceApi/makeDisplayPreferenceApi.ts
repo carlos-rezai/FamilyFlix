@@ -22,6 +22,10 @@ export function makeDisplayPreferenceApi(
     setTmdbRatings: () => Promise.resolve(),
     startTab: null,
     setStartTab: () => Promise.resolve(),
+    movieRowView: null,
+    setMovieRowView: () => Promise.resolve(),
+    seriesRowView: null,
+    setSeriesRowView: () => Promise.resolve(),
     ...overrides,
   };
 }

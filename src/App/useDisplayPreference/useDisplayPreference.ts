@@ -1,6 +1,6 @@
 import { createContext, useContext } from 'react';
 
-import type { LibraryTab } from '@/types';
+import type { LibraryTab, RowView } from '@/types';
 
 /** What `useDisplayPreference()` hands a consumer. */
 export interface DisplayPreferenceApi {
@@ -28,6 +28,20 @@ export interface DisplayPreferenceApi {
   startTab: LibraryTab | null;
   /** Choose it, on `setUltrawideMargins`' bargain. Never rejects. */
   setStartTab: (tab: LibraryTab) => Promise<void>;
+  /**
+   * The Movies tab's **Row view**: `null` until the same read lands, the
+   * stored view after.
+   */
+  movieRowView: RowView | null;
+  /** Choose it, on `setUltrawideMargins`' bargain. Never rejects. */
+  setMovieRowView: (view: RowView) => Promise<void>;
+  /**
+   * The Series tab's **Row view**: `null` until the same read lands, the
+   * stored view after.
+   */
+  seriesRowView: RowView | null;
+  /** Choose it, on `setUltrawideMargins`' bargain. Never rejects. */
+  setSeriesRowView: (view: RowView) => Promise<void>;
 }
 
 /**
@@ -39,7 +53,8 @@ export const DisplayPreferenceContext =
 
 /**
  * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings,
- * startTab, setStartTab }` off the app-level `DisplayPreferenceProvider`. The
+ * startTab, setStartTab, movieRowView, setMovieRowView, seriesRowView,
+ * setSeriesRowView }` off the app-level `DisplayPreferenceProvider`. The
  * provider is mounted in `App`, so a consumer outside one is a wiring mistake,
  * and a silent `null` would hide it: it throws, naming itself.
  */

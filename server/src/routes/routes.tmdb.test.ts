@@ -278,6 +278,8 @@ describe('GET /api/settings — not widened', () => {
       'ultrawideMargins',
       'tmdbRatings',
       'startTab',
+      'movieRowView',
+      'seriesRowView',
     ]);
     expect(JSON.stringify(body)).not.toContain(V3_KEY);
   });

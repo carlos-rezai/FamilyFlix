@@ -12,6 +12,7 @@ import type {
   HomePayload,
   LibraryQuery,
   LibraryTab,
+  RowView,
   Movie,
   MoviePatch,
   MovieQuery,
@@ -324,6 +325,16 @@ export interface LibraryStorage {
    */
   setStartTab(tab: LibraryTab): void;
   /**
+   * Store the Movies tab's **Row view**: an upsert; `settings()` reads it back
+   * with the default, By genre, applied to an absent or unknown value.
+   */
+  setMovieRowView(view: RowView): void;
+  /**
+   * Store the Series tab's **Row view**: an upsert; `settings()` reads it back
+   * with the default, All, applied to an absent or unknown value.
+   */
+  setSeriesRowView(view: RowView): void;
+  /**
    * The maintainer's TMDB key, `null` when none is stored — no default. Kept
    * in the same `settings` table but not a household preference, so
    * `settings()` never carries it.
@@ -579,6 +590,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setUltrawideMargins: settingsRepository.setUltrawideMargins,
     setTmdbRatings: settingsRepository.setTmdbRatings,
     setStartTab: settingsRepository.setStartTab,
+    setMovieRowView: settingsRepository.setMovieRowView,
+    setSeriesRowView: settingsRepository.setSeriesRowView,
     tmdbKey: settingsRepository.tmdbKey,
     setTmdbKey: settingsRepository.setTmdbKey,
     enrichmentLastSyncedAt: settingsRepository.enrichmentLastSyncedAt,

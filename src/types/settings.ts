@@ -1,4 +1,4 @@
-import type { LibraryTab } from './browse';
+import type { LibraryTab, RowView } from './browse';
 
 /**
  * The household's settings — what the Settings hub keeps, on the wire and in
@@ -51,6 +51,12 @@ export const DEFAULT_TMDB_RATINGS = true;
 /** The **Start tab** until the household chooses another: Movies. */
 export const DEFAULT_START_TAB: LibraryTab = 'movies';
 
+/** The Movies tab's **Row view** until the household chooses another: By genre. */
+export const DEFAULT_MOVIE_ROW_VIEW: RowView = 'genre';
+
+/** The Series tab's **Row view** until the household chooses another: All. */
+export const DEFAULT_SERIES_ROW_VIEW: RowView = 'all';
+
 /**
  * What `GET /api/settings` answers: every preference the household keeps, the
  * default already applied. `subtitleLanguage` and `audioLanguage` are strings
@@ -68,6 +74,10 @@ export interface Settings {
   tmdbRatings: boolean;
   /** Which **Library tab** the app opens on. */
   startTab: LibraryTab;
+  /** The Movies tab's **Row view**. */
+  movieRowView: RowView;
+  /** The Series tab's **Row view**. */
+  seriesRowView: RowView;
 }
 
 /**

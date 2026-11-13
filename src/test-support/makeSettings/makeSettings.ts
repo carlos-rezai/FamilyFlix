@@ -1,5 +1,7 @@
 import {
   DEFAULT_AUDIO_LANGUAGE,
+  DEFAULT_MOVIE_ROW_VIEW,
+  DEFAULT_SERIES_ROW_VIEW,
   DEFAULT_START_TAB,
   DEFAULT_SUBTITLE_LANGUAGE,
   DEFAULT_TMDB_RATINGS,
@@ -26,6 +28,8 @@ export function makeSettings(overrides: Partial<Settings> = {}): Settings {
     ultrawideMargins: DEFAULT_ULTRAWIDE_MARGINS,
     tmdbRatings: DEFAULT_TMDB_RATINGS,
     startTab: DEFAULT_START_TAB,
+    movieRowView: DEFAULT_MOVIE_ROW_VIEW,
+    seriesRowView: DEFAULT_SERIES_ROW_VIEW,
     ...overrides,
   };
 }

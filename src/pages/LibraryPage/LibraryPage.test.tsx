@@ -116,7 +116,9 @@ function mountPage(url = '/') {
   return render(
     <MemoryRouter initialEntries={[url]}>
       <ThemeProvider theme={theme}>
-        <LibraryPage />
+        <DisplayPreferenceProvider>
+          <LibraryPage />
+        </DisplayPreferenceProvider>
       </ThemeProvider>
     </MemoryRouter>
   );

@@ -73,6 +73,8 @@ describe('library: settings() — the default applied', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -87,6 +89,8 @@ describe('library: settings() — the default applied', () => {
       'ultrawideMargins',
       'tmdbRatings',
       'startTab',
+      'movieRowView',
+      'seriesRowView',
     ]);
   });
 
@@ -111,6 +115,8 @@ describe('library: setSubtitleLanguage — the upsert', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -164,6 +170,8 @@ describe('library: setSubtitleLanguage — the upsert', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 });
@@ -211,6 +219,8 @@ describe('library: tmdbKey / setTmdbKey — the TMDB key', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -275,6 +285,8 @@ describe('library: enrichmentLastSyncedAt — when the library last synced', () 
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
     expect(storage.tmdbKey()).toBe('kept-key');
   });
@@ -392,6 +404,8 @@ describe('library: ultrawideMargins / setUltrawideMargins — the frame preferen
       ultrawideMargins: true,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -500,6 +514,8 @@ describe('library: tmdbRatings / setTmdbRatings — the TMDB ratings preference'
       ultrawideMargins: true,
       tmdbRatings: false,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -655,6 +671,8 @@ describe('library: audioLanguage / setAudioLanguage — the audio preference', (
       ultrawideMargins: true,
       tmdbRatings: false,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 
@@ -783,6 +801,8 @@ describe('library: startTab / setStartTab, the Start tab preference', () => {
       ultrawideMargins: true,
       tmdbRatings: false,
       startTab: 'series',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 

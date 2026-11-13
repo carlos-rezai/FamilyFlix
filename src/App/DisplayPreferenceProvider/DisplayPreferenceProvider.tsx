@@ -14,7 +14,9 @@ import {
 import { saveUltrawideMargins } from '@/App/saveUltrawideMargins/saveUltrawideMargins';
 import { saveTmdbRatings } from '@/App/saveTmdbRatings/saveTmdbRatings';
 import { saveStartTab } from '@/App/saveStartTab/saveStartTab';
-import type { LibraryTab } from '@/types';
+import { saveMovieRowView } from '@/App/saveMovieRowView/saveMovieRowView';
+import { saveSeriesRowView } from '@/App/saveSeriesRowView/saveSeriesRowView';
+import type { LibraryTab, RowView } from '@/types';
 
 /** One held display preference: its value, what lands it, and its setter. */
 interface HeldValue<T> {
@@ -54,11 +56,11 @@ function useHeldValue<T>(save: (next: T) => Promise<T>): HeldValue<T> {
 
 /**
  * The household's display preferences (**Ultrawide margins**, _Fill in
- * ratings from TMDB_ and the **Start tab**), held app-wide so a change on the
+ * ratings from TMDB_, the **Start tab** and each tab's **Row view**), held app-wide so a change on the
  * Settings page reaches the **Content frame** and every star at once,
  * `SnackbarProvider`'s shape. It reads the shared `fetchSettings` once on
  * mount (**Blank until it lands**: `null` until then, `null` still after a
- * refusal), and one read lands all three. Its setters are one bargain,
+ * refusal), and one read lands them all. Its setters are one bargain,
  * `useHeldValue`'s, each over its own save.
  */
 export function DisplayPreferenceProvider({
@@ -71,7 +73,11 @@ export function DisplayPreferenceProvider({
   const startTab = useHeldValue<LibraryTab>(saveStartTab);
   const { land: landMargins } = margins;
   const { land: landRatings } = ratings;
+  const movieRowView = useHeldValue<RowView>(saveMovieRowView);
+  const seriesRowView = useHeldValue<RowView>(saveSeriesRowView);
   const { land: landStartTab } = startTab;
+  const { land: landMovieRowView } = movieRowView;
+  const { land: landSeriesRowView } = seriesRowView;
 
   useEffect(() => {
     let wanted = true;
@@ -82,6 +88,8 @@ export function DisplayPreferenceProvider({
           landMargins(landed.ultrawideMargins);
           landRatings(landed.tmdbRatings);
           landStartTab(landed.startTab);
+          landMovieRowView(landed.movieRowView);
+          landSeriesRowView(landed.seriesRowView);
         }
       },
       () => undefined
@@ -90,7 +98,13 @@ export function DisplayPreferenceProvider({
     return () => {
       wanted = false;
     };
-  }, [landMargins, landRatings, landStartTab]);
+  }, [
+    landMargins,
+    landRatings,
+    landStartTab,
+    landMovieRowView,
+    landSeriesRowView,
+  ]);
 
   const api = useMemo<DisplayPreferenceApi>(
     () => ({
@@ -100,6 +114,10 @@ export function DisplayPreferenceProvider({
       setTmdbRatings: ratings.set,
       startTab: startTab.value,
       setStartTab: startTab.set,
+      movieRowView: movieRowView.value,
+      setMovieRowView: movieRowView.set,
+      seriesRowView: seriesRowView.value,
+      setSeriesRowView: seriesRowView.set,
     }),
     [
       margins.value,
@@ -108,6 +126,10 @@ export function DisplayPreferenceProvider({
       ratings.set,
       startTab.value,
       startTab.set,
+      movieRowView.value,
+      movieRowView.set,
+      seriesRowView.value,
+      seriesRowView.set,
     ]
   );
 

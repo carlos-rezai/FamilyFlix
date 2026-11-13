@@ -57,6 +57,16 @@ export const LIBRARY_TABS = ['movies', 'series'] as const;
 export type LibraryTab = (typeof LIBRARY_TABS)[number];
 
 /**
+ * Every **Row view** a **Library tab** can be shown in: **All** (`'all'`) and
+ * **By genre** (`'genre'`), in the order the **Row view switch** draws them.
+ * `RowView` is derived from the list, the `MOVIE_SORTS` precedent.
+ */
+export const ROW_VIEWS = ['all', 'genre'] as const;
+
+/** One of the views in {@link ROW_VIEWS}. */
+export type RowView = (typeof ROW_VIEWS)[number];
+
+/**
  * Every order `listMovies` can be asked for — the wire's five plus
  * `last-watched`, which orders by the resume shelf's stamp: most recently
  * watched first, then every unstamped movie in {@link MOVIE_SORTS}'

@@ -14,6 +14,8 @@ const SETTINGS_KEYS: Array<keyof Settings> = [
   'ultrawideMargins',
   'tmdbRatings',
   'startTab',
+  'movieRowView',
+  'seriesRowView',
 ];
 
 describe('makeSettings: the default household', () => {
@@ -30,6 +32,8 @@ describe('makeSettings: the default household', () => {
       ultrawideMargins: false,
       tmdbRatings: true,
       startTab: 'movies',
+      movieRowView: 'genre',
+      seriesRowView: 'all',
     });
   });
 });
