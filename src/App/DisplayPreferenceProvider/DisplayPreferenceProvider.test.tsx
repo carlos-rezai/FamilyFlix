@@ -718,6 +718,33 @@ describe('DisplayPreferenceProvider, the Row views, the read', () => {
     await waitFor(() => expect(result.current.movieRowView).toBe('genre'));
     expect(result.current.seriesRowView).toBe('all');
   });
+
+  // 63, Row view, Phase 6 (issue #613): the home must still be drawn when the
+  // read is refused, so the two Row views land their defaults; nothing else
+  // is guessed.
+  it.each([
+    [
+      'the route refuses',
+      () => fetchMock.mockResolvedValue(serverErrorResponse()),
+    ],
+    [
+      'the request itself fails',
+      () => fetchMock.mockRejectedValue(new TypeError('Failed to fetch')),
+    ],
+  ])(
+    'lands Movies By genre and Series All when %s, every other preference null',
+    async (_, refuse) => {
+      refuse();
+
+      const { result } = renderPreference();
+
+      await waitFor(() => expect(result.current.movieRowView).toBe('genre'));
+      expect(result.current.seriesRowView).toBe('all');
+      expect(result.current.ultrawideMargins).toBeNull();
+      expect(result.current.tmdbRatings).toBeNull();
+      expect(result.current.startTab).toBeNull();
+    }
+  );
 });
 
 describe.each([

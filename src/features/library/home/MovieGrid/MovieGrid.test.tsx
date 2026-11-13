@@ -6,7 +6,10 @@ import { MemoryRouter } from 'react-router-dom';
 import { MovieGrid } from './MovieGrid';
 import { theme } from '@/styles/theme';
 import type { Movie, MovieGridPayload } from '@/types';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import {
   LocationProbe,
@@ -203,5 +206,94 @@ describe('MovieGrid: opening a film', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Amelie' }));
 
     expect(pathname()).toBe('/movie/m2');
+  });
+});
+
+/**
+ * 63, Row view, Phase 6 (issue #613): Q16's faces under **All**. A skeleton
+ * grid while the first load is out, the empty library's own words, today's
+ * no-results copy for a search or a filter, and a failure with a Retry that
+ * reloads the grid on screen.
+ */
+describe('MovieGrid: the faces', () => {
+  it('draws a skeleton grid, and no section, while the library is loading', () => {
+    fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
+
+    renderGrid();
+
+    const skeleton = screen.getByRole('status', { name: /loading/i });
+    expect(skeleton.children.length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading', { name: 'All movies' })).toBeNull();
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('replaces the skeleton with the grid once the payload lands', async () => {
+    serve({ movies: twoFilms, continueWatching: [] });
+
+    renderGrid();
+    await heading();
+
+    expect(screen.queryByRole('status', { name: /loading/i })).toBeNull();
+  });
+
+  it('words an empty library as one, with no grid', async () => {
+    serve({ movies: [], continueWatching: [] });
+
+    renderGrid();
+
+    expect(await screen.findByText('Your library is empty')).toBeDefined();
+    expect(
+      screen.getByText('Add a movie to start filling your shelves.')
+    ).toBeDefined();
+    expect(screen.queryByRole('heading', { name: 'All movies' })).toBeNull();
+    expect(screen.queryByText('0 movies')).toBeNull();
+  });
+
+  it('names the search that matched nothing', async () => {
+    serve({ movies: [], continueWatching: [] });
+
+    renderGrid('/?q=zzz');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(
+      screen.getByText(
+        'No movies match “zzz”. Try a different search or genre.'
+      )
+    ).toBeDefined();
+  });
+
+  it('words a filter that matched nothing as today', async () => {
+    serve({ movies: [], continueWatching: [] });
+
+    renderGrid('/?genre=Western');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(
+      screen.getByText(
+        'No movies match these filters. Try a different genre or rating.'
+      )
+    ).toBeDefined();
+  });
+
+  it('shows the failure with a Retry when the read is refused', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    renderGrid();
+
+    expect(await screen.findByText('Couldn’t load your library')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeDefined();
+  });
+
+  it('reloads the grid on screen when Retry is pressed', async () => {
+    fetchMock.mockResolvedValueOnce(serverErrorResponse());
+    renderGrid();
+    const retry = await screen.findByRole('button', { name: 'Retry' });
+    serve({ movies: twoFilms, continueWatching: [] });
+
+    fireEvent.click(retry);
+
+    expect(await heading()).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Amelie' })).toBeDefined();
+    expect(screen.queryByText('Couldn’t load your library')).toBeNull();
   });
 });

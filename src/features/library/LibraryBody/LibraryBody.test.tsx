@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
@@ -12,10 +12,16 @@ import type {
   Series,
   SeriesHomePayload,
 } from '@/types';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
+import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/DisplayPreferenceProvider';
+import { makeSettings } from '@/test-support/makeSettings/makeSettings';
+import { RowViewSwitch } from '../RowViewSwitch/RowViewSwitch';
 
 /**
  * 63, Row view, Phase 3 (issue #610): `LibraryBody` picks the Movies tab's
@@ -226,7 +232,7 @@ const allSeries = () =>
 
 const dramaRow = () => screen.findByRole('region', { name: 'Drama' });
 
-describe('LibraryBody: the Series tab’s Row view', () => {
+describe('LibraryBody: the Series tabï¿½s Row view', () => {
   it('draws All series under All, and reads no series rows', async () => {
     render(seriesTree('all'));
 
@@ -256,5 +262,82 @@ describe('LibraryBody: the Series tab’s Row view', () => {
 
     expect(await allSeries()).toBeDefined();
     expect(screen.queryByRole('region', { name: 'Drama' })).toBeNull();
+  });
+});
+
+/**
+ * 63, Row view, Phase 6 (issue #613): under the household's own provider,
+ * neither the **Row view switch** nor the body is drawn until the settings
+ * read lands, so the home is drawn once, in the household's view, and never
+ * first in a default it then leaves. A refused read lands the defaults.
+ */
+describe('LibraryBody: waiting on the settings read', () => {
+  /** The settings read, answered only when the test says so. */
+  function holdRead() {
+    let answer: (response: Response) => void = () => undefined;
+    const pending = new Promise<Response>((resolve) => {
+      answer = resolve;
+    });
+    const serveBody = fetchMock.getMockImplementation();
+    fetchMock.mockImplementation((input) =>
+      String(input) === '/api/settings'
+        ? pending
+        : (serveBody?.(input) ??
+          Promise.reject(new Error('Unexpected request')))
+    );
+    return {
+      land: async (response: Response) => {
+        await act(async () => answer(response));
+      },
+    };
+  }
+
+  function renderHome() {
+    return render(
+      <MemoryRouter initialEntries={['/']}>
+        <ThemeProvider theme={theme}>
+          <DisplayPreferenceProvider>
+            <RowViewSwitch />
+            <LibraryBody />
+          </DisplayPreferenceProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+  }
+
+  const bodyReads = () => requested().filter((url) => url !== '/api/settings');
+
+  it('draws neither the switch nor the body, and reads no body, until the read lands', () => {
+    holdRead();
+
+    const { container } = renderHome();
+
+    expect(container.textContent).toBe('');
+    expect(screen.queryByRole('button', { name: /^View/ })).toBeNull();
+    expect(bodyReads()).toEqual([]);
+  });
+
+  it('draws the householdâ€™s view once it lands, never the default first', async () => {
+    const read = holdRead();
+    renderHome();
+
+    await read.land(okResponse(makeSettings({ movieRowView: 'all' })));
+
+    expect(await allMovies()).toBeDefined();
+    expect(screen.getByRole('button', { name: 'View: All' })).toBeDefined();
+    expect(requested().some((url) => url.includes('/api/home'))).toBe(false);
+  });
+
+  it('draws Movies By genre when the read is refused', async () => {
+    const read = holdRead();
+    renderHome();
+
+    await read.land(serverErrorResponse());
+
+    expect(await actionRow()).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'View: By genre' })
+    ).toBeDefined();
+    expect(requested().some((url) => url.includes('/api/movies'))).toBe(false);
   });
 });

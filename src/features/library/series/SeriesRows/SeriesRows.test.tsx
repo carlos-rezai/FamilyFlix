@@ -5,8 +5,11 @@ import { MemoryRouter } from 'react-router-dom';
 
 import { SeriesRows } from './SeriesRows';
 import { theme } from '@/styles/theme';
-import type { Series } from '@/types';
-import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
+import type { Series, SeriesRowsPayload } from '@/types';
+import {
+  okResponse,
+  serverErrorResponse,
+} from '@/test-support/fakeResponse/fakeResponse';
 import {
   LocationProbe,
   pathname,
@@ -287,5 +290,143 @@ describe('SeriesRows: View all', () => {
 
     expect(pathname()).toBe('/genre-less');
     expect(params()).toEqual({ tab: 'series', sort: 'a-z' });
+  });
+});
+
+/**
+ * 63, Row view, Phase 6 (issue #613): Q16's faces under **By genre**, and one
+ * heart across rows and shelf. Nothing is drawn while the first load is out;
+ * an empty library is _All series_ over `0 series · 0 episodes`, as the Series
+ * tab words it today; a search or filter that keeps nothing is today's miss
+ * copy; a failure offers Retry, which reloads the rows on screen.
+ */
+
+const EMPTY: SeriesRowsPayload = {
+  rows: [],
+  other: null,
+  favorites: [],
+  continueWatching: [],
+};
+
+/** Serve one rows payload for every read; echo every write. */
+function servePayload(payload: SeriesRowsPayload) {
+  fetchMock.mockImplementation((input, init?: RequestInit) => {
+    const url = String(input);
+    if ((init?.method ?? 'GET').toUpperCase() !== 'GET') {
+      const body = JSON.parse(String(init?.body)) as { value: unknown };
+      return Promise.resolve(okResponse({ value: body.value }));
+    }
+    if (url.includes('/api/series/rows')) {
+      return Promise.resolve(okResponse(payload));
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+describe('SeriesRows: the faces', () => {
+  it('draws nothing while the rows are loading', () => {
+    fetchMock.mockReturnValue(new Promise<Response>(() => undefined));
+
+    renderRows();
+
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.queryByRole('region')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('status')).toBeNull();
+  });
+
+  it('words an empty library as the Series tab does: All series over its count', async () => {
+    servePayload(EMPTY);
+
+    renderRows();
+
+    expect(await findHeading('All series')).toBeDefined();
+    expect(screen.getByText('0 series · 0 episodes')).toBeDefined();
+  });
+
+  it('names the search that matched nothing', async () => {
+    servePayload(EMPTY);
+
+    renderRows('/?tab=series&q=zzz');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(screen.getByText('No series match “zzz”.')).toBeDefined();
+    expect(screen.queryByRole('heading', { name: 'All series' })).toBeNull();
+  });
+
+  it('words a filter that matched nothing as today', async () => {
+    servePayload(EMPTY);
+
+    renderRows('/?tab=series&genre=Western');
+
+    expect(await screen.findByText('Nothing here')).toBeDefined();
+    expect(
+      screen.getByText(
+        'No series match these filters. Try a different genre or rating.'
+      )
+    ).toBeDefined();
+  });
+
+  it('shows the failure with a Retry when the read is refused', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    renderRows();
+
+    expect(await screen.findByText('Couldn’t load your series')).toBeDefined();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeDefined();
+  });
+
+  it('reloads the rows on screen when Retry is pressed', async () => {
+    fetchMock.mockResolvedValueOnce(serverErrorResponse());
+    renderRows();
+    const retry = await screen.findByRole('button', { name: 'Retry' });
+    serve(ROWS, null);
+
+    fireEvent.click(retry);
+
+    expect(await findHeading('Drama')).toBeDefined();
+    expect(screen.queryByText('Couldn’t load your series')).toBeNull();
+  });
+});
+
+describe('SeriesRows: one heart across rows and shelf', () => {
+  /** The heart on one series' card inside one region. */
+  const heartIn = (regionName: string, title: string) =>
+    within(region(regionName).getByRole('button', { name: title })).getByRole(
+      'button',
+      { name: 'Favorite' }
+    );
+
+  const SHARED = makeSeries({ id: 's1', title: 'Harbor & Vine' });
+
+  const twoRowsOneShow: SeriesRowsPayload = {
+    rows: [
+      { genre: 'Drama', count: 2, series: [SHARED] },
+      { genre: 'Mystery', count: 1, series: [SHARED] },
+    ],
+    other: null,
+    favorites: [],
+    continueWatching: [],
+  };
+
+  it('fills the heart on every row the show is in, and puts it on the shelf', async () => {
+    servePayload(twoRowsOneShow);
+
+    renderRows();
+    await findHeading('Mystery');
+    expect(screen.queryByRole('region', { name: 'Favorites' })).toBeNull();
+
+    fireEvent.click(heartIn('Drama', 'Harbor & Vine'));
+
+    const shelf = await screen.findByRole('region', { name: 'Favorites' });
+    expect(
+      within(shelf).getByRole('button', { name: 'Harbor & Vine' })
+    ).toBeDefined();
+    expect(heartIn('Drama', 'Harbor & Vine').getAttribute('aria-pressed')).toBe(
+      'true'
+    );
+    expect(
+      heartIn('Mystery', 'Harbor & Vine').getAttribute('aria-pressed')
+    ).toBe('true');
   });
 });
