@@ -587,15 +587,33 @@ Step 46 came out of the two tabs browsing differently: Movies draws genre
 rows, Series one grid of every show. Settled in a grill-me on 2026-11-13
 (design log 63, handoff `docs/handoff/handoff-row-view/`):
 
-46. 🔲 **Row view**: a switch on both the Movies and the Series tab between
+46. 🔜 **Row view**: a switch on both the Movies and the Series tab between
     _All_, every title in one grid, and _By genre_, a row per genre, so
-    either tab can be browsed either way.
-    - **The household's, per tab**: a _View_ pill after Sort sets the current
-      tab's Row view, kept in Settings' table and so across relaunches;
-      today's faces are the defaults, Movies By genre and Series All.
-    - **Each tab both ways**: Movies under All is the Series tab's face in
-      films (All movies, a count line, the grid); Series by genre is the
-      Movies rows in shows, with an Other series row, and View all opens the
-      Genre page for series.
+    either tab can be browsed either way. Built in issues 608 to 614; the
+    refactor is still to come.
+    - **The household's, per tab**: the **Row view switch** (`RowViewSwitch`,
+      a _View_ Filter dropdown after the filters in the header's end slot)
+      sets the current tab's Row view, with no snackbar and no URL. It is kept
+      in Settings' table as `movie-row-view` (default `genre`) and
+      `series-row-view` (default `all`), posted to
+      `/api/settings/movie-row-view` and `/series-row-view`, and so survives a
+      relaunch. Nothing is drawn until the settings read lands; a refused read
+      lands the defaults, Movies By genre and Series All, so the home is still
+      drawn.
+    - **Movies under All** (`MovieGrid` over `GET /api/movies`): the Continue
+      row, the Favorites row read off the grid's hearted films (at most 15),
+      _All movies_, the `N movies` count line and the uncapped grid,
+      genre-less films included; a skeleton grid while loading, and the
+      Movies tab's empty, miss and failure faces.
+    - **Series under By genre** (`SeriesRows` over `GET /api/series/rows`):
+      the episode Continue row, the Favorites row, a Genre row per populated
+      series genre, busiest first, 15 cards each with the true count on _View
+      all_, and the **Other series row** last; under a genre filter only that
+      genre's row and no Other row. _View all_ opens `/genre/:name?tab=series`
+      or `/genre-less?tab=series`, the Carried sort beside the tab.
+    - **The Genre page for series**: `GET /api/series/genre/:name` and
+      `/api/series/genre-less`, drawn by the same Genre page under
+      `?tab=series` (the `other` mode headed _Other series_), its cards
+      opening the series page; Back with no history lands on `/?tab=series`.
     - **Nothing else moves**: the search and filters stay on a switch, and
       each tab's loading, empty and miss faces are the same in either view.

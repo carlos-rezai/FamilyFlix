@@ -129,26 +129,35 @@ export interface GenreMoviesProviderProps {
 }
 
 /**
- * The genre screen's one load, held above both halves of it.
+ * The **Genre page**'s one load, held above both halves of it, for either
+ * **Library tab**.
+ *
+ * The tab is read off the URL as the home reads it. Under Movies it loads
+ * `GET /api/genre/:name`, or `/api/genre-less` in the `other` mode headed
+ * _Other movies_ (the **Other row**'s _View all_). Under `?tab=series`, what a
+ * series **Genre row**'s _View all_ opens under the **By genre** **Row view**,
+ * it loads `GET /api/series/genre/:name`, or `/api/series/genre-less` headed
+ * _Other series_ (the **Other series row**'s), and draws the series as Poster
+ * cards opening the series page, a heart saving through `saveSeriesFavorite`.
+ * The name keeps _Movies_ for now; it serves both kinds.
  *
  * A genre page is a fixed header and a scrolling body over a single payload:
- * the heading needs the total, the grid needs the movies, and both come from
- * the same request. Calling a hook in each subtree would make that two requests
- * for one screen; lifting the load into `GenrePage` would put data logic in a
- * page, which the layer rules forbid. A provider is what keeps one request and
- * a logic-free page at the same time — the shape Favorites and a flat search
- * results page copy later.
+ * the heading needs the total, the grid needs the titles, and both come from
+ * the same request. Calling a hook in each subtree would make that two
+ * requests for one screen; lifting the load into `GenrePage` would put data
+ * logic in a page, which the layer rules forbid. A provider keeps one request
+ * and a logic-free page at the same time.
  *
- * The genre it loads is the one the path is carrying and the query is whatever
- * the URL is carrying beside it, both read straight from the router as
- * app-level state. Both are known on the first render, so a shared or
+ * The genre it loads is the one the path is carrying and the query is
+ * whatever the URL is carrying beside it, both read straight from the router
+ * as app-level state. Both are known on the first render, so a shared or
  * bookmarked link loads already narrowed and in its order, with no unnarrowed
- * genre flashing past first. Through a refetch the grid already on screen stays
- * put — the skeleton latch, which {@link useBrowseLoad} owns and explains.
+ * genre flashing past first. Through a refetch the grid already on screen
+ * stays put: the skeleton latch, which {@link useBrowseLoad} owns and explains.
  *
- * That the value travels by context is an implementation detail of this module,
- * not a contract: `useGenreMovies()` is what consumers read, and nothing about
- * them would change if the value arrived another way.
+ * That the value travels by context is an implementation detail of this
+ * module, not a contract: `useGenreMovies()` is what consumers read, and
+ * nothing about them would change if the value arrived another way.
  */
 export function GenreMoviesProvider({
   children,

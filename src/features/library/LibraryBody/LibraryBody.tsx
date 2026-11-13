@@ -21,11 +21,16 @@ function SeriesBody() {
 }
 
 /**
- * The browse home's body, picked off the **Library tab** the URL names:
- * on either tab, the grid (_All series_ on Series) under **All** and the genre
- * rows under **By genre**, each tab's **Row view** the household holds
- * rather than the URL, so back from a title lands on it again. The choice
- * lives here rather than in `LibraryPage`, which stays composition only.
+ * The browse home's body, picked off the **Library tab** the URL names, then
+ * off that tab's **Row view**. Movies under **By genre** (the default) are
+ * `HomeRows`, the genre rows and the **Other row** last; under **All**,
+ * `MovieGrid`, _All movies_ in one uncapped grid. Series under **All** (the
+ * default) are `SeriesHome`, _All series_; under **By genre**, `SeriesRows`,
+ * the series genre rows and the **Other series row** last. The Row view is
+ * the household's, set by the **Row view switch** and kept in Settings rather
+ * than the URL, so back from a title lands on the same view. Nothing is drawn
+ * until the settings read lands. The choice lives here rather than in
+ * `LibraryPage`, which stays composition only.
  */
 export function LibraryBody() {
   return useLibraryTab() === 'series' ? <SeriesBody /> : <MoviesBody />;

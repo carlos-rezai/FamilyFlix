@@ -33,24 +33,24 @@ function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {
 }
 
 /**
- * The Series tab's body: a Continue Watching row of **Episode continue cards**
- * — each opening the player on its episode, and the row not drawn when nothing
- * is part-watched — then _All series_, the count line, and the Library grid of
- * unchanged Poster cards over `GET /api/series` — with the **Favorites row**
- * between the two, the hearted series of what the grid shows, in its order,
- * capped at 15 (log 22 Q9 and Q28, amended). An empty library is the
- * heading and `0 series · 0 episodes`, and nothing else.
+ * Series under **All**, the Series tab's default **Row view** (`SeriesRows`
+ * draws **By genre**): a Continue Watching row of **Episode continue cards**,
+ * each opening the player on its episode and the row not drawn when nothing
+ * is part-watched; the **Favorites row**, the hearted series of what the grid
+ * shows, in its order, capped at 15 (log 22 Q9 and Q28, amended); then
+ * _All series_, the count line and the uncapped **Library grid** of Poster
+ * cards over `GET /api/series`, genre-less series included. An empty library
+ * is the heading and `0 series · 0 episodes`, and nothing else.
  *
- * The tab reads the header's **Library query** off the URL the way the Movies
- * tab does — the settled string is the load's key, so only a change to the
- * query reloads — and the grid, the count line and the Continue row are what
- * it keeps. A search or filter that keeps nothing is a no-results face, the
- * search named ahead of the filters; a sort alone narrows nothing, so an empty
- * library under it is still the empty tab. Nothing is drawn
- * until the payload lands. A poster's heart saves the series' favorite through
- * `saveSeriesFavorite`, filled at once and put back if the save is refused —
- * and the shelf follows it, because the shelf is read off the same loaded
- * series rather than held apart.
+ * It reads the header's **Library query** off the URL the way the Movies tab
+ * does: the settled string is the load's key, so only a change to the query
+ * reloads, and a flip of the **Row view switch** keeps the query. A search or
+ * filter that keeps nothing is a no-results face, the search named ahead of
+ * the filters; a sort alone narrows nothing, so an empty library under it is
+ * still the empty tab. Nothing is drawn until the payload lands. A poster's
+ * heart saves the series' favorite through `saveSeriesFavorite`, filled at
+ * once and put back if the save is refused, and the shelf follows it, because
+ * the shelf is read off the same loaded series rather than held apart.
  */
 export function SeriesHome() {
   const navigate = useNavigate();

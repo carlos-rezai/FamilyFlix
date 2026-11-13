@@ -61,12 +61,16 @@ function useHeldValue<T>(save: (next: T) => Promise<T>): HeldValue<T> {
 
 /**
  * The household's display preferences (**Ultrawide margins**, _Fill in
- * ratings from TMDB_, the **Start tab** and each tab's **Row view**), held app-wide so a change on the
- * Settings page reaches the **Content frame** and every star at once,
- * `SnackbarProvider`'s shape. It reads the shared `fetchSettings` once on
- * mount (**Blank until it lands**: `null` until then, `null` still after a
- * refusal but for the two Row views, which land their defaults), and one read lands them all. Its setters are one bargain,
- * `useHeldValue`'s, each over its own save.
+ * ratings from TMDB_, the **Start tab** and each tab's **Row view**), held
+ * app-wide so a change on the Settings page reaches the **Content frame** and
+ * every star at once, and a choice on the **Row view switch** redraws the
+ * browse home in **All** or **By genre**: `SnackbarProvider`'s shape. It reads
+ * the shared `fetchSettings` once on mount, and one read lands them all
+ * (**Blank until it lands**: `null` until then). A refused read leaves every
+ * preference `null` but the two Row views, which land their defaults, Movies
+ * By genre and Series All, so the home is still drawn. Its setters are one
+ * bargain, `useHeldValue`'s, each over its own save: the Row views' post to
+ * `/api/settings/movie-row-view` and `/api/settings/series-row-view`.
  */
 export function DisplayPreferenceProvider({
   children,

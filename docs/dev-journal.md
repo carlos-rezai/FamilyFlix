@@ -11,6 +11,68 @@ Newest entry first.
 
 ---
 
+## 2026-11-13: Row view, the build (issues 608 to 615)
+
+The spec amended first (608), then five slices run by `issue-loop`, each a
+RED and a GREEN commit (609 to 613), the live walk as tests (614) and this
+documents slice (615). **12132 tests pass across 794 files** (one
+skipped); `tsc -b --force` is clean. Step 46 stays 🔜 until the refactor.
+
+### What shipped
+
+- **The Row view switch, kept per tab** (609). Settings `movie-row-view`
+  (default `genre`) and `series-row-view` (default `all`), posted to
+  `/api/settings/movie-row-view` and `/series-row-view`;
+  `DisplayPreferenceProvider` holds both, and a refused settings read lands
+  the defaults, so the home is still drawn. `RowViewSwitch`, a _View_
+  `FilterDropdown` after `LibraryFilters` in `LibraryPage`'s end slot, over
+  `useRowView` and `rowViewOptions`; `LibraryBody` picks each tab's body.
+- **Movies under All** (610). `MovieGrid` over `GET /api/movies`: the
+  Continue row, the Favorites row read off the grid, _All movies_, the count
+  line and the uncapped grid.
+- **Series under By genre** (611). `SeriesRows` over `GET /api/series/rows`:
+  genre rows busiest first, 15 cards each, the **Other series row** last,
+  _View all_ to `/genre/:name?tab=series` or `/genre-less?tab=series`.
+- **The Genre page for series** (612). `GET /api/series/genre/:name` and
+  `/api/series/genre-less`, served by `GenreMovies` and `GenrePage` under
+  `?tab=series`.
+- **Every face of both new bodies** (613): the skeleton, the empty library,
+  the search and filter misses and the failure, each the tab's own.
+
+### Judgement calls worth knowing
+
+- **The prototype gained a genre-less sample series** (608). The model in
+  `FamilyFlix.dc.html` had no series without a genre, so the Other series
+  row could never be drawn there; _Grandma's Kitchen_ (no genres) was added
+  so the spec shows the row it describes.
+- **The walk found no gap** (614). Design log 63's live walk, written as
+  `App.rowViewWalk.test` and `routes.rowViewRelaunch.test`, passed against
+  the build as it stood, so 614 has a test commit and no GREEN. Its tests
+  stay as guards.
+- **A series heart does not reload the Favorites row** under By genre. Movies
+  By genre reads `/api/home` again once a confirmed heart (not an un-heart)
+  and every save still in flight have landed, so the shelf settles in the
+  server's sort and cap; `useSeriesRows` lays the heart into
+  the held payload instead (a new favorite at the shelf's front, an
+  un-hearted one kept with its flag off and not drawn) and asks nothing
+  again. A series hearted there sits at the shelf's front, not where the
+  server's sort would put it, until the next load.
+- **Back's series fallback lives in `GenreLayout`.** With no history, Back on
+  the series Genre page lands on `/?tab=series`, decided by reading the
+  **Library tab** in the layout, which is meant to be structure only. A
+  refactor candidate: hand the layout its landing from the page or the
+  feature instead.
+
+### Follow-ups for the refactor
+
+- **`GenreMovies` serves series too** and keeps its name (log 63 Q15); a
+  rename to what it holds.
+- **The Back fallback** out of `GenreLayout`, as above.
+- **Whether a series heart should reload** the By genre shelf as the Movies
+  one does, or the Movies one stop reloading.
+
+---
+
 ## 2026-11-13: Row view, the grill-me (log 63)
 
 Step 46, settled in `docs/design-logs/63-row-view.md`, with its handoff

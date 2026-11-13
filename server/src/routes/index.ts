@@ -834,13 +834,15 @@ export function createApiRouter(
         };
   }
 
-  // The whole browse home in one request: the in-progress movies, the favorited
-  // ones, plus a row per populated genre, alphabetical, each capped at 15
-  // movies with the genre's true total. The favorites shelf arrives on this
-  // same wire rather than through an `/api/favorites` of its own — a second
-  // request for one screen is exactly what this endpoint exists to avoid.
+  // Movies under **By genre**, the Movies tab's default **Row view**, in one
+  // request (`/movies` serves **All**): the in-progress movies, the favorited
+  // ones, a row per populated genre, busiest first, each capped at 15 movies
+  // with the genre's true total, and the **Other row** of genre-less films
+  // last. The favorites shelf arrives on this same wire rather than through an
+  // `/api/favorites` of its own: a second request for one screen is exactly
+  // what this endpoint exists to avoid.
   //
-  // `?q=` narrows every section to a search term — `q` is the wire name, and
+  // `?q=` narrows every section to a search term. `q` is the wire name, and
   // this boundary is the only place it is translated to the domain's `search`.
   // An empty value means no search, so a cleared box is the plain home again;
   // a term that matches nothing is an empty payload, not a 404.
@@ -922,10 +924,12 @@ export function createApiRouter(
     res.json(payload);
   });
 
-  // The Series tab in one read: the series the **Library query** keeps, the
-  // episode total across them — the tab's `N series · M episodes` line — and
-  // the Continue row, all narrowed by the one query `/home` reads, through the
-  // same parser and with the same 400s.
+  // Series under **All**, the Series tab's default **Row view**, in one read
+  // (`/series/rows` serves **By genre**): every series the **Library query**
+  // keeps, uncapped and genre-less ones included, the episode total across
+  // them (the tab's `N series · M episodes` line) and the Continue row, all
+  // narrowed by the one query `/home` reads, through the same parser and with
+  // the same 400s. The **Favorites row** is the screen's to read off `series`.
   router.get('/series', (req: Request, res: Response) => {
     const query = libraryQueryOr400(req, res);
     if (query) {
