@@ -34,9 +34,9 @@ export function useWelcomeTune({
     }
     const made = createWelcomeTune();
     tune.current = made;
-    // Under reduced motion an empty cue still opens the context, so a skip
-    // has a master to fade.
-    made.play(reducedMotion ? [] : INTRO_CUE);
+    if (!reducedMotion) {
+      made.play(INTRO_CUE);
+    }
     return () => {
       made.close();
       tune.current = null;
