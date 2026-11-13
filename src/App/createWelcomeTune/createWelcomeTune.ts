@@ -19,6 +19,10 @@ const MASTER_LEVEL = 0.3;
 const BELL_RISE = 0.01;
 const BELL_OCTAVE = 0.25;
 
+/** A pluck's rise and a swell's, in s (log 62 Q6). */
+const PLUCK_RISE = 0.005;
+const SWELL_RISE = 0.35;
+
 /** Where an exponential fall ends, as a share of its peak: inaudible. */
 const FLOOR = 1e-4;
 
@@ -34,26 +38,75 @@ const SILENT: WelcomeTune = {
   close: () => undefined,
 };
 
-/** One sine at `frequency`, peaking at `level`, into `master`. */
-function strikeSine(
+/** How a voice's level moves over a note, on its envelope's gain. */
+type Shape = (
+  gain: AudioParam,
+  level: number,
+  start: number,
+  end: number
+) => void;
+
+/** A fast linear rise, then an exponential fall to nothing at the end. */
+const struck =
+  (rise: number): Shape =>
+  (gain, level, start, end) => {
+    gain.setValueAtTime(0, start);
+    gain.linearRampToValueAtTime(level, start + rise);
+    gain.exponentialRampToValueAtTime(level * FLOOR, end);
+  };
+
+/** A slow linear rise, then a linear fall to silence at the end. */
+const swelled: Shape = (gain, level, start, end) => {
+  gain.setValueAtTime(0, start);
+  gain.linearRampToValueAtTime(level, start + SWELL_RISE);
+  gain.linearRampToValueAtTime(0, end);
+};
+
+/** One oscillator at `frequency`, shaped to peak at `level`, into `master`. */
+function sound(
   context: AudioContext,
   master: AudioNode,
+  type: OscillatorType,
+  shape: Shape,
   frequency: number,
   level: number,
   start: number,
   end: number
 ): void {
   const oscillator = context.createOscillator();
-  oscillator.type = 'sine';
+  oscillator.type = type;
   oscillator.frequency.value = frequency;
   const envelope = context.createGain();
-  envelope.gain.setValueAtTime(0, start);
-  envelope.gain.linearRampToValueAtTime(level, start + BELL_RISE);
-  envelope.gain.exponentialRampToValueAtTime(level * FLOOR, end);
+  shape(envelope.gain, level, start, end);
   oscillator.connect(envelope);
   envelope.connect(master);
   oscillator.start(start);
   oscillator.stop(end);
+}
+
+/** Sounds `note` in its voice, from `start` to `end` on the context's clock. */
+function strike(
+  context: AudioContext,
+  master: AudioNode,
+  note: WelcomeNote,
+  start: number,
+  end: number
+): void {
+  const frequency = frequencyOf(note.pitch);
+  const at = (type: OscillatorType, shape: Shape, hz: number, level: number) =>
+    sound(context, master, type, shape, hz, level, start, end);
+  switch (note.voice) {
+    case 'pluck':
+      at('triangle', struck(PLUCK_RISE), frequency, note.level);
+      return;
+    case 'swell':
+      at('sine', swelled, frequency, note.level);
+      return;
+    case 'bell':
+      at('sine', struck(BELL_RISE), frequency, note.level);
+      at('sine', struck(BELL_RISE), 2 * frequency, note.level * BELL_OCTAVE);
+      return;
+  }
 }
 
 /**
@@ -108,23 +161,7 @@ export function createWelcomeTune(): WelcomeTune {
       for (const note of cue) {
         const start = now + note.at / 1000;
         const end = start + note.length / 1000;
-        const frequency = frequencyOf(note.pitch);
-        strikeSine(
-          graph.context,
-          graph.master,
-          frequency,
-          note.level,
-          start,
-          end
-        );
-        strikeSine(
-          graph.context,
-          graph.master,
-          2 * frequency,
-          note.level * BELL_OCTAVE,
-          start,
-          end
-        );
+        strike(graph.context, graph.master, note, start, end);
         lastEnd = Math.max(lastEnd, end);
       }
     },

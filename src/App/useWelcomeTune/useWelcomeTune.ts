@@ -4,7 +4,7 @@ import {
   createWelcomeTune,
   type WelcomeTune,
 } from '@/App/createWelcomeTune/createWelcomeTune';
-import { CLOSING_CHORD } from '@/App/welcomeScore/welcomeScore';
+import { CLOSING_CHORD, INTRO_CUE } from '@/App/welcomeScore/welcomeScore';
 import type { WelcomePhase } from '@/App/welcomeStep/welcomeStep';
 
 export interface WelcomeTuneOptions {
@@ -15,7 +15,8 @@ export interface WelcomeTuneOptions {
 /**
  * The **Welcome tune** over the welcome's phases. It answers a step the
  * provider calls the moment a phase starts, not on a render, so a cue sounds
- * when its phase does: the **Closing chord** on `handoff`, `finish()` at
+ * when its phase does: the **Intro cue** from the mount, as the welcome
+ * starts, the **Closing chord** on `handoff`, `finish()` at
  * `done`. An unmount closes the tune at once.
  */
 export function useWelcomeTune({
@@ -29,6 +30,7 @@ export function useWelcomeTune({
     }
     const made = createWelcomeTune();
     tune.current = made;
+    made.play(INTRO_CUE);
     return () => {
       made.close();
       tune.current = null;
