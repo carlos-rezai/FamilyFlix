@@ -41,8 +41,8 @@ export function useWelcomeTune({
       made.close();
       tune.current = null;
     };
-    // Once per mount: `reducedMotion` is read once, at the start.
-  }, [played]);
+    // Once per mount: the provider reads both inputs once, at the start.
+  }, [played, reducedMotion]);
 
   return useCallback((phase: WelcomePhase) => {
     if (phase === 'handoff') {
