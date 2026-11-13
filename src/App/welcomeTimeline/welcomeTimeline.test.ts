@@ -89,12 +89,24 @@ describe('welcomeTimeline', () => {
   });
 });
 
+/**
+ * The `animation`, `transition` and `*-delay` declarations in `code`, each to
+ * its `;`: where a timing is spelled. A `z-index` or a weight is not one.
+ */
+function timingsOf(code: string): string {
+  return (
+    code.match(/\b(?:animation|transition|[\w-]*-delay)\s*:[^;]*;/g) ?? []
+  ).join('\n');
+}
+
 describe('welcomeTimeline: the splash and the provider read it', () => {
   it("leaves no timing literal of the welcome in the splash's styles", () => {
     const styles = codeOf('WelcomeSplash/WelcomeSplash.styles.ts');
+    const timings = timingsOf(styles);
 
-    expect(styles).not.toMatch(/\b(520|420|1000|700|1150|380)\b/);
-    expect(styles).not.toMatch(/\* (40|45)\b/);
+    expect(timings).toMatch(/animation:/);
+    expect(timings).not.toMatch(/\b(520|420|1000|700|1150|380)\b/);
+    expect(timings).not.toMatch(/\* (40|45)\b/);
     expect(styles).not.toMatch(/\b55%/);
   });
 
