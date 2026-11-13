@@ -75,6 +75,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Rebuild edges: hand-kept sheets, growing folders    | ✅ Done    |
 | Export round trip: an Export gives it all back      | ✅ Done    |
 | Welcome tune: a tune in sync with the intro         | ✅ Done    |
+| Row view: genre rows or one grid, Movies and Series | 🔲 Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -581,3 +582,10 @@ handoff `docs/handoff/handoff-welcome-tune/`, whose README is the score):
       (no audio device on Linux) gives a silent tune, a suspended one is never
       resumed, and the welcome runs unchanged. The shell spells
       `autoplayPolicy: 'no-user-gesture-required'` so a Cold start may sound.
+
+Step 46 came out of the two tabs browsing differently: Movies draws genre
+rows, Series one grid of every show. To be settled in a grill-me:
+
+46. 🔲 **Row view**: a switch on both the Movies and the Series tab between
+    _All_, every title in one grid, and _By genre_, a row per genre, so
+    either tab can be browsed either way.
