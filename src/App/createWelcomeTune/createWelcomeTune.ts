@@ -1,4 +1,5 @@
 import type { WelcomeNote } from '@/App/welcomeScore/welcomeScore';
+import { MARK_SWEEP_MS } from '@/App/welcomeTimeline/welcomeTimeline';
 
 /** The **Welcome tune**'s player. */
 export interface WelcomeTune {
@@ -19,9 +20,11 @@ const MASTER_LEVEL = 0.3;
 const BELL_RISE = 0.08;
 const BELL_OCTAVE = 0.1;
 
-/** A pluck's rise and a swell's, in s (log 62 Q6). */
+/** A pluck's rise, in s (log 62 Q6). */
 const PLUCK_RISE = 0.012;
-const SWELL_RISE = 0.35;
+
+/** A swell's rise, in s: it peaks at the mark sweep's middle (log 62 Q6). */
+const SWELL_RISE = MARK_SWEEP_MS / 2 / 1000;
 
 /**
  * The lowpass the master sounds through, in Hz, and its Q: it softens the

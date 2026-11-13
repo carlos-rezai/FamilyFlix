@@ -7,9 +7,9 @@ import {
   DROP_DELAYS,
   DROP_LANDING,
   DROP_MS,
+  INTRO_MS,
   LETTER_START,
   LETTER_STEP,
-  MARK_SWEEP_MS,
   MARK_SWEEP_START,
 } from '@/App/welcomeTimeline/welcomeTimeline';
 
@@ -51,12 +51,6 @@ const LETTER_PITCHES = [65, 67, 69, 70, 72, 74, 76, 77, 79, 81];
 /** C6 and F6. */
 const SWELL_PITCHES = [84, 89];
 
-/** A swell's rise, in ms: it peaks at the mark sweep's middle (log 62 Q6). */
-const SWELL_RISE_MS = 350;
-
-/** The swell dies away 950ms after it starts, as the intro ends. */
-const SWELL_MS = 950;
-
 /**
  * The **Intro cue**: a pluck on each F's landing, one per letter as it
  * rises, and a swell under the mark sweep, every time read off the
@@ -83,9 +77,9 @@ export const INTRO_CUE: readonly WelcomeNote[] = [
   ),
   ...SWELL_PITCHES.map(
     (pitch): WelcomeNote => ({
-      at: MARK_SWEEP_START + MARK_SWEEP_MS / 2 - SWELL_RISE_MS,
+      at: MARK_SWEEP_START,
       pitch,
-      length: SWELL_MS,
+      length: INTRO_MS - MARK_SWEEP_START,
       voice: 'swell',
       level: 0.13,
     })
