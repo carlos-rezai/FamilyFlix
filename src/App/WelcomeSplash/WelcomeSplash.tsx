@@ -2,6 +2,7 @@ import { useId } from 'react';
 
 import { LogoLoader } from '@/primitives';
 import { MARK_F1, MARK_F2, MARK_VIEWBOX } from '@/tokens';
+import { DROP_DELAYS } from '@/App/welcomeTimeline/welcomeTimeline';
 import {
   Background,
   HoldMark,
@@ -160,8 +161,8 @@ export function WelcomeSplash({
             <BandGradient id={gradient[0]} rgb={ORANGE} peak={0.95} />
             <BandGradient id={gradient[1]} rgb={WHITE} peak={0.7} />
           </defs>
-          <MarkF1 d={MARK_F1} $delay={0} $still={reducedMotion} />
-          <MarkF2 d={MARK_F2} $delay={150} $still={reducedMotion} />
+          <MarkF1 d={MARK_F1} $delay={DROP_DELAYS[0]} $still={reducedMotion} />
+          <MarkF2 d={MARK_F2} $delay={DROP_DELAYS[1]} $still={reducedMotion} />
           {!reducedMotion &&
             [0, 1].map((f) => (
               <g key={f} clipPath={`url(#${clip[f]})`}>

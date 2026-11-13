@@ -6,4 +6,4 @@ export { radius } from './radius';
 export { breakpoints } from './breakpoints';
 export { motion } from './motion';
 export { layout } from './layout';
-export { MARK_F1, MARK_F2, MARK_VIEWBOX } from './brand';
+export { MARK_F1, MARK_F2, MARK_VIEWBOX, WORDMARK_WEIGHT } from './brand';

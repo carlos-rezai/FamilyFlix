@@ -14,3 +14,6 @@ export const MARK_F2 =
 
 /** The box around the two Fs, without the app-icon tile. */
 export const MARK_VIEWBOX = '160 300 704 424';
+
+/** The wordmark's weight: _FamilyFlix_ in the brand's serif at 700. */
+export const WORDMARK_WEIGHT = 700;

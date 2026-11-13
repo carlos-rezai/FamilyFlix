@@ -5,6 +5,21 @@ import styled, {
   type Keyframes,
 } from 'styled-components';
 
+import { WORDMARK_WEIGHT } from '@/tokens';
+import {
+  DROP_LANDING,
+  DROP_MS,
+  HANDOFF_MS,
+  LETTER_MS,
+  LETTER_START,
+  LETTER_STEP,
+  LETTER_SWEEP_MS,
+  LETTER_SWEEP_START,
+  LETTER_SWEEP_STEP,
+  MARK_SWEEP_MS,
+  MARK_SWEEP_START,
+} from '@/App/welcomeTimeline/welcomeTimeline';
+
 /** The media query the welcome reads, once at the start (log 55 Q15). */
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
@@ -72,7 +87,7 @@ const drop = keyframes`
     opacity: 0;
     transform: translateY(-70%);
   }
-  55% {
+  ${Math.round(DROP_LANDING * 100)}% {
     opacity: 1;
     transform: translateY(5%);
   }
@@ -134,11 +149,14 @@ const toHeader = (scale: number, { left, top, ratio }: WordmarkLanding) =>
     }
   `;
 
-/** The splash over the whole window, above the **Home layer**. */
+/**
+ * The splash over the whole window, above the **Home layer** and every other
+ * layer (the **Snackbar stack**'s 200 the highest).
+ */
 export const Root = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 1000;
+  z-index: 999;
 `;
 
 /**
@@ -221,7 +239,7 @@ const MarkF = styled.path<{ $delay: number; $still: boolean }>`
   ${({ $delay, $still, theme }) =>
     !$still &&
     css`
-      animation: ${drop} 520ms ${$delay}ms both ${theme.motion.easeDrop};
+      animation: ${drop} ${DROP_MS}ms ${$delay}ms both ${theme.motion.easeDrop};
     `}
 `;
 
@@ -233,9 +251,10 @@ export const MarkF2 = styled(MarkF)`
   fill: ${({ theme }) => theme.colors.accent};
 `;
 
-/** A 220-unit band over an F, swept from 1000ms for 700ms. */
+/** A 220-unit band over an F, swept from `MARK_SWEEP_START` for `MARK_SWEEP_MS`. */
 export const SweepBand = styled.rect`
-  animation: ${sweep} 700ms 1000ms both ${({ theme }) => theme.motion.easeSweep};
+  animation: ${sweep} ${MARK_SWEEP_MS}ms ${MARK_SWEEP_START}ms both
+    ${({ theme }) => theme.motion.easeSweep};
 `;
 
 /**
@@ -263,7 +282,7 @@ export const WordmarkLayer = styled.div<{
     return (
       $landing !== null &&
       css`
-        animation: ${toHeader($scale, $landing)} 500ms 0ms both
+        animation: ${toHeader($scale, $landing)} ${HANDOFF_MS}ms 0ms both
           ${theme.motion.easeGlide};
       `
     );
@@ -281,7 +300,7 @@ export const SplashWordmark = styled.span`
   gap: ${2 / 25}em;
   letter-spacing: ${0.3 / 25}em;
   font-family: ${({ theme }) => theme.fonts.serif};
-  font-weight: 700;
+  font-weight: ${WORDMARK_WEIGHT};
 `;
 
 /** The wordmark again, laid exactly over it: the glyphs' sweep copies. */
@@ -302,8 +321,8 @@ export const LetterCell = styled.span<{ $i: number; $still: boolean }>`
   ${({ $i, $still, theme }) =>
     !$still &&
     css`
-      animation: ${letterIn} 420ms ${520 + $i * 40}ms both
-        ${theme.motion.easeOut};
+      animation: ${letterIn} ${LETTER_MS}ms ${LETTER_START + $i * LETTER_STEP}ms
+        both ${theme.motion.easeOut};
     `}
 `;
 
@@ -332,5 +351,6 @@ export const LetterSweep = styled.span<{ $i: number; $flix: boolean }>`
   background-repeat: no-repeat;
   -webkit-background-clip: text;
   background-clip: text;
-  animation: ${textSweep} 380ms ${({ $i }) => 1150 + $i * 45}ms both linear;
+  animation: ${textSweep} ${LETTER_SWEEP_MS}ms
+    ${({ $i }) => LETTER_SWEEP_START + $i * LETTER_SWEEP_STEP}ms both linear;
 `;

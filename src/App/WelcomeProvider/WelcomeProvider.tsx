@@ -22,23 +22,17 @@ import {
   type WordmarkLanding,
 } from '@/App/WelcomeSplash/WelcomeSplash';
 import { useWelcomeTune } from '@/App/useWelcomeTune/useWelcomeTune';
+import {
+  HANDOFF_MS,
+  INTRO_MS,
+  SKIP_MS,
+  STILL_HANDOFF_MS,
+  STILL_INTRO_MS,
+} from '@/App/welcomeTimeline/welcomeTimeline';
 import { HomeLayer } from './WelcomeProvider.styles';
 
 /** The `sessionStorage` flag a played welcome leaves for the session. */
 const WELCOMED_KEY = 'familyflix.welcomed';
-
-/**
- * The **Welcome intro** and the **Wordmark handoff**, in ms. The intro outlasts
- * the last letter's sweep (`1150 + 9·45 + 380`, 1935ms), so the glide starts
- * with no light left on _Flix_; the prototype's 1750 cut it short.
- */
-const INTRO_MS = 1950;
-const HANDOFF_MS = 500;
-/** The same under reduced motion: fades alone, 1300ms in all (log 55 Q15). */
-const STILL_INTRO_MS = 900;
-const STILL_HANDOFF_MS = 400;
-/** The skip's fade of the **Home layer**, in ms. */
-const SKIP_MS = 150;
 
 /** The input that skips the welcome, swallowed on `window` while it is up. */
 const SKIP_INPUTS = ['pointerdown', 'keydown'] as const;
