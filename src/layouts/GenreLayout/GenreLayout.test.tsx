@@ -131,6 +131,20 @@ describe('GenreLayout', () => {
 });
 
 describe('GenreLayout — Back', () => {
+  it('draws Back above the header strip it is pinned over, not under it', () => {
+    // The strip is a near-opaque, blurred, positioned layer across
+    // the top, and Back is pinned in its left padding. Drawn under it, Back is
+    // hidden and unclickable, and the genre page has no way out.
+    renderLayout(<p>the genre grid goes here</p>);
+
+    const zOf = (element: HTMLElement) =>
+      Number(window.getComputedStyle(element).zIndex);
+    const header = screen.getByRole('banner');
+
+    expect(window.getComputedStyle(header).position).not.toBe('static');
+    expect(zOf(back())).toBeGreaterThan(zOf(header));
+  });
+
   it('offers a Back control reachable by its accessible name', () => {
     renderLayout(<p>the genre grid goes here</p>);
 

@@ -15,6 +15,10 @@ const GLYPH = '#fff';
  * column or chrome. Glass, because on the detail pages it floats over artwork,
  * and the same glass reads on the plain sheets too.
  *
+ * Layered above the genre page's header strip (`z-index: 40`), which it is
+ * pinned over: under it, the strip's near-opaque glass hides Back and takes
+ * its clicks. Still below the dropdowns (50), the Fab (60) and dialogs (90).
+ *
  * The square, the centring, the pill corner, the press and the ring are
  * `IconButton`'s. The hover replaces the face's `background`, `color` and
  * `transform` completely (IconButton's rule 2).
@@ -23,7 +27,7 @@ export const Root = styled(IconButton)`
   position: fixed;
   top: ${({ theme }) => theme.space.s4};
   left: ${({ theme }) => theme.space.s6};
-  z-index: 30;
+  z-index: 45;
   background: ${GLASS};
   backdrop-filter: blur(10px);
   border: 1px solid ${GLASS_EDGE};
