@@ -23,6 +23,7 @@ import {
 } from '@/test-support/stubAudioContext/stubAudioContext';
 
 import { INTRO_CUE } from '@/App/welcomeScore/welcomeScore';
+import { REDUCED_MOTION_QUERY } from '@/App/WelcomeSplash/WelcomeSplash';
 
 import { WelcomeProvider } from './WelcomeProvider';
 
@@ -396,5 +397,78 @@ describe('WelcomeProvider: the Welcome hold is silent', () => {
     expect(context.oscillators).toHaveLength(
       INTRO_CUE.length + CHORD_HZ.length
     );
+  });
+});
+
+/**
+ * 62, Welcome tune, Phase 5 (issue #598): reduced motion plays the chord
+ * alone.
+ *
+ * Under reduced motion, read once at the start, the welcome plays no **Intro
+ * cue**: the **Closing chord** is the whole tune, struck when the reduced
+ * handoff starts, at 900ms. A skip still fades, and a skip from the intro
+ * never reaches the handoff, so it plays no chord.
+ */
+const STILL_INTRO = 900;
+
+/** A `matchMedia` that answers yes to reduced motion and no to all else. */
+function stubReducedMotion() {
+  vi.stubGlobal(
+    'matchMedia',
+    vi.fn((query: string) => ({
+      matches: query === REDUCED_MOTION_QUERY,
+      media: query,
+      onchange: null,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      dispatchEvent: () => false,
+    }))
+  );
+}
+
+describe('WelcomeProvider: reduced motion plays the chord alone', () => {
+  beforeEach(() => {
+    stubReducedMotion();
+  });
+
+  it('schedules no Intro cue note', async () => {
+    renderWelcome();
+    await advanceClock(100);
+    await advanceClock(STILL_INTRO - 100 - 1);
+
+    const context = onlyContext();
+    expect(context.oscillators).toHaveLength(0);
+  });
+
+  it('strikes the chord when the reduced handoff starts, at 900ms', async () => {
+    renderWelcome();
+    await advanceClock(100);
+    await advanceClock(STILL_INTRO - 100);
+
+    const context = onlyContext();
+    const handoff = context.currentTime;
+    expect(handoff).toBeCloseTo(STILL_INTRO / 1000, 6);
+    expectChord(startedAt(context, handoff));
+    expect(context.oscillators).toHaveLength(CHORD_HZ.length);
+  });
+
+  describe.each(skips)('%s', (_, skip) => {
+    it('during the intro fades the master over 150ms, closes after, and plays no chord', async () => {
+      renderWelcome();
+      await advanceClock(100);
+      const context = onlyContext();
+
+      act(() => {
+        skip(document.body);
+      });
+      const from = context.currentTime;
+
+      expectFadeFrom(context, from);
+      await expectClosedAfterFade(context);
+      await advanceClock(STILL_INTRO + CHORD_MS);
+      expect(context.oscillators).toHaveLength(0);
+    });
   });
 });
