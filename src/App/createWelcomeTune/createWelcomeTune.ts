@@ -132,9 +132,10 @@ function strike(
 }
 
 /**
- * The only code that touches Web Audio. The context is made on the first
- * `play`, never resumed; with no `AudioContext`, or one that throws, the tune
- * is silent and every call does nothing.
+ * The only code that touches Web Audio. The context is made with the tune,
+ * never resumed; each cue is anchored on its clock when it is played. With no
+ * `AudioContext`, or one that throws, the tune is silent and every call does
+ * nothing.
  */
 export function createWelcomeTune(): WelcomeTune {
   if (typeof window.AudioContext !== 'function') {

@@ -256,7 +256,10 @@ export const MarkF2 = styled(MarkF)`
   fill: ${({ theme }) => theme.colors.accent};
 `;
 
-/** A 220-unit band over an F, swept from `MARK_SWEEP_START` for `MARK_SWEEP_MS`. */
+/**
+ * A 220-unit band over an F, swept from `MARK_SWEEP_START` for
+ * `MARK_SWEEP_MS`.
+ */
 export const SweepBand = styled.rect`
   animation: ${sweep} ${MARK_SWEEP_MS}ms ${MARK_SWEEP_START}ms both
     ${({ theme }) => theme.motion.easeSweep};

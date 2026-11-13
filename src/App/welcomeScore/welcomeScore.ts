@@ -16,6 +16,7 @@ import {
 /** How a note sounds; the voices live in the player (log 62 Q6). */
 export type WelcomeVoice = 'pluck' | 'bell' | 'swell';
 
+/** One note of the **Welcome tune**. */
 export interface WelcomeNote {
   /** When it is struck, in ms from its cue's start. */
   at: number;

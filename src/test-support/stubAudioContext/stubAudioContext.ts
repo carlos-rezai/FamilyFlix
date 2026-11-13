@@ -1,6 +1,6 @@
 import { afterEach, beforeEach } from 'vitest';
 
-/** One scheduled change on a param, as the Web Audio automation calls make it. */
+/** One scheduled change on a param, as Web Audio's automation calls make it. */
 interface ParamEvent {
   kind: 'set' | 'linear' | 'exponential';
   time: number;
@@ -287,7 +287,10 @@ export interface StubbedAudio {
 export interface StubAudioOptions {
   /** What a new context's `currentTime` reads, in seconds. Defaults to 0. */
   startTime?: number;
-  /** The state a new context starts in: `'suspended'` as an autoplay policy keeps it. */
+  /**
+   * The state a new context starts in: `'suspended'` as an autoplay policy
+   * keeps it.
+   */
   state?: AudioContextState;
   /** The constructor throws, as it does on Linux with no audio device. */
   refuse?: boolean;
@@ -296,9 +299,9 @@ export interface StubAudioOptions {
 /**
  * jsdom has no Web Audio. Call this inside the `describe` that needs it (or at
  * a file's top), and for each test `window.AudioContext` is a recording fake:
- * every context made, its oscillators, gains and filters, how they connect, and what
- * each param does over time. Cleanup removes it, so the next file's window has
- * no `AudioContext` again, as jsdom's own doesn't. It follows
+ * every context made, its oscillators, gains and filters, how they connect,
+ * and what each param does over time. Cleanup removes it, so the next file's
+ * window has no `AudioContext` again, as jsdom's own doesn't. It follows
  * `stubMediaElement` in shape.
  */
 export function stubAudioContext({

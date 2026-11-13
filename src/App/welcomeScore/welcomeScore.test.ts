@@ -74,8 +74,9 @@ describe('welcomeScore: CLOSING_CHORD', () => {
  * landing (400ms, 0.8); ten letter plucks on each letter's start up the F
  * major scale, F4 to A5 (200ms, 0.3); a swell of C6 and F6 from the mark
  * sweep's start, at its height at the sweep's middle, died away by the
- * intro's end (0.13). Retuned by ear in issue #600. The summed peak is proved through the player, in
- * `createWelcomeTune.test.ts`, where the voices' shapes live.
+ * intro's end (0.13). Retuned by ear in issue #600. The summed peak is
+ * proved through the player, in `createWelcomeTune.test.ts`, where the
+ * voices' shapes live.
  */
 
 /** F3 on the first F's landing, F4 on the accent one's. */

@@ -120,13 +120,13 @@ export interface WelcomeProviderProps {
  * **Ready** when the header wordmark mounts on `useWelcome`'s ref; until the
  * end the header wordmark is hidden. At `done`, in one frame, the wordmark
  * shows, the splash unmounts and the Home layer loses its style; focus stays
- * where it is. A home not ready at the intro's end holds,
- * a beating `LogoLoader` in the mark's place, until it is (the **Welcome
- * hold**). Any `pointerdown` or `keydown` while the welcome is up is
- * swallowed on `window` and skips: the splash goes and the Home layer fades
- * in over 150ms, once the home is ready. Under reduced motion, read once
- * at the start, nothing moves: 900ms of fade-in, a 400ms handoff of fades,
- * the header wordmark shown from its start. A played welcome sounds the
+ * where it is. A home not ready at the intro's end holds, a beating
+ * `LogoLoader` in the mark's place, until it is (the **Welcome hold**). Any
+ * `pointerdown` or `keydown` while the welcome is up is swallowed on
+ * `window` and skips: the splash goes and the Home layer fades in over
+ * 150ms, once the home is ready. Under reduced motion, read once at the
+ * start, nothing moves: 900ms of fade-in, a 400ms handoff of fades, the
+ * header wordmark shown from its start. A played welcome sounds the
  * **Welcome tune** through `useWelcomeTune`, told each phase the moment it
  * starts: the **Intro cue** from the start, the **Closing chord** as the
  * handoff starts (the hold silent between them), a 150ms fade on a skip, and

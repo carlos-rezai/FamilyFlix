@@ -19,8 +19,10 @@ export interface WelcomeTuneOptions {
  * The **Welcome tune** over the welcome's phases. It answers a step the
  * provider calls the moment a phase starts, not on a render, so a cue sounds
  * when its phase does: the **Intro cue** from the mount, as the welcome
- * starts, unless under reduced motion, where the chord is the whole tune; the **Closing chord** on `handoff`, a fade over the skip's
- * `SKIP_MS` on `skipping`, `finish()` at `done`. The hold sounds nothing. An unmount closes the tune at once.
+ * starts; the **Closing chord** on `handoff`; a fade over the skip's
+ * `SKIP_MS` on `skipping`; `finish()` at `done`. Under reduced motion
+ * nothing plays until the chord, the whole tune. The hold sounds nothing. An
+ * unmount closes the tune at once.
  */
 export function useWelcomeTune({
   played,
