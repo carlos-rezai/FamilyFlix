@@ -11,6 +11,100 @@ Newest entry first.
 
 ---
 
+## 2026-11-13: Welcome tune, the refactor (issue 605)
+
+Fourteen commits against
+`docs/refactor-plans/62-welcome-tune-refactor.md`, one per plan commit.
+This is the initiative's closing round. **11951 tests pass across 778
+files** (one skipped), against 11934 across 777 at the end of the build
+(`c44a020c`): the autoplay guard lost its case on a comment, and
+`stubAudioContext` gained a suite of 18. `tsc -b --force` is clean. `eslint
+src server electron` reports 1 error and 137 warnings, down from 1 and 138
+at `c44a020c`.
+
+### What shipped before this round
+
+The build slices 594 to 599, RED and GREEN each (599 needed no GREEN): the
+player (`createWelcomeTune`) with its bell, pluck and swell voices, the
+score (`welcomeScore`), the timeline the splash, the provider and the score
+all read (`welcomeTimeline`), the hook over the welcome's phases
+(`useWelcomeTune`), the skip's fade, the chord alone under reduced motion,
+silence where Web Audio is missing, throws or is kept suspended, and the
+shell's spelled autoplay policy. The live walk retuned it by ear (600) and
+the documents followed (601).
+
+### What each group changed
+
+- **Group 1, a tune made whole when it is made** (`a9ca09c7`, `9d899000`,
+  `637ef333`). `createWelcomeTune` makes its `AudioContext`, master and
+  lowpass at once, answering the silent tune on a refusal there and then;
+  the lazy `open()` and the null checks in `fadeOut` and `finish` went.
+  `useWelcomeTune` plays the Intro cue unless under reduced motion, so the
+  empty `play([])` went, and its effect lists `[played, reducedMotion]`.
+- **Group 2, one copy of each number** (`d957db95`). The score strikes the
+  swell at `MARK_SWEEP_START` for `INTRO_MS - MARK_SWEEP_START`; the
+  player's swell rise is `MARK_SWEEP_MS / 2`. `SWELL_RISE_MS` and `SWELL_MS`
+  went.
+- **Group 3, a voice is its partials** (`8c241863`). A private
+  `VOICES: Record<WelcomeVoice, readonly VoicePartial[]>` in place of the
+  `switch`; `strike` sounds each partial, every oscillator a sine.
+- **Group 4, guards that read timings** (`14bd0d1d`, `042f64e9`,
+  `d0336076`, `97c5d0b7`). The splash's literal scan reads only the
+  `animation`, `transition` and `*-delay` declarations; the splash's
+  `z-index` is 1000 again; the **Wordmark** primitive reads
+  `WORDMARK_WEIGHT`; the autoplay guard pins the line alone.
+- **Group 5, a stub with its own suite** (`b4ea1af0`, `dc6937f7`).
+  `setTargetAtTime` and its evaluation branch left the stub, then
+  `stubAudioContext.test` pinned what the tune suites lean on.
+- **Group 6, comments** (`59540bc6`). The docblocks rewrapped to 80
+  columns; `createWelcomeTune`'s says the context is made with the tune,
+  `useWelcomeTune`'s that reduced motion plays nothing until the chord, and
+  `WelcomeNote` has its docblock.
+- **Group 7, the docs** (`7988bcb7` and this entry). Step 45 and its row
+  ticked, the row's _jingle_ gone; a Welcome tune release smoke. The
+  glossary already said what the code does.
+
+### Where this round left the plan
+
+- **`sound` and `strike` take a private `Graph`** (the context and its
+  master), made once with the tune, rather than the two as separate
+  parameters; `sound` takes the partial's `Shape` beside its frequency and
+  level.
+- **The scoped scan also asserts it found an `animation:`**, so a reshaped
+  styles file cannot pass it by matching nothing.
+- **`stubAudioContext.test` checks no import rule**: unlike
+  `stubMediaElement.test`, it pins the stub's behaviour only, as the plan
+  listed.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the splash's other literal durations
+(the reduced fades' 300ms, the hold's 400ms from 50ms, the mark's 300ms),
+`WelcomeProvider`'s two `exhaustive-deps` warnings, a mute control or volume
+setting, following `volumePreference`, resuming a suspended context,
+output-latency compensation, a shared `hz` test helper, and the frozen
+`handoff-welcome-splash/`. No note, level, time, wire, schema, Settings,
+copy or prototype change.
+
+### Follow-ups this refactor surfaced
+
+- **The splash's unlifted durations**, a timeline round of their own if the
+  animation is ever retimed.
+- **`WelcomeProvider`'s two dependency warnings** (`startClock` in `send`
+  and in the mount effect), which reshape the clock.
+- **A mute control**, as its own step.
+- **Process**: slice 594 ran over its token budget, as 582 did; the next
+  plan should split a new pure unit and its test-support fake from the
+  acceptance test that needs them.
+
+### The initiative
+
+**Welcome tune is done**: the build slices (594 to 599), the live walk
+(600), the documents (601) and this round (605). Issue 593, the epic, is
+shut with it.
+
+---
+
 ## 2026-11-13: Welcome tune, the build (issues 594 to 601)
 
 Six slices run by `issue-loop`, each a RED and a GREEN commit (599 needed no
