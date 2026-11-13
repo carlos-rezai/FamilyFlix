@@ -77,6 +77,14 @@ describe('COMPONENT-SPEC.md: the Welcome splash section', () => {
   });
 });
 
+describe('COMPONENT-SPEC.md: the Welcome splash section and its tune', () => {
+  // 62, Welcome tune, Phase 1 (issue #594): the section points at the tune's
+  // own handoff, the score, beside the frozen splash handoff.
+  it('names the new handoff-welcome-tune/', () => {
+    expect(welcomeSection()).toContain('handoff-welcome-tune/');
+  });
+});
+
 describe('handoff-welcome-splash/: frozen', () => {
   it('is unchanged from the commit that brought it in', () => {
     // `git diff --exit-code` answers 1, and so throws, on any difference.
