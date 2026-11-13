@@ -6,7 +6,7 @@ export interface WelcomeTune {
   play(cue: readonly WelcomeNote[]): void;
   /** Ramps the master to silence over `ms`, then closes. */
   fadeOut(ms: number): void;
-  /** Closes once the last note played has died away. */
+  /** Closes once the last note played has died away; after a fade, nothing. */
   finish(): void;
   /** Closes at once. */
   close(): void;
@@ -124,6 +124,7 @@ export function createWelcomeTune(): WelcomeTune {
   let lastEnd = 0;
   let closing: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
+  let fading = false;
 
   function open(): { context: AudioContext; master: GainNode } | null {
     if (closed) return null;
@@ -167,6 +168,7 @@ export function createWelcomeTune(): WelcomeTune {
     },
     fadeOut(ms) {
       if (context === null || master === null || closed) return;
+      fading = true;
       const now = context.currentTime;
       master.gain.cancelScheduledValues(now);
       master.gain.setValueAtTime(master.gain.value, now);
@@ -174,7 +176,7 @@ export function createWelcomeTune(): WelcomeTune {
       closeIn(ms);
     },
     finish() {
-      if (context === null || closed) return;
+      if (context === null || closed || fading) return;
       closeIn((lastEnd - context.currentTime) * 1000);
     },
     close,
