@@ -161,7 +161,7 @@ const toHeader = (scale: number, { left, top, ratio }: WordmarkLanding) =>
 export const Root = styled.div`
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: 1000;
 `;
 
 /**
