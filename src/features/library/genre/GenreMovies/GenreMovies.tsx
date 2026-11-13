@@ -7,10 +7,25 @@ import {
 } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 
-import type { GenrePayload, GenreQuery, PosterCardMovie } from '@/types';
+import type {
+  GenreQuery,
+  LibraryTab,
+  Movie,
+  PosterCardMovie,
+  Series,
+} from '@/types';
 import { parseGenreQuery, toGenreQueryParams } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
-import { fetchGenreLessPayload, fetchGenrePayload } from '../../api/api';
+import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
+import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
+import {
+  fetchGenreLessPayload,
+  fetchGenrePayload,
+  fetchSeriesGenreLessPayload,
+  fetchSeriesGenrePayload,
+} from '../../api/api';
+import { seriesCardView } from '../../series/seriesCardView/seriesCardView';
+import { OTHER_SERIES_TITLE } from '../../series/SeriesRows/SeriesRows';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
@@ -22,16 +37,50 @@ import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
  * than a fresh `[]` per render, so the context value below does not change
  * identity on a render that has nothing new in it.
  */
-const NO_GENRE: Pick<GenrePayload, 'total' | 'movies'> = {
+const NO_GENRE: HeldGenre = {
   total: 0,
   movies: [],
+  series: [],
 };
+
+/**
+ * One load, whichever **Library tab** asked it: the movie read fills `movies`,
+ * the series read `series`, the other list left empty.
+ */
+interface HeldGenre {
+  total: number;
+  movies: Movie[];
+  series: Series[];
+}
+
+/** One genre's titles under the tab: the movie reads, or the series reads. */
+async function loadGenre(
+  tab: LibraryTab,
+  mode: GenrePageMode,
+  genre: string,
+  query: GenreQuery
+): Promise<HeldGenre> {
+  if (tab === 'series') {
+    const { total, series } =
+      mode === 'other'
+        ? await fetchSeriesGenreLessPayload(query)
+        : await fetchSeriesGenrePayload(genre, query);
+    return { total, movies: [], series };
+  }
+  const { total, movies } =
+    mode === 'other'
+      ? await fetchGenreLessPayload(query)
+      : await fetchGenrePayload(genre, query);
+  return { total, movies, series: [] };
+}
 
 /** Where the load is: never both loading and errored, never movies without `ready`. */
 export type GenreMoviesStatus = 'loading' | 'ready' | 'error';
 
 export interface GenreMoviesValue {
   status: GenreMoviesStatus;
+  /** The **Library tab** the page serves: a card opens a movie or a series. */
+  tab: LibraryTab;
   /**
    * The genre this screen is. It comes from the path rather than the payload,
    * so the header can name it on the very first render instead of waiting on a
@@ -107,11 +156,13 @@ export function GenreMoviesProvider({
 }: GenreMoviesProviderProps) {
   const { name } = useParams<{ name: string }>();
   const [searchParams] = useSearchParams();
+  const tab = useLibraryTab();
 
   // The name arrives decoded from the router, which is what lets a genre with a
   // space in it ("Science Fiction") survive the round-trip through the URL.
   // The `other` mode names no genre, so the heading is its own title.
-  const genre = mode === 'other' ? OTHER_MOVIES_TITLE : (name ?? '');
+  const otherTitle = tab === 'series' ? OTHER_SERIES_TITLE : OTHER_MOVIES_TITLE;
+  const genre = mode === 'other' ? otherTitle : (name ?? '');
 
   // The settled query written back out the way the URL spells it — the shared
   // parser's answer, so a stale, hand-edited or hostile URL is made safe here by
@@ -134,26 +185,26 @@ export function GenreMoviesProvider({
   // Which load this is: the genre and the settled query together, since either
   // one changing is a different screen. The name is encoded so that a genre
   // holding a `?` cannot spell the same key as some other genre and query.
-  const key = `${mode}:${encodeURIComponent(genre)}?${settled}`;
+  const key = `${tab}:${mode}:${encodeURIComponent(genre)}?${settled}`;
 
   const { status, data, setData, retry } = useBrowseLoad(
-    () =>
-      mode === 'other'
-        ? fetchGenreLessPayload(query)
-        : fetchGenrePayload(genre, query),
+    () => loadGenre(tab, mode, genre, query),
     key
   );
 
   // A failed or unfinished load has no grid; the screen shows its own copy for
   // that, never an empty grid pretending to be a loaded one.
-  const { total, movies: held } = data ?? NO_GENRE;
+  const { total, movies: heldMovies, series: heldSeries } = data ?? NO_GENRE;
 
   // The held records drawn per render under the preference, so a flip in
   // Settings redraws the grid without reading the genre again.
   const tmdbRatings = useTmdbRatings();
   const movies = useMemo<PosterCardMovie[]>(
-    () => held.map((movie) => view(movie, tmdbRatings)),
-    [held, tmdbRatings]
+    () => [
+      ...heldMovies.map((movie) => view(movie, tmdbRatings)),
+      ...heldSeries.map((series) => seriesCardView(series, tmdbRatings)),
+    ],
+    [heldMovies, heldSeries, tmdbRatings]
   );
 
   /** Applies a favorite value to the loaded grid, leaving the total alone. */
@@ -165,6 +216,9 @@ export function GenreMoviesProvider({
           : {
               ...current,
               movies: withFavoriteInList(current.movies, id, favorite),
+              series: current.series.map((series) =>
+                series.id === id ? { ...series, isFavorite: favorite } : series
+              ),
             }
       ),
     [setData]
@@ -176,11 +230,14 @@ export function GenreMoviesProvider({
    * it writes through the same endpoint the home screen's hearts write through,
    * so a favorite means one thing in one place.
    */
-  const toggleFavorite = useOptimisticSave(applyFavorite, saveFavorite);
+  const toggleFavorite = useOptimisticSave(
+    applyFavorite,
+    tab === 'series' ? saveSeriesFavorite : saveFavorite
+  );
 
   const value = useMemo<GenreMoviesValue>(
-    () => ({ status, genre, query, total, movies, retry, toggleFavorite }),
-    [status, genre, query, total, movies, retry, toggleFavorite]
+    () => ({ status, tab, genre, query, total, movies, retry, toggleFavorite }),
+    [status, tab, genre, query, total, movies, retry, toggleFavorite]
   );
 
   return (

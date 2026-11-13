@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
+import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
 import { BackButton } from '@/components';
+import { seriesTabPath } from '@/utils';
 import { Root, Header, HeadingSlot, Spacer, Body } from './GenreLayout.styles';
 
 export interface GenreLayoutProps {
@@ -34,7 +36,9 @@ export function GenreLayout({
   heading,
   headerEnd,
 }: GenreLayoutProps) {
-  const goBack = useGoBack();
+  // With nothing behind it, Back lands on the Library tab the page serves.
+  const tab = useLibraryTab();
+  const goBack = useGoBack(tab === 'series' ? seriesTabPath() : '/');
   const body = useRestoredScroll<HTMLDivElement>();
 
   return (

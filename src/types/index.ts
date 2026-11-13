@@ -61,6 +61,7 @@ export type {
   SeriesHomePayload,
   SeriesRow,
   SeriesRowsPayload,
+  SeriesGenrePayload,
   EpisodeContinueEntry,
   SeriesDetail,
   SeasonSummary,

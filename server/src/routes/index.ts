@@ -953,6 +953,27 @@ export function createApiRouter(
     res.json(payload);
   });
 
+  // The Genre page under Series: one genre's series, uncapped, through the
+  // genre query's parser and its 400s. Registered ahead of `/series/:id`.
+  router.get(
+    '/series/genre/:name',
+    (req: Request<{ name: string }>, res: Response) => {
+      const query = genreQueryOr400(req.query, res);
+      if (query) {
+        res.json(storage.getSeriesGenre(req.params.name, query));
+      }
+    }
+  );
+
+  // The genre-less series, the series Other row's _View all_; ahead of
+  // `/series/:id`, which would otherwise read "genre-less" as an id.
+  router.get('/series/genre-less', (req: Request, res: Response) => {
+    const query = genreQueryOr400(req.query, res);
+    if (query) {
+      res.json(storage.getSeriesGenreLess(query));
+    }
+  });
+
   // The series page in one read: the series, its seasons with their episodes
   // and **Next episode**, and the series' own — derived on the server, so the
   // screen has no copy of `nextEpisodeOf`. A movie's id is not a series: 404.

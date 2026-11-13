@@ -25,6 +25,7 @@ import type {
   SeriesDetail,
   SeriesHomePayload,
   SeriesRowsPayload,
+  SeriesGenrePayload,
   Settings,
 } from '@/types';
 import { createMovieReader } from './read/read';
@@ -472,6 +473,13 @@ export interface LibraryStorage {
   getSeriesRows(query: LibraryQuery): SeriesRowsPayload;
   /** Each genre series carry, counted in series, with the series total. */
   listSeriesGenres(): GenreListPayload;
+  /**
+   * One genre's series in full, `getGenre`'s rules over series: uncapped, the
+   * search and sort applied, `total` the genre's unfiltered count.
+   */
+  getSeriesGenre(name: string, query?: Partial<GenreQuery>): SeriesGenrePayload;
+  /** The genre-less series in full, `getGenreLess`'s rules over series. */
+  getSeriesGenreLess(query?: Partial<GenreQuery>): SeriesGenrePayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
   listEpisodes(seriesId: string): Episode[];
   /**
@@ -642,6 +650,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     getSeriesHome: seriesBrowse.getSeriesHome,
     getSeriesRows: seriesBrowse.getSeriesRows,
     listSeriesGenres: seriesBrowse.listSeriesGenres,
+    getSeriesGenre: seriesBrowse.getSeriesGenre,
+    getSeriesGenreLess: seriesBrowse.getSeriesGenreLess,
     listEpisodes: seriesReader.listEpisodes,
     getSeriesDetail: seriesReader.getSeriesDetail,
     libraryFolders: folders.libraryFolders,

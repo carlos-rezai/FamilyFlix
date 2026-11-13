@@ -4,8 +4,10 @@ import {
   type EpisodeContinueEntry,
   type GenreCount,
   type GenreListPayload,
+  type GenreQuery,
   type LibraryQuery,
   type MovieSort,
+  type SeriesGenrePayload,
   type SeriesHomePayload,
   type SeriesRowsPayload,
 } from '@/types';
@@ -98,6 +100,13 @@ export interface SeriesBrowse {
   getSeriesRows(query: LibraryQuery): SeriesRowsPayload;
   /** Each genre series carry, counted in series, with the series total. */
   listSeriesGenres(): GenreListPayload;
+  /**
+   * One genre's series in full, the Genre page under Series: uncapped, the
+   * search and sort applied, `total` the genre's unfiltered count.
+   */
+  getSeriesGenre(name: string, query?: Partial<GenreQuery>): SeriesGenrePayload;
+  /** The genre-less series in full: {@link getSeriesGenre}'s rules, blank genre. */
+  getSeriesGenreLess(query?: Partial<GenreQuery>): SeriesGenrePayload;
 }
 
 /**
@@ -168,9 +177,14 @@ export function createSeriesBrowse(
 
   /**
    * The series the query keeps, and one more clause when given, in its sort,
-   * capped at {@link ROW_LIMIT}.
+   * capped at {@link ROW_LIMIT}, or uncapped when `limit` is `null`.
    */
-  function listCapped(query: LibraryQuery, on: boolean, extra?: string) {
+  function listCapped(
+    query: LibraryQuery,
+    on: boolean,
+    extra?: string,
+    limit: number | null = ROW_LIMIT
+  ) {
     const where = seriesWhere(query, on);
     const filter =
       extra === undefined
@@ -181,7 +195,7 @@ export function createSeriesBrowse(
     const rows = db
       .prepare(
         `SELECT s.* FROM series s ${filter}
-         ORDER BY ${seriesOrderBy(query.sort, on)} LIMIT ${ROW_LIMIT}`
+         ORDER BY ${seriesOrderBy(query.sort, on)}${limit === null ? '' : ` LIMIT ${limit}`}`
       )
       .all(...where.params) as SeriesRow[];
     return reader.assembleMany(rows);
@@ -248,6 +262,37 @@ export function createSeriesBrowse(
     listSeriesGenres: () => ({
       total: (countSeries.get() as { n: number }).n,
       genres: selectSeriesGenreCounts.all() as GenreCount[],
+    }),
+
+    getSeriesGenre: (name, query = {}) => {
+      const genre = (selectSeriesGenreCounts.all() as GenreCount[]).find(
+        (entry) => entry.name === name
+      );
+      return {
+        genre: name,
+        total: genre?.count ?? 0,
+        series: listCapped(
+          {
+            search: query.search,
+            sort: query.sort ?? DEFAULT_MOVIE_SORT,
+            genre: name,
+          },
+          tmdbRatings(),
+          undefined,
+          null
+        ),
+      };
+    },
+
+    getSeriesGenreLess: (query = {}) => ({
+      genre: '',
+      total: (countGenreLess.get() as { n: number }).n,
+      series: listCapped(
+        { search: query.search, sort: query.sort ?? DEFAULT_MOVIE_SORT },
+        tmdbRatings(),
+        GENRE_LESS,
+        null
+      ),
     }),
   };
 }

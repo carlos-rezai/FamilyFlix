@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { moviePath, range } from '@/utils';
+import { moviePath, range, seriesPath } from '@/utils';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { useGenreMovies } from '../GenreMovies/GenreMovies';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
@@ -44,8 +44,9 @@ function LoadingGrid({ genre }: { genre: string }) {
  * the message can never quote a term the request ignored.
  */
 export function GenreGrid() {
-  const { status, genre, query, total, movies, retry, toggleFavorite } =
+  const { status, tab, genre, query, total, movies, retry, toggleFavorite } =
     useGenreMovies();
+  const titles = tab === 'series' ? 'series' : 'movies';
   const navigate = useNavigate();
 
   if (status === 'loading') {
@@ -56,7 +57,7 @@ export function GenreGrid() {
     return (
       <RetryableFailure
         title="Couldn’t load this genre"
-        body="Something went wrong reading these movies."
+        body={`Something went wrong reading these ${titles}.`}
         onRetry={retry}
       />
     );
@@ -79,7 +80,7 @@ export function GenreGrid() {
     return (
       <LoadMessage
         title="Nothing here"
-        body={`There are no movies in ${genre}.`}
+        body={`There are no ${titles} in ${genre}.`}
       />
     );
   }
@@ -87,8 +88,10 @@ export function GenreGrid() {
   return (
     <LibraryGrid
       movies={movies}
-      // A movie id is data on its way into a URL — encode it.
-      onOpenMovie={(id) => navigate(moviePath(id))}
+      // An id is data on its way into a URL; each path encodes it.
+      onOpenMovie={(id) =>
+        navigate(tab === 'series' ? seriesPath(id) : moviePath(id))
+      }
       onToggleFavorite={toggleFavorite}
     />
   );

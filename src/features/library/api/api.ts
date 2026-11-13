@@ -4,6 +4,7 @@ import type {
   HomePayload,
   LibraryQuery,
   MovieGridPayload,
+  SeriesGenrePayload,
   SeriesHomePayload,
   SeriesRowsPayload,
 } from '@/types';
@@ -166,4 +167,48 @@ export async function fetchSeriesRows(
     throw new Error(`GET ${SERIES_ROWS_ENDPOINT} failed: ${response.status}`);
   }
   return (await response.json()) as SeriesRowsPayload;
+}
+
+/**
+ * Loads one genre of series in full, `fetchGenrePayload`'s rules over series:
+ * the name encoded into the path, the genre query written by the util the app
+ * URL is. Rejects on anything but a 2xx.
+ */
+export async function fetchSeriesGenrePayload(
+  name: string,
+  query: GenreQuery
+): Promise<SeriesGenrePayload> {
+  const endpoint = `/api/series/genre/${encodeURIComponent(name)}`;
+  const search = toGenreQueryParams(query).toString();
+  const response = await fetch(
+    search === '' ? endpoint : `${endpoint}?${search}`
+  );
+  if (!response.ok) {
+    throw new Error(`GET ${endpoint} failed: ${response.status}`);
+  }
+  return (await response.json()) as SeriesGenrePayload;
+}
+
+/** Where the series Genre page's `other` mode loads from. */
+const SERIES_GENRE_LESS_ENDPOINT = '/api/series/genre-less';
+
+/**
+ * Loads every series with no genre in full, `fetchGenreLessPayload`'s rules
+ * over series. Rejects on anything but a 2xx.
+ */
+export async function fetchSeriesGenreLessPayload(
+  query: GenreQuery
+): Promise<SeriesGenrePayload> {
+  const search = toGenreQueryParams(query).toString();
+  const response = await fetch(
+    search === ''
+      ? SERIES_GENRE_LESS_ENDPOINT
+      : `${SERIES_GENRE_LESS_ENDPOINT}?${search}`
+  );
+  if (!response.ok) {
+    throw new Error(
+      `GET ${SERIES_GENRE_LESS_ENDPOINT} failed: ${response.status}`
+    );
+  }
+  return (await response.json()) as SeriesGenrePayload;
 }

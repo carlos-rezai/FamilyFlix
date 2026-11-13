@@ -107,6 +107,16 @@ export interface SeriesRowsPayload {
   continueWatching: EpisodeContinueEntry[];
 }
 
+/**
+ * One genre of series in full, or the genre-less series: `GenrePayload`'s
+ * shape over series, uncapped, `total` the unfiltered count.
+ */
+export interface SeriesGenrePayload {
+  genre: string;
+  total: number;
+  series: Series[];
+}
+
 /** One season of a series: its episodes in order, and its own next episode. */
 export interface SeasonSummary {
   number: number;
