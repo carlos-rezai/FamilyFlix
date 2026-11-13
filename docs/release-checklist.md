@@ -128,6 +128,12 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       waits over 2s (a first open after a reboot can) fades the tile and
       _Opening your library_ in. With Windows animations off, open once more:
       the welcome is a plain fade.
+- [ ] Welcome tune, in the shell with the sound on: quit and open
+      FamilyFlix: a pluck as each F lands, a run up with the letters, a swell
+      with the light, a chord as the wordmark glides into the header, ringing
+      on under the home. Open again and press a key mid-run: the tune fades
+      with the picture and no chord plays. Reload: silence. With Windows
+      animations off, open once more: the chord alone, as the fades hand over.
 - [ ] Scan new folders, over the sandbox library: add a new Library folder
       holding a film: its row reads _Not scanned yet_. _Scan new folders_
       logs one `Scanning` line, for that folder, and imports only its

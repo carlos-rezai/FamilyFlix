@@ -74,7 +74,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Rebuild whole: every sheet field and series art     | ✅ Done    |
 | Rebuild edges: hand-kept sheets, growing folders    | ✅ Done    |
 | Export round trip: an Export gives it all back      | ✅ Done    |
-| Welcome tune: a jingle in sync with the intro       | 🔲 Planned |
+| Welcome tune: a tune in sync with the intro         | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -552,14 +552,17 @@ Settled in a grill-me on 2026-11-12, it is done (design log 61, handoff
       part-watched or when the show holds nothing but specials.
 
 Step 45 reopens a scope call of log 55, which shipped the intro with no
-sound. Settled in a grill-me on 2026-11-12 (design log 62, handoff
-`docs/handoff/handoff-welcome-tune/`, whose README is the score):
+sound. Settled in a grill-me on 2026-11-12, it is done (design log 62,
+handoff `docs/handoff/handoff-welcome-tune/`, whose README is the score):
 
-45. 🔜 **Welcome tune**: a short, catchy tune plays with the Welcome splash
+45. ✅ **Welcome tune**: a short, catchy tune plays with the Welcome splash
     on a Cold start, its notes in sync with the animation: the Fs landing,
     the letters rising, the light sweeping, and a closing chord as the
     wordmark glides into the header. No mute control for now; one can come
-    later. Built in issues 594 to 600; the refactor is still to come.
+    later. Built in issues 594 to 600; the closing round (issue 605) made
+    the tune's `AudioContext` with the tune, read the swell off the
+    timeline, made each voice its partials, and scoped the splash's timing
+    scan to its timings.
     - **Synthesised, in F**: twenty notes played with Web Audio from a score
       in the code (`welcomeScore`), no audio file. The **Intro cue** plucks F3
       and F4 as the two Fs land, runs up the F major scale from F4 to A5 with
