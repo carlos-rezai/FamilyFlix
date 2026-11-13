@@ -115,13 +115,15 @@ export const DoneLine = styled.p`
 `;
 
 /**
- * A path inside the done line — the folder written, then its destination —
- * in mono and the text ink.
+ * A path inside the done line (the folder written, then its destination) in
+ * mono and the text ink. A path has no spaces to wrap at, so it may break
+ * anywhere rather than run past the face's padding.
  */
 export const DonePath = styled.span`
   font-family: ${({ theme }) => theme.fonts.mono};
   font-size: 14px;
   color: ${({ theme }) => theme.colors.text};
+  overflow-wrap: anywhere;
 `;
 
 /** _Done_, 26px under the line. */
