@@ -16,7 +16,12 @@ import { saveTmdbRatings } from '@/App/saveTmdbRatings/saveTmdbRatings';
 import { saveStartTab } from '@/App/saveStartTab/saveStartTab';
 import { saveMovieRowView } from '@/App/saveMovieRowView/saveMovieRowView';
 import { saveSeriesRowView } from '@/App/saveSeriesRowView/saveSeriesRowView';
-import type { LibraryTab, RowView } from '@/types';
+import {
+  DEFAULT_MOVIE_ROW_VIEW,
+  DEFAULT_SERIES_ROW_VIEW,
+  type LibraryTab,
+  type RowView,
+} from '@/types';
 
 /** One held display preference: its value, what lands it, and its setter. */
 interface HeldValue<T> {
@@ -60,7 +65,7 @@ function useHeldValue<T>(save: (next: T) => Promise<T>): HeldValue<T> {
  * Settings page reaches the **Content frame** and every star at once,
  * `SnackbarProvider`'s shape. It reads the shared `fetchSettings` once on
  * mount (**Blank until it lands**: `null` until then, `null` still after a
- * refusal), and one read lands them all. Its setters are one bargain,
+ * refusal but for the two Row views, which land their defaults), and one read lands them all. Its setters are one bargain,
  * `useHeldValue`'s, each over its own save.
  */
 export function DisplayPreferenceProvider({
@@ -92,7 +97,14 @@ export function DisplayPreferenceProvider({
           landSeriesRowView(landed.seriesRowView);
         }
       },
-      () => undefined
+      () => {
+        // A refused read lands the two Row view defaults alone, so the home
+        // is still drawn; every other preference keeps `null`.
+        if (wanted) {
+          landMovieRowView(DEFAULT_MOVIE_ROW_VIEW);
+          landSeriesRowView(DEFAULT_SERIES_ROW_VIEW);
+        }
+      }
     );
 
     return () => {

@@ -3,6 +3,7 @@ import type {
   GenreQuery,
   HomePayload,
   LibraryQuery,
+  MovieGridPayload,
   SeriesHomePayload,
 } from '@/types';
 import { toGenreQueryParams, toLibraryQueryParams } from '@/utils';
@@ -122,4 +123,25 @@ export async function fetchSeriesHome(
     throw new Error(`GET ${SERIES_ENDPOINT} failed: ${response.status}`);
   }
   return (await response.json()) as SeriesHomePayload;
+}
+
+/** Movies under **All**: every film the query keeps, and the Continue row. */
+const MOVIES_ENDPOINT = '/api/movies';
+
+/**
+ * Loads Movies under the **All** **Row view** for one **Library query**: every
+ * film it keeps, uncapped and in its sort, and the Continue row, narrowed
+ * alike. An unfiltered grid asks a clean `/api/movies`. Rejects if the route
+ * answers with anything but a 2xx.
+ */
+export async function fetchMovieGrid(
+  query: LibraryQuery
+): Promise<MovieGridPayload> {
+  const search = toLibraryQueryParams(query).toString();
+  const url = search === '' ? MOVIES_ENDPOINT : `${MOVIES_ENDPOINT}?${search}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`GET ${MOVIES_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as MovieGridPayload;
 }

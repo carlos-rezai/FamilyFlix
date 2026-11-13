@@ -18,7 +18,11 @@ import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceAp
  * household rather than the URL, so back from a title lands on it again.
  */
 
-const FILM = makeMovie({ id: 'm1', title: 'Die Hard', genres: ['Action'] });
+const FILM = makeMovie({
+  id: 'm1',
+  title: 'Die Hard',
+  genres: [{ id: 'g1', name: 'Action' }],
+});
 
 const GRID: MovieGridPayload = { movies: [FILM], continueWatching: [] };
 

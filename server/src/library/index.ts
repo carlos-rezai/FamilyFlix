@@ -15,6 +15,7 @@ import type {
   RowView,
   Movie,
   MoviePatch,
+  MovieGridPayload,
   MovieQuery,
   NewEpisode,
   NewMovie,
@@ -225,6 +226,12 @@ export interface LibraryStorage {
    * the header sets. `favorites` and the genre rows take the caller's sort.
    */
   getHome(query?: LibraryQuery): HomePayload;
+  /**
+   * Movies under the **All** **Row view**: every movie the query keeps,
+   * uncapped and in its sort, genre-less ones included, with the continue
+   * section built exactly as `getHome` builds it.
+   */
+  getMovieGrid(query: LibraryQuery): MovieGridPayload;
   /**
    * One genre in full, in one call: the name as it was asked for, the genre's
    * **unfiltered** movie count, and every movie tagged with it — uncapped,
@@ -570,6 +577,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     countMovies: browse.countMovies,
     countGenreLess: browse.countGenreLess,
     getHome: home.getHome,
+    getMovieGrid: home.getMovieGrid,
     getGenre: genre.getGenre,
     getGenreLess: genre.getGenreLess,
     setResumePosition: changes.onCrossing('movie', watch.setResumePosition),

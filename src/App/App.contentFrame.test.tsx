@@ -163,16 +163,20 @@ describe('App — the Content frame on a framed route', () => {
     settingsRead = 'held';
     // The library off the Launch entry: on bare `/` the held read would also
     // hold the Start tab's gate, and nothing would be drawn to look at.
+    // The header, not a film: the Movies body is blank until the read lands
+    // its **Row view** (issue #610), while the chrome inside the frame is not.
     renderApp('/?tab=movies');
-    const title = (await screen.findAllByText('Northwind'))[0];
+    const header = await screen.findByRole('banner');
 
-    expect(framesAround(title)).toEqual([]);
+    expect(framesAround(header)).toEqual([]);
 
     await act(async () => {
       landRead(makeSettings({ ultrawideMargins: true }));
     });
 
-    await waitFor(() => expect(framesAround(title)).toHaveLength(1));
+    await waitFor(() => expect(framesAround(header)).toHaveLength(1));
+    const title = (await screen.findAllByText('Northwind'))[0];
+    expect(framesAround(title)).toHaveLength(1);
   });
 });
 

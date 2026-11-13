@@ -199,6 +199,18 @@ export interface HomePayload {
 }
 
 /**
+ * Movies under the **All** **Row view**, as `getMovieGrid()` builds it and
+ * `GET /api/movies` returns it: every film the **Library query** keeps,
+ * uncapped and in the caller's sort, genre-less ones included, and the
+ * continue section exactly as {@link HomePayload}'s. The **Favorites row** is
+ * the screen's to read off `movies`, so it travels in no field of its own.
+ */
+export interface MovieGridPayload {
+  movies: Movie[];
+  continueWatching: Movie[];
+}
+
+/**
  * The genre list `GET /api/genres` answers with — what the Genre dropdown is
  * built from. It has a different lifetime to {@link HomePayload}: fetched once
  * per mount and deliberately unfiltered, so the counts cannot reshuffle under a

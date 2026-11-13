@@ -5,6 +5,7 @@ import {
   type HomeRow,
   type ListSort,
   type Movie,
+  type MovieGridPayload,
 } from '@/types';
 import type { Browse } from '../browse/browse';
 
@@ -39,6 +40,7 @@ const CONTINUE_SORT: ListSort = 'last-watched';
 /** The home-screen aggregate: the whole browse payload in one call. */
 export interface Home {
   getHome(query?: LibraryQuery): HomePayload;
+  getMovieGrid(query: LibraryQuery): MovieGridPayload;
 }
 
 /**
@@ -177,5 +179,17 @@ export function createHome(browse: Browse): Home {
     };
   }
 
-  return { getHome };
+  /**
+   * Movies under **All**: the browse query uncapped in the caller's sort,
+   * genre-less films included, beside the continue section `getHome` builds,
+   * through the same `listSection` call so the two can never drift apart.
+   */
+  function getMovieGrid(query: LibraryQuery): MovieGridPayload {
+    return {
+      movies: browse.listMovies(query),
+      continueWatching: listSection(query, 'inProgressOnly', CONTINUE_SORT),
+    };
+  }
+
+  return { getHome, getMovieGrid };
 }

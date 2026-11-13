@@ -121,6 +121,7 @@ import {
   type NewSubtitle,
   type Series,
   type SeriesDetail,
+  type MovieGridPayload,
   type SeriesHomePayload,
   type Settings,
   type StorageReport,
@@ -863,6 +864,17 @@ export function createApiRouter(
     const query = libraryQueryOr400(req, res);
     if (query) {
       res.json(storage.getHome(query));
+    }
+  });
+
+  // Movies under the **All** **Row view**: every film the **Library query**
+  // keeps, uncapped, and the continue section, read through the parser `/home`
+  // reads with and answering its 400s.
+  router.get('/movies', (req: Request, res: Response) => {
+    const query = libraryQueryOr400(req, res);
+    if (query) {
+      const payload: MovieGridPayload = storage.getMovieGrid(query);
+      res.json(payload);
     }
   });
 

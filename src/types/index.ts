@@ -83,6 +83,7 @@ export type {
   GenrePayload,
   HomeRow,
   HomePayload,
+  MovieGridPayload,
 } from './browse';
 export type { NewSubtitle, NewMovie, MoviePatch } from './write';
 export type {
