@@ -1264,7 +1264,7 @@
               const nx=eps.find(e=>e.progress>0&&e.progress<100)||eps.find(e=>!e.watched)||eps[0];
               const allW=eps.length>0&&eps.every(e=>e.watched);
               return {
-                seriesTitle:x.title, seasonLabel:'Season '+n,
+                seriesTitle:x.title, seasonLabel:'Season '+n, posterStyle:this.posterStyleOf(x),
                 countLabel:eps.length+' episodes', watchedLabel:w+' watched',
                 playLabel: nx ? ((nx.progress>0?'Resume ':'Play ')+'E'+String(nx.number).padStart(2,'0')) : 'Play',
                 onPlayNext:()=>this.playEpisode(nx), onBack:()=>this.backFromSeason(),

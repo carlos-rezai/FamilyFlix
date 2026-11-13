@@ -11,8 +11,8 @@ export interface MaintainerLayoutProps {
 
 /**
  * The **Maintainer surface** — the sheet every column screen is drawn on:
- * Settings and its sub-pages, Import, the **Movie form**, the Enrichment flow
- * and the Season page. A scroll container on the deeper background, and one
+ * Settings and its sub-pages, Import, the **Movie form** and the Enrichment
+ * flow. A scroll container on the deeper background, and one
  * centred column at the **Page measure** — one width, not one per screen, so
  * moving between them never moves the content.
  *

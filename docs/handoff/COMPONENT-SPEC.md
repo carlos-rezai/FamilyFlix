@@ -814,7 +814,7 @@ additive; the movie flow is untouched.
 | --- | --- | --- |
 | Library → Series tab | `page.LibraryPage` | segmented Movies/Series control in the header; Series tab = episode Continue Watching row + an "All series" grid (reuses `LibraryGrid` + `PosterCard`) |
 | Series detail | `page.SeriesPage` | same hero shape as MoviePage (poster, year range, season/episode count, rating, genres, synopsis, creator/cast) + a **Seasons** grid of `SeasonCard` |
-| Season episodes | `page.SeasonPage` | header (series → season), _Resume Enn_, "Mark season watched", the `EpisodeRow` list, and an "Other seasons" pill row |
+| Season episodes | `page.SeasonPage` | the series' Detail backdrop behind it, header (series → season), _Resume Enn_, "Mark season watched", the `EpisodeRow` list, and an "Other seasons" pill row |
 | Player | `feat.PlayerControls` | unchanged for movies; for episodes the title reads `Show · S02E04 · Episode title` and an **Up next** card appears in the last 15s |
 
 **Decisions** (settled with the user): separate tabs · season posters → its own episode page

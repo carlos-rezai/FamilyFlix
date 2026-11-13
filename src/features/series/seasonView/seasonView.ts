@@ -118,6 +118,9 @@ export function seasonView(
   return {
     seriesId: series.id,
     seriesTitle: series.title,
+    backdropUrl: imageUrl(series.backdropPath),
+    g1,
+    g2,
     seasonNumber: season.number,
     seasonLabel: seasonLabelOf(season.number),
     playLabel: toPlayLabel(season),

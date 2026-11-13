@@ -335,6 +335,22 @@ describe('seasonView — the episode rows', () => {
   });
 });
 
+describe('seasonView — the backdrop', () => {
+  it('carries the series’ backdrop and gradient, as the series page draws them', () => {
+    const view = viewOf(
+      detailOf([midSeason()], { backdropPath: 'harbor/backdrop.jpg' }),
+      2
+    );
+
+    expect(view.backdropUrl).toBe('/api/images/harbor/backdrop.jpg');
+    expect({ g1: view.g1, g2: view.g2 }).toEqual(gradientFromId('harbor'));
+  });
+
+  it('carries no backdrop url for a series without one', () => {
+    expect(viewOf(detailOf([midSeason()]), 2).backdropUrl).toBeNull();
+  });
+});
+
 describe('seasonView — Other seasons', () => {
   it('lists every other season, in order, by number and label', () => {
     const detail = detailOf([

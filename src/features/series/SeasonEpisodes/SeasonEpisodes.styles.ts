@@ -5,10 +5,27 @@ import { Skeleton } from '@/primitives';
 import { controlStates } from '@/styles/interactionStates/interactionStates';
 
 /**
- * The season's content: the layout's column already holds it at the **Page
- * measure**, so this is only the box the loading state is announced on.
+ * The season's content, one centred column at the **Page measure** with the
+ * **Maintainer surface**'s padding, so the page reads as it did on that sheet.
+ * It holds itself off the sides by the room the pinned Back button needs (the
+ * sheet's own padding did that, but padding on the scroller would inset the
+ * **Detail backdrop**), and sits above that backdrop, as the series page's
+ * content does.
  */
-export const Column = styled.div``;
+export const Column = styled.div`
+  position: relative;
+  z-index: 10;
+  max-width: min(
+    ${({ theme }) => theme.layout.pageMeasure},
+    calc(
+      100% - 2 *
+        (${({ theme }) => `${theme.layout.backSize} + ${theme.space.s4}`})
+    )
+  );
+  margin: 0 auto;
+  padding: ${({ theme }) =>
+    `${theme.space.s4} ${theme.space.s6} ${theme.space.s8}`};
+`;
 
 /** The count line under the heading. */
 export const CountRow = styled.div`

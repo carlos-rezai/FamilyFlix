@@ -249,6 +249,10 @@ export interface OtherSeasonModel {
 export interface SeasonPageModel {
   seriesId: string;
   seriesTitle: string;
+  /** The series' **Backdrop**, drawn behind the page as on the **Series page**. */
+  backdropUrl: string | null;
+  g1: string;
+  g2: string;
   seasonNumber: number;
   seasonLabel: string;
   /** _Resume E04_ / _Play E01_. */
