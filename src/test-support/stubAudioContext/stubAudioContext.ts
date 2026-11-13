@@ -184,8 +184,9 @@ export class FakeOscillatorNode extends FakeAudioNode {
 
 /**
  * A recording `AudioContext`. Its clock reads `startTime` seconds when it is
- * made and runs with `Date.now()`, so a faked clock moves it; it never
- * suspends, and remembers whether it was resumed and when it was closed.
+ * made and runs with `Date.now()`, so a faked clock moves it. It starts in
+ * the state it is given (`'running'` unless a test says the browser keeps it
+ * `'suspended'`), and remembers whether it was resumed and when it was closed.
  */
 export class FakeAudioContext {
   readonly destination: FakeAudioNode;
@@ -198,8 +199,12 @@ export class FakeAudioContext {
   private readonly madeAt = Date.now();
   private readonly timers: Array<ReturnType<typeof setTimeout>> = [];
 
-  constructor(private readonly startTime: number) {
+  constructor(
+    private readonly startTime: number,
+    state: AudioContextState = 'running'
+  ) {
     this.destination = new FakeAudioNode(this);
+    this.state = state;
   }
 
   get currentTime(): number {
@@ -270,11 +275,17 @@ export function levelAt(node: FakeAudioNode, time: number): number {
 export interface StubbedAudio {
   /** Every context made since this test started, in order. */
   contexts(): FakeAudioContext[];
+  /** How many times the constructor was called this test, refused or not. */
+  attempts(): number;
 }
 
 export interface StubAudioOptions {
   /** What a new context's `currentTime` reads, in seconds. Defaults to 0. */
   startTime?: number;
+  /** The state a new context starts in: `'suspended'` as an autoplay policy keeps it. */
+  state?: AudioContextState;
+  /** The constructor throws, as it does on Linux with no audio device. */
+  refuse?: boolean;
 }
 
 /**
@@ -287,18 +298,26 @@ export interface StubAudioOptions {
  */
 export function stubAudioContext({
   startTime = 0,
+  state = 'running',
+  refuse = false,
 }: StubAudioOptions = {}): StubbedAudio {
   const made: FakeAudioContext[] = [];
+  let attempts = 0;
   let original: PropertyDescriptor | undefined;
 
   beforeEach(() => {
     made.splice(0);
+    attempts = 0;
     original = Object.getOwnPropertyDescriptor(window, 'AudioContext');
     Object.defineProperty(window, 'AudioContext', {
       configurable: true,
       writable: true,
       value: function AudioContext() {
-        const context = new FakeAudioContext(startTime);
+        attempts += 1;
+        if (refuse) {
+          throw new DOMException('no audio device', 'NotSupportedError');
+        }
+        const context = new FakeAudioContext(startTime, state);
         made.push(context);
         return context;
       },
@@ -314,5 +333,5 @@ export function stubAudioContext({
     }
   });
 
-  return { contexts: () => [...made] };
+  return { contexts: () => [...made], attempts: () => attempts };
 }

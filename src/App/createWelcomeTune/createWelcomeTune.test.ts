@@ -495,3 +495,70 @@ describe('createWelcomeTune: fadeOut()', () => {
     expect(context.closedAt).toBeGreaterThanOrEqual(from + FADE / 1000);
   });
 });
+
+/**
+ * 62, Welcome tune, Phase 6 (issue #599): a refused context stays silent.
+ *
+ * A constructor that throws (no audio device on Linux) gives the silent tune:
+ * every call does nothing, none throws, and the constructor isn't tried again.
+ * A context the browser keeps suspended is scheduled into and never resumed,
+ * on a fade or otherwise.
+ */
+describe('createWelcomeTune: an AudioContext constructor that throws', () => {
+  const audio = stubAudioContext({ startTime: NOW, refuse: true });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('gives a silent tune whose every call does nothing and none throws', () => {
+    const tune = createWelcomeTune();
+    expect(() => tune.play(INTRO_CUE)).not.toThrow();
+    expect(() => tune.play(CLOSING_CHORD)).not.toThrow();
+    expect(() => tune.fadeOut(150)).not.toThrow();
+    expect(() => tune.finish()).not.toThrow();
+    expect(() => tune.close()).not.toThrow();
+
+    expect(audio.attempts()).toBe(1);
+    expect(audio.contexts()).toHaveLength(0);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe('createWelcomeTune: a suspended context', () => {
+  const audio = stubAudioContext({ startTime: NOW, state: 'suspended' });
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('schedules into it and never resumes it, through to finish()', async () => {
+    const tune = createWelcomeTune();
+    tune.play(INTRO_CUE);
+    tune.play(CLOSING_CHORD);
+    tune.finish();
+    await vi.advanceTimersByTimeAsync(LENGTH * 1000 + 200);
+
+    const [context] = audio.contexts();
+    expect(context.oscillators.length).toBeGreaterThan(0);
+    expect(context.resumed).toBe(false);
+  });
+
+  it('never resumes it on a fade', async () => {
+    const tune = createWelcomeTune();
+    tune.play(CLOSING_CHORD);
+    tune.fadeOut(150);
+    await vi.advanceTimersByTimeAsync(300);
+
+    const [context] = audio.contexts();
+    expect(context.resumed).toBe(false);
+  });
+});

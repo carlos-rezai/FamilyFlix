@@ -3,6 +3,7 @@ import {
   act,
   fireEvent,
   render,
+  screen,
   type RenderResult,
 } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -469,6 +470,114 @@ describe('WelcomeProvider: reduced motion plays the chord alone', () => {
       await expectClosedAfterFade(context);
       await advanceClock(STILL_INTRO + CHORD_MS);
       expect(context.oscillators).toHaveLength(0);
+    });
+  });
+});
+
+/**
+ * 62, Welcome tune, Phase 6 (issue #599): a refused context stays silent.
+ *
+ * An `AudioContext` constructor that throws (no audio device on Linux) gives
+ * the silent tune, and the welcome plays through to `done` unchanged. A
+ * context the browser keeps suspended is scheduled into and never resumed,
+ * whether the welcome runs to its end or is skipped.
+ */
+const splash = () =>
+  screen.queryByRole('status', { name: 'Opening FamilyFlix' });
+
+/** The header's **Wordmark**: the banner's first element. */
+function headerWordmark(): Element {
+  const mark = screen.getByRole('banner').firstElementChild;
+  if (mark === null) {
+    throw new Error('the header has no wordmark');
+  }
+  return mark;
+}
+
+const isHidden = (element: Element) =>
+  getComputedStyle(element).visibility === 'hidden';
+
+describe('WelcomeProvider: a context that throws', () => {
+  const refused = stubAudioContext({ refuse: true });
+
+  it('plays the welcome through to done unchanged', async () => {
+    renderWelcome();
+    await advanceClock(100);
+    expect(splash()).not.toBeNull();
+    expect(isHidden(headerWordmark())).toBe(true);
+
+    await advanceClock(INTRO - 100 + HANDOFF - 1);
+    expect(splash()).not.toBeNull();
+
+    await advanceClock(1);
+    expect(splash()).toBeNull();
+    expect(isHidden(headerWordmark())).toBe(false);
+    expect(document.activeElement).toBe(document.body);
+    expect(refused.attempts()).toBeGreaterThan(0);
+    expect(refused.contexts()).toHaveLength(0);
+  });
+
+  describe.each(skips)('%s', (_, skip) => {
+    it('during the intro still shows the home in 150ms', async () => {
+      renderWelcome();
+      await advanceClock(100);
+      expect(refused.attempts()).toBeGreaterThan(0);
+
+      act(() => {
+        skip(document.body);
+      });
+      await advanceClock(SKIP);
+
+      expect(splash()).toBeNull();
+      expect(isHidden(headerWordmark())).toBe(false);
+    });
+  });
+});
+
+describe('WelcomeProvider: a suspended context', () => {
+  const suspended = stubAudioContext({ state: 'suspended' });
+
+  function theContext(): FakeAudioContext {
+    const made = suspended.contexts();
+    expect(made).toHaveLength(1);
+    return made[0];
+  }
+
+  it('is scheduled into and never resumed, through to done', async () => {
+    renderWelcome();
+    await advanceClock(100);
+    await advanceClock(INTRO - 100 + HANDOFF + CHORD_MS + 100);
+
+    const context = theContext();
+    expect(context.oscillators.length).toBeGreaterThan(0);
+    expect(context.resumed).toBe(false);
+    expect(splash()).toBeNull();
+  });
+
+  describe.each(skips)('%s', (_, skip) => {
+    it('during the intro never resumes it', async () => {
+      renderWelcome();
+      await advanceClock(100);
+
+      act(() => {
+        skip(document.body);
+      });
+      await advanceClock(SKIP + 100);
+
+      expect(theContext().resumed).toBe(false);
+    });
+
+    it('during the handoff never resumes it', async () => {
+      renderWelcome();
+      await advanceClock(100);
+      await advanceClock(INTRO - 100 + 100);
+
+      act(() => {
+        skip(document.body);
+      });
+      await advanceClock(SKIP + 100);
+
+      expect(theContext().resumed).toBe(false);
     });
   });
 });
