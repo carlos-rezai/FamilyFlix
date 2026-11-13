@@ -1,9 +1,11 @@
 import { afterEach, beforeEach } from 'vitest';
 
 /** One scheduled change on a param, as the Web Audio automation calls make it. */
-type ParamEvent =
-  | { kind: 'set' | 'linear' | 'exponential'; time: number; value: number }
-  | { kind: 'target'; time: number; value: number; timeConstant: number };
+interface ParamEvent {
+  kind: 'set' | 'linear' | 'exponential';
+  time: number;
+  value: number;
+}
 
 /**
  * A recording `AudioParam`: it remembers every automation call and answers
@@ -55,11 +57,6 @@ export class FakeAudioParam {
     return this;
   }
 
-  setTargetAtTime(value: number, time: number, timeConstant: number): this {
-    this.events.push({ kind: 'target', time, value, timeConstant });
-    return this;
-  }
-
   cancelScheduledValues(time: number): this {
     for (let i = this.events.length - 1; i >= 0; i -= 1) {
       if (this.events[i].time >= time) this.events.splice(i, 1);
@@ -79,38 +76,23 @@ export class FakeAudioParam {
     const events = [...this.events].sort((a, b) => a.time - b.time);
     let value = this.initial;
     let from = 0;
-    let target: Extract<ParamEvent, { kind: 'target' }> | null = null;
-
-    const settle = (at: number): number =>
-      target === null
-        ? value
-        : target.value +
-          (value - target.value) *
-            Math.exp(-(at - target.time) / target.timeConstant);
 
     for (const event of events) {
       if (event.time > time) {
-        const start = settle(from);
         const span = event.time - from;
         const part = span <= 0 ? 1 : (time - from) / span;
         if (event.kind === 'linear') {
-          return start + (event.value - start) * part;
+          return value + (event.value - value) * part;
         }
         if (event.kind === 'exponential') {
-          return start * Math.pow(event.value / start, part);
+          return value * Math.pow(event.value / value, part);
         }
-        return settle(time);
+        return value;
       }
-      if (event.kind === 'target') {
-        value = settle(event.time);
-        target = event;
-      } else {
-        value = event.value;
-        target = null;
-      }
+      value = event.value;
       from = event.time;
     }
-    return settle(time);
+    return value;
   }
 }
 
