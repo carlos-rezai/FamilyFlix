@@ -118,6 +118,20 @@
             menu-width="220"
             hint-size="190px,46px"
           ></dc-import>
+          <!-- The Row view switch: the View pill after Sort, All then By genre,
+               the current tab's one checked, no counts. It sets that tab's Row
+               view alone, with no snackbar; in the app it is not drawn until
+               the household's settings read lands. -->
+          <dc-import
+            name="mol.FilterDropdown"
+            label="View"
+            value="{{ lib.rowViewLabel }}"
+            options="{{ lib.rowViewOptions }}"
+            open="{{ lib.rowViewOpen }}"
+            on-toggle="{{ lib.onToggleRowView }}"
+            menu-width="180"
+            hint-size="170px,46px"
+          ></dc-import>
 
           <div style="position: relative; flex: 0 0 auto">
             <button
@@ -228,35 +242,77 @@
                 ></dc-import>
               </section>
             </sc-if>
-            <section>
-              <h2
-                style="
-                  font-family: var(--font-serif);
-                  font-weight: 600;
-                  font-size: 24px;
-                  color: var(--color-text);
-                  margin: 0 0 var(--space-3);
-                  padding: 0 var(--space-6);
-                "
+            <!-- Series, All (the default): the All series grid. -->
+            <sc-if
+              value="{{ lib.isSeriesAll }}"
+              hint-placeholder-val="{{ true }}"
+            >
+              <section>
+                <h2
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 600;
+                    font-size: 24px;
+                    color: var(--color-text);
+                    margin: 0 0 var(--space-3);
+                    padding: 0 var(--space-6);
+                  "
+                >
+                  All series
+                </h2>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    color: var(--color-text-faint);
+                    padding: 0 var(--space-6);
+                  "
+                >
+                  {{ lib.seriesCountLabel }}
+                </div>
+                <dc-import
+                  name="feat.LibraryGrid"
+                  movies="{{ lib.seriesList }}"
+                  hint-size="100%,600px"
+                ></dc-import>
+              </section>
+            </sc-if>
+
+            <!-- Series, By genre: the Movies tab's rows, in series. A Genre row
+                 per populated series genre, busiest first, 15 cards, View all
+                 with the genre's true count, opening the Genre page for series
+                 (/genre/{name}?tab=series). -->
+            <sc-if
+              value="{{ lib.isSeriesByGenre }}"
+              hint-placeholder-val="{{ false }}"
+            >
+              <sc-for
+                list="{{ lib.seriesGenreRows }}"
+                as="row"
+                hint-placeholder-count="3"
               >
-                All series
-              </h2>
-              <div
-                style="
-                  font-family: var(--font-sans);
-                  font-size: 15px;
-                  color: var(--color-text-faint);
-                  padding: 0 var(--space-6);
-                "
+                <dc-import
+                  name="feat.GenreRow"
+                  row="{{ row }}"
+                  hint-size="100%,430px"
+                ></dc-import>
+              </sc-for>
+
+              <!-- The Other series row: last, every series with no genre (at
+                   most 15). Its View all opens /genre-less?tab=series. Not
+                   drawn under a genre filter, nor when every series has one. -->
+              <sc-if
+                value="{{ lib.showSeriesOtherRow }}"
+                hint-placeholder-val="{{ false }}"
               >
-                {{ lib.seriesCountLabel }}
-              </div>
-              <dc-import
-                name="feat.LibraryGrid"
-                movies="{{ lib.seriesList }}"
-                hint-size="100%,600px"
-              ></dc-import>
-            </section>
+                <dc-import
+                  name="feat.GenreRow"
+                  row="{{ lib.seriesOtherRow }}"
+                  hint-size="100%,430px"
+                ></dc-import>
+              </sc-if>
+            </sc-if>
+
             <sc-if
               value="{{ lib.seriesNoResults }}"
               hint-placeholder-val="{{ false }}"
@@ -355,30 +411,75 @@
               </section>
             </sc-if>
 
-            <sc-for
-              list="{{ lib.genreRows }}"
-              as="row"
-              hint-placeholder-count="4"
-            >
-              <dc-import
-                name="feat.GenreRow"
-                row="{{ row }}"
-                hint-size="100%,430px"
-              ></dc-import>
-            </sc-for>
-
-            <!-- The Other row: last, "Other movies", every film with no genre
-                 (at most 15). Its View all opens the Genre page's other mode.
-                 Not drawn under a genre filter, nor when no film lacks a genre. -->
+            <!-- Movies, By genre (the default): the genre rows. -->
             <sc-if
-              value="{{ lib.showOtherRow }}"
+              value="{{ lib.isMoviesByGenre }}"
+              hint-placeholder-val="{{ true }}"
+            >
+              <sc-for
+                list="{{ lib.genreRows }}"
+                as="row"
+                hint-placeholder-count="4"
+              >
+                <dc-import
+                  name="feat.GenreRow"
+                  row="{{ row }}"
+                  hint-size="100%,430px"
+                ></dc-import>
+              </sc-for>
+
+              <!-- The Other row: last, "Other movies", every film with no genre
+                   (at most 15). Its View all opens the Genre page's other mode.
+                   Not drawn under a genre filter, nor when no film lacks a genre. -->
+              <sc-if
+                value="{{ lib.showOtherRow }}"
+                hint-placeholder-val="{{ false }}"
+              >
+                <dc-import
+                  name="feat.GenreRow"
+                  row="{{ lib.otherRow }}"
+                  hint-size="100%,430px"
+                ></dc-import>
+              </sc-if>
+            </sc-if>
+
+            <!-- Movies, All: the Series tab's All series, in movies. The
+                 Favorites row above is then the grid's hearted films, in its
+                 order, at most 15; the grid holds every film the query keeps,
+                 uncapped, genre-less ones included. -->
+            <sc-if
+              value="{{ lib.isMoviesAll }}"
               hint-placeholder-val="{{ false }}"
             >
-              <dc-import
-                name="feat.GenreRow"
-                row="{{ lib.otherRow }}"
-                hint-size="100%,430px"
-              ></dc-import>
+              <section>
+                <h2
+                  style="
+                    font-family: var(--font-serif);
+                    font-weight: 600;
+                    font-size: 24px;
+                    color: var(--color-text);
+                    margin: 0 0 var(--space-3);
+                    padding: 0 var(--space-6);
+                  "
+                >
+                  All movies
+                </h2>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    color: var(--color-text-faint);
+                    padding: 0 var(--space-6);
+                  "
+                >
+                  {{ lib.movieCountLabel }}
+                </div>
+                <dc-import
+                  name="feat.LibraryGrid"
+                  movies="{{ lib.movieGridList }}"
+                  hint-size="100%,600px"
+                ></dc-import>
+              </section>
             </sc-if>
 
             <sc-if

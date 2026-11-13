@@ -10,6 +10,11 @@
       <helmet>
         <link rel="stylesheet" href="tokens.css" />
       </helmet>
+      <!-- One page for both kinds. Movies: /genre/{name}, its other mode
+           /genre-less headed "Other movies". Series (a series row's View all,
+           design log 63): /genre/{name}?tab=series, its other mode
+           /genre-less?tab=series headed "Other series", drawn the same, its
+           cards opening the series page. -->
       <div
         data-screen-label="Genre"
         style="

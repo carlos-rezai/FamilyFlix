@@ -233,6 +233,10 @@
           {id:'s3',title:'Nightjar: After Dark',ys:2022,ye:2022,genres:['Crime','Thriller'],g1:'#23211f',g2:'#544c3e',rating:70,creator:'Noor Khalid',cast:['Greta Onn','Dom Vesper','Asa Quinn'],runtime:52,
             syn:'Eight nights in one city, told from the passenger seat of a cab that keeps arriving a minute too late.',
             seasons:[8],titles:['Fare One','The Ring Road','Two in the Morning','Meter Running','The Long Fare','Dead Air','Last Call','Dawn Shift']},
+          // A series with no genre, so the Other series row shows under By genre (design log 63).
+          {id:'s4',title:'Grandma’s Kitchen',ys:2015,ye:2016,genres:[],g1:'#33291f',g2:'#8a6a48',rating:60,creator:'Elin Marsk',cast:['Ruth Marsk'],runtime:22,
+            syn:'One recipe an episode, cooked in the same small kitchen and filmed on the family camcorder.',
+            seasons:[6],titles:['Cardamom Buns','Fish Soup','Apple Cake','Meatballs','Rye Bread','Rice Pudding']},
         ];
         seriesFavorites = ['s2'];
 
@@ -290,12 +294,18 @@
         // Series launch; a press of the Start on row applies at the next launch.
         launchStartTab = 'movies';
 
+        // The Row view (design log 63): per Library tab, a household setting kept
+        // beside the Start tab. Today's faces are the defaults, Movies 'genre'
+        // (By genre) and Series 'all' (All). The View pill offers them in this order.
+        rowViewDefs = [['all','All'],['genre','By genre']];
+
         state = {
           screen:'browse', selectedId:null,
           search:'', genre:'All Genres', sort:'recent', ratingFilter:'0',
           fRating:0, fRatingHover:null,
           openDrop:null, gearOpen:false, editMenuOpen:false, overrides:{}, favorites:[4,12,16],
-          genreView:null, genreOther:false, genreSearch:'', detailReturn:'browse',
+          genreView:null, genreOther:false, genreKind:'movies', genreSearch:'', detailReturn:'browse',
+          rowViews:{movies:'genre',series:'all'},
           playing:true, currentTime:0, subsOn:false, subTrack:0, subtitleMenuOpen:false, subtitleChoice:undefined, muted:false, volume:0.8, controlsVisible:true, playNotice:null, audioTrack:0, audioMenuOpen:false,
           addMode:'folder', folderPath:'', scanned:false,
           fTitle:'', fYear:'', fDirector:'', fCast:'', fDescription:'', fGenres:[], fVideo:'', fPoster:'', fSubs:[], fKind:'movie', fEpisodes:[], fSeasonPosters:{}, fShowFolder:'', fShowFolderRefusal:'', fShowFolderPicks:0, fStray:0, fMode:'link', fLinkOff:false, fVideoLinkOff:false, fVideoPicks:0, subLangOpen:null,
@@ -498,10 +508,14 @@
         runReset(){ this.setState({resetting:true}); setTimeout(()=>{ this.setState({resetting:false,resetOpen:false}); this.goBrowse(); },900); }
         chooseCsv(){ this.setExportFormat('csv'); }
         chooseXlsx(){ this.setExportFormat('xlsx'); }
-        openGenre(name){ this.setState({screen:'genre',genreView:name,genreOther:false,genreSearch:'',gearOpen:false,openDrop:null}); }
+        openGenre(name){ this.setState({screen:'genre',genreView:name,genreOther:false,genreKind:'movies',genreSearch:'',gearOpen:false,openDrop:null}); }
         // The Genre page's other mode (/genre-less in the app): headed "Other movies", every film with no genre.
-        openOther(){ this.setState({screen:'genre',genreView:'Other movies',genreOther:true,genreSearch:'',gearOpen:false,openDrop:null}); }
-        genrePageAll(){ const g=this.state.genreView; if(!g) return []; return this.rawMovies.filter(m=> this.state.genreOther ? m.genres.length===0 : m.genres.includes(g)); }
+        openOther(){ this.setState({screen:'genre',genreView:'Other movies',genreOther:true,genreKind:'movies',genreSearch:'',gearOpen:false,openDrop:null}); }
+        // The Genre page for series (/genre/:name?tab=series in the app), drawn as the movie one, its cards
+        // opening the series page; its other mode (/genre-less?tab=series) is headed "Other series".
+        openSeriesGenre(name){ this.setState({screen:'genre',genreView:name,genreOther:false,genreKind:'series',genreSearch:'',gearOpen:false,openDrop:null}); }
+        openSeriesOther(){ this.setState({screen:'genre',genreView:'Other series',genreOther:true,genreKind:'series',genreSearch:'',gearOpen:false,openDrop:null}); }
+        genrePageAll(){ const g=this.state.genreView; if(!g) return []; const pool=this.state.genreKind==='series'?this.rawSeries:this.rawMovies; return pool.filter(m=> this.state.genreOther ? m.genres.length===0 : m.genres.includes(g)); }
         onGenreSearch(e){ this.setState({genreSearch:e.target.value}); }
 
         // ---- browse ----
@@ -510,11 +524,19 @@
         toggleSort(){ this.setState(s=>({openDrop:s.openDrop==='sort'?null:'sort',gearOpen:false})); }
         toggleRating(){ this.setState(s=>({openDrop:s.openDrop==='rating'?null:'rating',gearOpen:false})); }
         toggleGear(){ this.setState(s=>({gearOpen:!s.gearOpen,openDrop:null})); }
+        // The Row view switch: the View pill sets the current tab's Row view alone. No snackbar, and the
+        // search, genre, rating and sort stay as they are (the app writes no URL for it).
+        toggleRowView(){ this.setState(s=>({openDrop:s.openDrop==='view'?null:'view',gearOpen:false})); }
+        setRowView(v){ this.setState(s=>({rowViews:{...s.rowViews,[s.tab]:v},openDrop:null})); }
 
         sortList(list){ const rank=m=>{const e=this.eff(m);return e==='unwatched'?0:e==='progress'?1:2;}; const s=this.state.sort; return [...list].sort((a,b)=> s==='az'?a.title.localeCompare(b.title): s==='year'?b.year-a.year: s==='rating'?(this.ratingOf(b)-this.ratingOf(a)||b.added-a.added): s==='unwatched'?(rank(a)-rank(b)||b.added-a.added): b.added-a.added); }
         passRating(m){ return this.ratingOf(m) >= Number(this.state.ratingFilter||0); }
         filteredSorted(){ const q=this.state.search.trim().toLowerCase(); const list=this.rawMovies.filter(m=> this.passRating(m) && (!q || m.title.toLowerCase().includes(q) || m.syn.toLowerCase().includes(q) || m.genres.join(' ').toLowerCase().includes(q))); return this.sortList(list); }
-        genrePageMovies(){ const q=this.state.genreSearch.trim().toLowerCase(); let list=this.genrePageAll().filter(m=>this.passRating(m)); if(q) list=list.filter(m=>m.title.toLowerCase().includes(q)||m.syn.toLowerCase().includes(q)); return this.sortList(list); }
+        genrePageMovies(){ const q=this.state.genreSearch.trim().toLowerCase(); const series=this.state.genreKind==='series'; let list=this.genrePageAll().filter(m=>series?this.passSeriesRating(m):this.passRating(m)); if(q) list=list.filter(m=>m.title.toLowerCase().includes(q)||m.syn.toLowerCase().includes(q)); return series?this.sortSeriesList(list):this.sortList(list); }
+        genrePageViews(){ return this.genrePageMovies().map(m=> this.state.genreKind==='series' ? this.seriesView(m) : this.view(m)); }
+        // Movies under All: every film the query keeps, uncapped, genre-less ones included; a genre
+        // filter narrows it to that genre.
+        movieGrid(){ const gf=this.state.genre; const list=this.filteredSorted(); return gf==='All Genres' ? list : list.filter(m=>m.genres.includes(gf)); }
         buildRows(){
           const list=this.filteredSorted();
           const gf=this.state.genre;
@@ -532,6 +554,32 @@
           const movies=this.filteredSorted().filter(m=>m.genres.length===0);
           if(movies.length===0) return null;
           return {name:'Other movies', count:this.rawMovies.filter(m=>m.genres.length===0).length, openAll:()=>this.openOther(), movies:movies.slice(0,15).map(m=>this.view(m))};
+        }
+
+        // ---- Series by genre (design log 63): the Movies tab's rows, in series ----
+        passSeriesRating(x){ return x.rating >= Number(this.state.ratingFilter||0); }
+        sortSeriesList(list){ const held=x=>this.rawSeries.indexOf(x); const s=this.state.sort; const unwatched=x=>{ const p=this.seriesProgress(x.id); return p.watched===0?0:p.watched<p.total?1:2; };
+          return [...list].sort((a,b)=> s==='az'?a.title.localeCompare(b.title): s==='year'?b.ys-a.ys: s==='rating'?(b.rating-a.rating||held(b)-held(a)): s==='unwatched'?(unwatched(a)-unwatched(b)||held(b)-held(a)): held(b)-held(a)); }
+        seriesFilteredSorted(){ const q=this.state.search.trim().toLowerCase(); return this.sortSeriesList(this.rawSeries.filter(x=> this.passSeriesRating(x) && (!q||x.title.toLowerCase().includes(q)||x.syn.toLowerCase().includes(q)||x.genres.join(' ').toLowerCase().includes(q)))); }
+        // A Genre row per populated series genre, busiest first, 15 cards, View all carrying the true count.
+        // A genre filter leaves that genre's row alone. View all opens the Genre page for series.
+        buildSeriesRows(){
+          const list=this.seriesFilteredSorted();
+          const gf=this.state.genre;
+          const counts={};
+          this.rawSeries.forEach(x=>x.genres.forEach(g=>counts[g]=(counts[g]||0)+1));
+          let genres=Object.keys(counts);
+          if(gf!=='All Genres') genres=genres.filter(g=>g===gf);
+          genres.sort((a,b)=> counts[b]-counts[a] || a.localeCompare(b));
+          return genres.map(g=>({name:g, count:counts[g], openAll:()=>this.openSeriesGenre(g), movies:list.filter(x=>x.genres.includes(g)).slice(0,15).map(x=>this.seriesView(x))})).filter(r=>r.movies.length>0);
+        }
+        // The Other series row, last: every series with no genre, at most 15. Not drawn under a genre
+        // filter, nor when every series has a genre. Its View all opens the series Genre page's other mode.
+        buildSeriesOtherRow(){
+          if(this.state.genre!=='All Genres') return null;
+          const series=this.seriesFilteredSorted().filter(x=>x.genres.length===0);
+          if(series.length===0) return null;
+          return {name:'Other series', count:this.rawSeries.filter(x=>x.genres.length===0).length, openAll:()=>this.openSeriesOther(), movies:series.slice(0,15).map(x=>this.seriesView(x))};
         }
 
         // ---- detail ----
@@ -701,9 +749,9 @@
         }
         toggleSeriesFav(id){ this.setState(st=>({seriesFavs:st.seriesFavs.includes(id)?st.seriesFavs.filter(x=>x!==id):[...st.seriesFavs,id]})); }
         setTab(t){ this.setState({tab:t,search:'',openDrop:null,gearOpen:false}); }
-        openSeries(id){ this.setState({screen:'series',seriesId:id,seriesReturn:null,gearOpen:false,openDrop:null}); }
+        openSeries(id){ this.setState(s=>({screen:'series',seriesId:id,seriesReturn:s.screen==='genre'?'genre':null,gearOpen:false,openDrop:null})); }
         openSeason(n){ this.setState({screen:'season',seasonN:n}); }
-        backFromSeries(){ this.setState(s=>s.seriesReturn==='settings'?{screen:'settings',seriesReturn:null}:{screen:'browse',tab:'series'}); }
+        backFromSeries(){ this.setState(s=>s.seriesReturn==='settings'?{screen:'settings',seriesReturn:null}:s.seriesReturn==='genre'?{screen:'genre',seriesReturn:null}:{screen:'browse',tab:'series'}); }
         backFromSeason(){ this.setState({screen:'series'}); }
         toggleEpWatched(ep){ this.setState(st=>{ const cur=st.epState[ep.key]||{}; const now=!cur.watched; return {epState:{...st.epState,[ep.key]:{watched:now,progress:now?0:cur.progress||0}}}; }); }
         toggleSeasonAll(){ const eps=this.episodesOf(this.state.seriesId,this.state.seasonN); const allW=eps.every(e=>e.watched);
@@ -838,10 +886,19 @@
           const rootStyle={position:'relative',width:'100%',height:'100vh',minHeight:'600px',overflow:'hidden',background:'var(--color-bg)',color:'var(--color-text)',fontFamily:'var(--font-sans)','--color-accent':accent,'--color-accent-hover':this.shade(accent,0.18),'--color-accent-press':this.shade(accent,-0.12),'--color-accent-soft':this.rgba(accent,0.14),'--color-accent-line':this.rgba(accent,0.32),'--color-focus-ring':this.rgba(this.shade(accent,0.18),0.55),'--card-w':cardW+'px','--poster-radius':radius};
 
           // browse
+          const movieRowView=s.rowViews.movies, seriesRowView=s.rowViews.series;
           const rows=this.buildRows();
           const otherRow=this.buildOtherRow();
           const continueList=this.filteredSorted().filter(m=>this.eff(m)==='progress').slice(0,15).map(m=>this.view(m));
-          const favoritesList=this.filteredSorted().filter(m=>s.favorites.includes(m.id)).slice(0,15).map(m=>this.view(m));
+          // Movies under All: the grid, and the Favorites row derived from it (its hearted films, in its order, at most 15).
+          const movieGrid=this.movieGrid();
+          const movieGridList=movieGrid.map(m=>this.view(m));
+          const favoritesList=(movieRowView==='all'?movieGrid:this.filteredSorted()).filter(m=>s.favorites.includes(m.id)).slice(0,15).map(m=>this.view(m));
+          const moviesNoResults=movieRowView==='all' ? movieGrid.length===0 : rows.length===0 && !otherRow;
+          // The View pill: All then By genre, the current tab's one checked, no counts.
+          const currentRowView=s.rowViews[s.tab];
+          const rowViewOptions=this.rowViewDefs.map(([v,l])=>({label:l,selected:v===currentRowView,onSelect:()=>this.setRowView(v)}));
+          const rowViewLabel=(this.rowViewDefs.find(d=>d[0]===currentRowView)||['','All'])[1];
           const counts={}; this.rawMovies.forEach(m=>m.genres.forEach(g=>counts[g]=(counts[g]||0)+1));
           const optStyle=active=>({padding:'9px 12px',borderRadius:'8px',cursor:'pointer',fontFamily:'var(--font-sans)',fontSize:'15px',color:active?accent:'var(--color-text)',fontWeight:active?'600':'400'});
           const allGenres=['All Genres',...Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b))];
@@ -855,7 +912,11 @@
           const sq=s.search.trim().toLowerCase();
           const seriesFiltered=this.rawSeries.filter(x=>!sq||x.title.toLowerCase().includes(sq)||x.syn.toLowerCase().includes(sq)||x.genres.join(' ').toLowerCase().includes(sq));
           const seriesList=seriesFiltered.map(x=>this.seriesView(x));
-          const seriesFavoritesList=seriesFiltered.filter(x=>s.seriesFavs.includes(x.id)).slice(0,15).map(x=>this.seriesView(x));
+          const seriesFavoritesList=(seriesRowView==='genre'?this.seriesFilteredSorted():seriesFiltered).filter(x=>s.seriesFavs.includes(x.id)).slice(0,15).map(x=>this.seriesView(x));
+          // Series by genre: a row per populated series genre, then the Other series row last.
+          const seriesRows=this.buildSeriesRows();
+          const seriesOtherRow=this.buildSeriesOtherRow();
+          const seriesNoResults=seriesRowView==='genre' ? seriesRows.length===0 && !seriesOtherRow : seriesList.length===0;
           const totalEpisodes=this.rawSeries.reduce((a,x)=>a+x.seasons.reduce((p,q)=>p+q,0),0);
           const episodeContinueList=[];
           this.rawSeries.forEach(x=>{ this.allEpisodes(x.id).forEach(e=>{ if(e.progress>0&&e.progress<100) episodeContinueList.push({
@@ -1001,7 +1062,7 @@
             rootStyle, isBrowse:s.screen==='browse', isDetail:s.screen==='detail', isPlayer:s.screen==='player', isAdd:s.screen==='add', isImport:s.screen==='import', isGenre:s.screen==='genre', isSettings:s.screen==='settings', isCodecs:s.screen==='codecs', isFolders:s.screen==='folders', isManage:s.screen==='manage', onManageBack:()=>this.goSettings(), isEnrich:s.screen==='enrich', isSeries:s.screen==='series', isSeason:s.screen==='season',
             snackbars: s.snackbars.map(n=>({ ...n, onDismiss:()=>this.dismissSnack(n.id) })), hasSnackbars: s.snackbars.length>0,
             goBrowse:()=>this.goBrowse(), backFromDetail:()=>this.backFromDetail(),
-            genreView:s.genreView, genrePageList:this.genrePageMovies().map(m=>this.view(m)), genreNoResults:this.genrePageMovies().length===0,
+            genreView:s.genreView, genrePageList:this.genrePageViews(), genreNoResults:this.genrePageMovies().length===0,
             genreSearch:s.genreSearch, onGenreSearch:(e)=>this.onGenreSearch(e),
             genreCountLabel:(function(self){ if(!s.genreView) return ''; const all=self.genrePageAll().length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
             genreModel:{
@@ -1009,7 +1070,7 @@
               countLabel:(function(self){ if(!s.genreView) return ''; const all=self.genrePageAll().length; const shown=self.genrePageMovies().length; return shown===all? all+' titles' : shown+' of '+all+' titles'; })(this),
               search:s.genreSearch, onSearch:(e)=>this.onGenreSearch(e), searchPlaceholder:'Search in '+(s.genreView||''),
               sortValue:sortLabel, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(), sortOptions,
-              movies:this.genrePageMovies().map(m=>this.view(m)), noResults:this.genrePageMovies().length===0,
+              movies:this.genrePageViews(), noResults:this.genrePageMovies().length===0,
             },
             // header
             search:s.search, onSearch:(e)=>this.onSearch(e),
@@ -1018,14 +1079,20 @@
             toggleGenre:()=>this.toggleGenre(), toggleSort:()=>this.toggleSort(), toggleGear:()=>this.toggleGear(),
             genreOptions, sortOptions, goAdd:()=>this.goAdd(), goImport:()=>this.goImport(), openExport:()=>this.openExport(),
             // body
-            showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:rows.length===0 && !otherRow,
+            showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList, genreRows:rows, noResults:moviesNoResults,
             libModel:{
               search:s.search, onSearch:(e)=>this.onSearch(e),
               isMoviesTab:s.tab==='movies', isSeriesTab:s.tab==='series',
               tabOptions:[{value:'movies',label:'Movies'},{value:'series',label:'Series'}], tab:s.tab, onTab:(t)=>this.setTab(t),
 
               searchPlaceholder:s.tab==='series'?'Search your series':'Search your movies',
-              seriesList, seriesCountLabel:seriesList.length+' series · '+totalEpisodes+' episodes', seriesNoResults:seriesList.length===0,
+              seriesList, seriesCountLabel:seriesList.length+' series · '+totalEpisodes+' episodes', seriesNoResults,
+              // The Row view: the View pill after Sort, and the body each tab draws under it.
+              rowViewLabel, rowViewOptions, rowViewOpen:s.openDrop==='view', onToggleRowView:()=>this.toggleRowView(),
+              isMoviesByGenre:movieRowView==='genre', isMoviesAll:movieRowView==='all',
+              isSeriesAll:seriesRowView==='all', isSeriesByGenre:seriesRowView==='genre',
+              movieGridList, movieCountLabel:movieGrid.length===1?'1 movie':movieGrid.length+' movies',
+              seriesGenreRows:seriesRows, showSeriesOtherRow:!!seriesOtherRow, seriesOtherRow,
               episodeContinueList, showEpisodeContinue:episodeContinueList.length>0,
               seriesFavoritesList, showSeriesFavorites:seriesFavoritesList.length>0,
               genreLabel:s.genre, genreOptions, genreOpen:s.openDrop==='genre', onToggleGenre:()=>this.toggleGenre(),
@@ -1033,7 +1100,7 @@
               sortLabel, sortOptions, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(),
               gearOpen:s.gearOpen, onToggleGear:()=>this.toggleGear(), onAdd:()=>this.goAdd(), onImport:()=>this.goImport(), onExport:()=>this.openExport(), onSettings:()=>this.goSettings(),
               showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList,
-              genreRows:rows, showOtherRow:!!otherRow, otherRow, noResults:rows.length===0 && !otherRow,
+              genreRows:rows, showOtherRow:!!otherRow, otherRow, noResults:moviesNoResults,
             },
             foldersModel:{
               onBack:()=>this.goSettings(),
@@ -1230,7 +1297,7 @@
               const isFav=s.seriesFavs.includes(x.id);
               return {
                 title:x.title, genres:x.genres, synopsis:x.syn, creator:x.creator, castText:x.cast.join(', '),
-                topTag:x.genres[0]+' \u00b7 Series', yearLabel:x.ye?(x.ys===x.ye?String(x.ys):x.ys+'\u2013'+x.ye):(x.ys+'\u2013'),
+                topTag:(x.genres[0]?x.genres[0]+' \u00b7 ':'')+'Series', yearLabel:x.ye?(x.ys===x.ye?String(x.ys):x.ys+'\u2013'+x.ye):(x.ys+'\u2013'),
                 countLabel:x.seasons.length+' season'+(x.seasons.length===1?'':'s')+' \u00b7 '+pr.total+' episodes',
                 ratingPct:x.rating,
                 posterStyle:{position:'absolute',inset:0,background:'linear-gradient(155deg, '+x.g1+' 0%, '+x.g2+' 100%)'},
