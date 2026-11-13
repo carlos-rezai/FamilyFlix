@@ -1,5 +1,7 @@
 import styled from 'styled-components';
 
+import { WORDMARK_WEIGHT } from '@/tokens';
+
 /**
  * **Family** run straight into **Flix**, on one baseline. No size of its own:
  * the mark takes the `font-size` its parent sets, so the header's 25px, the
@@ -15,7 +17,7 @@ export const Root = styled.span`
 /** The brand's serif at 700; `Family` in the text ink. */
 export const Family = styled.span`
   font-family: ${({ theme }) => theme.fonts.serif};
-  font-weight: 700;
+  font-weight: ${WORDMARK_WEIGHT};
   color: ${({ theme }) => theme.colors.text};
 `;
 
