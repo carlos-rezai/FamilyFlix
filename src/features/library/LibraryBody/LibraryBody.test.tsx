@@ -5,7 +5,13 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { LibraryBody } from './LibraryBody';
 import { theme } from '@/styles/theme';
-import type { HomePayload, MovieGridPayload, RowView } from '@/types';
+import type {
+  HomePayload,
+  MovieGridPayload,
+  RowView,
+  Series,
+  SeriesHomePayload,
+} from '@/types';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
@@ -17,6 +23,30 @@ import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceAp
  * **By genre**, and nothing while the view is `null`. The view is held by the
  * household rather than the URL, so back from a title lands on it again.
  */
+
+function makeSeries(overrides: Partial<Series> = {}): Series {
+  return {
+    id: 's1',
+    tmdbId: null,
+    title: 'Harbor & Vine',
+    year: 2021,
+    endYear: null,
+    synopsis: null,
+    creator: null,
+    cast: [],
+    rating: null,
+    isFavorite: false,
+    posterPath: null,
+    backdropPath: null,
+    originalTitle: null,
+    tmdbScore: null,
+    genres: [],
+    watched: false,
+    createdAt: '2026-09-23T00:00:00.000Z',
+    updatedAt: '2026-09-23T00:00:00.000Z',
+    ...overrides,
+  };
+}
 
 const FILM = makeMovie({
   id: 'm1',
@@ -33,6 +63,21 @@ const HOME: HomePayload = {
   other: null,
 };
 
+const SHOW = makeSeries({ id: 's1', title: 'Harbor & Vine' });
+
+const SERIES_HOME: SeriesHomePayload = {
+  series: [SHOW],
+  episodeCount: 1,
+  continueWatching: [],
+};
+
+const SERIES_ROWS = {
+  rows: [{ genre: 'Drama', count: 1, series: [SHOW] }],
+  other: null,
+  favorites: [],
+  continueWatching: [],
+};
+
 let fetchMock: ReturnType<
   typeof vi.fn<(input: RequestInfo | URL) => Promise<Response>>
 >;
@@ -46,6 +91,12 @@ beforeEach(() => {
     }
     if (url.includes('/api/home')) {
       return Promise.resolve(okResponse(HOME));
+    }
+    if (url.includes('/api/series/rows')) {
+      return Promise.resolve(okResponse(SERIES_ROWS));
+    }
+    if (url.includes('/api/series')) {
+      return Promise.resolve(okResponse(SERIES_HOME));
     }
     return Promise.reject(new Error(`Unexpected request: ${url}`));
   });
@@ -145,5 +196,65 @@ describe('LibraryBody: back from a title', () => {
 
     expect(await allMovies()).toBeDefined();
     expect(screen.queryByRole('region', { name: 'Action' })).toBeNull();
+  });
+});
+
+/**
+ * 63, Row view, Phase 4 (issue #611): on the Series tab `LibraryBody` picks
+ * `SeriesHome` under **All** and `SeriesRows` under **By genre**, off the
+ * Series tab's own **Row view**.
+ */
+function seriesTree(seriesRowView: RowView | null) {
+  return (
+    <MemoryRouter initialEntries={['/?tab=series']}>
+      <ThemeProvider theme={theme}>
+        <DisplayPreferenceContext.Provider
+          value={makeDisplayPreferenceApi({
+            movieRowView: 'genre',
+            seriesRowView,
+          })}
+        >
+          <LibraryBody />
+        </DisplayPreferenceContext.Provider>
+      </ThemeProvider>
+    </MemoryRouter>
+  );
+}
+
+const allSeries = () =>
+  screen.findByRole('heading', { name: 'All series', level: 2 });
+
+const dramaRow = () => screen.findByRole('region', { name: 'Drama' });
+
+describe('LibraryBody: the Series tab’s Row view', () => {
+  it('draws All series under All, and reads no series rows', async () => {
+    render(seriesTree('all'));
+
+    expect(await allSeries()).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Drama' })).toBeNull();
+    expect(requested().some((url) => url.includes('/api/series/rows'))).toBe(
+      false
+    );
+  });
+
+  it('draws the series genre rows under By genre, and no All series', async () => {
+    render(seriesTree('genre'));
+
+    expect(await dramaRow()).toBeDefined();
+    expect(screen.queryByRole('heading', { name: 'All series' })).toBeNull();
+    expect(requested().some((url) => url.includes('/api/series/rows'))).toBe(
+      true
+    );
+    expect(requested().some((url) => url.includes('/api/home'))).toBe(false);
+  });
+
+  it('switches from the rows to All series once All is chosen', async () => {
+    const { rerender } = render(seriesTree('genre'));
+    await dramaRow();
+
+    rerender(seriesTree('all'));
+
+    expect(await allSeries()).toBeDefined();
+    expect(screen.queryByRole('region', { name: 'Drama' })).toBeNull();
   });
 });
