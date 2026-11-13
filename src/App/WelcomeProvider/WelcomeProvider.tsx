@@ -153,7 +153,7 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
   const [landing, setLanding] = useState<WordmarkLanding | null>(null);
   const [held, setHeld] = useState(false);
 
-  const tuneTo = useWelcomeTune({ played });
+  const tuneTo = useWelcomeTune({ played, reducedMotion });
 
   // The clock runs off the state it just stepped to, not off a render, so a
   // phase's timer starts the moment the phase does.

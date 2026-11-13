@@ -11,17 +11,20 @@ import { SKIP_MS } from '@/App/welcomeTimeline/welcomeTimeline';
 export interface WelcomeTuneOptions {
   /** Whether this mount plays the welcome; nothing sounds unless it does. */
   played: boolean;
+  /** Whether the system asks for reduced motion: then no Intro cue. */
+  reducedMotion: boolean;
 }
 
 /**
  * The **Welcome tune** over the welcome's phases. It answers a step the
  * provider calls the moment a phase starts, not on a render, so a cue sounds
  * when its phase does: the **Intro cue** from the mount, as the welcome
- * starts, the **Closing chord** on `handoff`, a fade over the skip's
+ * starts, unless under reduced motion, where the chord is the whole tune; the **Closing chord** on `handoff`, a fade over the skip's
  * `SKIP_MS` on `skipping`, `finish()` at `done`. The hold sounds nothing. An unmount closes the tune at once.
  */
 export function useWelcomeTune({
   played,
+  reducedMotion,
 }: WelcomeTuneOptions): (phase: WelcomePhase) => void {
   const tune = useRef<WelcomeTune | null>(null);
 
@@ -31,11 +34,14 @@ export function useWelcomeTune({
     }
     const made = createWelcomeTune();
     tune.current = made;
-    made.play(INTRO_CUE);
+    // Under reduced motion an empty cue still opens the context, so a skip
+    // has a master to fade.
+    made.play(reducedMotion ? [] : INTRO_CUE);
     return () => {
       made.close();
       tune.current = null;
     };
+    // Once per mount: `reducedMotion` is read once, at the start.
   }, [played]);
 
   return useCallback((phase: WelcomePhase) => {
