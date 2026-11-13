@@ -126,37 +126,30 @@ export function createWelcomeTune(): WelcomeTune {
     return SILENT;
   }
 
-  let context: AudioContext | null = null;
-  let master: GainNode | null = null;
+  let context: AudioContext;
+  try {
+    context = new window.AudioContext();
+  } catch {
+    return SILENT;
+  }
+  const master = context.createGain();
+  master.gain.value = MASTER_LEVEL;
+  const brightness = context.createBiquadFilter();
+  brightness.type = 'lowpass';
+  brightness.frequency.value = BRIGHTNESS_HZ;
+  brightness.Q.value = BRIGHTNESS_Q;
+  master.connect(brightness);
+  brightness.connect(context.destination);
+
   let lastEnd = 0;
   let closing: ReturnType<typeof setTimeout> | undefined;
   let closed = false;
   let fading = false;
 
-  function open(): { context: AudioContext; master: GainNode } | null {
-    if (closed) return null;
-    if (context !== null && master !== null) return { context, master };
-    try {
-      context = new window.AudioContext();
-    } catch {
-      closed = true;
-      return null;
-    }
-    master = context.createGain();
-    master.gain.value = MASTER_LEVEL;
-    const brightness = context.createBiquadFilter();
-    brightness.type = 'lowpass';
-    brightness.frequency.value = BRIGHTNESS_HZ;
-    brightness.Q.value = BRIGHTNESS_Q;
-    master.connect(brightness);
-    brightness.connect(context.destination);
-    return { context, master };
-  }
-
   function close(): void {
     clearTimeout(closing);
     closed = true;
-    if (context !== null && context.state !== 'closed') {
+    if (context.state !== 'closed') {
       void context.close();
     }
   }
@@ -168,18 +161,17 @@ export function createWelcomeTune(): WelcomeTune {
 
   return {
     play(cue) {
-      const graph = open();
-      if (graph === null) return;
-      const now = graph.context.currentTime;
+      if (closed) return;
+      const now = context.currentTime;
       for (const note of cue) {
         const start = now + note.at / 1000;
         const end = start + note.length / 1000;
-        strike(graph.context, graph.master, note, start, end);
+        strike(context, master, note, start, end);
         lastEnd = Math.max(lastEnd, end);
       }
     },
     fadeOut(ms) {
-      if (context === null || master === null || closed) return;
+      if (closed) return;
       fading = true;
       const now = context.currentTime;
       master.gain.cancelScheduledValues(now);
@@ -188,7 +180,7 @@ export function createWelcomeTune(): WelcomeTune {
       closeIn(ms);
     },
     finish() {
-      if (context === null || closed || fading) return;
+      if (closed || fading) return;
       closeIn((lastEnd - context.currentTime) * 1000);
     },
     close,
