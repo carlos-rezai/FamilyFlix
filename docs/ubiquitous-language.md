@@ -1062,6 +1062,27 @@ its score is `docs/handoff/handoff-welcome-tune/README.md`.
 | **Welcome hold** (updated)     | As before, and silent: the **Intro cue** has died away and the **Closing chord** waits for the handoff.                                                                                                                                                                                                                                      |                                    |
 | **Wordmark handoff** (updated) | As before, and strikes the **Closing chord** at its start, the reduced handoff included.                                                                                                                                                                                                                                                     |                                    |
 
+## Row view
+
+Design log 63: step 46, initiative `row-view`. Either **Library tab** can be
+browsed as one grid or as a row per genre, the household's choice per tab;
+the handoff is `docs/handoff/handoff-row-view/README.md`.
+
+| Term                        | Definition                                                                                                                                                                                                                              | Aliases to avoid                      |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Row view** (new)          | How one **Library tab** is browsed, **All** or **By genre**: a household setting per tab (`movie-row-view`, `series-row-view`), Movies `By genre` and Series `All` until changed. `RowView` over `ROW_VIEWS` in code. Never in the URL. | layout, mode, display, grid view      |
+| **All** (new)               | The **Row view** that draws a tab's titles in one **Library grid** under _All movies_ or _All series_ and its count line, after the Continue and **Favorites row**s. `'all'` in code.                                                   | grid mode, flat view                  |
+| **By genre** (new)          | The **Row view** that draws a tab's titles as a **Genre row** per populated genre and the tab's **Other row** last, after the Continue and **Favorites row**s. `'genre'` in code.                                                       | rows mode, genre view, shelves        |
+| **Row view switch** (new)   | The _View_ **Filter dropdown** last in the browse header's end slot, after Sort, setting the current tab's **Row view**. Writes no URL, draws no snackbar, not drawn until the settings read lands. `RowViewSwitch` in code.            | view toggle, layout picker, view pill |
+| **Other series row** (new)  | The Series tab's **Other row** under **By genre**, _Other series_: every series with no **Genre**, capped at 15; its **View all** opens `/genre-less?tab=series`.                                                                       | uncategorised series                  |
+| **Browse home** (updated)   | Since log 63, draws each tab in its **Row view**: the Continue and **Favorites row**s, then **Genre rows** and the **Other row** (**By genre**) or the **Library grid** (**All**).                                                      |                                       |
+| **Series tab** (updated)    | Since log 63, _All series_ is its **All** face, the default; **By genre** draws series **Genre rows** and the **Other series row** instead.                                                                                             |                                       |
+| **Genre page** (updated)    | Since log 63, also serves series under `?tab=series` (`/genre/:name?tab=series`, `/genre-less?tab=series`), reading the **Library tab** off its URL as the home does; its cards then open the series page.                              |                                       |
+| **Other row** (updated)     | Since log 63, each tab has its own under **By genre**: _Other movies_ and the **Other series row**.                                                                                                                                     |                                       |
+| **View all** (updated)      | Since log 63, a series **Genre row**'s opens the **Genre page** for series, the tab riding the link as `?tab=series` beside the **Carried sort**.                                                                                       |                                       |
+| **Library grid** (updated)  | Since log 63, also the **All** face of both tabs, uncapped.                                                                                                                                                                             |                                       |
+| **Favorites row** (updated) | Since log 63, drawn in both **Row view**s of both tabs; under **All** it is derived from the grid, under **By genre** it comes with the rows, capped at 15 either way.                                                                  |                                       |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1259,6 +1280,7 @@ its score is `docs/handoff/handoff-welcome-tune/README.md`.
 - A run that reaches review touches every **Library folder** its walk read, so a sheet a crash left behind catches up at the next scan (log 59 Q19).
 - A sheet's path cell fills only a **Layout place** the Title folder left empty; the folder wins, and the `Video` cell is never read (log 59 Q14).
 - A **Cold start** plays at most one **Welcome tune**, with its **Welcome splash**; a skip fades it over 150ms, and only a **Wordmark handoff** strikes its **Closing chord** (log 62).
+- A **Library tab** has exactly one **Row view** at a time, the household's; the two tabs' are independent, and neither is in the URL (log 63).
 
 ## Example dialogue
 
@@ -2025,6 +2047,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "Yes. The **Welcome hold** is silent; the chord comes with the handoff, whenever that is. If she presses a key instead, the tune fades out with the skip and no chord plays."
 > **Dev:** "And Dad, with reduced motion on?"
 > **Domain expert:** "Only the **Closing chord**, as the fades hand over. The Intro cue marks motion his welcome doesn't draw."
+
+> **Dev:** "Dad wants to see every film at once, not in genre rows. Is that a setting?"
+> **Domain expert:** "It's the Movies tab's **Row view**. He picks **All** on the **Row view switch**, the _View_ pill after Sort, and the tab draws one **Library grid** under _All movies_. It's the household's, so Mum finds it that way too, after a relaunch as well."
+> **Dev:** "Does the Series tab follow?"
+> **Domain expert:** "No, each tab keeps its own. Series stays **All** until someone picks **By genre**; then it draws a **Genre row** per series genre and the **Other series row** last."
+> **Dev:** "And _View all_ on the Drama series row?"
+> **Domain expert:** "The **Genre page** for series, `/genre/Drama?tab=series`. Switching back to **All** keeps her search and filters; the switch writes no URL."
 
 ## Flagged ambiguities
 
@@ -3013,3 +3042,4 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Path cell" names a file that is there (new):** in an **Export file** a path cell names where the **File plan** put a file; in a **Library sheet** it names what the **Layout read** found. Never call a Library sheet's cell "planned", and never fill it from storage's own paths (log 59).
 - **"Export round trip" is not "Round trip" (new):** the **Round trip** is a Library folder's own sheet rebuilding it after a Factory reset; the **Export round trip** is an **Export**, uploaded or copied over, doing the same from outside the Library folder.
 - **"Jingle" names nothing (new):** the checklist row's word for the **Welcome tune**. Say **Welcome tune** for the whole, **Intro cue** or **Closing chord** for its parts; never "sound" alone, which the player's audio tracks already answer to.
+- **"Row view" includes the grid (new):** the step's name covers both values, so **All**, one grid, is a Row view too. Say **Row view** for the choice, **All** or **By genre** for its values; never "grid view" or "layout", which `layouts/` already answers to, nor "mode", which the **Genre page** and the **Import mode** own.

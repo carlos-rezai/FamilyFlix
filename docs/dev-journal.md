@@ -11,6 +11,31 @@ Newest entry first.
 
 ---
 
+## 2026-11-13: Row view, the grill-me (log 63)
+
+Step 46, settled in `docs/design-logs/63-row-view.md`, with its handoff
+`docs/handoff/handoff-row-view/README.md`, which phase 1 turns into
+prototype amendments before any code.
+
+### What a later session should know
+
+- **No uncapped movie list exists on the home.** `/api/home` caps every
+  row at 15 and the only uncapped movie reads are the Genre page's, so
+  Movies under All needs its own read, `GET /api/movies` (log 63 Q12); grouping
+  the rows payload would lose films.
+- **Series have genres but no rows and no Genre page.** `/api/series/genres`
+  counts them for the dropdown and nothing else reads them; the Genre page
+  learns series through `?tab=series` (Q15), and its provider keeps the name
+  `GenreMovies` until the refactor.
+- **The provider can't tell a pending read from a refused one.** Every
+  display preference is `null` in both cases; for the Row views alone a
+  refusal lands the defaults (Q10), so the home never stays blank.
+- **New series routes go ahead of `/series/:id`.** `/series/rows`,
+  `/series/genre/:name` and `/series/genre-less` join `/series/genres` there,
+  or Express reads the word as a series id.
+
+---
+
 ## 2026-11-13: Welcome tune, the refactor (issue 605)
 
 Fourteen commits against

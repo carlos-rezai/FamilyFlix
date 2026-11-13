@@ -584,8 +584,18 @@ handoff `docs/handoff/handoff-welcome-tune/`, whose README is the score):
       `autoplayPolicy: 'no-user-gesture-required'` so a Cold start may sound.
 
 Step 46 came out of the two tabs browsing differently: Movies draws genre
-rows, Series one grid of every show. To be settled in a grill-me:
+rows, Series one grid of every show. Settled in a grill-me on 2026-11-13
+(design log 63, handoff `docs/handoff/handoff-row-view/`):
 
 46. 🔲 **Row view**: a switch on both the Movies and the Series tab between
     _All_, every title in one grid, and _By genre_, a row per genre, so
     either tab can be browsed either way.
+    - **The household's, per tab**: a _View_ pill after Sort sets the current
+      tab's Row view, kept in Settings' table and so across relaunches;
+      today's faces are the defaults, Movies By genre and Series All.
+    - **Each tab both ways**: Movies under All is the Series tab's face in
+      films (All movies, a count line, the grid); Series by genre is the
+      Movies rows in shows, with an Other series row, and View all opens the
+      Genre page for series.
+    - **Nothing else moves**: the search and filters stay on a switch, and
+      each tab's loading, empty and miss faces are the same in either view.
