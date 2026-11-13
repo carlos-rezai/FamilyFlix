@@ -2,12 +2,19 @@ import { useCallback, useMemo } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { moviePath, parseLibraryQuery, toLibraryQueryParams } from '@/utils';
+import {
+  moviePath,
+  parseLibraryQuery,
+  range,
+  toLibraryQueryParams,
+} from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { fetchMovieGrid } from '../../api/api';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
+import { Grid } from '../../LibraryGrid/LibraryGrid.styles';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
+import { SkeletonCard } from '../../SkeletonCard/SkeletonCard';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
@@ -20,6 +27,20 @@ import { Count, Heading } from './MovieGrid.styles';
 /** The Favorites shelf's cap: the movie home's 15, a carousel's slice. */
 const FAVORITES_LIMIT = 15;
 
+/** Enough placeholder tiles to fill the fold while the library loads. */
+const SKELETON_CARDS = 12;
+
+/** The first load, laid out on the grid it is about to become. */
+function LoadingGrid() {
+  return (
+    <Grid role="status" aria-label="Loading your library">
+      {range(SKELETON_CARDS).map((card) => (
+        <SkeletonCard key={card} />
+      ))}
+    </Grid>
+  );
+}
+
 /** `N movies`, or `1 movie`. */
 function movieCountLabel(count: number): string {
   return `${count} ${count === 1 ? 'movie' : 'movies'}`;
@@ -31,8 +52,9 @@ function movieCountLabel(count: number): string {
  * (its hearted films, in its order, at most 15), _All movies_, the count line
  * and the **Library grid**. A card opens the film's page; a heart saves through
  * `saveFavorite`, filled at once and put back if refused, and the shelf follows
- * it because it is read off the same loaded movies. Nothing is drawn until the
- * payload lands; a search or filter that keeps nothing is a no-results face.
+ * it because it is read off the same loaded movies. A skeleton grid holds the
+ * place until the payload lands; a search or filter that keeps nothing is a
+ * no-results face, and an empty library is worded as one, as `HomeRows` has it.
  */
 export function MovieGrid() {
   const navigate = useNavigate();
@@ -91,8 +113,8 @@ export function MovieGrid() {
     );
   }
 
-  if (data === null) {
-    return null;
+  if (status === 'loading' || data === null) {
+    return <LoadingGrid />;
   }
 
   if (data.movies.length === 0 && query.search !== undefined) {
@@ -112,6 +134,15 @@ export function MovieGrid() {
       <LoadMessage
         title="Nothing here"
         body="No movies match these filters. Try a different genre or rating."
+      />
+    );
+  }
+
+  if (data.movies.length === 0) {
+    return (
+      <LoadMessage
+        title="Your library is empty"
+        body="Add a movie to start filling your shelves."
       />
     );
   }
