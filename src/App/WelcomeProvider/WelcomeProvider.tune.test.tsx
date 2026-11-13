@@ -173,7 +173,8 @@ describe('WelcomeProvider: the handoff strikes the Closing chord', () => {
 describe('WelcomeProvider: the tune ends', () => {
   it('at done it finishes: the context closes once the chord has died away, not before', async () => {
     renderWelcome();
-    await advanceClock(INTRO + HANDOFF);
+    await advanceClock(100);
+    await advanceClock(INTRO - 100 + HANDOFF);
     const context = onlyContext();
     expect(context.state).not.toBe('closed');
 

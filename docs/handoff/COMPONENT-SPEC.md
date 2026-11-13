@@ -921,7 +921,9 @@ From the frozen `handoff-welcome-splash/`, option **2a** (_Bounce, sweep, handof
 alternatives 1a to 1f for reference only. The renderer's cold-start animation, played once
 per window session on a **Cold start**, after the shell's **Start-up splash**: the Fs drop
 in, _FamilyFlix_ rises letter by letter, a light sweeps both, and the wordmark glides into
-the header. No sound, no route, no server change.
+the header. No route, no server change. Its sound, the **Welcome tune**, is scored in its own
+handoff, `handoff-welcome-tune/` (log 62): the README there is the score, played by
+`createWelcomeTune` from `welcomeScore` through `useWelcomeTune`.
 
 | Unit              | Target                     | Role                                                                                                                                                                                                              |
 | ----------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

@@ -21,6 +21,7 @@ import {
   WelcomeSplash,
   type WordmarkLanding,
 } from '@/App/WelcomeSplash/WelcomeSplash';
+import { useWelcomeTune } from '@/App/useWelcomeTune/useWelcomeTune';
 import { HomeLayer } from './WelcomeProvider.styles';
 
 /** The `sessionStorage` flag a played welcome leaves for the session. */
@@ -158,6 +159,8 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
   const [landing, setLanding] = useState<WordmarkLanding | null>(null);
   const [held, setHeld] = useState(false);
 
+  const tuneTo = useWelcomeTune({ played });
+
   // The clock runs off the state it just stepped to, not off a render, so a
   // phase's timer starts the moment the phase does.
   const send = useCallback(
@@ -176,10 +179,11 @@ export function WelcomeProvider({ children }: WelcomeProviderProps) {
       }
       setState(next);
       if (next.phase !== before.phase) {
+        tuneTo(next.phase);
         startClock(next.phase);
       }
     },
-    [scale]
+    [scale, tuneTo]
   );
 
   function startClock(at: WelcomePhase) {

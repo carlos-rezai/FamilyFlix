@@ -219,6 +219,9 @@ function openWindow(preload: string): void {
       sandbox: true,
       webSecurity: true,
       nodeIntegration: false,
+      // Electron's default, spelled out: the Welcome tune and the player both
+      // start sound with no user gesture, so a changed default can't silence them.
+      autoplayPolicy: 'no-user-gesture-required',
     },
   });
 
