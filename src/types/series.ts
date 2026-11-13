@@ -83,6 +83,30 @@ export interface SeriesHomePayload {
   continueWatching: EpisodeContinueEntry[];
 }
 
+/**
+ * One genre row of Series under **By genre**, `HomeRow`'s shape over series:
+ * the genre, its **true total** series count, and the capped slice the row
+ * shows, in the caller's sort.
+ */
+export interface SeriesRow {
+  genre: string;
+  count: number;
+  series: Series[];
+}
+
+/**
+ * Series under **By genre** in one call, `HomePayload`'s rules over series:
+ * the episode Continue row, the Favorites row, a row per populated genre
+ * busiest first, and the genre-less series as `other` (`null` under a genre
+ * filter or when none is left).
+ */
+export interface SeriesRowsPayload {
+  rows: SeriesRow[];
+  other: SeriesRow | null;
+  favorites: Series[];
+  continueWatching: EpisodeContinueEntry[];
+}
+
 /** One season of a series: its episodes in order, and its own next episode. */
 export interface SeasonSummary {
   number: number;

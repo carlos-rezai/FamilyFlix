@@ -123,6 +123,7 @@ import {
   type SeriesDetail,
   type MovieGridPayload,
   type SeriesHomePayload,
+  type SeriesRowsPayload,
   type Settings,
   type StorageReport,
   type StoredVideo,
@@ -929,6 +930,17 @@ export function createApiRouter(
     const query = libraryQueryOr400(req, res);
     if (query) {
       const payload: SeriesHomePayload = storage.getSeriesHome(query);
+      res.json(payload);
+    }
+  });
+
+  // Series under **By genre**: `/home`'s rows over series, read through the
+  // same parser and with the same 400s. Registered ahead of `/series/:id`,
+  // which would otherwise read "rows" as a series id.
+  router.get('/series/rows', (req: Request, res: Response) => {
+    const query = libraryQueryOr400(req, res);
+    if (query) {
+      const payload: SeriesRowsPayload = storage.getSeriesRows(query);
       res.json(payload);
     }
   });

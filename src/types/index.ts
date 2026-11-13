@@ -59,6 +59,8 @@ export type {
   Series,
   Episode,
   SeriesHomePayload,
+  SeriesRow,
+  SeriesRowsPayload,
   EpisodeContinueEntry,
   SeriesDetail,
   SeasonSummary,

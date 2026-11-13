@@ -7,12 +7,19 @@ import {
   type LibraryQuery,
   type MovieSort,
   type SeriesHomePayload,
+  type SeriesRowsPayload,
 } from '@/types';
 import type { EpisodeRow, SeriesReader, SeriesRow } from '../read/read';
 import { highestRatedSql, shownRatingSql } from '../../browse/browse';
 
 /** The Series tab's Continue Watching row holds at most this many entries. */
 const CONTINUE_LIMIT = 15;
+
+/** A genre row, the Other row and the Favorites row each carry at most this many. */
+const ROW_LIMIT = 15;
+
+/** A series carrying no genre at all: the **Other row**'s clause. */
+const GENRE_LESS = 's.id NOT IN (SELECT series_id FROM series_genres)';
 
 /** A series is fully watched when it has episodes and none is unwatched. */
 const FULLY_WATCHED =
@@ -82,6 +89,13 @@ export interface SeriesBrowse {
    * the Continue Watching entries narrowed by the same filters.
    */
   getSeriesHome(query?: LibraryQuery): SeriesHomePayload;
+  /**
+   * Series under **By genre**, `getHome`'s rules over series: a row per
+   * populated genre busiest first, each capped with the genre's true count;
+   * the genre-less series as `other`; the favorites capped in the caller's
+   * sort; and the Continue row exactly as {@link getSeriesHome} builds it.
+   */
+  getSeriesRows(query: LibraryQuery): SeriesRowsPayload;
   /** Each genre series carry, counted in series, with the series total. */
   listSeriesGenres(): GenreListPayload;
 }
@@ -126,6 +140,52 @@ export function createSeriesBrowse(
     ORDER BY COUNT(sg.series_id) DESC, g.name
   `);
   const countSeries = db.prepare('SELECT COUNT(*) AS n FROM series');
+  const countGenreLess = db.prepare(
+    `SELECT COUNT(*) AS n FROM series s WHERE ${GENRE_LESS}`
+  );
+
+  /** The Continue row, narrowed by the query's filters. */
+  function continueWatchingOf(where: {
+    sql: string;
+    params: unknown[];
+  }): EpisodeContinueEntry[] {
+    return (
+      db
+        .prepare(continueEpisodesSql(where.sql))
+        .all(...where.params) as (EpisodeRow & {
+        series_title: string;
+        series_poster_path: string | null;
+      })[]
+    ).map((row) => ({
+      series: {
+        id: row.series_id,
+        title: row.series_title,
+        posterPath: row.series_poster_path,
+      },
+      episode: reader.assembleEpisode(row),
+    }));
+  }
+
+  /**
+   * The series the query keeps, and one more clause when given, in its sort,
+   * capped at {@link ROW_LIMIT}.
+   */
+  function listCapped(query: LibraryQuery, on: boolean, extra?: string) {
+    const where = seriesWhere(query, on);
+    const filter =
+      extra === undefined
+        ? where.sql
+        : where.sql === ''
+          ? `WHERE ${extra}`
+          : `${where.sql} AND ${extra}`;
+    const rows = db
+      .prepare(
+        `SELECT s.* FROM series s ${filter}
+         ORDER BY ${seriesOrderBy(query.sort, on)} LIMIT ${ROW_LIMIT}`
+      )
+      .all(...where.params) as SeriesRow[];
+    return reader.assembleMany(rows);
+  }
 
   return {
     getSeriesHome: (query = { sort: DEFAULT_MOVIE_SORT }) => {
@@ -142,25 +202,46 @@ export function createSeriesBrowse(
            WHERE series_id IN (SELECT s.id FROM series s ${where.sql})`
         )
         .get(...where.params) as { n: number };
-      const continueWatching: EpisodeContinueEntry[] = (
-        db
-          .prepare(continueEpisodesSql(where.sql))
-          .all(...where.params) as (EpisodeRow & {
-          series_title: string;
-          series_poster_path: string | null;
-        })[]
-      ).map((row) => ({
-        series: {
-          id: row.series_id,
-          title: row.series_title,
-          posterPath: row.series_poster_path,
-        },
-        episode: reader.assembleEpisode(row),
-      }));
       return {
         series: reader.assembleMany(rows),
         episodeCount: n,
-        continueWatching,
+        continueWatching: continueWatchingOf(where),
+      };
+    },
+
+    getSeriesRows: (query) => {
+      const on = tmdbRatings();
+      // Busiest first, as the Genre dropdown lists them; a genre filter keeps
+      // only its own row, and a row the query empties is dropped.
+      const genres = (selectSeriesGenreCounts.all() as GenreCount[]).filter(
+        (genre) => query.genre === undefined || genre.name === query.genre
+      );
+      const rows = genres
+        .map((genre) => ({
+          genre: genre.name,
+          count: genre.count,
+          series: listCapped({ ...query, genre: genre.name }, on),
+        }))
+        .filter((row) => row.series.length > 0);
+
+      // The genre-less series: none under a genre filter, `null` when empty,
+      // its count the unfiltered genre-less total and its genre blank.
+      const otherSeries =
+        query.genre === undefined ? listCapped(query, on, GENRE_LESS) : [];
+      const other =
+        otherSeries.length === 0
+          ? null
+          : {
+              genre: '',
+              count: (countGenreLess.get() as { n: number }).n,
+              series: otherSeries,
+            };
+
+      return {
+        rows,
+        other,
+        favorites: listCapped(query, on, 's.is_favorite = 1'),
+        continueWatching: continueWatchingOf(seriesWhere(query, on)),
       };
     },
 

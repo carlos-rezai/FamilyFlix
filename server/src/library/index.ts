@@ -24,6 +24,7 @@ import type {
   Series,
   SeriesDetail,
   SeriesHomePayload,
+  SeriesRowsPayload,
   Settings,
 } from '@/types';
 import { createMovieReader } from './read/read';
@@ -462,6 +463,13 @@ export interface LibraryStorage {
    * across them; and the Continue row narrowed by the same filters.
    */
   getSeriesHome(query?: LibraryQuery): SeriesHomePayload;
+  /**
+   * Series under **By genre**, `getHome`'s rules over series: a row per
+   * populated genre busiest first with its true count, the genre-less series
+   * as `other`, the favorites in the caller's sort, and the Continue row as
+   * `getSeriesHome` builds it.
+   */
+  getSeriesRows(query: LibraryQuery): SeriesRowsPayload;
   /** Each genre series carry, counted in series, with the series total. */
   listSeriesGenres(): GenreListPayload;
   /** A series' episodes in season, then episode order; `[]` for none. */
@@ -632,6 +640,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setSeriesRating: onTitle(seriesCuration.setSeriesRating),
     getEpisodeRead: seriesReader.getEpisodeRead,
     getSeriesHome: seriesBrowse.getSeriesHome,
+    getSeriesRows: seriesBrowse.getSeriesRows,
     listSeriesGenres: seriesBrowse.listSeriesGenres,
     listEpisodes: seriesReader.listEpisodes,
     getSeriesDetail: seriesReader.getSeriesDetail,

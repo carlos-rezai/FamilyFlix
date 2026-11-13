@@ -5,6 +5,7 @@ import type {
   LibraryQuery,
   MovieGridPayload,
   SeriesHomePayload,
+  SeriesRowsPayload,
 } from '@/types';
 import { toGenreQueryParams, toLibraryQueryParams } from '@/utils';
 
@@ -144,4 +145,25 @@ export async function fetchMovieGrid(
     throw new Error(`GET ${MOVIES_ENDPOINT} failed: ${response.status}`);
   }
   return (await response.json()) as MovieGridPayload;
+}
+
+/** Series under **By genre**: the rows, Other, the favorites and Continue. */
+const SERIES_ROWS_ENDPOINT = '/api/series/rows';
+
+/**
+ * Loads Series under **By genre** for one **Library query**, `fetchSeriesHome`'s
+ * shape: the parameters written by the util the app URL is, so an unfiltered
+ * read asks a clean `/api/series/rows`. Rejects on anything but a 2xx.
+ */
+export async function fetchSeriesRows(
+  query: LibraryQuery
+): Promise<SeriesRowsPayload> {
+  const search = toLibraryQueryParams(query).toString();
+  const url =
+    search === '' ? SERIES_ROWS_ENDPOINT : `${SERIES_ROWS_ENDPOINT}?${search}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    throw new Error(`GET ${SERIES_ROWS_ENDPOINT} failed: ${response.status}`);
+  }
+  return (await response.json()) as SeriesRowsPayload;
 }
