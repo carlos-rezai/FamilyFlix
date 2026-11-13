@@ -11,6 +11,68 @@ Newest entry first.
 
 ---
 
+## 2026-11-13: Welcome tune, the build (issues 594 to 601)
+
+Six slices run by `issue-loop`, each a RED and a GREEN commit (599 needed no
+GREEN), then the live walk (600) and this documents slice (601). **11934
+tests pass across 777 files**, one skipped; `tsc -b --force` is clean. Step
+45 stays 🔜 until the refactor.
+
+### Where the build moved off the plan
+
+- **`useWelcomeTune` has another shape** (594). The PRD had
+  `useWelcomeTune(phase, { played, reducedMotion })`, watching the phase in an
+  effect; that starts the chord a render late. The hook is
+  `useWelcomeTune({ played, reducedMotion })` and returns a stable
+  `(phase) => void` that `WelcomeProvider`'s `send` calls the moment a phase
+  starts, as its clock already did.
+- **One RED test was wrong, fixed by hand** (594). It moved the clock past
+  the intro in one `act` step, so the home was never Ready in time and the
+  welcome went through the **Welcome hold**; the chord started 500ms later
+  than the test expected. It now advances 100ms first, as the other provider
+  tests do.
+- **The timeline's literal scan reached past timing** (595). Its test bans
+  the bare numbers 1000 and 700 anywhere in `WelcomeSplash.styles`, which
+  also held a z-index and a font weight: the splash's z-index went to 999
+  (still above every other layer) and the wordmark reads a new
+  `WORDMARK_WEIGHT` token in `src/tokens/brand.ts`.
+- **A fade wins over `finish()`** (597): a skip moves on to `done`, whose
+  `finish()` would push the close back to the chord's end, so after a fade it
+  does nothing.
+- **Reduced motion plays an empty cue** (598): `play([])` on mount opens the
+  context without a note, so a skip in the 900ms intro has something to fade.
+- **599 needed no code**: #594's player was already silent on a throwing
+  constructor and never resumed. Its tests are kept as guards, and
+  `stubAudioContext` gained `refuse`, `state` and `attempts()` for them.
+- **An unplanned test reads `main.ts`** (594): the PRD left the
+  `autoplayPolicy` line to the live walk; the RED step gave it a source test.
+- **Some new tests passed at RED** (594's reload and deep link, 597's
+  `fadeOut` and silent hold, all of 599): behaviour an earlier slice already
+  held. Each is kept as a guard.
+- **Retuned by ear in the walk** (600), auditioned on a throwaway bench page
+  first, then amended in `handoff-welcome-tune/README.md` before the code:
+  sine plucks at 12ms instead of triangles at 5ms, the letter run up the F
+  major scale to A5 instead of the pentatonic to F6 (the score's rule now
+  says the run climbs the scale, not that it ends on F), the swell at 0.13
+  for 950ms, the chord C3 to A4 instead of F2 to F4, rising in 80ms with its
+  octave at 0.1 and ringing 2600ms, and a 4700Hz lowpass after the master.
+  The player gained a filter node, and `stubAudioContext` a
+  `FakeBiquadFilterNode` that passes levels through.
+
+### Follow-ups for the refactor
+
+- **The empty cue is a workaround** (598). An explicit way to open the tune
+  says what `play([])` only implies.
+- **The literal scan bans numbers, not timings** (595). Scoping it to the
+  keyframes and durations would have spared the z-index and the weight token.
+- **The source test on `main.ts`** (594) checks a string, not behaviour; the
+  walk proved the line. Decide whether it stays.
+- **Slice 594 was too thick**: its RED step used 101k tokens against the 100k
+  a step is budgeted. The player, the score, the hook and the shell line were
+  one slice.
+
+---
+
 ## 2026-11-12: Welcome tune, the grill-me (log 62)
 
 Step 45, settled in `docs/design-logs/62-welcome-tune.md`, with its score as

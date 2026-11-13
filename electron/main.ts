@@ -203,7 +203,8 @@ function applyWindowPolicy(target: BrowserWindow, appUrl: string): void {
 
 /**
  * Open the one window over the **Start-up splash** and show it as soon as the
- * splash is painted, before the server's `ready`.
+ * splash is painted, before the server's `ready`. Its autoplay policy lets
+ * the **Welcome tune** sound on a **Cold start** with no gesture.
  */
 function openWindow(preload: string): void {
   window = new BrowserWindow({

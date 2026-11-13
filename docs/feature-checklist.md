@@ -555,18 +555,26 @@ Step 45 reopens a scope call of log 55, which shipped the intro with no
 sound. Settled in a grill-me on 2026-11-12 (design log 62, handoff
 `docs/handoff/handoff-welcome-tune/`, whose README is the score):
 
-45. 🔲 **Welcome tune**: a short, catchy tune plays with the Welcome splash
+45. 🔜 **Welcome tune**: a short, catchy tune plays with the Welcome splash
     on a Cold start, its notes in sync with the animation: the Fs landing,
     the letters rising, the light sweeping, and a closing chord as the
     wordmark glides into the header. No mute control for now; one can come
-    later.
-    - **Synthesised, in F**: a dozen notes played with Web Audio from a score
-      in the code, no audio file; the two Fs land on F, the letters run up
-      the F major pentatonic, the sweep swells, and an F major chord rings
-      under the arriving home.
-    - **In sync by construction**: the splash, its clock and the score read
-      one timeline, and the Closing chord waits for the Wordmark handoff, so
-      a held welcome stays silent until the home is ready.
-    - **Every path**: a skip fades the tune over 150ms; reduced motion plays
-      the chord alone; a window with no sound to give is silent and the
-      welcome unchanged.
+    later. Built in issues 594 to 600; the refactor is still to come.
+    - **Synthesised, in F**: twenty notes played with Web Audio from a score
+      in the code (`welcomeScore`), no audio file. The **Intro cue** plucks F3
+      and F4 as the two Fs land, runs up the F major scale from F4 to A5 with
+      the letters and swells C6 and F6 under the light's sweep; the **Closing
+      chord**, C3 F3 A3 C4 F4 A4 as bells, rings 2600ms under the arriving
+      home. Retuned by ear in the live walk (600): sine plucks with a 12ms
+      attack, a bell rising in 80ms with its octave at 0.1, and the master
+      at 0.3 through a 4700Hz lowpass, so nothing crackles on a TV's speakers.
+    - **In sync by construction**: the splash's styles, the welcome's clock
+      and the score all read one timeline (`welcomeTimeline`), and the Closing
+      chord waits for the Wordmark handoff, so a held welcome stays silent
+      until the home is ready.
+    - **Every path**: a skip fades the tune over 150ms and never plays the
+      chord; reduced motion plays the chord alone, at 900ms; a reload or a
+      deep link makes no sound; an `AudioContext` that is missing or throws
+      (no audio device on Linux) gives a silent tune, a suspended one is never
+      resumed, and the welcome runs unchanged. The shell spells
+      `autoplayPolicy: 'no-user-gesture-required'` so a Cold start may sound.

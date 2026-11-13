@@ -126,8 +126,12 @@ export interface WelcomeProviderProps {
  * swallowed on `window` and skips: the splash goes and the Home layer fades
  * in over 150ms, once the home is ready. Under reduced motion, read once
  * at the start, nothing moves: 900ms of fade-in, a 400ms handoff of fades,
- * the header wordmark shown from its start. Anywhere else it draws nothing but
- * its children.
+ * the header wordmark shown from its start. A played welcome sounds the
+ * **Welcome tune** through `useWelcomeTune`, told each phase the moment it
+ * starts: the **Intro cue** from the start, the **Closing chord** as the
+ * handoff starts (the hold silent between them), a 150ms fade on a skip, and
+ * under reduced motion the chord alone. Anywhere else it draws nothing but
+ * its children, and makes no sound.
  */
 export function WelcomeProvider({ children }: WelcomeProviderProps) {
   const location = useLocation();

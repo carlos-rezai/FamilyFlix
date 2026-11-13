@@ -20,6 +20,11 @@ import {
   MARK_SWEEP_START,
 } from '@/App/welcomeTimeline/welcomeTimeline';
 
+/*
+ * Every time below is read off `welcomeTimeline`, the clock the **Welcome
+ * tune**'s score reads too, so each **Intro cue** note lands on its frame.
+ */
+
 /** The media query the welcome reads, once at the start (log 55 Q15). */
 export const REDUCED_MOTION_QUERY = '(prefers-reduced-motion: reduce)';
 
