@@ -4,13 +4,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import type { Episode, EpisodeRead, Movie, Playable } from '@/types';
-import {
-  formatEpisodeTag,
-  gradientFromId,
-  imageUrl,
-  moviePath,
-  seasonPath,
-} from '@/utils';
+import { formatEpisodeTag, moviePath, seasonPath } from '@/utils';
 import { PlayerControls } from '../PlayerControls/PlayerControls';
 import { PlayerNotice } from '../PlayerNotice/PlayerNotice';
 import type { PlayerNoticeKind } from '../PlayerNotice/PlayerNotice';
@@ -32,15 +26,7 @@ import {
   readVolumePreference,
   writeVolumePreference,
 } from '../volumePreference/volumePreference';
-import {
-  ArtLayer,
-  Backdrop,
-  Centre,
-  Picture,
-  PictureLayer,
-  Scrim,
-  Stage,
-} from './Player.styles';
+import { Centre, Picture, PictureLayer, Stage } from './Player.styles';
 
 /**
  * What to play: a **Playable** — a movie or an episode. The URL carries an
@@ -159,8 +145,8 @@ function noticeFor(
  * The player screen: the film, our **Chrome** over it, and whatever the centre
  * of the picture has to say.
  *
- * It owns the two reads the screen opens with — the movie record, for the name
- * and the artwork, and the **Playback read**, for the path and the duration —
+ * It owns the two reads the screen opens with — the movie record, for the name,
+ * and the **Playback read**, for the path and the duration —
  * and hands everything else to a hook: `usePlayback` binds the element,
  * `useWatchReporter` decides when the watching gets written down,
  * `useControlsVisibility` decides whether the chrome is on screen, and the two
@@ -169,10 +155,9 @@ function noticeFor(
  * The record is what the film opens at, which is why this screen reads one at
  * all beyond the title: an in-progress film starts where it was left, silently.
  *
- * **The screen is never a flat black rectangle.** The blurred backdrop is drawn
- * from the id's own gradient before either read has landed, and a film whose
- * file is missing gets the notice that says so rather than a picture that will
- * never arrive.
+ * **Behind the picture is plain black**, letterbox bars included: nothing of
+ * the title's artwork is drawn there. A film whose file is missing gets the
+ * notice that says so rather than a picture that will never arrive.
  *
  * There is one way out, reached two ways: the Back pill and Escape both call
  * {@link leave}, because two ways out with two handlers are two behaviours to
@@ -383,15 +368,8 @@ export function Player({
     onLeave: leave,
   });
 
-  const { g1, g2 } = gradientFromId(id);
-
   return (
     <Stage $idle={!visible} onMouseMove={onMouseMove}>
-      <ArtLayer aria-hidden="true">
-        <Backdrop url={imageUrl(movie?.posterPath ?? null)} g1={g1} g2={g2} />
-        <Scrim />
-      </ArtLayer>
-
       <PictureLayer onClick={toggle}>
         {/* No element over bytes no browser can read: one left there stalls,
             retries and logs a decode error behind a notice already saying what

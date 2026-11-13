@@ -1,7 +1,5 @@
 import styled from 'styled-components';
 
-import { Artwork } from '@/primitives';
-
 /**
  * The player's stage: the prototype's `playerWrap` — a black, non-scrolling
  * surface filling the window, which the picture, the chrome and the subtitle
@@ -25,34 +23,6 @@ export const Stage = styled.div<{ $idle: boolean }>`
   cursor: ${({ $idle }) => ($idle ? 'none' : 'pointer')};
 `;
 
-/** The backdrop and its scrim, clipped to the stage so the scale cannot spill. */
-export const ArtLayer = styled.div`
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-`;
-
-/**
- * The film's own artwork, blurred out of legibility behind the picture — the
- * prototype's `blur(28px) brightness(.5)` over a `scale(1.2)`, which is what
- * keeps the blur's soft edge off the sides of the screen.
- *
- * It is drawn from the id's **Gradient fallback** before a record has arrived
- * and from the poster once one has, so the screen has something behind the
- * picture from its first frame rather than from its first byte of video.
- */
-export const Backdrop = styled(Artwork)`
-  filter: blur(28px) brightness(0.5);
-  transform: scale(1.2);
-`;
-
-/** The prototype's flat wash over the backdrop, so white chrome stays legible. */
-export const Scrim = styled.div`
-  position: absolute;
-  inset: 0;
-  background: rgba(8, 6, 4, 0.55);
-`;
-
 /**
  * The picture and whatever the centre of it is saying, and the surface a press
  * anywhere on the film lands on — one layer, because "click the picture to
@@ -69,10 +39,8 @@ export const PictureLayer = styled.div`
  * is a mix of aspect ratios, so cropping would silently cut the sides off some
  * of them.
  *
- * Transparent, not black: the backdrop is behind it, and an element painting
- * its own black over that would give the family the flat rectangle the backdrop
- * exists to replace — through the letterbox bars, and for as long as the first
- * frame takes to arrive.
+ * No background of its own: the letterbox bars are the stage's black showing
+ * through, so there is one black on this screen, not two.
  */
 export const Picture = styled.video`
   position: absolute;

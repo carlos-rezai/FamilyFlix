@@ -32,8 +32,8 @@ import { stubMediaElement } from '@/test-support/stubMediaElement/stubMediaEleme
  * (issue #85).
  *
  * The player stops being a bare element with the browser's controls on it. This
- * is the screen the family actually sees: our **Chrome** over a blurred
- * backdrop, the film starting on its own, the controls fading into **Idle**
+ * is the screen the family actually sees: our **Chrome** over a black
+ * stage, the film starting on its own, the controls fading into **Idle**
  * three seconds after the mouse stops, and a **Player notice** where a black
  * rectangle used to be.
  *
@@ -287,7 +287,7 @@ function circle(container: HTMLElement): HTMLElement | undefined {
   );
 }
 
-/** Whatever the picture sits over that is drawn blurred — the backdrop. */
+/** Anything on the screen drawn blurred; the player draws none behind the picture. */
 function blurredLayer(container: HTMLElement): HTMLElement | undefined {
   return Array.from(container.querySelectorAll<HTMLElement>('*')).find(
     (element) => window.getComputedStyle(element).filter.includes('blur')
@@ -353,22 +353,15 @@ describe('Player — the picture', () => {
     expect(await screen.findByText(FILM)).toBeDefined();
   });
 
-  it('has the blurred backdrop behind the picture from the first frame', async () => {
-    // Not after the record arrives and not after the first byte of video: the
-    // screen must never be a flat black rectangle, and the gradient is
-    // derivable from the id the URL already carried.
-    //
-    // Rendered rather than opened, because the frame this is about is the one
-    // the picture is not on yet: the backdrop has to be there already, and the
-    // element arrives behind it a moment later.
+  it('draws plain black behind the picture, not the artwork', async () => {
+    // The letterbox bars are black whatever the film's shape: no blurred
+    // poster is drawn behind the picture, from the first frame on.
     const { container } = renderScreen();
 
-    const backdrop = blurredLayer(container);
-    expect(backdrop).toBeDefined();
+    expect(blurredLayer(container)).toBeUndefined();
 
-    const video = await waitFor(() => picture(container));
-    const order = backdrop?.compareDocumentPosition(video) ?? 0;
-    expect(order & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await waitFor(() => picture(container));
+    expect(blurredLayer(container)).toBeUndefined();
   });
 
   it('pauses when the picture is clicked, and resumes when it is clicked again', async () => {
@@ -508,7 +501,7 @@ describe('Player — a film whose file is missing', () => {
     const { container } = renderScreen();
 
     expect(await screen.findByText(MISSING_TITLE)).toBeDefined();
-    expect(blurredLayer(container)).toBeDefined();
+    expect(blurredLayer(container)).toBeUndefined();
   });
 
   it('points nothing at the stream on the frame before the read lands', () => {
@@ -612,11 +605,11 @@ describe('Player — a film this build cannot play', () => {
     }
   });
 
-  it('keeps its backdrop rather than going black', async () => {
+  it('stays black behind the notice, with no artwork drawn', async () => {
     const { container } = renderScreen();
     await screen.findByText(CANNOT_TITLE);
 
-    expect(blurredLayer(container)).toBeDefined();
+    expect(blurredLayer(container)).toBeUndefined();
   });
 });
 
@@ -2073,13 +2066,13 @@ describe('Player — a conversion that never started', () => {
     }
   });
 
-  it('keeps its backdrop rather than going black', async () => {
+  it('stays black behind the notice, with no artwork drawn', async () => {
     const { container, video } = await renderPlayer();
 
     emit(video, 'error');
     await screen.findByText(COULD_NOT_START_TITLE);
 
-    expect(blurredLayer(container)).toBeDefined();
+    expect(blurredLayer(container)).toBeUndefined();
   });
 });
 

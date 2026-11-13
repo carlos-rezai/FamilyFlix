@@ -15,19 +15,6 @@
         onMouseMove="{{ p.onMove }}"
         style="{{ p.wrapStyle }}"
       >
-        <div style="position: absolute; inset: 0; overflow: hidden">
-          <div
-            style="{{ p.posterStyle }}; filter:blur(28px) brightness(.5);transform:scale(1.2)"
-          ></div>
-          <div
-            style="
-              position: absolute;
-              inset: 0;
-              background: rgba(8, 6, 4, 0.55);
-            "
-          ></div>
-        </div>
-
         <div
           onClick="{{ p.togglePlay }}"
           style="
