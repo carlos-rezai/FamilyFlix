@@ -19,7 +19,7 @@ import {
 /**
  * 63, Row view, Phase 4 (issue #611): Series under **By genre**.
  *
- * `SeriesRows` is `HomeRows`' shape over series, read from
+ * `SeriesRows` is `MovieRows`' shape over series, read from
  * `GET /api/series/rows`: a `GenreRow` per populated series genre in the order
  * the payload gives them, each with its true count on _View all_, and the
  * genre-less series last as _Other series_, drawn only when the payload holds

@@ -1242,7 +1242,7 @@ describe('library: getHome pins the continue section’s order', () => {
     const home = storage.getHome({ sort: 'a-z' });
 
     // Pinning the order must not conjure a shelf out of a library with no
-    // queue in it — the row stays hidden (`HomeRows.test.tsx`).
+    // queue in it — the row stays hidden (`MovieRows.test.tsx`).
     expect(home.continueWatching).toEqual([]);
     expect(home.rows.map((row) => row.genre)).toEqual(['Drama']);
   });

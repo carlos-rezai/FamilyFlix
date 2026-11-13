@@ -79,10 +79,10 @@ function withHeart(
 }
 
 /** Where the load is: never both loading and errored, never rows without `ready`. */
-export type HomeRowsStatus = 'loading' | 'ready' | 'error';
+export type MovieRowsStatus = 'loading' | 'ready' | 'error';
 
-export interface UseHomeRowsResult {
-  status: HomeRowsStatus;
+export interface UseMovieRowsResult {
+  status: MovieRowsStatus;
   /**
    * The settled query these rows were loaded for. Handed back so that anything
    * describing the result — the miss copy above all — reads the same query the
@@ -127,7 +127,7 @@ export interface UseHomeRowsResult {
  * same state. The heart fills before the save is confirmed and reverts if the
  * save fails, so it never claims something is saved that isn't.
  */
-export function useHomeRows(): UseHomeRowsResult {
+export function useMovieRows(): UseMovieRowsResult {
   const [searchParams] = useSearchParams();
 
   // The settled query written back out the way the URL spells it — the shared

@@ -96,7 +96,7 @@ export interface UseSeriesRowsResult {
 }
 
 /**
- * Series under **By genre**, `useHomeRows`' shape over series: the URL's
+ * Series under **By genre**, `useMovieRows`' shape over series: the URL's
  * settled **Library query** is the load's key, so only a change to it reloads
  * `GET /api/series/rows`; the held payload is drawn per render under the TMDB
  * ratings preference through `seriesCardView`; and a heart saves through

@@ -1,6 +1,6 @@
 import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
 
-import { HomeRows } from '../home/HomeRows/HomeRows';
+import { MovieRows } from '../home/MovieRows/MovieRows';
 import { MovieGrid } from '../home/MovieGrid/MovieGrid';
 import { SeriesHome } from '../series/SeriesHome/SeriesHome';
 import { SeriesRows } from '../series/SeriesRows/SeriesRows';
@@ -10,7 +10,7 @@ import { useRowView } from '../useRowView/useRowView';
 function MoviesBody() {
   const { rowView } = useRowView();
   if (rowView === null) return null;
-  return rowView === 'all' ? <MovieGrid /> : <HomeRows />;
+  return rowView === 'all' ? <MovieGrid /> : <MovieRows />;
 }
 
 /** Series' body, picked off its own **Row view**: nothing until the read lands. */
@@ -23,7 +23,7 @@ function SeriesBody() {
 /**
  * The browse home's body, picked off the **Library tab** the URL names, then
  * off that tab's **Row view**. Movies under **By genre** (the default) are
- * `HomeRows`, the genre rows and the **Other row** last; under **All**,
+ * `MovieRows`, the genre rows and the **Other row** last; under **All**,
  * `MovieGrid`, _All movies_ in one uncapped grid. Series under **All** (the
  * default) are `SeriesHome`, _All series_; under **By genre**, `SeriesRows`,
  * the series genre rows and the **Other series row** last. The Row view is

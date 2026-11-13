@@ -54,7 +54,7 @@ function movieCountLabel(count: number): string {
  * `saveFavorite`, filled at once and put back if refused, and the shelf follows
  * it because it is read off the same loaded movies. A skeleton grid holds the
  * place until the payload lands; a search or filter that keeps nothing is a
- * no-results face, and an empty library is worded as one, as `HomeRows` has it.
+ * no-results face, and an empty library is worded as one, as `MovieRows` has it.
  */
 export function MovieGrid() {
   const navigate = useNavigate();

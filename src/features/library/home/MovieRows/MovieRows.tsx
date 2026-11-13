@@ -8,7 +8,7 @@ import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { GenreRow } from '../GenreRow/GenreRow';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { shelvedFavorites } from '../shelvedFavorites/shelvedFavorites';
-import { useHomeRows } from '../useHomeRows/useHomeRows';
+import { useMovieRows } from '../useMovieRows/useMovieRows';
 import {
   SkeletonSection,
   SkeletonHeader,
@@ -16,7 +16,7 @@ import {
   SkeletonViewAll,
   SkeletonStrip,
   SkeletonCard,
-} from './HomeRows.styles';
+} from './MovieRows.styles';
 
 /** Enough placeholder rows and cards to fill the fold while the library loads. */
 const SKELETON_ROWS = 3;
@@ -67,7 +67,7 @@ const GENRE_LESS_PATH = '/genre-less';
  * so the message can never name a filter the request ignored — and the query
  * still lives in the URL, so nothing here is imported from the search feature.
  */
-export function HomeRows() {
+export function MovieRows() {
   const {
     status,
     query,
@@ -77,7 +77,7 @@ export function HomeRows() {
     other,
     retry,
     toggleFavorite,
-  } = useHomeRows();
+  } = useMovieRows();
   const navigate = useNavigate();
   // A settled query holds a filter or holds nothing; there is no empty one to
   // tell apart, because the parser already dropped those.

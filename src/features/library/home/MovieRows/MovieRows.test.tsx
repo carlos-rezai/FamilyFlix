@@ -10,7 +10,7 @@ import {
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 
-import { HomeRows } from './HomeRows';
+import { MovieRows } from './MovieRows';
 import { theme } from '@/styles/theme';
 import {
   MOVIE_SORTS,
@@ -210,7 +210,7 @@ function renderRows(url = '/') {
   return render(
     <MemoryRouter initialEntries={[url]}>
       <ThemeProvider theme={theme}>
-        <HomeRows />
+        <MovieRows />
       </ThemeProvider>
       <LocationProbe />
     </MemoryRouter>
@@ -243,7 +243,7 @@ function favoriteSaves(): string[] {
     .map((match) => decodeURIComponent(match[1]));
 }
 
-describe('HomeRows — loading the library', () => {
+describe('MovieRows — loading the library', () => {
   it('renders one genre row per populated genre, in the order the home payload gives them', async () => {
     respondWithRows(LIBRARY);
 
@@ -341,7 +341,7 @@ describe('HomeRows — loading the library', () => {
  * screen can claim is where the section sits, where a tile leads, and when the
  * section is absent altogether.
  */
-describe('HomeRows — the Continue Watching row', () => {
+describe('MovieRows — the Continue Watching row', () => {
   it('renders the Continue Watching row above every genre row', async () => {
     respondWithRows(LIBRARY, IN_PROGRESS);
 
@@ -410,7 +410,7 @@ describe('HomeRows — the Continue Watching row', () => {
   });
 });
 
-describe('HomeRows — the Favorites row', () => {
+describe('MovieRows — the Favorites row', () => {
   it('renders the Favorites row between Continue Watching and the genre rows', async () => {
     respondWithRows(LIBRARY, IN_PROGRESS, FAVORITES);
 
@@ -528,7 +528,7 @@ describe('HomeRows — the Favorites row', () => {
   });
 });
 
-describe('HomeRows — the empty library', () => {
+describe('MovieRows — the empty library', () => {
   it('reports an empty library only when there are no genre rows and nothing in progress', async () => {
     respondWithRows([], []);
 
@@ -582,7 +582,7 @@ describe('HomeRows — the empty library', () => {
   });
 });
 
-describe('HomeRows — a search that matched nothing', () => {
+describe('MovieRows — a search that matched nothing', () => {
   it('says so plainly, and quotes back what was typed', async () => {
     // A miss must not read as a broken app, and the parent needs to see the
     // term to spot a typo in it.
@@ -620,7 +620,7 @@ describe('HomeRows — a search that matched nothing', () => {
   });
 });
 
-describe('HomeRows — while a new query is loading', () => {
+describe('MovieRows — while a new query is loading', () => {
   /** A stand-in for the header's search bar: it only ever writes the URL. */
   function SearchTrigger() {
     const navigate = useNavigate();
@@ -638,7 +638,7 @@ describe('HomeRows — while a new query is loading', () => {
     return render(
       <MemoryRouter initialEntries={['/']}>
         <ThemeProvider theme={theme}>
-          <HomeRows />
+          <MovieRows />
         </ThemeProvider>
         <SearchTrigger />
       </MemoryRouter>
@@ -665,12 +665,12 @@ describe('HomeRows — while a new query is loading', () => {
 
 /**
  * The optimistic-favorite behaviour itself — reverting, echoing, one movie
- * across several rows — belongs to `useHomeRows` and is tested there against
+ * across several rows — belongs to `useMovieRows` and is tested there against
  * the hook directly. What is left here is the claim only the rendered screen
  * can make: that the heart on a card is actually wired to that hook, for the
  * movie whose card was clicked.
  */
-describe('HomeRows — the favorite heart', () => {
+describe('MovieRows — the favorite heart', () => {
   it('fills the clicked card’s heart and saves that movie', async () => {
     serve(HOME_PAYLOAD);
     renderRows();
@@ -690,7 +690,7 @@ describe('HomeRows — the favorite heart', () => {
  * now empty the screen with nothing typed, which the search copy cannot
  * describe — it would quote an empty term back.
  */
-describe('HomeRows — filters that matched nothing', () => {
+describe('MovieRows — filters that matched nothing', () => {
   const FILTER_MISS =
     'No movies match these filters. Try a different genre or rating.';
 
@@ -760,7 +760,7 @@ describe('HomeRows — filters that matched nothing', () => {
 
 // --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
 
-describe('HomeRows — a rating that matched nothing', () => {
+describe('MovieRows — a rating that matched nothing', () => {
   const FILTER_MISS =
     'No movies match these filters. Try a different genre or rating.';
 
@@ -838,7 +838,7 @@ describe('HomeRows — a rating that matched nothing', () => {
  * The destination's path and its query string are asserted apart, because
  * "clean" is a claim about the second one on its own.
  */
-describe('HomeRows — the carried sort on View all', () => {
+describe('MovieRows — the carried sort on View all', () => {
   /**
    * A genre whose name has a space in it, so the path encoding and the carried
    * parameter are seen surviving the same click.
@@ -1011,7 +1011,7 @@ function homeRequests(): string[] {
     .filter((url) => url.includes('/api/home'));
 }
 
-describe('HomeRows — pruning the shelf', () => {
+describe('MovieRows — pruning the shelf', () => {
   it('takes the card off the shelf the instant it is un-hearted, leaving the other favorite', async () => {
     serveShelf(SHELF_ROWS, SHELF_FAVORITES, () =>
       Promise.resolve(okResponse({ value: false }))
@@ -1147,7 +1147,7 @@ describe('HomeRows — pruning the shelf', () => {
  * non-zero length and renders nothing at all. A guard reading raw lengths sees
  * a populated library, skips every message, and the screen goes blank.
  */
-describe('HomeRows — the shelf that empties under the guard', () => {
+describe('MovieRows — the shelf that empties under the guard', () => {
   const FILTER_MISS =
     'No movies match these filters. Try a different genre or rating.';
 
@@ -1281,7 +1281,7 @@ function serveRemembering(
   });
 }
 
-describe('HomeRows — a heart from a genre row reaches the shelf', () => {
+describe('MovieRows — a heart from a genre row reaches the shelf', () => {
   it('draws the Favorites row the moment a movie is hearted in its genre row', async () => {
     serveRemembering(() => new Promise<Response>(() => undefined));
     renderRows();
@@ -1343,7 +1343,7 @@ describe('HomeRows — a heart from a genre row reaches the shelf', () => {
  * Off, or before the read lands, the cards draw as before. The Continue card
  * draws no stars and is unchanged.
  */
-describe('HomeRows — TMDB ratings on the cards', () => {
+describe('MovieRows — TMDB ratings on the cards', () => {
   function preference(tmdbRatings: boolean | null) {
     return makeDisplayPreferenceApi({ tmdbRatings });
   }
@@ -1353,7 +1353,7 @@ describe('HomeRows — TMDB ratings on the cards', () => {
       <MemoryRouter initialEntries={['/']}>
         <ThemeProvider theme={theme}>
           <DisplayPreferenceContext.Provider value={preference(tmdbRatings)}>
-            <HomeRows />
+            <MovieRows />
           </DisplayPreferenceContext.Provider>
         </ThemeProvider>
       </MemoryRouter>
@@ -1445,7 +1445,7 @@ describe('HomeRows — TMDB ratings on the cards', () => {
   });
 });
 
-describe('HomeRows: the Other row', () => {
+describe('MovieRows: the Other row', () => {
   /**
    * The genre-less films the home read answers in `other`. Its `genre` is
    * deliberately blank: the title is this screen's to draw, not the payload's.

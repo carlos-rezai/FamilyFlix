@@ -17,7 +17,7 @@ export const OTHER_SERIES_TITLE = 'Other series';
 const SERIES_TAB = 'series';
 
 /**
- * Series under **By genre**, `HomeRows`' shape over `GET /api/series/rows`: the
+ * Series under **By genre**, `MovieRows`' shape over `GET /api/series/rows`: the
  * episode Continue row, the **Favorites row**, a `GenreRow` per populated
  * series genre in the payload's order with its true count on _View all_, and
  * _Other series_ last, drawn only when the payload holds one. A card opens the

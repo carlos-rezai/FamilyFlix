@@ -25,7 +25,7 @@ import { RowViewSwitch } from '../RowViewSwitch/RowViewSwitch';
 
 /**
  * 63, Row view, Phase 3 (issue #610): `LibraryBody` picks the Movies tab's
- * body off its **Row view**: `MovieGrid` under **All**, `HomeRows` under
+ * body off its **Row view**: `MovieGrid` under **All**, `MovieRows` under
  * **By genre**, and nothing while the view is `null`. The view is held by the
  * household rather than the URL, so back from a title lands on it again.
  */

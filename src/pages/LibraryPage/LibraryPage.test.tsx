@@ -157,7 +157,7 @@ function requestedQuery(): URLSearchParams {
 
 /**
  * The browse home is composition only: the chrome from `MainLayout` and the
- * body from the library feature's `HomeRows`. What those two do once mounted
+ * body from the library feature's `MovieRows`. What those two do once mounted
  * — load states, rows, the favorite heart — is tested where it lives.
  */
 describe('LibraryPage', () => {

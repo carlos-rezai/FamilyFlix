@@ -7,7 +7,7 @@ import type { PosterCardMovie } from '@/types';
  * save a card to put back — so a section can hold movies and draw none.
  *
  * Written once because two callers need the same answer. `FavoritesRow` maps it
- * into cards, and `HomeRows`' empty guard counts it, and a screen whose guard
+ * into cards, and `MovieRows`' empty guard counts it, and a screen whose guard
  * and whose shelf disagree about what is on screen renders nothing at all with
  * nothing to say about it.
  */

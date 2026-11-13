@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { MemoryRouter, useNavigate } from 'react-router-dom';
 
-import { useHomeRows } from './useHomeRows';
+import { useMovieRows } from './useMovieRows';
 import { gradientFromId, NOMINAL_SLIVER_PERCENT } from '@/utils';
 import type { GenreRowModel, HomePayload, PosterCardMovie } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
@@ -215,7 +215,7 @@ function routerAt(url: string) {
 
 /** Mount the hook on a URL, without waiting for anything. */
 function mountRows(url = '/') {
-  return renderHook(() => useHomeRows(), { wrapper: routerAt(url) });
+  return renderHook(() => useMovieRows(), { wrapper: routerAt(url) });
 }
 
 /** Mount the hook and wait for the initial load to settle. */
@@ -288,7 +288,7 @@ function favoriteRequests(): FavoriteRequest[] {
     }));
 }
 
-describe('useHomeRows — loading the library', () => {
+describe('useMovieRows — loading the library', () => {
   it('maps the payload into render-ready rows and reports ready', async () => {
     serve(HOME_PAYLOAD);
 
@@ -389,7 +389,7 @@ describe('useHomeRows — loading the library', () => {
   });
 });
 
-describe('useHomeRows — the settled query', () => {
+describe('useMovieRows — the settled query', () => {
   /** The same library narrowed by a search: Action matched nothing and was dropped. */
   const NARROWED_PAYLOAD: HomePayload = {
     continueWatching: [],
@@ -512,7 +512,7 @@ describe('useHomeRows — the settled query', () => {
   });
 });
 
-describe('useHomeRows — the continue section', () => {
+describe('useMovieRows — the continue section', () => {
   it('maps the continue section into render-ready resume tiles', async () => {
     serve(IN_PROGRESS_PAYLOAD);
 
@@ -588,7 +588,7 @@ describe('useHomeRows — the continue section', () => {
   });
 });
 
-describe('useHomeRows — the favorites section', () => {
+describe('useMovieRows — the favorites section', () => {
   it('maps the favorites section into render-ready poster cards', async () => {
     serve(FAVORITES_PAYLOAD);
 
@@ -686,7 +686,7 @@ describe('useHomeRows — the favorites section', () => {
   });
 });
 
-describe('useHomeRows — the favorite flag', () => {
+describe('useMovieRows — the favorite flag', () => {
   it('shows the new value immediately, before the save has come back', async () => {
     // A save that never settles: anything set here is optimistic, not confirmed.
     serve(HOME_PAYLOAD, () => new Promise<Response>(() => undefined));
@@ -817,7 +817,7 @@ describe('useHomeRows — the favorite flag', () => {
   });
 });
 
-describe('useHomeRows — one heart, two sections', () => {
+describe('useMovieRows — one heart, two sections', () => {
   it('sets the flag on the shelf and in every genre row the movie has a card in', async () => {
     // A save that never settles: everything asserted here is the optimistic
     // edit, applied in one `setData` across both sections.
@@ -921,7 +921,7 @@ describe('useHomeRows — one heart, two sections', () => {
   });
 });
 
-describe('useHomeRows — the sort order', () => {
+describe('useMovieRows — the sort order', () => {
   /** The same library the other way up, as a sorted request would answer it. */
   const SORTED_PAYLOAD: HomePayload = {
     continueWatching: [],
@@ -1035,7 +1035,7 @@ describe('useHomeRows — the sort order', () => {
  * read from the URL like every other part of the settled query, and the server
  * is what narrows the screen down to the one row.
  */
-describe('useHomeRows — the genre filter', () => {
+describe('useMovieRows — the genre filter', () => {
   /** The library narrowed to one genre, as a filtered request would answer it. */
   const ONE_ROW_PAYLOAD: HomePayload = {
     continueWatching: [],
@@ -1164,7 +1164,7 @@ describe('useHomeRows — the genre filter', () => {
 
 // --- 05 — Search + filter, Phase 5: "the Rating dropdown" (issue #37) ---------
 
-describe('useHomeRows — the minimum rating', () => {
+describe('useMovieRows — the minimum rating', () => {
   /** The library narrowed to what is well rated, as a filtered request answers it. */
   const HIGHLY_RATED_PAYLOAD: HomePayload = {
     continueWatching: [],
@@ -1387,7 +1387,7 @@ function shelved(favorites: PosterCardMovie[]): string[] {
   return favorites.filter((movie) => movie.favorite).map((movie) => movie.id);
 }
 
-describe('useHomeRows — a heart from a genre row reaches the shelf', () => {
+describe('useMovieRows — a heart from a genre row reaches the shelf', () => {
   it('puts the movie on the shelf at once, at the front, before the save has come back', async () => {
     serve(ROW_HEART_PAYLOAD, () => new Promise<Response>(() => undefined));
     const { result } = await loadRows();
