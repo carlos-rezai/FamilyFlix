@@ -47,7 +47,7 @@ function movieCountLabel(count: number): string {
 }
 
 /**
- * Movies under the **All** **Row view**: `SeriesHome`'s shape in films over
+ * Movies under the **All** **Row view**: `SeriesGrid`'s shape in films over
  * `GET /api/movies`. The Continue row, the **Favorites row** read off the grid
  * (its hearted films, in its order, at most 15), _All movies_, the count line
  * and the **Library grid**. A card opens the film's page; a heart saves through

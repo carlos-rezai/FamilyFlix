@@ -9,7 +9,7 @@ import {
 import { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
 
-import { SeriesHome } from './SeriesHome';
+import { SeriesGrid } from './SeriesGrid';
 import { theme } from '@/styles/theme';
 import type { Series, SeriesHomePayload } from '@/types';
 import {
@@ -87,7 +87,7 @@ function renderHome(url = '/?tab=series') {
   return render(
     <MemoryRouter initialEntries={[url]}>
       <ThemeProvider theme={theme}>
-        <SeriesHome />
+        <SeriesGrid />
       </ThemeProvider>
     </MemoryRouter>
   );
@@ -96,7 +96,7 @@ function renderHome(url = '/?tab=series') {
 const heading = () =>
   screen.findByRole('heading', { name: 'All series', level: 2 });
 
-describe('SeriesHome — All series', () => {
+describe('SeriesGrid — All series', () => {
   it('asks GET /api/series for the tab', async () => {
     serve({ series: [], episodeCount: 0, continueWatching: [] });
 
@@ -189,7 +189,7 @@ describe('SeriesHome — All series', () => {
 
 // 22 — Series (TV), Phase 2 (issue #191): a Series tab poster opens its
 // **Series page**, `/series/<id>` — the route `seriesPath` names.
-describe('SeriesHome — opening a series', () => {
+describe('SeriesGrid — opening a series', () => {
   it('opens the series page when its poster is pressed', async () => {
     serve({
       series: [
@@ -203,7 +203,7 @@ describe('SeriesHome — opening a series', () => {
     render(
       <MemoryRouter initialEntries={['/?tab=series']}>
         <ThemeProvider theme={theme}>
-          <SeriesHome />
+          <SeriesGrid />
         </ThemeProvider>
         <LocationProbe />
       </MemoryRouter>
@@ -222,7 +222,7 @@ describe('SeriesHome — opening a series', () => {
  * `POST /api/series/:id/favorite { value }`, never the movie's route. It fills
  * before the save is confirmed and is put back if the save is refused.
  */
-describe('SeriesHome — the heart', () => {
+describe('SeriesGrid — the heart', () => {
   let saveFetch: ReturnType<
     typeof vi.fn<
       (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>
@@ -286,7 +286,7 @@ describe('SeriesHome — the heart', () => {
     render(
       <MemoryRouter initialEntries={['/?tab=series']}>
         <ThemeProvider theme={theme}>
-          <SeriesHome />
+          <SeriesGrid />
         </ThemeProvider>
         <LocationProbe />
       </MemoryRouter>
@@ -384,7 +384,7 @@ function makeEntry(
 const continueRegion = () =>
   screen.findByRole('region', { name: 'Continue Watching' });
 
-describe('SeriesHome — Continue Watching', () => {
+describe('SeriesGrid — Continue Watching', () => {
   it('draws a Continue Watching row above All series', async () => {
     serve({
       continueWatching: [makeEntry()],
@@ -468,7 +468,7 @@ describe('SeriesHome — Continue Watching', () => {
     render(
       <MemoryRouter initialEntries={['/?tab=series']}>
         <ThemeProvider theme={theme}>
-          <SeriesHome />
+          <SeriesGrid />
         </ThemeProvider>
         <LocationProbe />
       </MemoryRouter>
@@ -503,7 +503,7 @@ describe('SeriesHome — Continue Watching', () => {
 // rating, sort — and asks `GET /api/series` for exactly it, so the grid, the
 // count line and the Continue row are all what the query keeps. A query that
 // keeps nothing is one of the prototype's two no-results faces.
-describe('SeriesHome — the query', () => {
+describe('SeriesGrid — the query', () => {
   /** Every `/api/series` request the tab issued, as its parameters. */
   function seriesRequests(): URLSearchParams[] {
     return fetchMock.mock.calls
@@ -596,7 +596,7 @@ describe('SeriesHome — the query', () => {
  * Un-hearting a card on it takes it off at once and a refused save puts it
  * back.
  */
-describe('SeriesHome — Favorites', () => {
+describe('SeriesGrid — Favorites', () => {
   const favoritesRegion = () =>
     screen.findByRole('region', { name: 'Favorites' });
 
@@ -716,7 +716,7 @@ describe('SeriesHome — Favorites', () => {
  * app-level display preference, so a flip in Settings redraws the loaded
  * cards. Off, or before the read lands, every card draws as it did before.
  */
-describe('SeriesHome — TMDB ratings on the cards', () => {
+describe('SeriesGrid — TMDB ratings on the cards', () => {
   function preference(tmdbRatings: boolean | null) {
     return makeDisplayPreferenceApi({ tmdbRatings });
   }
@@ -726,7 +726,7 @@ describe('SeriesHome — TMDB ratings on the cards', () => {
       <MemoryRouter initialEntries={['/?tab=series']}>
         <ThemeProvider theme={theme}>
           <DisplayPreferenceContext.Provider value={preference(tmdbRatings)}>
-            <SeriesHome />
+            <SeriesGrid />
           </DisplayPreferenceContext.Provider>
         </ThemeProvider>
       </MemoryRouter>

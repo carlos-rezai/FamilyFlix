@@ -20,7 +20,7 @@ import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 /**
  * 63, Row view, Phase 3 (issue #610): Movies under **All**.
  *
- * `MovieGrid` is `SeriesHome`'s shape in films over `GET /api/movies`: the
+ * `MovieGrid` is `SeriesGrid`'s shape in films over `GET /api/movies`: the
  * Continue row, the **Favorites row** read off the grid through
  * `shelvedFavorites` (at most 15, the grid's order), _All movies_, the count
  * line `N movies` / `1 movie`, and the **Library grid**. A card opens the

@@ -2,7 +2,7 @@ import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
 
 import { MovieRows } from '../home/MovieRows/MovieRows';
 import { MovieGrid } from '../home/MovieGrid/MovieGrid';
-import { SeriesHome } from '../series/SeriesHome/SeriesHome';
+import { SeriesGrid } from '../series/SeriesGrid/SeriesGrid';
 import { SeriesRows } from '../series/SeriesRows/SeriesRows';
 import { useRowView } from '../useRowView/useRowView';
 
@@ -17,7 +17,7 @@ function MoviesBody() {
 function SeriesBody() {
   const { rowView } = useRowView();
   if (rowView === null) return null;
-  return rowView === 'all' ? <SeriesHome /> : <SeriesRows />;
+  return rowView === 'all' ? <SeriesGrid /> : <SeriesRows />;
 }
 
 /**
@@ -25,12 +25,13 @@ function SeriesBody() {
  * off that tab's **Row view**. Movies under **By genre** (the default) are
  * `MovieRows`, the genre rows and the **Other row** last; under **All**,
  * `MovieGrid`, _All movies_ in one uncapped grid. Series under **All** (the
- * default) are `SeriesHome`, _All series_; under **By genre**, `SeriesRows`,
- * the series genre rows and the **Other series row** last. The Row view is
- * the household's, set by the **Row view switch** and kept in Settings rather
- * than the URL, so back from a title lands on the same view. Nothing is drawn
- * until the settings read lands. The choice lives here rather than in
- * `LibraryPage`, which stays composition only.
+ * default) are `SeriesGrid`, _All series_; under **By genre**, `SeriesRows`,
+ * the series genre rows and the **Other series row** last: four bodies, named
+ * kind then shape. The Row view is the household's, set by the **Row view
+ * switch** and kept in Settings rather than the URL, so back from a title
+ * lands on the same view. Nothing is drawn until the settings read lands. The
+ * choice lives here rather than in `LibraryPage`, which stays composition
+ * only.
  */
 export function LibraryBody() {
   return useLibraryTab() === 'series' ? <SeriesBody /> : <MoviesBody />;

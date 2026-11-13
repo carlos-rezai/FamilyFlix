@@ -7,7 +7,7 @@ import { FavoritesRow } from '../../home/FavoritesRow/FavoritesRow';
 import { GenreRow } from '../../home/GenreRow/GenreRow';
 import { shelvedFavorites } from '../../home/shelvedFavorites/shelvedFavorites';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
-import { Count, Heading } from '../SeriesHome/SeriesHome.styles';
+import { Count, Heading } from '../SeriesGrid/SeriesGrid.styles';
 import { useSeriesRows } from '../useSeriesRows/useSeriesRows';
 
 /** The genre-less series' row title: the payload names no genre for it. */
@@ -24,7 +24,7 @@ const SERIES_TAB = 'series';
  * **Series page**; _View all_ opens `/genre/:name` or `/genre-less` under
  * `?tab=series`, the **Carried sort** beside the tab. Nothing is drawn until
  * the payload lands; a search or filter that keeps nothing is a no-results
- * face, the search named ahead of the filters, as `SeriesHome` words them, and
+ * face, the search named ahead of the filters, as `SeriesGrid` words them, and
  * an empty library is its _All series_ heading over `0 series · 0 episodes`.
  */
 export function SeriesRows() {

@@ -207,7 +207,7 @@ describe('LibraryBody: back from a title', () => {
 
 /**
  * 63, Row view, Phase 4 (issue #611): on the Series tab `LibraryBody` picks
- * `SeriesHome` under **All** and `SeriesRows` under **By genre**, off the
+ * `SeriesGrid` under **All** and `SeriesRows` under **By genre**, off the
  * Series tab's own **Row view**.
  */
 function seriesTree(seriesRowView: RowView | null) {

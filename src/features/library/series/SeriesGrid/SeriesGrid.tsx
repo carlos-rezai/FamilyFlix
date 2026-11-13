@@ -21,7 +21,7 @@ import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
-import { Count, Heading } from './SeriesHome.styles';
+import { Count, Heading } from './SeriesGrid.styles';
 
 /** The Favorites shelf's cap — the movie home's 15, a carousel's slice. */
 const FAVORITES_LIMIT = 15;
@@ -40,7 +40,9 @@ function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {
  * shows, in its order, capped at 15 (log 22 Q9 and Q28, amended); then
  * _All series_, the count line and the uncapped **Library grid** of Poster
  * cards over `GET /api/series`, genre-less series included. An empty library
- * is the heading and `0 series · 0 episodes`, and nothing else.
+ * is the heading and `0 series · 0 episodes`, and nothing else. It is one of
+ * the library's four bodies, named kind then shape: `MovieRows`, `MovieGrid`,
+ * `SeriesGrid` and `SeriesRows`.
  *
  * It reads the header's **Library query** off the URL the way the Movies tab
  * does: the settled string is the load's key, so only a change to the query
@@ -52,7 +54,7 @@ function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {
  * once and put back if the save is refused, and the shelf follows it, because
  * the shelf is read off the same loaded series rather than held apart.
  */
-export function SeriesHome() {
+export function SeriesGrid() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const settled = toLibraryQueryParams(
