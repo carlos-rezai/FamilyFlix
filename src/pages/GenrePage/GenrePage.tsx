@@ -2,6 +2,7 @@ import {
   GenreTitlesProvider,
   type GenrePageMode,
 } from '@/features/library/genre/GenreTitles/GenreTitles';
+import { GenreBack } from '@/features/library/genre/GenreBack/GenreBack';
 import { GenreHeading } from '@/features/library/genre/GenreHeading/GenreHeading';
 import { GenreGrid } from '@/features/library/genre/GenreGrid/GenreGrid';
 import { GenreControls } from '@/features/search/GenreControls/GenreControls';
@@ -39,7 +40,11 @@ export interface GenrePageProps {
 export default function GenrePage({ mode = 'genre' }: GenrePageProps) {
   return (
     <GenreTitlesProvider mode={mode}>
-      <GenreLayout heading={<GenreHeading />} headerEnd={<GenreControls />}>
+      <GenreLayout
+        back={<GenreBack />}
+        heading={<GenreHeading />}
+        headerEnd={<GenreControls />}
+      >
         <GenreGrid />
       </GenreLayout>
     </GenreTitlesProvider>

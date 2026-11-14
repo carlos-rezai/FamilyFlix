@@ -1,15 +1,13 @@
 import type { ReactNode } from 'react';
 
-import { useGoBack } from '@/hooks/useGoBack/useGoBack';
-import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
-import { BackButton } from '@/components';
-import { seriesTabPath } from '@/utils';
 import { Root, Header, HeadingSlot, Spacer, Body } from './GenreLayout.styles';
 
 export interface GenreLayoutProps {
   /** The scrollable page body rendered under the header. */
   children: ReactNode;
+  /** The **Back button**, pinned before the header; the screen says where it goes. */
+  back?: ReactNode;
   /** Header content between Back and the spacer — the genre name and count. */
   heading?: ReactNode;
   /** Header content after the spacer — the search box and the sort pill. */
@@ -17,8 +15,10 @@ export interface GenreLayoutProps {
 }
 
 /**
- * The chrome from `page.GenrePage.dc.html`: the **Back button**, a heading, trailing
- * controls, and a scrolling body under them.
+ * The chrome from `page.GenrePage.dc.html`: the **Back button**, a heading,
+ * trailing controls, and a scrolling body under them. Back is a slot like the
+ * other two: where it leads with nothing behind it depends on the **Library
+ * tab**, which is the screen's to know.
  *
  * A second layout rather than a `MainLayout` variant. The app-wide navigation —
  * the logo, the settings gear — deliberately does not follow a screen whose
@@ -33,17 +33,15 @@ export interface GenreLayoutProps {
  */
 export function GenreLayout({
   children,
+  back,
   heading,
   headerEnd,
 }: GenreLayoutProps) {
-  // With nothing behind it, Back lands on the Library tab the page serves.
-  const tab = useLibraryTab();
-  const goBack = useGoBack(tab === 'series' ? seriesTabPath() : '/');
   const body = useRestoredScroll<HTMLDivElement>();
 
   return (
     <Root>
-      <BackButton onClick={goBack} />
+      {back}
       <Header>
         {heading ? <HeadingSlot>{heading}</HeadingSlot> : null}
         <Spacer />

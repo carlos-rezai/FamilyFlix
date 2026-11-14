@@ -1,38 +1,32 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
-import {
-  MemoryRouter,
-  Route,
-  Routes,
-  useNavigate,
-  type MemoryRouterProps,
-} from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { GenreLayout, type GenreLayoutProps } from './GenreLayout';
+import { BackButton } from '@/components';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { headerSpacer } from '@/test-support/headerSpacer/headerSpacer';
-import {
-  LocationProbe,
-  pathname,
-} from '@/test-support/LocationProbe/LocationProbe';
 import { stubScrollMetrics } from '@/test-support/stubScrollMetrics/stubScrollMetrics';
 
 stubScrollMetrics(9400);
 
+/**
+ * The layout as the Genre page mounts it, Back in its slot. Where Back leads is
+ * `GenreBack`'s, so this one leads nowhere: the layout only draws it.
+ */
 function renderLayout(
   children: React.ReactNode,
-  slots: Omit<Partial<GenreLayoutProps>, 'children'> = {},
-  initialEntries: MemoryRouterProps['initialEntries'] = ['/genre/Action'],
-  initialIndex?: number
+  slots: Omit<Partial<GenreLayoutProps>, 'children'> = {}
 ) {
   return render(
-    <MemoryRouter initialEntries={initialEntries} initialIndex={initialIndex}>
+    <MemoryRouter initialEntries={['/genre/Action']}>
       <ThemeProvider theme={theme}>
-        <GenreLayout {...slots}>{children}</GenreLayout>
+        <GenreLayout back={<BackButton onClick={() => undefined} />} {...slots}>
+          {children}
+        </GenreLayout>
       </ThemeProvider>
-      <LocationProbe />
     </MemoryRouter>
   );
 }
@@ -145,26 +139,17 @@ describe('GenreLayout — Back', () => {
     expect(zOf(back())).toBeGreaterThan(zOf(header));
   });
 
-  it('offers a Back control reachable by its accessible name', () => {
+  it('draws the Back it is handed, before the header', () => {
     renderLayout(<p>the genre grid goes here</p>);
 
-    expect(back()).toBeDefined();
+    expect(comesBefore(back(), screen.getByRole('banner'))).toBe(true);
+    expect(screen.getByRole('banner').contains(back())).toBe(false);
   });
 
-  it('steps back through history rather than jumping to the library', () => {
-    // Arrived on the genre from the browse home, which the parent had already
-    // filtered and scrolled. Back is a step back onto it, not a fresh `/`.
-    renderLayout(
-      <p>the genre grid goes here</p>,
-      {},
-      ['/', '/genre/Action'],
-      1
-    );
-    expect(pathname()).toBe('/genre/Action');
+  it('draws no Back when the slot is empty', () => {
+    renderLayout(<p>the genre grid goes here</p>, { back: undefined });
 
-    fireEvent.click(back());
-
-    expect(pathname()).toBe('/');
+    expect(screen.queryByRole('button', { name: 'Back' })).toBeNull();
   });
 });
 
