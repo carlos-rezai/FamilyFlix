@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { moviePath, range, toGenreQueryParams } from '@/utils';
-import { OTHER_MOVIES_TITLE } from '../../genre/GenreTitles/GenreTitles';
+import { otherRowTitle } from '../../otherRowTitle/otherRowTitle';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { GenreRow } from '../GenreRow/GenreRow';
@@ -180,7 +180,7 @@ export function MovieRows() {
       {/* The payload names no genre for the Other row: the title is ours. */}
       {other !== null && (
         <GenreRow
-          row={{ ...other, genre: OTHER_MOVIES_TITLE }}
+          row={{ ...other, genre: otherRowTitle('movies') }}
           onOpenAll={() => navigate(GENRE_LESS_PATH)}
           onOpenMovie={openMovie}
           onToggleFavorite={toggleFavorite}

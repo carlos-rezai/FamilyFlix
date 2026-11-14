@@ -25,7 +25,7 @@ import {
   fetchSeriesGenrePayload,
 } from '../../api/api';
 import { seriesCardView } from '../../series/seriesCardView/seriesCardView';
-import { OTHER_SERIES_TITLE } from '../../series/SeriesRows/SeriesRows';
+import { otherRowTitle } from '../../otherRowTitle/otherRowTitle';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
@@ -116,12 +116,6 @@ const GenreTitlesContext = createContext<GenreTitlesValue | null>(null);
  */
 export type GenrePageMode = 'genre' | 'other';
 
-/**
- * What the `other` mode is headed by: no genre's name, the screen's own. The
- * home's **Other row** is titled by it too.
- */
-export const OTHER_MOVIES_TITLE = 'Other movies';
-
 export interface GenreTitlesProviderProps {
   children: ReactNode;
   /** `genre` when omitted. */
@@ -169,8 +163,7 @@ export function GenreTitlesProvider({
   // The name arrives decoded from the router, which is what lets a genre with a
   // space in it ("Science Fiction") survive the round-trip through the URL.
   // The `other` mode names no genre, so the heading is its own title.
-  const otherTitle = tab === 'series' ? OTHER_SERIES_TITLE : OTHER_MOVIES_TITLE;
-  const genre = mode === 'other' ? otherTitle : (name ?? '');
+  const genre = mode === 'other' ? otherRowTitle(tab) : (name ?? '');
 
   // The settled query written back out the way the URL spells it — the shared
   // parser's answer, so a stale, hand-edited or hostile URL is made safe here by

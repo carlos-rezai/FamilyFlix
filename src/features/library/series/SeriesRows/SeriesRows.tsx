@@ -6,12 +6,10 @@ import { ContinueRow } from '../../home/ContinueRow/ContinueRow';
 import { FavoritesRow } from '../../home/FavoritesRow/FavoritesRow';
 import { GenreRow } from '../../home/GenreRow/GenreRow';
 import { shelvedFavorites } from '../../home/shelvedFavorites/shelvedFavorites';
+import { otherRowTitle } from '../../otherRowTitle/otherRowTitle';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { Count, Heading } from '../SeriesGrid/SeriesGrid.styles';
 import { useSeriesRows } from '../useSeriesRows/useSeriesRows';
-
-/** The genre-less series' row title: the payload names no genre for it. */
-export const OTHER_SERIES_TITLE = 'Other series';
 
 /** The tab the genre pages open under, so they read series rather than films. */
 const SERIES_TAB = 'series';
@@ -117,7 +115,7 @@ export function SeriesRows() {
       ))}
       {other !== null && (
         <GenreRow
-          row={{ ...other, genre: OTHER_SERIES_TITLE }}
+          row={{ ...other, genre: otherRowTitle('series') }}
           onOpenAll={() => navigate(`/genre-less${carried}`)}
           onOpenMovie={openSeries}
           onToggleFavorite={toggleFavorite}
