@@ -1,5 +1,4 @@
 import { useCallback, useMemo, useRef } from 'react';
-import { useSearchParams } from 'react-router-dom';
 
 import type {
   ContinueCardMovie,
@@ -8,13 +7,13 @@ import type {
   LibraryQuery,
   PosterCardMovie,
 } from '@/types';
-import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { fetchHomePayload } from '../../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
 import { view } from '../../view/view';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
@@ -128,27 +127,7 @@ export interface UseMovieRowsResult {
  * save fails, so it never claims something is saved that isn't.
  */
 export function useMovieRows(): UseMovieRowsResult {
-  const [searchParams] = useSearchParams();
-
-  // The settled query written back out the way the URL spells it — the shared
-  // parser's answer, so a stale, hand-edited or hostile URL is made safe here
-  // by exactly the rules the header's pills read it by.
-  //
-  // Reducing it to that canonical string first is what decides when the library
-  // reloads: only the parts this hook reads are in it, at their settled values,
-  // so a scroll offset arriving, an empty `?genre=`, or a sort spelled at the
-  // default it was already in all leave the string alone and reload nothing.
-  const settled = toLibraryQueryParams(
-    parseLibraryQuery(searchParams)
-  ).toString();
-
-  // Read back from that canonical form, so an unchanged query keeps one
-  // identity for the load below. It yields what the URL says because the two
-  // functions are inverses — a property their own test asserts.
-  const query = useMemo(
-    () => parseLibraryQuery(new URLSearchParams(settled)),
-    [settled]
-  );
+  const { settled, query } = useSettledLibraryQuery();
 
   // Each movie's newest save still waiting on the route: the value it asked
   // for, and a token telling it from a save it overtook.

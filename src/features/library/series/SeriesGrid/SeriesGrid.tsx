@@ -1,14 +1,9 @@
 import { useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import type { SeriesHomePayload } from '@/types';
-import {
-  episodePlayPath,
-  parseLibraryQuery,
-  seriesPath,
-  toLibraryQueryParams,
-} from '@/utils';
+import { episodePlayPath, seriesPath } from '@/utils';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
 import { fetchSeriesHome } from '../../api/api';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
@@ -17,6 +12,7 @@ import { ContinueRow } from '../../home/ContinueRow/ContinueRow';
 import { FavoritesRow } from '../../home/FavoritesRow/FavoritesRow';
 import { shelvedFavorites } from '../../home/shelvedFavorites/shelvedFavorites';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
@@ -56,14 +52,7 @@ function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {
  */
 export function SeriesGrid() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const settled = toLibraryQueryParams(
-    parseLibraryQuery(searchParams)
-  ).toString();
-  const query = useMemo(
-    () => parseLibraryQuery(new URLSearchParams(settled)),
-    [settled]
-  );
+  const { settled, query } = useSettledLibraryQuery();
   const { status, data, setData, retry } = useBrowseLoad(
     () => fetchSeriesHome(query),
     settled

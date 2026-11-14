@@ -1,13 +1,8 @@
 import { useCallback, useMemo } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import {
-  moviePath,
-  parseLibraryQuery,
-  range,
-  toLibraryQueryParams,
-} from '@/utils';
+import { moviePath, range } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { fetchMovieGrid } from '../../api/api';
@@ -16,6 +11,7 @@ import { Grid } from '../../LibraryGrid/LibraryGrid.styles';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { SkeletonCard } from '../../SkeletonCard/SkeletonCard';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
@@ -58,14 +54,7 @@ function movieCountLabel(count: number): string {
  */
 export function MovieGrid() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const settled = toLibraryQueryParams(
-    parseLibraryQuery(searchParams)
-  ).toString();
-  const query = useMemo(
-    () => parseLibraryQuery(new URLSearchParams(settled)),
-    [settled]
-  );
+  const { settled, query } = useSettledLibraryQuery();
   const { status, data, setData, retry } = useBrowseLoad(
     () => fetchMovieGrid(query),
     settled

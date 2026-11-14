@@ -1,5 +1,4 @@
 import { useCallback, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
 
 import type {
   ContinueCardMovie,
@@ -10,11 +9,11 @@ import type {
   SeriesRow,
   SeriesRowsPayload,
 } from '@/types';
-import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { fetchSeriesRows } from '../../api/api';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
@@ -104,14 +103,7 @@ export interface UseSeriesRowsResult {
  * put back if the save is refused.
  */
 export function useSeriesRows(): UseSeriesRowsResult {
-  const [searchParams] = useSearchParams();
-  const settled = toLibraryQueryParams(
-    parseLibraryQuery(searchParams)
-  ).toString();
-  const query = useMemo(
-    () => parseLibraryQuery(new URLSearchParams(settled)),
-    [settled]
-  );
+  const { settled, query } = useSettledLibraryQuery();
 
   const { status, data, setData, retry } = useBrowseLoad(
     () => fetchSeriesRows(query),
