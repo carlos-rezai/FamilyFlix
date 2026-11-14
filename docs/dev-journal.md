@@ -11,6 +11,112 @@ Newest entry first.
 
 ---
 
+## 2026-11-14: Row view, the refactor (issue 616)
+
+Eighteen commits against `docs/refactor-plans/63-row-view-refactor.md`,
+one per plan commit. This is the initiative's closing round. **12163 tests
+pass across 802 files** (one skipped), against 12132 across 794 at the end
+of the build (`103c24ac`): eight new suites (`otherRowTitle`, `genrePath`,
+`genreLessPath`, `useSettledLibraryQuery`, `LibraryGridHeading`,
+`SkeletonGrid`, `GenreBack`, `useSeriesRows`) and series cases in
+`withFavorite.test`, while `GenreLayout.test` traded its history case for
+two slot cases. `tsc -b --force` is clean. `eslint src server electron`
+reports 1 error and 137 warnings, as at `103c24ac`.
+
+### What shipped before this round
+
+The spec amended (608), then the build slices 609 to 613, RED and GREEN
+each: the **Row view switch** kept per tab in Settings, Movies under All
+(`MovieGrid`), Series under By genre (`SeriesRows`), the Genre page for
+series, and every face of both new bodies. The live walk became tests
+(614) and the documents followed (615).
+
+### What each group changed
+
+- **Group 1, kind then shape** (`16d31d4b`, `5907b965`, `e8b845ff`).
+  `HomeRows` is `MovieRows` (with `useMovieRows`), `SeriesHome` is
+  `SeriesGrid`, and the Genre page's provider is `GenreTitles`
+  (`GenreTitlesProvider`, `useGenreTitles`, its value's `titles`). The wire
+  kept its names.
+- **Group 2, one owner for each shared piece** (`387c2e91`, `5443ef35`,
+  `49c316c6`, `eb2dfd41`, `767a0f9e`, `1eb10177`). `otherRowTitle(tab)`
+  answers both Other titles; `genrePath` and `genreLessPath` are pure
+  routes beside `seriesTabPath`; `useSettledLibraryQuery` is the one
+  reading of the URL the four bodies share; `LibraryGridHeading` draws the
+  heading over its count line; `SkeletonGrid` is the one loading grid;
+  `FAVORITES_LIMIT` lives beside `shelvedFavorites`, and the series browse
+  slice reads `HOME_ROW_LIMIT`.
+- **Group 3, one heart rule** (`07735159`, `92ab3275`, `ff23d25b`).
+  `withFavoriteInList` and `withShelved` take any record with an `id` and
+  an `isFavorite`; `useRowsLoad` holds the settling load `useMovieRows`
+  wrote, and `useSeriesRows` loads through it.
+- **Group 4, a Genre page whose chrome knows nothing** (`bcaaf349`).
+  `GenreLayout` takes a `back` slot; `GenreBack` reads the tab off
+  `useGenreTitles` and picks Back's fallback.
+- **Group 5, a series list with named options** (`25296845`). `listCapped`
+  is `listSeries(query, on, { where, limit })`, uncapped without a limit;
+  `getSeriesHome` calls it.
+- **Group 6, tidies** (`af6e2ea0`, `2ea4d262`). `DisplayPreferenceProvider`
+  makes its five held values, then pulls their five `land`s, in the API's
+  order; the long comment lines rewrapped.
+- **Group 7, the docs** (`1726f08b` and this entry). Step 46 and its row
+  ticked; `COMPONENT-SPEC.md` names `MovieRows`, `SeriesGrid` and
+  `GenreTitles`; a Row view release smoke.
+
+### The one behaviour change
+
+**A confirmed series heart under By genre reloads the rows**, as a movie
+heart does, once every save in flight has landed. A heart puts its card at
+the shelf's front, which is not where the server's sort or its cap of 15
+would, and `/api/series/rows` builds its shelf by the same rule as
+`/api/home`, so the reason held word for word. An un-heart and a refused
+heart still reload nothing. `useSeriesRows.test` pins it: three of its
+five cases failed before the fix.
+
+### Where this round left the plan
+
+- **The glossary changed one line.** The plan expected no change, but
+  **Favorites row** said a series heart reloads nothing; it now says either
+  tab's By genre heart reloads the rows.
+- **The Row view smoke follows the Welcome tune's**, not a Series tab smoke:
+  the release checklist has none.
+- **`genrePath` and `genreLessPath` share `genreRouteSearch`**, exported
+  from `genrePath`'s module and not from the barrel; `sort` is optional and
+  writes nothing at the default, so the Other movies row passes none.
+- **The series browse slice's limit comment** went with `ROW_LIMIT` in
+  commit 9, so commit 16 had nothing there to rewrap.
+- **`withShelved` gained its own cases**, two for movies and one for
+  series, where the plan asked one series case per generic helper: it had
+  none before.
+- **`useSeriesRows.test`'s last case holds the reload at the server**,
+  `useMovieRows.test`'s shape, since a save that never settles keeps any
+  reload from being sent.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the Other movies row's _View all_
+carries no sort, the wire keeps its names, no generic body over both kinds,
+the per-tab no-results copy, the library's other lines past 80 columns and
+the lint warnings that predate the initiative. No wire, schema, setting,
+copy, prototype or drawn pixel change beyond the series shelf's reload.
+
+### Follow-ups this refactor surfaced
+
+- **The Other movies row's sort**: `genreLessPath({ sort, tab: 'movies' })`
+  is the one-argument fix when someone decides it.
+- **A kind-neutral body** (`TitleRows`, `TitleGrid`) if a third kind ever
+  joins.
+- **`useMovieRows`' docblock** still runs past 80 columns in three lines
+  the plan did not list.
+
+### The initiative
+
+**Row view is done**: the spec (608), the build slices (609 to 613), the
+walk (614), the documents (615) and this round (616). Issue 607, the epic,
+is shut with it.
+
+---
+
 ## 2026-11-13: Row view, the build (issues 608 to 615)
 
 The spec amended first (608), then five slices run by `issue-loop`, each a
