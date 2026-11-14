@@ -16,11 +16,11 @@ import { view } from '../../view/view';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { continueView } from '../continueView/continueView';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
-import { shelvedFavorites } from '../shelvedFavorites/shelvedFavorites';
+import {
+  FAVORITES_LIMIT,
+  shelvedFavorites,
+} from '../shelvedFavorites/shelvedFavorites';
 import { LibraryGridHeading } from '../../LibraryGridHeading/LibraryGridHeading';
-
-/** The Favorites shelf's cap: the movie home's 15, a carousel's slice. */
-const FAVORITES_LIMIT = 15;
 
 /** `N movies`, or `1 movie`. */
 function movieCountLabel(count: number): string {

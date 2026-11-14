@@ -1,6 +1,12 @@
 import type { PosterCardMovie } from '@/types';
 
 /**
+ * The Favorites shelf's cap when the client slices it: the server's 15 for a
+ * home section, a carousel's worth. `MovieGrid` and `SeriesGrid` read it.
+ */
+export const FAVORITES_LIMIT = 15;
+
+/**
  * The movies the Favorites shelf actually draws, out of the ones its home
  * section is holding. The two are not the same list: the hook never removes an
  * un-hearted movie from `favorites` — that indirection is what gives a refused

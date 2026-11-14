@@ -10,7 +10,10 @@ import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { ContinueRow } from '../../home/ContinueRow/ContinueRow';
 import { FavoritesRow } from '../../home/FavoritesRow/FavoritesRow';
-import { shelvedFavorites } from '../../home/shelvedFavorites/shelvedFavorites';
+import {
+  FAVORITES_LIMIT,
+  shelvedFavorites,
+} from '../../home/shelvedFavorites/shelvedFavorites';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
@@ -18,9 +21,6 @@ import { episodeContinueView } from '../episodeContinueView/episodeContinueView'
 import { seriesCardView } from '../seriesCardView/seriesCardView';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { LibraryGridHeading } from '../../LibraryGridHeading/LibraryGridHeading';
-
-/** The Favorites shelf's cap — the movie home's 15, a carousel's slice. */
-const FAVORITES_LIMIT = 15;
 
 /** `N series · M episodes` — the series word invariant, episodes pluralised. */
 function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {

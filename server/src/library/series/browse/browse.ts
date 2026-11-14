@@ -13,12 +13,10 @@ import {
 } from '@/types';
 import type { EpisodeRow, SeriesReader, SeriesRow } from '../read/read';
 import { highestRatedSql, shownRatingSql } from '../../browse/browse';
+import { HOME_ROW_LIMIT } from '../../home/home';
 
 /** The Series tab's Continue Watching row holds at most this many entries. */
 const CONTINUE_LIMIT = 15;
-
-/** A genre row, the Other row and the Favorites row each carry at most this many. */
-const ROW_LIMIT = 15;
 
 /** A series carrying no genre at all: the **Other row**'s clause. */
 const GENRE_LESS = 's.id NOT IN (SELECT series_id FROM series_genres)';
@@ -177,13 +175,13 @@ export function createSeriesBrowse(
 
   /**
    * The series the query keeps, and one more clause when given, in its sort,
-   * capped at {@link ROW_LIMIT}, or uncapped when `limit` is `null`.
+   * capped at {@link HOME_ROW_LIMIT}, or uncapped when `limit` is `null`.
    */
   function listCapped(
     query: LibraryQuery,
     on: boolean,
     extra?: string,
-    limit: number | null = ROW_LIMIT
+    limit: number | null = HOME_ROW_LIMIT
   ) {
     const where = seriesWhere(query, on);
     const filter =
