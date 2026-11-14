@@ -26,7 +26,7 @@ import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceAp
 /**
  * 18 — Snackbar system, Phase 2: "the tracer bullet" (issue #161).
  *
- * The **Snackbar stack** and its queue, proven the way `GenreMovies` proves a
+ * The **Snackbar stack** and its queue, proven the way `GenreTitles` proves a
  * provider: a small consumer rendered under the real one, driven through the
  * hook, and what is on screen read back — which notices are present, in what
  * order, after what elapsed. `notify` lands a card drawn by the molecule with

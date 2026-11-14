@@ -11,7 +11,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
 import { GenreGrid } from './GenreGrid';
-import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
+import { GenreTitlesProvider } from '../GenreTitles/GenreTitles';
 import { theme } from '@/styles/theme';
 import type { GenrePayload } from '@/types';
 import {
@@ -94,9 +94,9 @@ function renderGrid(url = '/genre/Action') {
           <Route
             path="/genre/:name"
             element={
-              <GenreMoviesProvider>
+              <GenreTitlesProvider>
                 <GenreGrid />
-              </GenreMoviesProvider>
+              </GenreTitlesProvider>
             }
           />
           <Route path="/movie/:id" element={<p>the movie detail page</p>} />

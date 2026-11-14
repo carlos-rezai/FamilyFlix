@@ -36,7 +36,7 @@ export const SnackbarContext = createContext<SnackbarApi | null>(null);
 /**
  * `{ notify, dismiss }` off the **Snackbar stack** above the route table. The
  * provider is mounted in `App`, so a consumer outside one is a wiring mistake,
- * and a no-op would hide it: it throws, naming itself (the `useGenreMovies`
+ * and a no-op would hide it: it throws, naming itself (the `useGenreTitles`
  * precedent).
  */
 export function useSnackbar(): SnackbarApi {

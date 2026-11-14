@@ -9,7 +9,7 @@ import {
 } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 
-import { GenreMoviesProvider, useGenreMovies } from './GenreMovies';
+import { GenreTitlesProvider, useGenreTitles } from './GenreTitles';
 import { gradientFromId } from '@/utils';
 import type { GenrePayload, PosterCardMovie } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
@@ -136,7 +136,7 @@ function providerAt(url: string) {
         <Routes>
           <Route
             path="/genre/:name"
-            element={<GenreMoviesProvider>{children}</GenreMoviesProvider>}
+            element={<GenreTitlesProvider>{children}</GenreTitlesProvider>}
           />
         </Routes>
         <Navigator />
@@ -147,7 +147,7 @@ function providerAt(url: string) {
 
 /** Mount the hook on a genre URL, without waiting for anything. */
 function mountGenre(url = '/genre/Action') {
-  return renderHook(() => useGenreMovies(), { wrapper: providerAt(url) });
+  return renderHook(() => useGenreTitles(), { wrapper: providerAt(url) });
 }
 
 /** Mount the hook and wait for the first load to settle. */
@@ -157,7 +157,7 @@ async function loadGenre(url = '/genre/Action') {
   return view;
 }
 
-describe('GenreMovies — loading one genre', () => {
+describe('GenreTitles — loading one genre', () => {
   it('is loading until the payload arrives, and ready once it has', async () => {
     serve(ACTION);
 
@@ -193,8 +193,8 @@ describe('GenreMovies — loading one genre', () => {
 
     const { result } = await loadGenre();
 
-    expect(result.current.movies).toHaveLength(214);
-    expect(result.current.movies[213].title).toBe('Action 213');
+    expect(result.current.titles).toHaveLength(214);
+    expect(result.current.titles[213].title).toBe('Action 213');
   });
 
   it('reports the unfiltered total while a search narrows the movies', async () => {
@@ -202,7 +202,7 @@ describe('GenreMovies — loading one genre', () => {
 
     const { result } = await loadGenre('/genre/Action?q=north');
 
-    expect(result.current.movies).toHaveLength(2);
+    expect(result.current.titles).toHaveLength(2);
     expect(result.current.total).toBe(214);
   });
 
@@ -221,11 +221,11 @@ describe('GenreMovies — loading one genre', () => {
 
     const { result } = mountGenre();
 
-    expect(result.current.movies).toEqual([]);
+    expect(result.current.titles).toEqual([]);
   });
 });
 
-describe('GenreMovies — the movies it reports', () => {
+describe('GenreTitles — the movies it reports', () => {
   it('reports them as the view models a poster card renders', async () => {
     serve({
       genre: 'Action',
@@ -244,7 +244,7 @@ describe('GenreMovies — the movies it reports', () => {
 
     const { result } = await loadGenre();
 
-    expect(result.current.movies[0]).toMatchObject({
+    expect(result.current.titles[0]).toMatchObject({
       id: 'a1',
       title: 'Northwind',
       posterUrl: '/api/images/Northwind/poster.jpg',
@@ -264,9 +264,9 @@ describe('GenreMovies — the movies it reports', () => {
     const { result } = await loadGenre();
 
     const { g1, g2 } = gradientFromId('a1');
-    expect(result.current.movies[0].posterUrl).toBeNull();
-    expect(result.current.movies[0].g1).toBe(g1);
-    expect(result.current.movies[0].g2).toBe(g2);
+    expect(result.current.titles[0].posterUrl).toBeNull();
+    expect(result.current.titles[0].g1).toBe(g1);
+    expect(result.current.titles[0].g2).toBe(g2);
   });
 
   it('keeps the order the route returned them in', async () => {
@@ -283,7 +283,7 @@ describe('GenreMovies — the movies it reports', () => {
 
     const { result } = await loadGenre('/genre/Action?sort=a-z');
 
-    expect(result.current.movies.map((movie) => movie.title)).toEqual([
+    expect(result.current.titles.map((movie) => movie.title)).toEqual([
       'Zephyr',
       'Ironclad',
       'Northwind',
@@ -291,7 +291,7 @@ describe('GenreMovies — the movies it reports', () => {
   });
 });
 
-describe('GenreMovies — the genre in the path', () => {
+describe('GenreTitles — the genre in the path', () => {
   it('loads a genre whose name has a space in it, decoded out of the path', async () => {
     serve({ genre: 'Science Fiction', total: 4, movies: [] });
 
@@ -310,7 +310,7 @@ describe('GenreMovies — the genre in the path', () => {
   });
 });
 
-describe('GenreMovies — the query in the URL', () => {
+describe('GenreTitles — the query in the URL', () => {
   it('asks already narrowed and ordered when the URL arrives carrying both', async () => {
     // A deep link loads the screen it names, with no unnarrowed genre flashing
     // past first: the query is known on the very first render.
@@ -343,13 +343,13 @@ describe('GenreMovies — the query in the URL', () => {
   });
 });
 
-describe('GenreMovies — one request for the whole screen', () => {
+describe('GenreTitles — one request for the whole screen', () => {
   /** A consumer that prints what it reads, so two of them can be told apart. */
   function Consumer({ label }: { label: string }) {
-    const { status, genre, total, movies } = useGenreMovies();
+    const { status, genre, total, titles } = useGenreTitles();
     return (
       <p data-testid={label}>
-        {status} · {genre} · {total} · {movies.length}
+        {status} · {genre} · {total} · {titles.length}
       </p>
     );
   }
@@ -369,10 +369,10 @@ describe('GenreMovies — one request for the whole screen', () => {
           <Route
             path="/genre/:name"
             element={
-              <GenreMoviesProvider>
+              <GenreTitlesProvider>
                 <Consumer label="heading" />
                 <Consumer label="grid" />
-              </GenreMoviesProvider>
+              </GenreTitlesProvider>
             }
           />
         </Routes>
@@ -420,14 +420,14 @@ function favoriteRequests(): FavoriteRequest[] {
     }));
 }
 
-describe('GenreMovies — a query that changes under it', () => {
+describe('GenreTitles — a query that changes under it', () => {
   it('asks again, with the new term, when the settled query changes', async () => {
     serveInTurn(ACTION, NARROWED);
     const { result } = await loadGenre('/genre/Action');
 
     act(() => goTo('/genre/Action?q=north'));
 
-    await waitFor(() => expect(result.current.movies).toHaveLength(2));
+    await waitFor(() => expect(result.current.titles).toHaveLength(2));
     expect(genreRequests()).toHaveLength(2);
     expect(requestedQuery(1).get('q')).toBe('north');
   });
@@ -443,7 +443,7 @@ describe('GenreMovies — a query that changes under it', () => {
     act(() => goTo('/genre/Action?q=north'));
 
     await waitFor(() => expect(genreRequests()).toHaveLength(2));
-    expect(result.current.movies).toHaveLength(214);
+    expect(result.current.titles).toHaveLength(214);
   });
 
   it('does not go back to loading during that refetch', async () => {
@@ -491,18 +491,18 @@ describe('GenreMovies — a query that changes under it', () => {
       settleFirst(okResponse(ACTION));
     });
 
-    expect(result.current.movies).toHaveLength(2);
+    expect(result.current.titles).toHaveLength(2);
   });
 });
 
-describe('GenreMovies — a load that failed', () => {
+describe('GenreTitles — a load that failed', () => {
   it('reports error and holds no movies when the request fails', async () => {
     fetchMock.mockRejectedValue(new Error('network down'));
 
     const { result } = await loadGenre();
 
     expect(result.current.status).toBe('error');
-    expect(result.current.movies).toEqual([]);
+    expect(result.current.titles).toEqual([]);
   });
 
   it('treats a non-OK response as a failed load', async () => {
@@ -534,7 +534,7 @@ describe('GenreMovies — a load that failed', () => {
     act(() => result.current.retry());
 
     await waitFor(() => expect(result.current.status).toBe('ready'));
-    expect(result.current.movies).toHaveLength(214);
+    expect(result.current.titles).toHaveLength(214);
   });
 
   it('asks for the same genre and query again on retry', async () => {
@@ -572,21 +572,21 @@ describe('GenreMovies — a load that failed', () => {
     });
 
     expect(result.current.status).toBe('ready');
-    expect(result.current.movies).toHaveLength(214);
+    expect(result.current.titles).toHaveLength(214);
   });
 });
 
-describe('GenreMovies — the favorite flag', () => {
+describe('GenreTitles — the favorite flag', () => {
   it('shows the new value immediately, before the save has come back', async () => {
     // A save that never settles: anything set here is optimistic, not confirmed.
     serve(HEARTS, () => new Promise<Response>(() => undefined));
     const { result } = await loadGenre();
 
-    expect(favoriteOf(result.current.movies, 'a1')).toBe(false);
+    expect(favoriteOf(result.current.titles, 'a1')).toBe(false);
 
     act(() => result.current.toggleFavorite('a1', true));
 
-    expect(favoriteOf(result.current.movies, 'a1')).toBe(true);
+    expect(favoriteOf(result.current.titles, 'a1')).toBe(true);
   });
 
   it('saves the new value to POST /api/movies/:id/favorite', async () => {
@@ -609,11 +609,11 @@ describe('GenreMovies — the favorite flag', () => {
     serve(HEARTS, () => Promise.resolve(okResponse({ value: false })));
     const { result } = await loadGenre();
 
-    expect(favoriteOf(result.current.movies, 'a2')).toBe(true);
+    expect(favoriteOf(result.current.titles, 'a2')).toBe(true);
 
     act(() => result.current.toggleFavorite('a2', false));
 
-    expect(favoriteOf(result.current.movies, 'a2')).toBe(false);
+    expect(favoriteOf(result.current.titles, 'a2')).toBe(false);
     await waitFor(() => expect(favoriteRequests()).toHaveLength(1));
     expect(favoriteRequests()[0].body).toEqual({ value: false });
   });
@@ -624,10 +624,10 @@ describe('GenreMovies — the favorite flag', () => {
     const { result } = await loadGenre();
 
     act(() => result.current.toggleFavorite('a1', true));
-    expect(favoriteOf(result.current.movies, 'a1')).toBe(true);
+    expect(favoriteOf(result.current.titles, 'a1')).toBe(true);
 
     await waitFor(() =>
-      expect(favoriteOf(result.current.movies, 'a1')).toBe(false)
+      expect(favoriteOf(result.current.titles, 'a1')).toBe(false)
     );
   });
 
@@ -636,10 +636,10 @@ describe('GenreMovies — the favorite flag', () => {
     const { result } = await loadGenre();
 
     act(() => result.current.toggleFavorite('a1', true));
-    expect(favoriteOf(result.current.movies, 'a1')).toBe(true);
+    expect(favoriteOf(result.current.titles, 'a1')).toBe(true);
 
     await waitFor(() =>
-      expect(favoriteOf(result.current.movies, 'a1')).toBe(false)
+      expect(favoriteOf(result.current.titles, 'a1')).toBe(false)
     );
   });
 
@@ -648,10 +648,10 @@ describe('GenreMovies — the favorite flag', () => {
     const { result } = await loadGenre();
 
     act(() => result.current.toggleFavorite('a2', false));
-    expect(favoriteOf(result.current.movies, 'a2')).toBe(false);
+    expect(favoriteOf(result.current.titles, 'a2')).toBe(false);
 
     await waitFor(() =>
-      expect(favoriteOf(result.current.movies, 'a2')).toBe(true)
+      expect(favoriteOf(result.current.titles, 'a2')).toBe(true)
     );
   });
 
@@ -661,8 +661,8 @@ describe('GenreMovies — the favorite flag', () => {
 
     act(() => result.current.toggleFavorite('a1', true));
 
-    expect(favoriteOf(result.current.movies, 'a2')).toBe(true);
-    expect(result.current.movies.map((movie) => movie.id)).toEqual([
+    expect(favoriteOf(result.current.titles, 'a2')).toBe(true);
+    expect(result.current.titles.map((movie) => movie.id)).toEqual([
       'a1',
       'a2',
     ]);
@@ -677,7 +677,7 @@ describe('GenreMovies — the favorite flag', () => {
  * and a search land — carry the **Shown rating** and its source, read off the
  * app-level display preference, so a flip redraws them without a second read.
  */
-describe('GenreMovies — TMDB ratings on the cards', () => {
+describe('GenreTitles — TMDB ratings on the cards', () => {
   const SYNCED: GenrePayload = {
     genre: 'Action',
     total: 1,
@@ -701,7 +701,7 @@ describe('GenreMovies — TMDB ratings on the cards', () => {
   async function loadWith(on: boolean | null) {
     tmdbRatings = on;
     serve(SYNCED);
-    const view = renderHook(() => useGenreMovies(), {
+    const view = renderHook(() => useGenreTitles(), {
       wrapper: preferenceAt('/genre/Action'),
     });
     await waitFor(() => expect(view.result.current.status).toBe('ready'));
@@ -711,22 +711,22 @@ describe('GenreMovies — TMDB ratings on the cards', () => {
   it('gives an unrated, synced film the TMDB rating while on', async () => {
     const { result } = await loadWith(true);
 
-    expect(result.current.movies[0].rating).toBe(70);
-    expect(result.current.movies[0].ratingSource).toBe('tmdb');
+    expect(result.current.titles[0].rating).toBe(70);
+    expect(result.current.titles[0].ratingSource).toBe('tmdb');
   });
 
   it('leaves it unrated while off', async () => {
     const { result } = await loadWith(false);
 
-    expect(result.current.movies[0].rating).toBeNull();
-    expect(result.current.movies[0].ratingSource).toBeNull();
+    expect(result.current.titles[0].rating).toBeNull();
+    expect(result.current.titles[0].ratingSource).toBeNull();
   });
 
   it('leaves it unrated until the preference lands', async () => {
     const { result } = await loadWith(null);
 
-    expect(result.current.movies[0].rating).toBeNull();
-    expect(result.current.movies[0].ratingSource).toBeNull();
+    expect(result.current.titles[0].rating).toBeNull();
+    expect(result.current.titles[0].ratingSource).toBeNull();
   });
 
   it('redraws the loaded cards on a flip, without reading the genre again', async () => {
@@ -737,7 +737,7 @@ describe('GenreMovies — TMDB ratings on the cards', () => {
     rerender();
 
     await waitFor(() =>
-      expect(result.current.movies[0].ratingSource).toBe('tmdb')
+      expect(result.current.titles[0].ratingSource).toBe('tmdb')
     );
     expect(genreRequests()).toHaveLength(reads);
   });

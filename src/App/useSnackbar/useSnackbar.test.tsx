@@ -15,7 +15,7 @@ import { theme } from '@/styles/theme';
  * alone.
  *
  * `useSnackbar()` answers `{ notify, dismiss }`. Outside a provider it throws,
- * naming itself — the `useGenreMovies` precedent: the provider is mounted in
+ * naming itself — the `useGenreTitles` precedent: the provider is mounted in
  * `App`, so a consumer out there is a wiring mistake, and a no-op would hide
  * it. Under the provider, `notify` answers the `number` id a notice can be
  * retracted by, successive calls answer different ids, and both functions keep

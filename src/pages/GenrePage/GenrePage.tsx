@@ -1,7 +1,7 @@
 import {
-  GenreMoviesProvider,
+  GenreTitlesProvider,
   type GenrePageMode,
-} from '@/features/library/genre/GenreMovies/GenreMovies';
+} from '@/features/library/genre/GenreTitles/GenreTitles';
 import { GenreHeading } from '@/features/library/genre/GenreHeading/GenreHeading';
 import { GenreGrid } from '@/features/library/genre/GenreGrid/GenreGrid';
 import { GenreControls } from '@/features/search/GenreControls/GenreControls';
@@ -21,7 +21,7 @@ import { GenreLayout } from '@/layouts/GenreLayout/GenreLayout';
  * and the grid in the scrolling body render from the one request, and the page
  * itself never learns what a genre or a tab is: it holds no state, fetches
  * nothing, and reads neither the path nor the query. Both halves ask
- * `useGenreMovies()` for what they need.
+ * `useGenreTitles()` for what they need.
  *
  * The controls sit inside that provider too, but they are not fed by it: they
  * read and write the URL, and the provider reloads because the URL changed. So
@@ -38,10 +38,10 @@ export interface GenrePageProps {
 
 export default function GenrePage({ mode = 'genre' }: GenrePageProps) {
   return (
-    <GenreMoviesProvider mode={mode}>
+    <GenreTitlesProvider mode={mode}>
       <GenreLayout heading={<GenreHeading />} headerEnd={<GenreControls />}>
         <GenreGrid />
       </GenreLayout>
-    </GenreMoviesProvider>
+    </GenreTitlesProvider>
   );
 }

@@ -1,4 +1,4 @@
-import { useGenreMovies } from '../GenreMovies/GenreMovies';
+import { useGenreTitles } from '../GenreTitles/GenreTitles';
 import { genreCountLabel } from '../genreCountLabel/genreCountLabel';
 import { Name, Count } from './GenreHeading.styles';
 
@@ -15,13 +15,13 @@ import { Name, Count } from './GenreHeading.styles';
  * printing "0 titles" until they do would claim an empty genre every time.
  */
 export function GenreHeading() {
-  const { status, genre, total, movies } = useGenreMovies();
+  const { status, genre, total, titles } = useGenreTitles();
 
   return (
     <>
       <Name>{genre}</Name>
       {status === 'ready' ? (
-        <Count>{genreCountLabel(movies.length, total)}</Count>
+        <Count>{genreCountLabel(titles.length, total)}</Count>
       ) : null}
     </>
   );

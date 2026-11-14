@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import { moviePath, range, toGenreQueryParams } from '@/utils';
-import { OTHER_MOVIES_TITLE } from '../../genre/GenreMovies/GenreMovies';
+import { OTHER_MOVIES_TITLE } from '../../genre/GenreTitles/GenreTitles';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { GenreRow } from '../GenreRow/GenreRow';

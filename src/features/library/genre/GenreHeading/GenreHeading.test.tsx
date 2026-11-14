@@ -4,7 +4,7 @@ import { ThemeProvider } from 'styled-components';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 
 import { GenreHeading } from './GenreHeading';
-import { GenreMoviesProvider } from '../GenreMovies/GenreMovies';
+import { GenreTitlesProvider } from '../GenreTitles/GenreTitles';
 import { theme } from '@/styles/theme';
 import type { GenrePayload } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
@@ -55,9 +55,9 @@ function renderHeading(url = '/genre/Action') {
           <Route
             path="/genre/:name"
             element={
-              <GenreMoviesProvider>
+              <GenreTitlesProvider>
                 <GenreHeading />
-              </GenreMoviesProvider>
+              </GenreTitlesProvider>
             }
           />
         </Routes>

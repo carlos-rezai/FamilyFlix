@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { LoadMessage } from '@/components';
 import { moviePath, range, seriesPath } from '@/utils';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
-import { useGenreMovies } from '../GenreMovies/GenreMovies';
+import { useGenreTitles } from '../GenreTitles/GenreTitles';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { SkeletonCard } from '../../SkeletonCard/SkeletonCard';
 import { SkeletonGrid } from './GenreGrid.styles';
@@ -39,14 +39,14 @@ function LoadingGrid({ genre }: { genre: string }) {
  * else is narrowing it, so a search running over an empty genre is never
  * blamed for a miss it did not cause.
  *
- * The term it quotes comes from the settled query the movies were loaded for,
+ * The term it quotes comes from the settled query the titles were loaded for,
  * handed over by the provider — the same value the request was built from, so
  * the message can never quote a term the request ignored.
  */
 export function GenreGrid() {
-  const { status, tab, genre, query, total, movies, retry, toggleFavorite } =
-    useGenreMovies();
-  const titles = tab === 'series' ? 'series' : 'movies';
+  const { status, tab, genre, query, total, titles, retry, toggleFavorite } =
+    useGenreTitles();
+  const kind = tab === 'series' ? 'series' : 'movies';
   const navigate = useNavigate();
 
   if (status === 'loading') {
@@ -57,13 +57,13 @@ export function GenreGrid() {
     return (
       <RetryableFailure
         title="Couldn’t load this genre"
-        body={`Something went wrong reading these ${titles}.`}
+        body={`Something went wrong reading these ${kind}.`}
         onRetry={retry}
       />
     );
   }
 
-  if (movies.length === 0) {
+  if (titles.length === 0) {
     // A settled query holds a search or holds nothing; there is no empty one to
     // tell apart, because the parser already dropped it.
     const { search } = query;
@@ -80,14 +80,14 @@ export function GenreGrid() {
     return (
       <LoadMessage
         title="Nothing here"
-        body={`There are no ${titles} in ${genre}.`}
+        body={`There are no ${kind} in ${genre}.`}
       />
     );
   }
 
   return (
     <LibraryGrid
-      movies={movies}
+      movies={titles}
       // An id is data on its way into a URL; each path encodes it.
       onOpenMovie={(id) =>
         navigate(tab === 'series' ? seriesPath(id) : moviePath(id))

@@ -74,11 +74,11 @@ async function loadGenre(
   return { total, movies, series: [] };
 }
 
-/** Where the load is: never both loading and errored, never movies without `ready`. */
-export type GenreMoviesStatus = 'loading' | 'ready' | 'error';
+/** Where the load is: never both loading and errored, never titles without `ready`. */
+export type GenreTitlesStatus = 'loading' | 'ready' | 'error';
 
-export interface GenreMoviesValue {
-  status: GenreMoviesStatus;
+export interface GenreTitlesValue {
+  status: GenreTitlesStatus;
   /** The **Library tab** the page serves: a card opens a movie or a series. */
   tab: LibraryTab;
   /**
@@ -88,7 +88,7 @@ export interface GenreMoviesValue {
    */
   genre: string;
   /**
-   * The settled query these movies were loaded for. Handed back so anything
+   * The settled query these titles were loaded for. Handed back so anything
    * describing the result reads the same query the request was built from,
    * rather than parsing the URL for itself and risking naming a filter the
    * request ignored.
@@ -96,19 +96,19 @@ export interface GenreMoviesValue {
   query: GenreQuery;
   /**
    * The genre's **unfiltered** total — the same number "View all 214" promised
-   * on the row, unmoved by a search that narrows `movies`. `0` until the
+   * on the row, unmoved by a search that narrows `titles`. `0` until the
    * payload lands.
    */
   total: number;
-  /** The movies to render, uncapped; empty until the payload lands. */
-  movies: PosterCardMovie[];
+  /** The titles to render, uncapped; empty until the payload lands. */
+  titles: PosterCardMovie[];
   /** Re-run the load after a failure. */
   retry: () => void;
-  /** Save one movie's favorite flag, showing the new value immediately. */
+  /** Save one title's favorite flag, showing the new value immediately. */
   toggleFavorite: (id: string, favorite: boolean) => void;
 }
 
-const GenreMoviesContext = createContext<GenreMoviesValue | null>(null);
+const GenreTitlesContext = createContext<GenreTitlesValue | null>(null);
 
 /**
  * Which screen the Genre page is: one genre named by the path, or the `other`
@@ -122,7 +122,7 @@ export type GenrePageMode = 'genre' | 'other';
  */
 export const OTHER_MOVIES_TITLE = 'Other movies';
 
-export interface GenreMoviesProviderProps {
+export interface GenreTitlesProviderProps {
   children: ReactNode;
   /** `genre` when omitted. */
   mode?: GenrePageMode;
@@ -139,7 +139,6 @@ export interface GenreMoviesProviderProps {
  * it loads `GET /api/series/genre/:name`, or `/api/series/genre-less` headed
  * _Other series_ (the **Other series row**'s), and draws the series as Poster
  * cards opening the series page, a heart saving through `saveSeriesFavorite`.
- * The name keeps _Movies_ for now; it serves both kinds.
  *
  * A genre page is a fixed header and a scrolling body over a single payload:
  * the heading needs the total, the grid needs the titles, and both come from
@@ -156,13 +155,13 @@ export interface GenreMoviesProviderProps {
  * stays put: the skeleton latch, which {@link useBrowseLoad} owns and explains.
  *
  * That the value travels by context is an implementation detail of this
- * module, not a contract: `useGenreMovies()` is what consumers read, and
+ * module, not a contract: `useGenreTitles()` is what consumers read, and
  * nothing about them would change if the value arrived another way.
  */
-export function GenreMoviesProvider({
+export function GenreTitlesProvider({
   children,
   mode = 'genre',
-}: GenreMoviesProviderProps) {
+}: GenreTitlesProviderProps) {
   const { name } = useParams<{ name: string }>();
   const [searchParams] = useSearchParams();
   const tab = useLibraryTab();
@@ -208,7 +207,7 @@ export function GenreMoviesProvider({
   // The held records drawn per render under the preference, so a flip in
   // Settings redraws the grid without reading the genre again.
   const tmdbRatings = useTmdbRatings();
-  const movies = useMemo<PosterCardMovie[]>(
+  const titles = useMemo<PosterCardMovie[]>(
     () => [
       ...heldMovies.map((movie) => view(movie, tmdbRatings)),
       ...heldSeries.map((series) => seriesCardView(series, tmdbRatings)),
@@ -235,7 +234,7 @@ export function GenreMoviesProvider({
 
   /**
    * The one edit this screen can make to the grid it loaded. It lives here
-   * because the optimistic value and the loaded movies are the same state, and
+   * because the optimistic value and the loaded titles are the same state, and
    * it writes through the same endpoint the home screen's hearts write through,
    * so a favorite means one thing in one place.
    */
@@ -244,27 +243,27 @@ export function GenreMoviesProvider({
     tab === 'series' ? saveSeriesFavorite : saveFavorite
   );
 
-  const value = useMemo<GenreMoviesValue>(
-    () => ({ status, tab, genre, query, total, movies, retry, toggleFavorite }),
-    [status, tab, genre, query, total, movies, retry, toggleFavorite]
+  const value = useMemo<GenreTitlesValue>(
+    () => ({ status, tab, genre, query, total, titles, retry, toggleFavorite }),
+    [status, tab, genre, query, total, titles, retry, toggleFavorite]
   );
 
   return (
-    <GenreMoviesContext.Provider value={value}>
+    <GenreTitlesContext.Provider value={value}>
       {children}
-    </GenreMoviesContext.Provider>
+    </GenreTitlesContext.Provider>
   );
 }
 
 /**
  * What the genre screen's heading and grid both read — one load, two subtrees.
- * Throws outside a {@link GenreMoviesProvider}, because a heading with no genre
+ * Throws outside a {@link GenreTitlesProvider}, because a heading with no genre
  * behind it is a bug at the point it is mounted, not something to render around.
  */
-export function useGenreMovies(): GenreMoviesValue {
-  const value = useContext(GenreMoviesContext);
+export function useGenreTitles(): GenreTitlesValue {
+  const value = useContext(GenreTitlesContext);
   if (value === null) {
-    throw new Error('useGenreMovies must be used within a GenreMoviesProvider');
+    throw new Error('useGenreTitles must be used within a GenreTitlesProvider');
   }
   return value;
 }
