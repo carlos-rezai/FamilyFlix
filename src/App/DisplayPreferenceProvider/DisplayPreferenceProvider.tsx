@@ -80,10 +80,10 @@ export function DisplayPreferenceProvider({
   const margins = useHeldValue<boolean>(saveUltrawideMargins);
   const ratings = useHeldValue<boolean>(saveTmdbRatings);
   const startTab = useHeldValue<LibraryTab>(saveStartTab);
-  const { land: landMargins } = margins;
-  const { land: landRatings } = ratings;
   const movieRowView = useHeldValue<RowView>(saveMovieRowView);
   const seriesRowView = useHeldValue<RowView>(saveSeriesRowView);
+  const { land: landMargins } = margins;
+  const { land: landRatings } = ratings;
   const { land: landStartTab } = startTab;
   const { land: landMovieRowView } = movieRowView;
   const { land: landSeriesRowView } = seriesRowView;
