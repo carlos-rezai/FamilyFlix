@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react';
+import { useMemo } from 'react';
 
 import type {
   ContinueCardMovie,
@@ -11,13 +11,12 @@ import type {
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { fetchSeriesRows } from '../../api/api';
-import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useRowsLoad } from '../../useRowsLoad/useRowsLoad';
 import {
   withFavoriteInList,
   withShelved,
 } from '../../withFavorite/withFavorite';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
-import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
 
@@ -93,15 +92,18 @@ export interface UseSeriesRowsResult {
  * settled **Library query** is the load's key, so only a change to it reloads
  * `GET /api/series/rows`; the held payload is drawn per render under the TMDB
  * ratings preference through `seriesCardView`; and a heart saves through
- * `saveSeriesFavorite`, filled at once everywhere the series is carried and
- * put back if the save is refused.
+ * `saveSeriesFavorite` by {@link useRowsLoad}, filled at once everywhere the
+ * series is carried, put back if the save is refused, and settled by one
+ * reload once every confirmed heart has landed, as the movie rows are.
  */
 export function useSeriesRows(): UseSeriesRowsResult {
   const { settled, query } = useSettledLibraryQuery();
 
-  const { status, data, setData, retry } = useBrowseLoad(
+  const { status, data, retry, toggleFavorite } = useRowsLoad(
     () => fetchSeriesRows(query),
-    settled
+    settled,
+    withHeart,
+    saveSeriesFavorite
   );
   const held = data ?? NO_PAYLOAD;
 
@@ -117,15 +119,6 @@ export function useSeriesRows(): UseSeriesRowsResult {
     }),
     [held, tmdbRatings]
   );
-
-  const applyFavorite = useCallback(
-    (id: string, favorite: boolean) =>
-      setData((current) =>
-        current === null ? current : withHeart(current, id, favorite)
-      ),
-    [setData]
-  );
-  const toggleFavorite = useOptimisticSave(applyFavorite, saveSeriesFavorite);
 
   return { status, query, ...sections, retry, toggleFavorite };
 }
