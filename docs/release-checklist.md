@@ -134,6 +134,12 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       on under the home. Open again and press a key mid-run: the tune fades
       with the picture and no chord plays. Reload: silence. With Windows
       animations off, open once more: the chord alone, as the fades hand over.
+- [ ] Row view, in the shell on the dev library with
+      `npm run db:seed-series`: switch Movies to _All_: every film in one
+      grid under _All movies_. Switch Series to _By genre_: a row per genre
+      and _Other series_ last. _View all_ on a series row opens its series,
+      and Back returns to the rows. Heart a series on a row: it lands on the
+      shelf. Quit and open: both tabs keep their view.
 - [ ] Scan new folders, over the sandbox library: add a new Library folder
       holding a film: its row reads _Not scanned yet_. _Scan new folders_
       logs one `Scanning` line, for that folder, and imports only its

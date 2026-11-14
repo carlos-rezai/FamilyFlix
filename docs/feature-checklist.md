@@ -75,7 +75,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Rebuild edges: hand-kept sheets, growing folders    | ✅ Done    |
 | Export round trip: an Export gives it all back      | ✅ Done    |
 | Welcome tune: a tune in sync with the intro         | ✅ Done    |
-| Row view: genre rows or one grid, Movies and Series | 🔲 Planned |
+| Row view: genre rows or one grid, Movies and Series | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -587,10 +587,14 @@ Step 46 came out of the two tabs browsing differently: Movies draws genre
 rows, Series one grid of every show. Settled in a grill-me on 2026-11-13
 (design log 63, handoff `docs/handoff/handoff-row-view/`):
 
-46. 🔜 **Row view**: a switch on both the Movies and the Series tab between
+46. ✅ **Row view**: a switch on both the Movies and the Series tab between
     _All_, every title in one grid, and _By genre_, a row per genre, so
     either tab can be browsed either way. Built in issues 608 to 614; the
-    refactor is still to come.
+    closing round (issue 616) named the four bodies kind then shape
+    (`MovieRows`, `MovieGrid`, `SeriesGrid`, `SeriesRows`) and the Genre
+    page's provider `GenreTitles`, gave each shared piece one owner, settled
+    the series shelf after a heart as the movie shelf is, and made Back the
+    Genre page layout's slot.
     - **The household's, per tab**: the **Row view switch** (`RowViewSwitch`,
       a _View_ Filter dropdown after the filters in the header's end slot)
       sets the current tab's Row view, with no snackbar and no URL. It is kept
@@ -610,7 +614,10 @@ rows, Series one grid of every show. Settled in a grill-me on 2026-11-13
       series genre, busiest first, 15 cards each with the true count on _View
       all_, and the **Other series row** last; under a genre filter only that
       genre's row and no Other row. _View all_ opens `/genre/:name?tab=series`
-      or `/genre-less?tab=series`, the Carried sort beside the tab.
+      or `/genre-less?tab=series`, the Carried sort beside the tab. A
+      confirmed heart reads the rows again once every save has landed, so
+      the shelf settles in the server's sort and cap, as Movies By genre
+      (`MovieRows`) does.
     - **The Genre page for series**: `GET /api/series/genre/:name` and
       `/api/series/genre-less`, drawn by the same Genre page under
       `?tab=series` (the `other` mode headed _Other series_), its cards
