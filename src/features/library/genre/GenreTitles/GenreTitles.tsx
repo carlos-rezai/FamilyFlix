@@ -74,7 +74,10 @@ async function loadGenre(
   return { total, movies, series: [] };
 }
 
-/** Where the load is: never both loading and errored, never titles without `ready`. */
+/**
+ * Where the load is: never both loading and errored, never titles without
+ * `ready`.
+ */
 export type GenreTitlesStatus = 'loading' | 'ready' | 'error';
 
 export interface GenreTitlesValue {
@@ -166,8 +169,8 @@ export function GenreTitlesProvider({
   const genre = mode === 'other' ? otherRowTitle(tab) : (name ?? '');
 
   // The settled query written back out the way the URL spells it — the shared
-  // parser's answer, so a stale, hand-edited or hostile URL is made safe here by
-  // exactly the rules the header's controls read it by.
+  // parser's answer, so a stale, hand-edited or hostile URL is made safe here
+  // by exactly the rules the header's controls read it by.
   //
   // Reducing it to that canonical string first is what decides when the genre
   // reloads: only the parts this screen reads are in it, at their settled
@@ -175,9 +178,9 @@ export function GenreTitlesProvider({
   // the default it was already in all leave the string alone.
   const settled = toGenreQueryParams(parseGenreQuery(searchParams)).toString();
 
-  // Read back from that canonical form, so an unchanged query keeps one identity
-  // for the load below. It yields what the URL says because the two functions
-  // are inverses — a property their own test asserts.
+  // Read back from that canonical form, so an unchanged query keeps one
+  // identity for the load below. It yields what the URL says because the two
+  // functions are inverses — a property their own test asserts.
   const query = useMemo(
     () => parseGenreQuery(new URLSearchParams(settled)),
     [settled]
@@ -248,8 +251,9 @@ export function GenreTitlesProvider({
 
 /**
  * What the genre screen's heading and grid both read — one load, two subtrees.
- * Throws outside a {@link GenreTitlesProvider}, because a heading with no genre
- * behind it is a bug at the point it is mounted, not something to render around.
+ * Throws outside a {@link GenreTitlesProvider}, because a heading with no
+ * genre behind it is a bug at the point it is mounted, not something to render
+ * around.
  */
 export function useGenreTitles(): GenreTitlesValue {
   const value = useContext(GenreTitlesContext);

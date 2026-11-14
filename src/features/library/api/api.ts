@@ -152,9 +152,10 @@ export async function fetchMovieGrid(
 const SERIES_ROWS_ENDPOINT = '/api/series/rows';
 
 /**
- * Loads Series under **By genre** for one **Library query**, `fetchSeriesHome`'s
- * shape: the parameters written by the util the app URL is, so an unfiltered
- * read asks a clean `/api/series/rows`. Rejects on anything but a 2xx.
+ * Loads Series under **By genre** for one **Library query**, in
+ * `fetchSeriesHome`'s shape: the parameters written by the util the app URL
+ * is, so an unfiltered read asks a clean `/api/series/rows`. Rejects on
+ * anything but a 2xx.
  */
 export async function fetchSeriesRows(
   query: LibraryQuery
