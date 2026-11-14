@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef } from 'react';
+import { useMemo } from 'react';
 
 import type {
   ContinueCardMovie,
@@ -12,9 +12,8 @@ import { fetchHomePayload } from '../../api/api';
 import { continueView } from '../continueView/continueView';
 import { toGenreRow } from '../toGenreRow/toGenreRow';
 import { view } from '../../view/view';
-import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import { useRowsLoad } from '../../useRowsLoad/useRowsLoad';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
-import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 
@@ -121,39 +120,20 @@ export interface UseMovieRowsResult {
  * Through that refetch the rows already on screen stay put — the skeleton latch,
  * which {@link useBrowseLoad} owns and explains.
  *
- * It also owns the one edit the browse home can make to those rows — the
- * favorite heart — because the optimistic value and the loaded rows are the
- * same state. The heart fills before the save is confirmed and reverts if the
- * save fails, so it never claims something is saved that isn't.
+ * The favorite heart, and the reload a confirmed one earns so the shelf
+ * settles in the server's sort and cap, are {@link useRowsLoad}'s; this hook
+ * hands it the payload's `withHeart`.
  */
 export function useMovieRows(): UseMovieRowsResult {
   const { settled, query } = useSettledLibraryQuery();
 
-  // Each movie's newest save still waiting on the route: the value it asked
-  // for, and a token telling it from a save it overtook.
-  const pending = useRef(
-    new Map<string, { favorite: boolean; token: object }>()
-  );
-  // Every save on the wire, an overtaken one included — the count the reload
-  // waits on, where `pending` holds only each movie's newest value.
-  const inFlight = useRef(0);
-  const reloadWanted = useRef(false);
-
   // The settled query string is what says which load this is: an unchanged
   // query is an unchanged string, and nothing else about a render can move it.
-  //
-  // A load answers with what the server held when it read, which can be from
-  // before a save still in flight — so each of those is laid back over it, and
-  // a heart pressed while a reload was out survives the reload landing.
-  const { status, data, setData, retry } = useBrowseLoad(
-    () =>
-      fetchHomePayload(query).then((payload) =>
-        [...pending.current].reduce(
-          (held, [id, { favorite }]) => withHeart(held, id, favorite),
-          payload
-        )
-      ),
-    settled
+  const { status, data, retry, toggleFavorite } = useRowsLoad(
+    () => fetchHomePayload(query),
+    settled,
+    withHeart,
+    saveFavorite
   );
 
   // A failed or unfinished load has no payload; the screen shows its own copy
@@ -167,70 +147,6 @@ export function useMovieRows(): UseMovieRowsResult {
     () => toSections(held, tmdbRatings),
     [held, tmdbRatings]
   );
-
-  /**
-   * Applies a favorite value everywhere the payload carries the movie, leaving
-   * nothing else moved. A film can hold two cards on this screen at once — one
-   * on the shelf and one in each genre row it is tagged with — and they are one
-   * film: two cards telling the reader different things is not a state we ship.
-   * So both sections move inside a single `setData`, which is what makes the
-   * shelf card and the Drama card flip on the same render rather than one
-   * behind the other.
-   *
-   * Nothing is ever removed here. An un-favorited movie stays in `favorites`
-   * with its flag false — `FavoritesRow` filters what it renders — so a refused
-   * save has a movie to flip back and the card returns to the shelf.
-   */
-  const applyFavorite = useCallback(
-    (id: string, favorite: boolean) =>
-      setData((current) =>
-        current === null ? current : withHeart(current, id, favorite)
-      ),
-    [setData]
-  );
-
-  /**
-   * The save, and the reload a confirmed heart earns. A heart puts its card at
-   * the front of the shelf, which is not where the server's sort or its cap of
-   * 15 would put it — so once the route has it, the home is read again and the
-   * shelf settles where it belongs, behind the skeleton latch so nothing on
-   * screen moves but the shelf. The reload waits for every save still in
-   * flight, and a reload already out is answered with them laid back over it
-   * (above). An un-heart needs no reload — the card only leaves.
-   *
-   * A confirmed save writes its value back into what is held, because a reload
-   * that landed while it was in flight may have answered without it.
-   */
-  const saveAndSettle = useCallback(
-    async (id: string, favorite: boolean) => {
-      const token = {};
-      pending.current.set(id, { favorite, token });
-      inFlight.current += 1;
-      const newest = () => pending.current.get(id)?.token === token;
-      try {
-        const saved = await saveFavorite(id, favorite);
-        if (saved === favorite && newest()) {
-          applyFavorite(id, saved);
-        }
-        if (favorite && saved) {
-          reloadWanted.current = true;
-        }
-        return saved;
-      } finally {
-        if (newest()) {
-          pending.current.delete(id);
-        }
-        inFlight.current -= 1;
-        if (inFlight.current === 0 && reloadWanted.current) {
-          reloadWanted.current = false;
-          retry();
-        }
-      }
-    },
-    [applyFavorite, retry]
-  );
-
-  const toggleFavorite = useOptimisticSave(applyFavorite, saveAndSettle);
 
   return {
     status,
