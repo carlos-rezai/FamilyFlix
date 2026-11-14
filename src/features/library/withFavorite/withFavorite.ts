@@ -1,49 +1,54 @@
-import type { HomeRow, Movie } from '@/types';
+import type { HomeRow } from '@/types';
+
+/** Any **Title** a heart can land on: a **Movie** or a **Series**. */
+export interface Heartable {
+  id: string;
+  isFavorite: boolean;
+}
 
 /**
- * The movies with one of them's favorite flag set. The list comes back at its
+ * The titles with one of them's favorite flag set. The list comes back at its
  * own length and in its own order — the server decided which cards are on the
  * grid and where; a heart only ever changes what one of them says about itself.
  *
- * Pure: the movies handed in are never mutated, so an optimistic value can be
+ * Pure: the titles handed in are never mutated, so an optimistic value can be
  * applied and reverted from the same source list.
  */
-export function withFavoriteInList(
-  movies: Movie[],
+export function withFavoriteInList<T extends Heartable>(
+  titles: T[],
   id: string,
   favorite: boolean
-): Movie[] {
-  return movies.map((movie) =>
-    movie.id === id ? { ...movie, isFavorite: favorite } : movie
+): T[] {
+  return titles.map((title) =>
+    title.id === id ? { ...title, isFavorite: favorite } : title
   );
 }
 
 /**
- * The Favorites shelf with one movie's favorite flag set — and, for a heart on
- * a movie the shelf does not hold yet, that movie's record from the rows put
- * at the front. The shelf was loaded as a snapshot, so a movie hearted from a
- * genre row has no card on it to flip; this is what gives it one.
+ * The Favorites shelf with one title's favorite flag set — and, for a heart on
+ * a title the shelf does not hold yet, that title's record put at the front,
+ * found among the records the heart can come from (the caller flattens its
+ * rows into them). The shelf was loaded as a snapshot, so a title hearted from
+ * a genre row has no card on it to flip; this is what gives it one.
  *
- * Nothing is ever removed: an un-hearted movie stays with its flag false, and
+ * Nothing is ever removed: an un-hearted title stays with its flag false, and
  * `shelvedFavorites` leaves it out, so a refused save has a card to put back.
- * A heart on a movie no row carries either has nothing to shelve, and the shelf
- * comes back flipped and nothing more.
+ * A heart on a title none of the records carries has nothing to shelve, and
+ * the shelf comes back flipped and nothing more.
  *
- * Pure: the shelf and rows handed in are never mutated.
+ * Pure: the shelf and records handed in are never mutated.
  */
-export function withShelved(
-  favorites: Movie[],
-  rows: HomeRow[],
+export function withShelved<T extends Heartable>(
+  favorites: T[],
+  records: T[],
   id: string,
   favorite: boolean
-): Movie[] {
-  if (!favorite || favorites.some((movie) => movie.id === id)) {
+): T[] {
+  if (!favorite || favorites.some((title) => title.id === id)) {
     return withFavoriteInList(favorites, id, favorite);
   }
 
-  const record = rows
-    .flatMap((row) => row.movies)
-    .find((movie) => movie.id === id);
+  const record = records.find((title) => title.id === id);
   return record === undefined
     ? favorites
     : [{ ...record, isFavorite: favorite }, ...favorites];

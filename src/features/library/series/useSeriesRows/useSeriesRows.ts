@@ -5,7 +5,6 @@ import type {
   GenreRowModel,
   LibraryQuery,
   PosterCardMovie,
-  Series,
   SeriesRow,
   SeriesRowsPayload,
 } from '@/types';
@@ -13,6 +12,10 @@ import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite'
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { fetchSeriesRows } from '../../api/api';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
+import {
+  withFavoriteInList,
+  withShelved,
+} from '../../withFavorite/withFavorite';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
@@ -35,13 +38,6 @@ function toRow(row: SeriesRow, tmdbRatings: boolean): GenreRowModel {
   };
 }
 
-/** The series with one of them's favorite flag set, nothing else moved. */
-function withFlag(list: Series[], id: string, isFavorite: boolean): Series[] {
-  return list.map((series) =>
-    series.id === id ? { ...series, isFavorite } : series
-  );
-}
-
 /**
  * The payload with one series' favorite set everywhere it is carried: every
  * genre row, Other, and the shelf, which gains the series at its front when
@@ -55,21 +51,19 @@ function withHeart(
 ): SeriesRowsPayload {
   const rowsOf = (row: SeriesRow) => ({
     ...row,
-    series: withFlag(row.series, id, isFavorite),
+    series: withFavoriteInList(row.series, id, isFavorite),
   });
-  const shelved = payload.favorites.some((series) => series.id === id);
-  const record = [...payload.rows, ...(payload.other ? [payload.other] : [])]
-    .flatMap((row) => row.series)
-    .find((series) => series.id === id);
-  const favorites =
-    isFavorite && !shelved && record !== undefined
-      ? [{ ...record, isFavorite }, ...payload.favorites]
-      : withFlag(payload.favorites, id, isFavorite);
+  const other = payload.other === null ? [] : [payload.other];
   return {
     ...payload,
     rows: payload.rows.map(rowsOf),
     other: payload.other === null ? null : rowsOf(payload.other),
-    favorites,
+    favorites: withShelved(
+      payload.favorites,
+      [...payload.rows, ...other].flatMap((row) => row.series),
+      id,
+      isFavorite
+    ),
   };
 }
 

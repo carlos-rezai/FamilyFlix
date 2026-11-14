@@ -69,7 +69,7 @@ function withHeart(
     rows: withFavorite(payload.rows, id, favorite),
     favorites: withShelved(
       payload.favorites,
-      [...payload.rows, ...other],
+      [...payload.rows, ...other].flatMap((row) => row.movies),
       id,
       favorite
     ),

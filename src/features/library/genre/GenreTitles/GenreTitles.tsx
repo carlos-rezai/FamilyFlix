@@ -217,9 +217,7 @@ export function GenreTitlesProvider({
           : {
               ...current,
               movies: withFavoriteInList(current.movies, id, favorite),
-              series: current.series.map((series) =>
-                series.id === id ? { ...series, isFavorite: favorite } : series
-              ),
+              series: withFavoriteInList(current.series, id, favorite),
             }
       ),
     [setData]

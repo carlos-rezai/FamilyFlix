@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
-import { withFavorite, withFavoriteInList } from './withFavorite';
-import type { HomeRow, Movie } from '@/types';
+import { withFavorite, withFavoriteInList, withShelved } from './withFavorite';
+import type { HomeRow, Movie, Series } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 /** The same movie tagged with two genres, plus a bystander in each row. */
@@ -150,5 +150,82 @@ describe('withFavoriteInList', () => {
     const before = list();
 
     expect(withFavoriteInList(before, 'nope', true)).toEqual(before);
+  });
+});
+
+/** A series record, every field the type asks for, the given ones over it. */
+function makeSeries(overrides: Partial<Series> = {}): Series {
+  return {
+    id: 's1',
+    tmdbId: null,
+    title: 'Harbor & Vine',
+    year: 2021,
+    endYear: null,
+    synopsis: null,
+    creator: null,
+    cast: [],
+    rating: null,
+    isFavorite: false,
+    posterPath: null,
+    backdropPath: null,
+    originalTitle: null,
+    tmdbScore: null,
+    genres: [],
+    watched: false,
+    createdAt: '2026-09-23T00:00:00.000Z',
+    updatedAt: '2026-09-23T00:00:00.000Z',
+    ...overrides,
+  };
+}
+
+describe('withFavoriteInList: a series', () => {
+  it('sets the flag on the series whose id matches, the rest untouched', () => {
+    const next = withFavoriteInList(
+      [makeSeries({ id: 's1' }), makeSeries({ id: 's2', title: 'Tidewater' })],
+      's2',
+      true
+    );
+
+    expect(next.map((series) => series.isFavorite)).toEqual([false, true]);
+    expect(next[1].title).toBe('Tidewater');
+  });
+});
+
+describe('withShelved', () => {
+  it('flips a movie the shelf already holds, adding nothing', () => {
+    const shelf = [makeMovie({ id: 'a2', isFavorite: true })];
+
+    const next = withShelved(shelf, list(), 'a2', false);
+
+    expect(next.map((movie) => [movie.id, movie.isFavorite])).toEqual([
+      ['a2', false],
+    ]);
+  });
+
+  it('puts a newly hearted movie at the shelf’s front, from the records', () => {
+    const shelf = [makeMovie({ id: 'a2', isFavorite: true })];
+
+    const next = withShelved(shelf, list(), 'a1', true);
+
+    expect(next.map((movie) => movie.id)).toEqual(['a1', 'a2']);
+    expect(next[0]).toMatchObject({ title: 'Northwind', isFavorite: true });
+  });
+
+  it('shelves nothing for a heart on a title none of the records carries', () => {
+    const shelf = [makeMovie({ id: 'a2', isFavorite: true })];
+
+    expect(withShelved(shelf, list(), 'nope', true)).toEqual(shelf);
+  });
+
+  it('puts a newly hearted series at the shelf’s front, from the records', () => {
+    const shelf = [makeSeries({ id: 's1', isFavorite: true })];
+    const records = [makeSeries({ id: 's2', title: 'Tidewater' })];
+
+    const next = withShelved(shelf, records, 's2', true);
+
+    expect(next.map((series) => [series.id, series.isFavorite])).toEqual([
+      ['s2', true],
+      ['s1', true],
+    ]);
   });
 });

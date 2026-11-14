@@ -17,6 +17,7 @@ import {
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
+import { withFavoriteInList } from '../../withFavorite/withFavorite';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
@@ -66,9 +67,7 @@ export function SeriesGrid() {
           ? current
           : {
               ...current,
-              series: current.series.map((series) =>
-                series.id === id ? { ...series, isFavorite } : series
-              ),
+              series: withFavoriteInList(current.series, id, isFavorite),
             }
       ),
     [setData]

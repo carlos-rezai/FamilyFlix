@@ -12,6 +12,7 @@ import { SkeletonGrid } from '../../SkeletonGrid/SkeletonGrid';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
+import { withFavoriteInList } from '../../withFavorite/withFavorite';
 import { view } from '../../view/view';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { continueView } from '../continueView/continueView';
@@ -53,9 +54,7 @@ export function MovieGrid() {
           ? current
           : {
               ...current,
-              movies: current.movies.map((movie) =>
-                movie.id === id ? { ...movie, isFavorite } : movie
-              ),
+              movies: withFavoriteInList(current.movies, id, isFavorite),
             }
       ),
     [setData]
