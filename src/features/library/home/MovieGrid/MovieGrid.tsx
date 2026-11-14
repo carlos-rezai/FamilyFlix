@@ -18,7 +18,7 @@ import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { continueView } from '../continueView/continueView';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
 import { shelvedFavorites } from '../shelvedFavorites/shelvedFavorites';
-import { Count, Heading } from './MovieGrid.styles';
+import { LibraryGridHeading } from '../../LibraryGridHeading/LibraryGridHeading';
 
 /** The Favorites shelf's cap: the movie home's 15, a carousel's slice. */
 const FAVORITES_LIMIT = 15;
@@ -146,8 +146,10 @@ export function MovieGrid() {
         onOpenMovie={openMovie}
         onToggleFavorite={toggleFavorite}
       />
-      <Heading>All movies</Heading>
-      <Count>{movieCountLabel(data.movies.length)}</Count>
+      <LibraryGridHeading
+        title="All movies"
+        count={movieCountLabel(data.movies.length)}
+      />
       <LibraryGrid
         movies={cards}
         onOpenMovie={openMovie}

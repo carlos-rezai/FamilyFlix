@@ -8,7 +8,7 @@ import { GenreRow } from '../../home/GenreRow/GenreRow';
 import { shelvedFavorites } from '../../home/shelvedFavorites/shelvedFavorites';
 import { otherRowTitle } from '../../otherRowTitle/otherRowTitle';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
-import { Count, Heading } from '../SeriesGrid/SeriesGrid.styles';
+import { LibraryGridHeading } from '../../LibraryGridHeading/LibraryGridHeading';
 import { useSeriesRows } from '../useSeriesRows/useSeriesRows';
 
 /**
@@ -74,8 +74,7 @@ export function SeriesRows() {
     }
     return (
       <section>
-        <Heading>All series</Heading>
-        <Count>0 series · 0 episodes</Count>
+        <LibraryGridHeading title="All series" count="0 series · 0 episodes" />
       </section>
     );
   }

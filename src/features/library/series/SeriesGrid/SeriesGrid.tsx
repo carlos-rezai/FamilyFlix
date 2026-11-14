@@ -17,7 +17,7 @@ import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
-import { Count, Heading } from './SeriesGrid.styles';
+import { LibraryGridHeading } from '../../LibraryGridHeading/LibraryGridHeading';
 
 /** The Favorites shelf's cap — the movie home's 15, a carousel's slice. */
 const FAVORITES_LIMIT = 15;
@@ -139,8 +139,7 @@ export function SeriesGrid() {
         onOpenMovie={(id) => navigate(seriesPath(id))}
         onToggleFavorite={toggleFavorite}
       />
-      <Heading>All series</Heading>
-      <Count>{seriesCountLabel(data)}</Count>
+      <LibraryGridHeading title="All series" count={seriesCountLabel(data)} />
       <LibraryGrid
         movies={cards}
         onOpenMovie={(id) => navigate(seriesPath(id))}
