@@ -2,14 +2,13 @@ import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { moviePath, range } from '@/utils';
+import { moviePath } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
 import { fetchMovieGrid } from '../../api/api';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
-import { Grid } from '../../LibraryGrid/LibraryGrid.styles';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
-import { SkeletonCard } from '../../SkeletonCard/SkeletonCard';
+import { SkeletonGrid } from '../../SkeletonGrid/SkeletonGrid';
 import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
@@ -22,20 +21,6 @@ import { LibraryGridHeading } from '../../LibraryGridHeading/LibraryGridHeading'
 
 /** The Favorites shelf's cap: the movie home's 15, a carousel's slice. */
 const FAVORITES_LIMIT = 15;
-
-/** Enough placeholder tiles to fill the fold while the library loads. */
-const SKELETON_CARDS = 12;
-
-/** The first load, laid out on the grid it is about to become. */
-function LoadingGrid() {
-  return (
-    <Grid role="status" aria-label="Loading your library">
-      {range(SKELETON_CARDS).map((card) => (
-        <SkeletonCard key={card} />
-      ))}
-    </Grid>
-  );
-}
 
 /** `N movies`, or `1 movie`. */
 function movieCountLabel(count: number): string {
@@ -103,7 +88,7 @@ export function MovieGrid() {
   }
 
   if (status === 'loading' || data === null) {
-    return <LoadingGrid />;
+    return <SkeletonGrid label="Loading your library" />;
   }
 
   if (data.movies.length === 0 && query.search !== undefined) {

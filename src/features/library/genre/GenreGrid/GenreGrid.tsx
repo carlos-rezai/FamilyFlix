@@ -1,25 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { moviePath, range, seriesPath } from '@/utils';
+import { moviePath, seriesPath } from '@/utils';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { useGenreTitles } from '../GenreTitles/GenreTitles';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
-import { SkeletonCard } from '../../SkeletonCard/SkeletonCard';
-import { SkeletonGrid } from './GenreGrid.styles';
-
-/** Enough placeholder tiles to fill the fold while the genre loads. */
-const SKELETON_CARDS = 12;
-
-function LoadingGrid({ genre }: { genre: string }) {
-  return (
-    <SkeletonGrid role="status" aria-label={`Loading ${genre}`}>
-      {range(SKELETON_CARDS).map((card) => (
-        <SkeletonCard key={card} />
-      ))}
-    </SkeletonGrid>
-  );
-}
+import { SkeletonGrid } from '../../SkeletonGrid/SkeletonGrid';
 
 /**
  * The body half of the genre screen: every movie in the genre, uncapped, in the
@@ -50,7 +36,7 @@ export function GenreGrid() {
   const navigate = useNavigate();
 
   if (status === 'loading') {
-    return <LoadingGrid genre={genre} />;
+    return <SkeletonGrid label={`Loading ${genre}`} />;
   }
 
   if (status === 'error') {
