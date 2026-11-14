@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { episodePlayPath, seriesPath, toGenreQueryParams } from '@/utils';
+import { episodePlayPath, genreLessPath, genrePath, seriesPath } from '@/utils';
 import { ContinueRow } from '../../home/ContinueRow/ContinueRow';
 import { FavoritesRow } from '../../home/FavoritesRow/FavoritesRow';
 import { GenreRow } from '../../home/GenreRow/GenreRow';
@@ -10,9 +10,6 @@ import { otherRowTitle } from '../../otherRowTitle/otherRowTitle';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
 import { Count, Heading } from '../SeriesGrid/SeriesGrid.styles';
 import { useSeriesRows } from '../useSeriesRows/useSeriesRows';
-
-/** The tab the genre pages open under, so they read series rather than films. */
-const SERIES_TAB = 'series';
 
 /**
  * Series under **By genre**, `MovieRows`' shape over `GET /api/series/rows`: the
@@ -83,11 +80,9 @@ export function SeriesRows() {
     );
   }
 
-  // The tab, and the order the rows are in spelled the way the genre page
-  // reads it back; the search and the filters stay behind.
-  const params = toGenreQueryParams({ sort: query.sort });
-  params.set('tab', SERIES_TAB);
-  const carried = `?${params.toString()}`;
+  // The tab, and the order the rows are in, spelled by the routes the way the
+  // genre page reads them back; the search and the filters stay behind.
+  const { sort } = query;
   const openSeries = (id: string) => navigate(seriesPath(id));
 
   return (
@@ -106,8 +101,7 @@ export function SeriesRows() {
           key={row.genre}
           row={row}
           onOpenAll={() =>
-            // A genre name is user data on its way into a URL: encode it.
-            navigate(`/genre/${encodeURIComponent(row.genre)}${carried}`)
+            navigate(genrePath(row.genre, { sort, tab: 'series' }))
           }
           onOpenMovie={openSeries}
           onToggleFavorite={toggleFavorite}
@@ -116,7 +110,7 @@ export function SeriesRows() {
       {other !== null && (
         <GenreRow
           row={{ ...other, genre: otherRowTitle('series') }}
-          onOpenAll={() => navigate(`/genre-less${carried}`)}
+          onOpenAll={() => navigate(genreLessPath({ sort, tab: 'series' }))}
           onOpenMovie={openSeries}
           onToggleFavorite={toggleFavorite}
         />

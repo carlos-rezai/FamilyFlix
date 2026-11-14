@@ -44,6 +44,8 @@ export { toGenreQueryParams } from './toGenreQueryParams/toGenreQueryParams';
 export { moviePath } from './moviePath/moviePath';
 export { seriesPath } from './seriesPath/seriesPath';
 export { seriesTabPath } from './seriesTabPath/seriesTabPath';
+export { genrePath } from './genrePath/genrePath';
+export { genreLessPath } from './genreLessPath/genreLessPath';
 export { seasonPath } from './seasonPath/seasonPath';
 export { episodePlayPath } from './episodePlayPath/episodePlayPath';
 export { enrichPath, parseEnrichQuery } from './enrichPath/enrichPath';

@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { moviePath, range, toGenreQueryParams } from '@/utils';
+import { genreLessPath, genrePath, moviePath, range } from '@/utils';
 import { otherRowTitle } from '../../otherRowTitle/otherRowTitle';
 import { ContinueRow } from '../ContinueRow/ContinueRow';
 import { FavoritesRow } from '../FavoritesRow/FavoritesRow';
@@ -41,9 +41,6 @@ function LoadingRows() {
     </div>
   );
 }
-
-/** Where the Other row's _View all_ goes: its own route, never `/genre/Other`. */
-const GENRE_LESS_PATH = '/genre-less';
 
 /**
  * The body of the browse home: what the family is part-way through, then what
@@ -147,18 +144,13 @@ export function MovieRows() {
 
   const openMovie = (id: string) => navigate(moviePath(id));
 
-  // The order the rows are actually in, spelled the way the genre page reads it
-  // back — through the same serializer, so the two screens can never disagree
-  // about how an order is written. It comes from the settled query rather than
-  // the raw URL, so a stale or hand-edited `?sort=` the parser dropped carries
-  // nothing. At the default it is empty, and the destination stays a clean
-  // `/genre/Drama`. Neither the search text nor the home's filters travel: a
-  // narrower search starts fresh in the header's own empty box, the genre rides
-  // in the path, and a rating is a filter that screen has no control to show.
-  const carriedSort = toGenreQueryParams({ sort: query.sort }).toString();
-  const genrePath = (genre: string) =>
-    // A genre name is user data on its way into a URL — encode it.
-    `/genre/${encodeURIComponent(genre)}${carriedSort === '' ? '' : `?${carriedSort}`}`;
+  // The order the rows are actually in, carried to the genre page by
+  // `genrePath`, which spells it the way that page reads it back. It comes from
+  // the settled query rather than the raw URL, so a stale or hand-edited
+  // `?sort=` the parser dropped carries nothing. Neither the search text nor
+  // the home's filters travel: a narrower search starts fresh in the header's
+  // own empty box, and a rating is a filter that screen has no control to show.
+  const { sort } = query;
 
   return (
     <>
@@ -172,7 +164,9 @@ export function MovieRows() {
         <GenreRow
           key={row.genre}
           row={row}
-          onOpenAll={() => navigate(genrePath(row.genre))}
+          onOpenAll={() =>
+            navigate(genrePath(row.genre, { sort, tab: 'movies' }))
+          }
           onOpenMovie={openMovie}
           onToggleFavorite={toggleFavorite}
         />
@@ -181,7 +175,7 @@ export function MovieRows() {
       {other !== null && (
         <GenreRow
           row={{ ...other, genre: otherRowTitle('movies') }}
-          onOpenAll={() => navigate(GENRE_LESS_PATH)}
+          onOpenAll={() => navigate(genreLessPath({ tab: 'movies' }))}
           onOpenMovie={openMovie}
           onToggleFavorite={toggleFavorite}
         />
