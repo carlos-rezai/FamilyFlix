@@ -18,6 +18,14 @@ import { HOME_ROW_LIMIT } from '../../home/home';
 /** The Series tab's Continue Watching row holds at most this many entries. */
 const CONTINUE_LIMIT = 15;
 
+/** What `listSeries` narrows and caps by, beyond the query. */
+interface ListSeriesOptions {
+  /** One more SQL clause over `s`, ANDed onto the query's. */
+  where?: string;
+  /** At most this many; every match when omitted. */
+  limit?: number;
+}
+
 /** A series carrying no genre at all: the **Other row**'s clause. */
 const GENRE_LESS = 's.id NOT IN (SELECT series_id FROM series_genres)';
 
@@ -174,14 +182,13 @@ export function createSeriesBrowse(
   }
 
   /**
-   * The series the query keeps, and one more clause when given, in its sort,
-   * capped at {@link HOME_ROW_LIMIT}, or uncapped when `limit` is `null`.
+   * The series the query keeps, in its sort: narrowed by one more clause when
+   * `where` is given, capped at `limit` when one is, uncapped otherwise.
    */
-  function listCapped(
+  function listSeries(
     query: LibraryQuery,
     on: boolean,
-    extra?: string,
-    limit: number | null = HOME_ROW_LIMIT
+    { where: extra, limit }: ListSeriesOptions = {}
   ) {
     const where = seriesWhere(query, on);
     const filter =
@@ -190,10 +197,11 @@ export function createSeriesBrowse(
         : where.sql === ''
           ? `WHERE ${extra}`
           : `${where.sql} AND ${extra}`;
+    const cap = limit === undefined ? '' : ` LIMIT ${limit}`;
     const rows = db
       .prepare(
         `SELECT s.* FROM series s ${filter}
-         ORDER BY ${seriesOrderBy(query.sort, on)}${limit === null ? '' : ` LIMIT ${limit}`}`
+         ORDER BY ${seriesOrderBy(query.sort, on)}${cap}`
       )
       .all(...where.params) as SeriesRow[];
     return reader.assembleMany(rows);
@@ -203,11 +211,6 @@ export function createSeriesBrowse(
     getSeriesHome: (query = { sort: DEFAULT_MOVIE_SORT }) => {
       const on = tmdbRatings();
       const where = seriesWhere(query, on);
-      const rows = db
-        .prepare(
-          `SELECT s.* FROM series s ${where.sql} ORDER BY ${seriesOrderBy(query.sort, on)}`
-        )
-        .all(...where.params) as SeriesRow[];
       const { n } = db
         .prepare(
           `SELECT COUNT(*) AS n FROM episodes
@@ -215,7 +218,7 @@ export function createSeriesBrowse(
         )
         .get(...where.params) as { n: number };
       return {
-        series: reader.assembleMany(rows),
+        series: listSeries(query, on),
         episodeCount: n,
         continueWatching: continueWatchingOf(where),
       };
@@ -232,14 +235,18 @@ export function createSeriesBrowse(
         .map((genre) => ({
           genre: genre.name,
           count: genre.count,
-          series: listCapped({ ...query, genre: genre.name }, on),
+          series: listSeries({ ...query, genre: genre.name }, on, {
+            limit: HOME_ROW_LIMIT,
+          }),
         }))
         .filter((row) => row.series.length > 0);
 
       // The genre-less series: none under a genre filter, `null` when empty,
       // its count the unfiltered genre-less total and its genre blank.
       const otherSeries =
-        query.genre === undefined ? listCapped(query, on, GENRE_LESS) : [];
+        query.genre === undefined
+          ? listSeries(query, on, { where: GENRE_LESS, limit: HOME_ROW_LIMIT })
+          : [];
       const other =
         otherSeries.length === 0
           ? null
@@ -252,7 +259,10 @@ export function createSeriesBrowse(
       return {
         rows,
         other,
-        favorites: listCapped(query, on, 's.is_favorite = 1'),
+        favorites: listSeries(query, on, {
+          where: 's.is_favorite = 1',
+          limit: HOME_ROW_LIMIT,
+        }),
         continueWatching: continueWatchingOf(seriesWhere(query, on)),
       };
     },
@@ -269,15 +279,13 @@ export function createSeriesBrowse(
       return {
         genre: name,
         total: genre?.count ?? 0,
-        series: listCapped(
+        series: listSeries(
           {
             search: query.search,
             sort: query.sort ?? DEFAULT_MOVIE_SORT,
             genre: name,
           },
-          tmdbRatings(),
-          undefined,
-          null
+          tmdbRatings()
         ),
       };
     },
@@ -285,11 +293,10 @@ export function createSeriesBrowse(
     getSeriesGenreLess: (query = {}) => ({
       genre: '',
       total: (countGenreLess.get() as { n: number }).n,
-      series: listCapped(
+      series: listSeries(
         { search: query.search, sort: query.sort ?? DEFAULT_MOVIE_SORT },
         tmdbRatings(),
-        GENRE_LESS,
-        null
+        { where: GENRE_LESS }
       ),
     }),
   };
