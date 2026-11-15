@@ -308,43 +308,46 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
 }
 
 /**
- * Read a folder's **Season folders**, one per number, in number order, and
- * each number two Season folders or more hold (`Season 01`, `Season 1`) as a
- * `season` **Doubled place**: the first by name order holding a video is read
- * (the first by name order when none does), the others passed, never merged,
- * so an empty `Season 01/` never hides the `Season 1/` beside it. Throws when
- * the folder cannot be read.
+ * One **Season folder** per number of a show's Season folder scans in name
+ * order, in number order: the first holding a video (the first when none
+ * does), the others passed, never merged, so an empty `Season 01/` never
+ * hides the `Season 1/` beside it. Each number two scans or more hold
+ * (`Season 01`, `Season 1`) is a `season` **Doubled place**, the read one
+ * first.
  */
-async function readSeasonPlaces(
-  dir: string
-): Promise<{ seasons: SeasonFolderScan[]; doubled: DoubledPlace[] }> {
+const oneSeasonPerNumber = (
+  scans: SeasonFolderScan[]
+): { seasons: SeasonFolderScan[]; doubled: DoubledPlace[] } => {
+  const seasons: SeasonFolderScan[] = [];
+  const doubled: DoubledPlace[] = [];
+  const byNumber = [...groupedBy(scans, (scan) => scan.number)].sort(
+    ([a], [b]) => a - b
+  );
+  for (const [season, found] of byNumber) {
+    const pick = Math.max(
+      0,
+      found.findIndex((scan) => scan.videos.length > 0)
+    );
+    seasons.push(found[pick]);
+    const folders = [found[pick], ...found.filter((_, i) => i !== pick)].map(
+      (scan) => scan.dir
+    );
+    doubled.push(...doubledOf(folders, { place: 'season', season }));
+  }
+  return { seasons, doubled };
+};
+
+/**
+ * Read every **Season folder** in a folder, in name order, one scan each.
+ * Throws when the folder cannot be read.
+ */
+async function readEverySeasonFolder(dir: string): Promise<SeasonFolderScan[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const names = entries
     .filter((entry) => entry.isDirectory() && isSeasonFolder(entry.name))
     .map((entry) => entry.name)
     .sort((a, b) => a.localeCompare(b));
-  const seasons: SeasonFolderScan[] = [];
-  const doubled: DoubledPlace[] = [];
-  const byNumber = [
-    ...groupedBy(names, (name) => String(seasonNumberOf(name))),
-  ].sort(([a], [b]) => Number(a) - Number(b));
-  for (const [number, found] of byNumber) {
-    const read = await Promise.all(
-      found.map((name) => readSeasonFolder(join(dir, name)))
-    );
-    const pick = Math.max(
-      0,
-      read.findIndex((season) => season.videos.length > 0)
-    );
-    seasons.push(read[pick]);
-    const folders = [read[pick], ...read.filter((_, i) => i !== pick)].map(
-      (season) => season.dir
-    );
-    doubled.push(
-      ...doubledOf(folders, { place: 'season', season: Number(number) })
-    );
-  }
-  return { seasons, doubled };
+  return Promise.all(names.map((name) => readSeasonFolder(join(dir, name))));
 }
 
 /**
@@ -359,7 +362,7 @@ async function readSeasonPlaces(
 export async function readSeasonFolders(
   dir: string
 ): Promise<SeasonFolderScan[]> {
-  return (await readSeasonPlaces(dir)).seasons;
+  return oneSeasonPerNumber(await readEverySeasonFolder(dir)).seasons;
 }
 
 /**
@@ -384,7 +387,9 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
   const key = folderKeyOf(name);
   const entries = await readdir(dir, { withFileTypes: true });
   const { videos } = looseFilesIn(dir, entries);
-  const { seasons, doubled: seasonsDoubled } = await readSeasonPlaces(dir);
+  const { seasons, doubled: seasonsDoubled } = oneSeasonPerNumber(
+    await readEverySeasonFolder(dir)
+  );
 
   if (videos.length > 0 && seasons.length > 0) {
     return { kind: 'left-out', dir, name, reason: 'mixed' };
