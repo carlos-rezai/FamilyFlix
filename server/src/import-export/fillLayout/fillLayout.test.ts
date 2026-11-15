@@ -96,6 +96,7 @@ function heldSeries(overrides: Partial<HeldTitleFiles> = {}): HeldTitleFiles {
     seasons: [
       {
         number: 1,
+        folder: 'Season 01',
         poster: 'severance-2022/season-01/poster.jpg',
         episodes: [
           {
@@ -420,5 +421,45 @@ describe('fillLayout: a folder it can’t write', () => {
     expect(outcome.lines).toHaveLength(1);
     expect(outcome.lines[0].kind).toBe('warning');
     expect(existsSync(join(root, 'Ronin (1998)'))).toBe(false);
+  });
+});
+
+// 64, Rescan a folder, Phase 4 (issue #621): the household's Season folder.
+//
+// Every season-scoped file is written under `season.folder`, the folder its
+// episodes actually lie in; `fillLayout` spells no Season folder itself.
+describe('fillLayout: a season’s files under its own folder', () => {
+  /** The series' held files, season 1 held in `Season 1/`. */
+  const inSeasonOne = (): HeldTitleFiles => {
+    const held = heldSeries();
+    held.seasons[0] = { ...held.seasons[0], folder: 'Season 1' };
+    return held;
+  };
+
+  it('writes the Season poster, Stills and episode track under Season 1', async () => {
+    const { root, title, media } = world(SHOW);
+    mkdirSync(join(title, 'Season 1'));
+
+    await fillLayout(media, root, inSeasonOne());
+
+    expect(bytesOf(join(title, 'Season 1', 'Images', 'poster.jpg'))).toBe(
+      'season 1 poster'
+    );
+    expect(namesIn(join(title, 'Season 1', 'Images', 'Stills'))).toEqual([
+      'S01E01.jpg',
+      'S01E02.png',
+    ]);
+    expect(
+      bytesOf(join(title, 'Season 1', 'Subtitles', 'S01E01', 'English.srt'))
+    ).toBe('severance english');
+  });
+
+  it('makes no Season 01 folder beside Season 1', async () => {
+    const { root, title, media } = world(SHOW);
+    mkdirSync(join(title, 'Season 1'));
+
+    await fillLayout(media, root, inSeasonOne());
+
+    expect(namesIn(title)).toEqual(['Images', 'Season 1']);
   });
 });

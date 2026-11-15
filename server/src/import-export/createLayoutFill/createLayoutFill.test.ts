@@ -189,3 +189,61 @@ describe('createLayoutFill: a title that gets no Layout fill', () => {
     expect(outcome).toEqual({ written: [], lines: [] });
   });
 });
+
+// 64, Rescan a folder, Phase 4 (issue #621): the household's Season folder.
+//
+// The composition names each season's folder through `seasonFolderOf`: the
+// folder its episodes' **Source files** lie in, else `Season 01`.
+describe('createLayoutFill: a season written into the folder its episodes lie in', () => {
+  /** Harbor's season 1, its episodes' Source files as given, its poster stored. */
+  function addHarbor(
+    { storage, folder }: ReturnType<typeof world>,
+    sourceFiles: (string | null)[]
+  ) {
+    const harbor = storage.addSeries(
+      { title: 'Harbor', year: 2020 },
+      sourceFiles.map((sourceFile, index) => ({
+        season: 1,
+        number: index + 1,
+        videoPath: `Harbor (2020)/${sourceFile ?? `Harbor S01E0${index + 1}.mkv`}`,
+        videoFolderId: folder.id,
+        sourceFile,
+      }))
+    );
+    storage.setSourceFolder(harbor.id, folder.id, 'Harbor (2020)');
+    storage.setSeasonPoster(harbor.id, 1, 'harbor-2020/season-01/poster.jpg');
+    return harbor;
+  }
+
+  it('writes the Season poster into Season 1 when the episodes lie there', async () => {
+    const box = world();
+    rmSync(join(box.library, 'Harbor (2020)', 'Season 01'), {
+      recursive: true,
+    });
+    mkdirSync(join(box.library, 'Harbor (2020)', 'Season 1'));
+    const harbor = addHarbor(box, [
+      'Season 1/Harbor S01E01.mkv',
+      'Season 1/Harbor S01E02.mkv',
+    ]);
+
+    await box.fill.fill(harbor.id);
+
+    expect(filesUnder(join(box.library, 'Harbor (2020)'))).toEqual([
+      'Season 1/Images/poster.jpg',
+    ]);
+  });
+
+  it('still spells Season 01 for a season with no episode in a folder', async () => {
+    const box = world();
+    rmSync(join(box.library, 'Harbor (2020)', 'Season 01'), {
+      recursive: true,
+    });
+    const harbor = addHarbor(box, ['Harbor S01E01.mkv', null]);
+
+    await box.fill.fill(harbor.id);
+
+    expect(filesUnder(join(box.library, 'Harbor (2020)'))).toEqual([
+      'Season 01/Images/poster.jpg',
+    ]);
+  });
+});
