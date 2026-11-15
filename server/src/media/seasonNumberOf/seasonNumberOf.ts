@@ -1,12 +1,12 @@
 /**
- * A **Season folder**'s name: `Season NN`, two digits or more, case folded;
- * `Season 00` the specials.
+ * A **Season folder**'s name: `Season N`, any number of digits, case folded;
+ * `Season 0` the specials.
  */
-const SEASON_FOLDER = /^season (\d{2,})$/i;
+const SEASON_FOLDER = /^season (\d+)$/i;
 
 /**
  * The season a folder's name says, or `null` for a name that is no **Season
- * folder**: one digit, another word, or anything after the number.
+ * folder**: another word, or anything after the number.
  */
 export function seasonNumberOf(name: string): number | null {
   const found = SEASON_FOLDER.exec(name);

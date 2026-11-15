@@ -463,7 +463,7 @@ describe('showFolderOf', () => {
     expect(showFolderOf(join(SHOW_DIR, 'Season 01'))).toBe(SHOW_DIR);
   });
 
-  it.each([['Season 1'], ['S01'], ['Specials']])(
+  it.each([['Seizoen 1'], ['S01'], ['Specials']])(
     'answers a folder named %s itself, no Season folder',
     (name) => {
       const dir = join(SHOW_DIR, name);

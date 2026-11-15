@@ -6,7 +6,7 @@
 // A picked **Title folder** answers its `Season NN` folders' episodes, each
 // by its **Episode tag** under its folder's season, and its **Unplaced**
 // videos: an untagged one in a Season folder. Since issue #557 a folder
-// the layout does not read as a Season folder (`Season 2`) is silent. A
+// the layout does not read as a Season folder (`Seizoen 2`) is silent. A
 // picked Season folder answers its series; a picked folder of loose tagged
 // videos answers them as Unplaced. Picking `Tidewater (2018)/` of the series fixture finds
 // the same seasons and episodes the scan's `readTitleFolder` finds.
@@ -61,7 +61,7 @@ async function readOf(dir: string, context: ShowFolderContext) {
 
 /**
  * `Shows/Harbor and Vine (2021)`: two Season folders, an untagged video in
- * the first, and a `Season 2` folder the layout does not read.
+ * the first, and a `Seizoen 2` folder the layout does not read.
  */
 function harborAndVine(): { shows: string; show: string } {
   const shows = join(sandboxRoot('familyflix-show-layout-'), 'Shows');
@@ -70,7 +70,7 @@ function harborAndVine(): { shows: string; show: string } {
     'Season 01/Harbor.and.Vine.S01E01.Pilot.mkv',
     'Season 01/bonus.mkv',
     'Season 02/Harbor.and.Vine.S02E01.Spring.Tide.mkv',
-    'Season 2/Harbor.and.Vine.S02E02.Neap.Tide.mkv',
+    'Seizoen 2/Harbor.and.Vine.S02E02.Neap.Tide.mkv',
   ]);
   return { shows, show };
 }
@@ -163,7 +163,7 @@ describe('readShowFolder: a picked Season folder of the layout', () => {
   it('never stands for its series under a name the layout does not read', async () => {
     const { shows, show } = harborAndVine();
 
-    const read = await readOf(join(show, 'Season 2'), onRecord(shows));
+    const read = await readOf(join(show, 'Seizoen 2'), onRecord(shows));
 
     expect(read.episodes).toEqual([]);
     expect(read.unplaced.map((video) => video.relativePath)).toEqual([
