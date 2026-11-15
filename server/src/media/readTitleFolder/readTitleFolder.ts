@@ -187,11 +187,11 @@ const imagesByRole = (dir: string, images: string[], role: string): string[] =>
     .map((file) => join(dir, file));
 
 /** `items` grouped by the key `keyOf` gives each, in first-seen order. */
-function groupedBy<T>(
+function groupedBy<T, K>(
   items: readonly T[],
-  keyOf: (item: T) => string
-): Map<string, T[]> {
-  const groups = new Map<string, T[]>();
+  keyOf: (item: T) => K
+): Map<K, T[]> {
+  const groups = new Map<K, T[]>();
   for (const item of items) {
     const key = keyOf(item);
     groups.set(key, [...(groups.get(key) ?? []), item]);
