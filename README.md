@@ -51,7 +51,7 @@ The main screen is genre rows, like a streaming app, with search and filtering o
 
 ### Looking after the library
 
-A rescan never adds a title twice: a video FamilyFlix already plays is known wherever it lies and whatever its folder is now called, and a film whose file has gone missing is found again when a scan meets its file. Season folders are read the way real shows name them (`Season 1`, `Seizoen 1`, `Season 1 (2008)`, a release's `S01` folder, `Specials`), and a show folder pick names each episode by its path inside the show. Deleting a title takes it out of FamilyFlix and leaves its files where they lie, and never deletes a file of yours. A title taken out stays out of every scan until _Bring back_ on its Library folder, or until you add it again by hand. A poster that won't load draws the stand-in.
+A rescan never adds a title twice: a video FamilyFlix already plays is known wherever it lies and whatever its folder is now called, and a film whose file has gone missing is found again when a scan meets its file. A folder is read under the name the family gives it, its year optional (`Heat` as good as `Heat (1995)`), and `Season 1` is as good as `Season 01`; FamilyFlix writes a show's art and subtitles into the season folder its episodes already lie in. A show folder pick names each episode by its path inside the show. Deleting a title takes it out of FamilyFlix and leaves its files where they lie, and never deletes a file of yours. A title taken out stays out of every scan until _Bring back_ on its Library folder, or until you add it again by hand. A poster that won't load draws the stand-in.
 
 ---
 
@@ -170,7 +170,7 @@ familyflix/
 │       │   ├── readableFolder/        # whether a path is a folder the app can read, never throwing
 │       │   ├── walkLibraryFolder/     # a Library folder → its Title folders, Layout warnings and Meta/ sheet
 │       │   ├── readTitleFolder/       # one Title folder by the layout: a film, a series of Season folders, or left out
-│       │   ├── folderKeyOf/           # the Folder key: a Title folder's name read as Title (Year), spelled back, and compared folded, NFC then case
+│       │   ├── folderKeyOf/           # the Folder key: a Title folder's name, its year read off a trailing (YYYY), spelled back, and compared folded, NFC then case
 │       │   ├── seasonNumberOf/        # the Season folder: Season NN read as its number, and spelled back
 │       │   ├── folderLayout/          # the layout's folder and sheet names, and the image role and track name rules
 │       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name

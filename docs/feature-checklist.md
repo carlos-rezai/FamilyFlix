@@ -76,7 +76,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Export round trip: an Export gives it all back      | ✅ Done    |
 | Welcome tune: a tune in sync with the intro         | ✅ Done    |
 | Row view: genre rows or one grid, Movies and Series | ✅ Done    |
-| Rescan a folder: a year and `Season 1` optional     | 🔲 Planned |
+| Rescan a folder: a year and `Season 1` optional     | ✅ Done    |
 | Missing videos: a held title whose file is gone     | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
@@ -634,9 +634,14 @@ its missing year and one-digit season, with only a log line to say so.
 Settled in a grill-me on 2026-11-15 (design log 64, the layout handoff
 `docs/handoff/handoff-folder-layout/` amended):
 
-47. 🔜 **Rescan a folder**: _Scan all folders_ finds what the household
+47. ✅ **Rescan a folder**: _Scan all folders_ finds what the household
     dropped into a linked Library folder under the names they would give it.
     Built in issues 618 to 624; the walk ran in the shell on the dev library.
+    The closing round (issue 625) made every season-scoped place carry its
+    **Season folder name**, so `seasonFolderOf` alone spells `Season 01`,
+    read a show's Season folders through a pure `oneSeasonPerNumber` beside
+    the track read, named the matcher's bare-title fallback `foldersFor`,
+    and took out the dead `yearInName`.
     - **The year is optional**: any folder in the root is a **Title folder**,
       read as its title with a null year (`folderKeyOf` always answers); a
       trailing `(1995)` (or a range, `(2022–)`) is its year, needed only to

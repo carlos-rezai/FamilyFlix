@@ -98,6 +98,12 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       the second film by hand under **Copy**. Delete all three: every original
       is still in the sandbox folder, byte for byte, and _Scan all folders_ again
       does not bring them back.
+- [ ] Rescan a folder: on a sandbox Library folder holding a copy of the
+      importer fixture, drop in `Heat/heat.mkv` and `Death Note/Season 1/`
+      with two episodes, and press _Scan all folders_: both arrive with no
+      year and no `isn't named` line. Sync Death Note: its poster lands in
+      `Death Note/Season 1/Images/` and no `Season 01/` appears. A second
+      scan adds nothing.
 - [ ] The Media directory refusal: on Settings → Library folders, type
       `%APPDATA%\FamilyFlix\media` and _Add_: it is refused with _That folder
       overlaps where FamilyFlix keeps its own copies. Choose another one._,
