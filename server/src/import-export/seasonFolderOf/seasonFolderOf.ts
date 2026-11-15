@@ -1,22 +1,27 @@
 import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 
+/** What `seasonFolderOf` reads of a held season: its number and episodes. */
+export interface HeldSeason {
+  number: number;
+  episodes: readonly { sourceFile: string | null }[];
+}
+
 /**
  * The **Season folder** a show's season lies in: the first path segment of
  * its held episodes' **Source files**, the first one that has a folder, in
- * the order given, else `spellSeasonFolder(season)`. Reads no disk.
+ * the order held (the library reads them by number), else
+ * `spellSeasonFolder(season.number)`. A Source file is stored with forward
+ * slashes and split on `/`. Reads no disk.
  */
-export function seasonFolderOf(
-  sourceFiles: readonly (string | null)[],
-  season: number
-): string {
-  for (const sourceFile of sourceFiles) {
+export function seasonFolderOf(season: HeldSeason): string {
+  for (const { sourceFile } of season.episodes) {
     if (sourceFile === null) {
       continue;
     }
-    const segments = sourceFile.split(/[/\\]/);
+    const segments = sourceFile.split('/');
     if (segments.length > 1 && segments[0] !== '') {
       return segments[0];
     }
   }
-  return spellSeasonFolder(season);
+  return spellSeasonFolder(season.number);
 }

@@ -249,10 +249,7 @@ function seasonRows(
   cells: PathCells
 ): ExportCell[][] {
   const episodes = [...season.episodes].sort((a, b) => a.number - b.number);
-  const seasonFolder = seasonFolderOf(
-    season.episodes.map((episode) => episode.sourceFile),
-    season.number
-  );
+  const seasonFolder = seasonFolderOf(season);
   return [
     rowOf({
       Type: 'Season',

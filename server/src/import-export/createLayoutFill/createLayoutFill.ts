@@ -67,10 +67,7 @@ export function createLayoutFill({
       subtitles: [],
       seasons: detail.seasons.map((season) => ({
         number: season.number,
-        folder: seasonFolderOf(
-          season.episodes.map((episode) => episode.sourceFile),
-          season.number
-        ),
+        folder: seasonFolderOf(season),
         poster: season.posterPath,
         episodes: season.episodes.map((episode) => ({
           number: episode.number,
