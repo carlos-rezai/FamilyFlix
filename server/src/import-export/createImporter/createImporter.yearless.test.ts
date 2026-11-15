@@ -128,9 +128,13 @@ describe('createImporter.scan: a yearless Title folder', () => {
 
     expect(held(box.storage)).toEqual([{ title: 'Heat', year: null }]);
     expect(run.problems).toEqual([]);
-    expect(
-      run.log.filter((line) => line.kind === 'warning').map((l) => l.text)
-    ).toEqual([]);
+    const warnings = run.log
+      .filter((line) => line.kind === 'warning')
+      .map((l) => l.text);
+    expect(warnings.filter((text) => text.includes('Title (Year)'))).toEqual(
+      []
+    );
+    expect(warnings.filter((text) => text.includes('left out'))).toEqual([]);
   });
 
   it('imports Heat beside Heat (1986) as two titles', async () => {

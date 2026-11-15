@@ -1,25 +1,25 @@
 /**
  * A **Title folder**'s **Folder key**: its own name, and the title and year it
- * spells as `Title (Year)`. A series is keyed by its first year.
+ * spells. A name ending in `(Year)` or a range is keyed by its first year;
+ * any other name is the title, verbatim, year `null`.
  */
 export interface FolderKey {
   name: string;
   title: string;
-  year: number;
+  year: number | null;
 }
 
-/** `Title (Year)`, the whole name: a four-digit year and nothing after it. */
-const FOLDER_KEY = /^(.+) \((\d{4})\)$/;
-
 /**
- * The **Folder key** a folder's name spells, or `null` for a name the
- * **Folder layout** does not read: no year, a range, a release name, or
- * anything after the closing parenthesis.
+ * `Title (Year)`, the whole name: a four-digit year, or a range opened by one
+ * (`2022-`, `2022–2025`), and nothing after it.
  */
-export function folderKeyOf(name: string): FolderKey | null {
+const FOLDER_KEY = /^(.+) \((\d{4})(?:[-–](?:\d{4})?)?\)$/;
+
+/** The **Folder key** a folder's name spells: every name answers one. */
+export function folderKeyOf(name: string): FolderKey {
   const found = FOLDER_KEY.exec(name);
   if (found === null) {
-    return null;
+    return { name, title: name, year: null };
   }
   return { name, title: found[1], year: Number(found[2]) };
 }

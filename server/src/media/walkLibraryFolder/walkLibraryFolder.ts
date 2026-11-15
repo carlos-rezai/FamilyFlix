@@ -32,7 +32,6 @@ const SHEETS = [`${LIBRARY_SHEET_STEM}.csv`, `${LIBRARY_SHEET_STEM}.xlsx`];
 
 /** A **Layout warning**'s text for a root folder left out. */
 const WARNING: Record<LeftOutReason, (name: string) => string> = {
-  'no-key': (name) => `⚠ ${name} isn't named Title (Year), left out`,
   empty: (name) => `⚠ ${name} holds no video or Season folder, left out`,
   mixed: (name) => `⚠ ${name} holds loose videos and Season folders, left out`,
 };

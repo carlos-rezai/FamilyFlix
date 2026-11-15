@@ -38,9 +38,8 @@ export const filmSourceOf = (
  * The **Source folder** a found film video says: a **Title folder** lying
  * directly in its listed **Library folder**, placed at its **Folder key**,
  * so a later **Folder scan** reads the film as **Already in library**.
- * `null` for a video anywhere else: under a folder not named `Title (Year)`,
- * in a Title folder deeper than the root, loose in the root, or under no
- * listed folder. Read in both modes.
+ * `null` for a video anywhere else: in a Title folder deeper than the root,
+ * loose in the root, or under no listed folder. Read in both modes.
  */
 export function placeFilmFolder(
   folders: readonly StoredLibraryFolder[],

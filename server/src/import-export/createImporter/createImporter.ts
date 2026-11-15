@@ -70,7 +70,7 @@ import {
   readShowFolder,
   type ShowFolderAnswer,
 } from '../readShowFolder/readShowFolder';
-import { titleGuess, titleKey, yearInName } from '../titleKey/titleKey';
+import { titleKey } from '../titleKey/titleKey';
 import type {
   CandidateFolder,
   ImportField,
@@ -765,8 +765,8 @@ interface HeldSeries {
 
 /**
  * The row a folder no row names imports under — a show the sheet left out, or
- * every title of a **Folder scan**: its title guessed from the folder's name,
- * its year the one the name carries, and nothing else.
+ * every title of a **Folder scan**: its title and year its **Folder key**'s,
+ * and nothing else.
  */
 const guessedRow = (name: string): SheetRow => {
   const key = folderKeyOf(name);
@@ -775,8 +775,8 @@ const guessedRow = (name: string): SheetRow => {
     folder: name,
     season: null,
     episode: null,
-    title: key?.title ?? titleGuess(name),
-    year: key?.year ?? yearInName(name),
+    title: key.title,
+    year: key.year,
     endYear: null,
     genres: [],
     director: null,

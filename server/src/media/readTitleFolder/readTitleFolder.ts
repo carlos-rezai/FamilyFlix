@@ -107,10 +107,10 @@ export interface SeriesFolderScan {
 }
 
 /**
- * Why a folder in the root is left out of the **Folder layout**: a name that
- * is no **Folder key**, neither a loose video nor a Season folder, or both.
+ * Why a folder in the root is left out of the **Folder layout**: neither a
+ * loose video nor a Season folder, or both.
  */
-export type LeftOutReason = 'no-key' | 'empty' | 'mixed';
+export type LeftOutReason = 'empty' | 'mixed';
 
 export interface LeftOutFolder {
   kind: 'left-out';
@@ -332,7 +332,7 @@ export async function readSeasonFolders(
  * order), its tracks from `Subtitles/` under any name, one per language. A
  * place two files or more fill reads the first by name order and is reported
  * as a **Doubled place** (log 61). Season folders and no loose video is a
- * series. Both, neither, or a name that is no **Folder key** is left out,
+ * series. Both or neither is left out,
  * with the reason the walk words as its **Layout warning**; Season folders
  * that all hold no video are as good as none, `empty`.
  * `Extras/` and anything else the layout doesn't name is passed in silence.
@@ -342,9 +342,6 @@ export async function readSeasonFolders(
 export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
   const name = basename(dir);
   const key = folderKeyOf(name);
-  if (key === null) {
-    return { kind: 'left-out', dir, name, reason: 'no-key' };
-  }
   const entries = await readdir(dir, { withFileTypes: true });
   const { videos } = looseFilesIn(dir, entries);
   const seasons = await readSeasonFolders(dir);
