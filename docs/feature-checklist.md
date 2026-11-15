@@ -76,6 +76,8 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Export round trip: an Export gives it all back      | ✅ Done    |
 | Welcome tune: a tune in sync with the intro         | ✅ Done    |
 | Row view: genre rows or one grid, Movies and Series | ✅ Done    |
+| Rescan a folder: a year and `Season 1` optional     | 🔲 Planned |
+| Missing videos: a held title whose file is gone     | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -624,3 +626,38 @@ rows, Series one grid of every show. Settled in a grill-me on 2026-11-13
       opening the series page; Back with no history lands on `/?tab=series`.
     - **Nothing else moves**: the search and filters stay on a switch, and
       each tab's loading, empty and miss faces are the same in either view.
+
+Step 47 came out of using a linked Library folder that changes on disk: a
+show dropped in, a movie deleted. _Scan all folders_ already re-reads a
+scanned folder, but a new show named `Death Note/Season 1` was left out for
+its missing year and one-digit season, with only a log line to say so.
+Settled in a grill-me on 2026-11-15 (design log 64, the layout handoff
+`docs/handoff/handoff-folder-layout/` amended):
+
+47. 🔲 **Rescan a folder**: _Scan all folders_ finds what the household
+    dropped into a linked Library folder under the names they would give it.
+    - **The year is optional**: any folder in the root is a **Title folder**,
+      read as its title; a trailing `(1995)` (or a range, `(2022–)`) is its
+      year, needed only to tell two titles of one name apart.
+    - **`Season 1` is a Season folder**: `Season N`, any digits; two folders
+      of one number are a **Doubled place**, the first by name read.
+    - **FamilyFlix writes the household's spelling**: the Layout fill and an
+      Export put a season's art and tracks in the folder its episodes lie in,
+      never in a new `Season 01/` beside `Season 1/`.
+    - **The sheet is unchanged**: `Folder` is the folder's own name, `Year`
+      the title's; a hand-made row's `Heat`, `1995` finds a folder `Heat`.
+
+Step 48 is what step 47's draft held beyond the names, split out by log 64
+Q1. Not yet through a grill-me:
+
+48. ⬜ **Missing videos**: a scan notices what is no longer on disk.
+    - **What was removed**: a held title whose video is no longer in the
+      folder (a **Missing video**, not an **Unreachable** folder) is listed
+      for the household to keep or take out of the library; nothing leaves on
+      its own, and nothing on disk is ever touched.
+    - **What was left out**: a folder the **Folder layout** still turns away
+      (`empty`, `mixed`) is named in the run's review, not only in the log.
+    - **Open questions for the grill-me**: whether a removal pass runs on
+      every scan; how a missing episode is drawn against a missing film;
+      whether a renamed or moved file is still **Found again** before it is
+      called removed.

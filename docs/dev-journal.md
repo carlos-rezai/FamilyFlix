@@ -11,6 +11,32 @@ Newest entry first.
 
 ---
 
+## 2026-11-15: Rescan a folder, the grill-me (log 64)
+
+Step 47, settled in `docs/design-logs/64-rescan-a-folder.md`, with the layout
+handoff `docs/handoff/handoff-folder-layout/README.md` amended in place. The
+removal pass and left-out folders in review were split out as a draft step
+48, **Missing videos**.
+
+### What a later session should know
+
+- **The bug was only the names.** `folderKeyOf` (`(YYYY)` required) and
+  `seasonNumberOf` (two digits required) refused `Death Note/Season 1`; the
+  walk, the Already in library rules and the import never saw it.
+- **Three writers spell `Season NN` on their own**: `fillLayout`, `filePlan`'s
+  `seasonDir` and `exportRows`' `videoCell`. Relaxing the reader without
+  them would make the Layout fill create `Season 01/` beside `Season 1/`, a
+  Doubled place on the next scan. `seasonFolderOf` (log 64 Q9) is the fix;
+  build it in the same phase as the readers' change, never after.
+- **`folderKeyOf` stops returning `null`**, so every `=== null` branch on it
+  (`readTitleFolder`, `placeTitleFolder`, `createImporter.guessedRow`) is dead
+  and goes, and `guessedRow`'s `titleGuess` / `yearInName` fallbacks with it
+  for a folder scan.
+- **The client mirror moves with the server**: `readSeasonFolder` in the
+  movie form and the `seasonFolderCases` table, under one drift guard.
+
+---
+
 ## 2026-11-14: Row view, the refactor (issue 616)
 
 Eighteen commits against `docs/refactor-plans/63-row-view-refactor.md`,

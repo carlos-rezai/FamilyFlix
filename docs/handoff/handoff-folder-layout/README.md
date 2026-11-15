@@ -18,6 +18,12 @@ The prototype amendments are made in place, not in a `prototype/` copy:
 
 No screenshots were taken: no browser was available to the session.
 
+**Amended by step 47** (design log `docs/design-logs/64-rescan-a-folder.md`):
+the year in a Title folder's name is optional, and a Season folder is
+`Season N` with any number of digits. The trees below show both spellings;
+FamilyFlix still spells `Title (Year)` and `Season 01` where it names a
+folder itself, and otherwise writes into the household's own.
+
 ## A Library folder
 
 ```text
@@ -51,17 +57,30 @@ E:\Movies\                         a Library folder
         S01E02\
           English.srt
     Season 00\                     the specials
+  Death Note\                      no year: the name is the title
+    Season 1\                      one digit reads as season 1
+      Death.Note.S01E01.mkv
+      Images\
+        poster.jpg                 the Layout fill writes here, never in a Season 01\
+  Heat (1986)\                     a year tells two of one name apart
+    Heat.1986.mkv
 ```
+
+A name ending in ` (YYYY)` reads that year; a range, ` (2022–)` or
+` (2022-2025)`, its first. Any other name is the title as written, year
+blank until a Sync fills it.
 
 ## What the scan says about the rest
 
-One Warning line per root entry left out, never a Problem:
+One Warning line per root entry left out, or per place filled twice, never a
+Problem:
 
 | On disk                                    | Log line                                                             |
 | ------------------------------------------ | -------------------------------------------------------------------- |
-| `Drama\Amelie (2001)\`                     | `⚠ Drama isn't named Title (Year), left out`                         |
+| `Drama\Amelie (2001)\`                     | `⚠ Drama holds no video or Season folder, left out`                  |
 | `Heat (1995)\` with no video               | `⚠ Heat (1995) holds no video or Season folder, left out`            |
 | `Severance (2022)\` with a loose `.mkv`    | `⚠ Severance (2022) holds loose videos and Season folders, left out` |
+| `Death Note\Season 1\` and `Season 01\`    | `⚠ Death Note holds 2 Season 1 folders, Season 01 read`              |
 | 98 `.mp4` files lying in `E:\Movies\`      | `⚠ 98 videos lie loose at the top of E:\Movies, left out`            |
 | `Meta\`, an Export folder, `$RECYCLE.BIN\` | nothing                                                              |
 
@@ -105,6 +124,15 @@ forward slashes; subtitle paths are joined by `|`.
 | Series  | Severance (2022) |        |         | Severance            | 2022– | 8      |         |                                                    | Severance (2022)/Images/poster.jpg           |
 | Season  | Severance (2022) | 1      |         |                      |       |        |         |                                                    | Severance (2022)/Season 01/Images/poster.jpg |
 | Episode | Severance (2022) | 1      | 1       | Good News About Hell |       |        | Watched | Severance (2022)/Season 01/Severance.S01E01....mkv |                                              |
+
+A folder named without a year keeps its own name as its `Folder`, and the
+year lives only in `Year`:
+
+| Type    | Folder     | Season | Episode | Title      | Year | Video                                     | Poster                                |
+| ------- | ---------- | ------ | ------- | ---------- | ---- | ----------------------------------------- | ------------------------------------- |
+| Series  | Death Note |        |         | Death Note | 2006 |                                           | Death Note/Images/poster.jpg          |
+| Season  | Death Note | 1      |         |            |      |                                           | Death Note/Season 1/Images/poster.jpg |
+| Episode | Death Note | 1      | 1       | Rebirth    |      | Death Note/Season 1/Death.Note.S01E01.mkv |                                       |
 
 The full column list and each type's cells are in log 58, Q13.
 
