@@ -61,15 +61,29 @@ function resolvedRow(row: SheetRow, folder: FilmScan): SheetRow {
 }
 
 /**
+ * The folders a row weighs: those whose name is its **Folder key**, case
+ * folded. Only when no folder holds the key and the row has a year are the
+ * folders whose key folds equal to the row's title alone weighed instead, so
+ * a `Heat`, `1995` row with no `Folder` cell finds `Heat/`; a row without a
+ * year gets no such fallback.
+ */
+function foldersFor(row: SheetRow, folders: FilmScan[]): FilmScan[] {
+  const keyed = folders.filter((folder) =>
+    sameFolderKey(folder.name, row.folder)
+  );
+  return keyed.length === 0 && row.year !== null
+    ? folders.filter((folder) => sameFolderKey(folder.name, row.title))
+    : keyed;
+}
+
+/**
  * The matcher, pure: **Sheet rows** × folder scans → what can be imported
  * without a human looking, and what cannot.
  *
  * A **Match** is the one **Title folder** whose name is the row's **Folder
  * key**, exactly and case folded, holding exactly one video: never a fuzzy
- * title. Only when no folder holds the key and the row has a year are the
- * folders whose key folds equal to the row's title alone weighed instead, so
- * a `Heat`, `1995` row with no `Folder` cell finds `Heat/`; a row without a
- * year gets no such fallback. Anything short of that is a verdict rather
+ * title. The folders a row weighs are {@link foldersFor}'s, its bare title
+ * only as a fallback. Anything short of that is a verdict rather
  * than a guess: two or more such folders (in two Library folders, or names
  * differing only by case) are `ambiguous`; none is `no-folder`; and the one
  * folder holding no video, or more than one, is `no-video` with its own two
@@ -95,24 +109,18 @@ export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
   };
 
   for (const row of rows) {
-    const keyed = folders.filter((folder) =>
-      sameFolderKey(folder.name, row.folder)
-    );
-    const exact =
-      keyed.length === 0 && row.year !== null
-        ? folders.filter((folder) => sameFolderKey(folder.name, row.title))
-        : keyed;
+    const found = foldersFor(row, folders);
 
-    if (exact.length > 1) {
-      problem(row, 'ambiguous', MATCH_REASON.twoFolders, exact);
+    if (found.length > 1) {
+      problem(row, 'ambiguous', MATCH_REASON.twoFolders, found);
       continue;
     }
-    if (exact.length === 0) {
+    if (found.length === 0) {
       problem(row, 'no-folder', MATCH_REASON.noFolder, []);
       continue;
     }
 
-    const [folder] = exact;
+    const [folder] = found;
     if (folder.videos.length === 0) {
       problem(row, 'no-video', MATCH_REASON.noVideo, [folder]);
       continue;
