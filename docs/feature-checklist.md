@@ -634,18 +634,28 @@ its missing year and one-digit season, with only a log line to say so.
 Settled in a grill-me on 2026-11-15 (design log 64, the layout handoff
 `docs/handoff/handoff-folder-layout/` amended):
 
-47. 🔲 **Rescan a folder**: _Scan all folders_ finds what the household
+47. 🔜 **Rescan a folder**: _Scan all folders_ finds what the household
     dropped into a linked Library folder under the names they would give it.
+    Built in issues 618 to 624; the walk ran in the shell on the dev library.
     - **The year is optional**: any folder in the root is a **Title folder**,
-      read as its title; a trailing `(1995)` (or a range, `(2022–)`) is its
-      year, needed only to tell two titles of one name apart.
-    - **`Season 1` is a Season folder**: `Season N`, any digits; two folders
-      of one number are a **Doubled place**, the first by name read.
-    - **FamilyFlix writes the household's spelling**: the Layout fill and an
-      Export put a season's art and tracks in the folder its episodes lie in,
-      never in a new `Season 01/` beside `Season 1/`.
+      read as its title with a null year (`folderKeyOf` always answers); a
+      trailing `(1995)` (or a range, `(2022–)`) is its year, needed only to
+      tell two titles of one name apart. No folder is left out or warned
+      about for its name; the `no-key` reason and its `isn't named` line are
+      gone. A Sync fills the year and renames nothing.
+    - **`Season 1` is a Season folder**: `Season N`, any digits, case folded,
+      on the server (`seasonNumberOf`) and in the movie form
+      (`readSeasonFolder`) under one case table. Two folders of one number
+      are a `season` **Doubled place**: the first by name holding a video is
+      read, never merged, so an empty `Season 01/` hides no `Season 1/`.
+    - **FamilyFlix writes the household's spelling**: `seasonFolderOf` reads
+      a season's folder off its episodes' Source files, and the Layout fill
+      and an Export put a season's art and tracks there, never in a new
+      `Season 01/` beside `Season 1/`; a yearless title with no Source
+      folder exports as its bare title, never `Heat ()`.
     - **The sheet is unchanged**: `Folder` is the folder's own name, `Year`
-      the title's; a hand-made row's `Heat`, `1995` finds a folder `Heat`.
+      the title's, blank until a Sync; a hand-made row's `Heat`, `1995` with
+      no `Folder` cell finds a folder `Heat` when no `Heat (1995)` exists.
 
 Step 48 is what step 47's draft held beyond the names, split out by log 64
 Q1. Not yet through a grill-me:

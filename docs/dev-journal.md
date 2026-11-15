@@ -11,6 +11,79 @@ Newest entry first.
 
 ---
 
+## 2026-11-15: Rescan a folder, the build (issues 618 to 624)
+
+Six slices run by `issue-loop`, each a RED and a GREEN commit (618 to 623),
+one gap fix found after its slice closed (620), and this walk and documents
+slice (624). **12253 tests pass across 816 files** (one skipped);
+`tsc -b --force` is clean. Step 47 stays 🔜 until the refactor.
+
+### What shipped
+
+- **A yearless Title folder imported** (618). `folderKeyOf` always answers:
+  a trailing ` (YYYY)` or a range is the year, any other name the title,
+  year `null`. The `no-key` Left-out reason and its `isn't named Title
+(Year)` line are gone; `placeTitleFolder` keeps only its depth and listed
+  folder checks, and the importer's `guessedRow` takes its title and year
+  from the Folder key alone.
+- **`Season 1` read, on both sides** (619). `seasonNumberOf` and the movie
+  form's `readSeasonFolder` read `Season N`, any digits, case folded, both
+  driven by the `seasonFolderCases` table under the drift guard.
+- **The doubled season** (620). Two Season folders of one number are a
+  `season` **Doubled place**, worded `⚠ Death Note holds 2 Season 1 folders,
+Season 01 read`; one is read, never merged.
+- **The Layout fill writes into the household's season folder** (621).
+  `seasonFolderOf` answers a season's folder from its episodes' Source
+  files, else `Season 01`; `HeldSeasonFiles.folder` carries it into
+  `fillLayout`, which spells no Season folder itself.
+- **The Export agrees** (622). Every season-scoped place in `exportRows`
+  carries its `seasonFolder`, which `filePlan` and `videoCell` lay out;
+  `spellFolderKey` takes a `null` year and replaces `spelledKey` and
+  `folderKeyName`.
+- **The sheet matches a bare title** (623). A row with a year whose Folder
+  key no folder holds is matched by its title alone, with the same
+  `ambiguous`, `no-folder` and `no-video` outcomes.
+- **The walk** (624). `createImporter.rescanWalk.test` copies the dev
+  Library folder, drops in `Heat/` and `Death Note/Season 1/`, and proves
+  log 64 end to end: both imported with null years, a Sync through
+  `fakeTmdb` fills both years and renames nothing, the Season poster lands
+  in `Death Note/Season 1/Images/` with no `Season 01/`, the Export lays out
+  `Heat/` and `Death Note/Season 1/`, and a second scan adds no warning.
+
+### Judgement calls worth knowing
+
+- **An empty `Season 01/` hid a `Season 1/`** (fixed in 9bb22cb8, under
+  620). The doubled-season read took the first folder by name order, so an
+  empty `Season 01/` (one a Layout fill could have made before 621) beside
+  the household's `Season 1/` left the show with no episodes. It now reads
+  the first by name order holding a video, and still reports the other.
+- **The shell walk ran on a sandbox copy**, not the maintainer's own
+  `familyflix.db`, whose listed folder is a real drive. The shell was
+  launched as `electron:start` launches it, with `FAMILYFLIX_DB_PATH` and
+  `FAMILYFLIX_MEDIA_PATH` pointed at a scratch folder and a remote
+  debugging port, and driven over the DevTools protocol. The Library
+  folder (a copy of the importer's fixture) was listed through
+  `POST /api/library-folders`, since _Browse…_ opens a native dialog no
+  script can answer. _Scan all folders_ was pressed on the Library folders
+  page: the first run linked Amelie and Die Hard; after `Heat/` and
+  `Death Note/Season 1/` were dropped in, the second linked _Heat_ and
+  _Death Note_ S01E01 and S01E02, both with no year, 0 Problems, and no
+  `isn't named` line. Its only warnings were Heat's `no subtitle track
+found` and `no poster found`, as for any title with no art.
+- **The second scan's warnings are compared, not counted.** A title with
+  no art logs `no poster found` and `no subtitle track found` on every scan
+  until a Sync fills them, so "no new warning" is the second scan's lines
+  less the first's, not an empty list.
+
+### Follow-ups for the refactor
+
+- **_What the scanner accepts_ still reads `Movie Title (2019)` and `Season
+01`.** It matches the prototype (log 64 changed no screen), but a
+  household reading it would not learn the year is optional; a grill-me
+  question, not a build fix.
+
+---
+
 ## 2026-11-15: Rescan a folder, the grill-me (log 64)
 
 Step 47, settled in `docs/design-logs/64-rescan-a-folder.md`, with the layout
