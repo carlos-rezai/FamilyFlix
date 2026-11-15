@@ -66,7 +66,8 @@ function resolvedRow(row: SheetRow, folder: FilmScan): SheetRow {
  *
  * A **Match** is the one **Title folder** whose name is the row's **Folder
  * key**, exactly and case folded, holding exactly one video: never a fuzzy
- * title, never the row's Title. Anything short of that is a verdict rather
+ * title. Only when no folder holds the key and the row has a year are the
+ * folders named by the row's title alone weighed instead. Anything short of that is a verdict rather
  * than a guess: two or more such folders (in two Library folders, or names
  * differing only by case) are `ambiguous`; none is `no-folder`; and the one
  * folder holding no video, or more than one, is `no-video` with its own two
@@ -92,9 +93,13 @@ export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
   };
 
   for (const row of rows) {
-    const exact = folders.filter((folder) =>
+    const keyed = folders.filter((folder) =>
       sameFolderKey(folder.name, row.folder)
     );
+    const exact =
+      keyed.length === 0 && row.year !== null
+        ? folders.filter((folder) => sameFolderKey(folder.name, row.title))
+        : keyed;
 
     if (exact.length > 1) {
       problem(row, 'ambiguous', MATCH_REASON.twoFolders, exact);
