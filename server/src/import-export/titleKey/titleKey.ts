@@ -14,12 +14,6 @@ const TAIL = new RegExp(
   'i'
 );
 
-/** The one tail form that carries a year, wherever it sits at the end. */
-const YEAR_TAIL = new RegExp(
-  `(?:^|[\\s([])(${YEAR})[)\\]]?\\s*(?:\\d{3,4}p|4k)?\\s*$`,
-  'i'
-);
-
 /**
  * The separators a folder name uses for the spaces a title has. A hyphen is
  * among them: `die-hard-1988` is how a folder spells "Die Hard 1988".
@@ -157,15 +151,4 @@ export function titleGuess(name: string): string {
   return stripTails(dropReleaseNoise(name.replace(SPACE_SEPARATORS, ' ')))
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-/**
- * The year a **Source folder** name carries in its tail — `Die Hard (1988)`,
- * `Die.Hard.1988.1080p`, `Amelie [2001]` — or `null` for a name that carries
- * none. Read through the same tail forms {@link titleKey} strips, so a name
- * and its key can never disagree about whether there was a year.
- */
-export function yearInName(name: string): number | null {
-  const match = YEAR_TAIL.exec(name.replace(SEPARATORS, ' '));
-  return match === null ? null : Number(match[1]);
 }

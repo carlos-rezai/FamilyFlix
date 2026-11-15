@@ -10,7 +10,7 @@
 //   cannot be reached is skipped with `⚠ Can't reach <path> — skipped`, and a
 //   run with none reachable still reaches review;
 // - the log opens with one `Scanning   <path>` line per folder;
-// - a film is named off its folder (`titleGuess` / `yearInName`), a show off
+// - a film is named by its folder's **Folder key** (log 64), a show off
 //   its Show folder — so no `no-row` and no `missing-meta` is ever raised;
 // - **Already in library** is two rules in order: the same Library folder and
 //   Source folder (whatever the title now says), then the title key and year,
