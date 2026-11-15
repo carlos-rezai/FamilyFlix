@@ -396,10 +396,6 @@ function cellDate(text: string): string | null {
   return found === null ? null : found[1];
 }
 
-/** A **Folder key** spelled from a title and its first year: `Title (Year)`. */
-const spelledKey = (title: string, year: number | null): string =>
-  year === null ? title : spellFolderKey(title, year);
-
 /** Text, or `null` for an empty cell. */
 const cellOptional = (text: string): string | null =>
   text === '' ? null : text;
@@ -583,7 +579,7 @@ export async function readSheet(
       year: null,
       endYear: null,
     };
-    const folder = read(row, 'folder') || spelledKey(title, span.year);
+    const folder = read(row, 'folder') || spellFolderKey(title, span.year);
     const season = parsedCell(read(row, 'season'), 'Season', cellWhole, report);
     const episode = parsedCell(
       read(row, 'episode'),

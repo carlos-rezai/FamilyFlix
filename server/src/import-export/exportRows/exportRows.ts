@@ -16,6 +16,7 @@ import {
 } from '../../media/folderKeyOf/folderKeyOf';
 import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
+import { seasonFolderOf } from '../seasonFolderOf/seasonFolderOf';
 
 /** A cell's value: text or a number, or `null` for an empty cell. */
 export type ExportCell = string | number | null;
@@ -32,8 +33,19 @@ export interface ExportRows {
 /** A title's or a season's image place, or an episode's Still. */
 export type ImagePlace =
   | { kind: 'poster' | 'backdrop'; folder: string }
-  | { kind: 'season-poster'; folder: string; season: number }
-  | { kind: 'still'; folder: string; season: number; episode: number };
+  | {
+      kind: 'season-poster';
+      folder: string;
+      season: number;
+      seasonFolder?: string;
+    }
+  | {
+      kind: 'still';
+      folder: string;
+      season: number;
+      episode: number;
+      seasonFolder?: string;
+    };
 
 /** A film's tracks (no season), or an episode's. */
 export interface TracksPlace {
@@ -41,6 +53,7 @@ export interface TracksPlace {
   folder: string;
   season?: number;
   episode?: number;
+  seasonFolder?: string;
 }
 
 /** A film's video (no season), or an episode's, with its **Source file**. */
@@ -49,7 +62,17 @@ export interface VideoPlace {
   folder: string;
   season?: number;
   sourceFile?: string | null;
+  seasonFolder?: string;
 }
+
+/**
+ * A season-scoped place's **Season folder**: the one its season lies in, as
+ * `exportRows` read it (`seasonFolderOf`), else `Season NN`.
+ */
+export const seasonFolderAt = (place: {
+  season: number;
+  seasonFolder?: string;
+}): string => place.seasonFolder ?? spellSeasonFolder(place.season);
 
 /** Where a video place's video lies: an episode's Source file as it lies. */
 function videoPath(place: VideoPlace, storedPath: string): string {
@@ -58,7 +81,7 @@ function videoPath(place: VideoPlace, storedPath: string): string {
   }
   return place.sourceFile
     ? `${place.folder}/${place.sourceFile}`
-    : `${place.folder}/${spellSeasonFolder(place.season)}/${basenameOf(storedPath)}`;
+    : `${place.folder}/${seasonFolderAt({ season: place.season, seasonFolder: place.seasonFolder })}/${basenameOf(storedPath)}`;
 }
 
 /**
@@ -111,14 +134,11 @@ export const safeName = (name: string): string =>
   name.replace(UNSAFE_IN_NAME, '').trim() || FALLBACK_FOLDER;
 
 /**
- * A title's **Folder key** as a folder's name, `Heat (1995)`, a series keyed
- * by its first year; the title alone with no year. Through {@link safeName},
- * and with no trailing dot or space, which Windows drops from a folder's name.
+ * A spelled **Folder key** as a folder's name: through {@link safeName}, and
+ * with no trailing dot or space, which Windows drops from a folder's name.
  */
-function folderKeyName(title: string, year: number | null): string {
-  const name = year === null ? title : spellFolderKey(title, year);
-  return safeName(safeName(name).replace(/[. ]+$/, ''));
-}
+const safeFolderName = (name: string): string =>
+  safeName(safeName(name).replace(/[. ]+$/, ''));
 
 /** A stored path's last segment. */
 export const basenameOf = (storedPath: string): string =>
@@ -189,6 +209,7 @@ const movieRows =
 function episodeRow(
   episode: Episode,
   folder: string,
+  seasonFolder: string,
   cells: PathCells
 ): ExportCell[] {
   const { season, number } = episode;
@@ -202,41 +223,57 @@ function episodeRow(
     Runtime: episode.runtimeMinutes,
     Status: STATUS_CELL[episode.status],
     Video: cells.video(
-      { kind: 'video', folder, season, sourceFile: episode.sourceFile },
+      {
+        kind: 'video',
+        folder,
+        season,
+        sourceFile: episode.sourceFile,
+        seasonFolder,
+      },
       episode.videoPath || null
     ),
     Subtitles: pathCell(
       cells.tracks(
-        { kind: 'tracks', folder, season, episode: number },
+        { kind: 'tracks', folder, season, episode: number, seasonFolder },
         episode.subtitles
       )
     ),
     Still: cells.image(
-      { kind: 'still', folder, season, episode: number },
+      { kind: 'still', folder, season, episode: number, seasonFolder },
       episode.stillPath
     ),
   });
 }
 
-/** A season's row, then its episodes' by number. */
-const seasonRows = (
+/**
+ * A season's row, then its episodes' by number, every place in the **Season
+ * folder** its held episodes lie in (`seasonFolderOf`).
+ */
+function seasonRows(
   season: SeasonSummary,
   folder: string,
   cells: PathCells
-): ExportCell[][] => [
-  rowOf({
-    Type: 'Season',
-    Folder: folder,
-    Season: season.number,
-    Poster: cells.image(
-      { kind: 'season-poster', folder, season: season.number },
-      season.posterPath
+): ExportCell[][] {
+  const episodes = [...season.episodes].sort((a, b) => a.number - b.number);
+  const seasonFolder = seasonFolderOf(
+    season.episodes.map((episode) => episode.sourceFile),
+    season.number
+  );
+  return [
+    rowOf({
+      Type: 'Season',
+      Folder: folder,
+      Season: season.number,
+      Poster: cells.image(
+        { kind: 'season-poster', folder, season: season.number, seasonFolder },
+        season.posterPath
+      ),
+    }),
+    ...episodes.map((episode) =>
+      episodeRow(episode, folder, seasonFolder, cells)
     ),
-  }),
-  ...[...season.episodes]
-    .sort((a, b) => a.number - b.number)
-    .map((episode) => episodeRow(episode, folder, cells)),
-];
+  ];
+}
 
 /** A series' row, then each season's rows by number. */
 const seriesRows =
@@ -296,7 +333,8 @@ export function exportRows(
     ...movies.map(
       (movie): Planned => ({
         key:
-          sourceFolders.get(movie.id) ?? folderKeyName(movie.title, movie.year),
+          sourceFolders.get(movie.id) ??
+          safeFolderName(spellFolderKey(movie.title, movie.year)),
         rows: movieRows(movie),
       })
     ),
@@ -304,7 +342,9 @@ export function exportRows(
       (detail): Planned => ({
         key:
           sourceFolders.get(detail.series.id) ??
-          folderKeyName(detail.series.title, detail.series.year),
+          safeFolderName(
+            spellFolderKey(detail.series.title, detail.series.year)
+          ),
         rows: seriesRows(detail),
       })
     ),

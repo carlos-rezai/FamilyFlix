@@ -36,6 +36,9 @@ export const foldFolderKey = (name: string): string =>
 export const sameFolderKey = (a: string, b: string): boolean =>
   foldFolderKey(a) === foldFolderKey(b);
 
-/** A title and its year spelled as a **Title folder**'s name, `Title (Year)`. */
-export const spellFolderKey = (title: string, year: number): string =>
-  `${title} (${year})`;
+/**
+ * A title and its year spelled as a **Title folder**'s name, `Title (Year)`;
+ * the bare title for a `null` year, never `Title ()`.
+ */
+export const spellFolderKey = (title: string, year: number | null): string =>
+  year === null ? title : `${title} (${year})`;
