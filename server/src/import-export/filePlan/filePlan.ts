@@ -9,7 +9,6 @@ import {
 import {
   basenameOf,
   safeName,
-  seasonFolderAt,
   type ImagePlace,
   type PathCells,
   type TracksPlace,
@@ -49,11 +48,8 @@ const inTrackOrder = (subtitles: readonly Subtitle[]): Subtitle[] =>
  * A place's Season folder under its Title folder, `Death Note/Season 1`: the
  * one its season lies in, else `Season 01`.
  */
-const seasonDir = (place: {
-  folder: string;
-  season: number;
-  seasonFolder?: string;
-}): string => `${place.folder}/${seasonFolderAt(place)}`;
+const seasonDir = (place: { folder: string; seasonFolder: string }): string =>
+  `${place.folder}/${place.seasonFolder}`;
 
 /** The folder an image place's file lies in, and its name before the extension. */
 function imageTarget(place: ImagePlace): { dir: string; name: string } {
@@ -78,7 +74,7 @@ function imageTarget(place: ImagePlace): { dir: string; name: string } {
 function tracksDir(place: TracksPlace): string {
   return !('season' in place)
     ? `${place.folder}/${SUBTITLES_FOLDER}`
-    : `${seasonDir({ folder: place.folder, season: place.season, seasonFolder: place.seasonFolder })}/${SUBTITLES_FOLDER}/${spellEpisodeTag(place.season, place.episode)}`;
+    : `${seasonDir(place)}/${SUBTITLES_FOLDER}/${spellEpisodeTag(place.season, place.episode)}`;
 }
 
 /**

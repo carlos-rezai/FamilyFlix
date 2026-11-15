@@ -157,7 +157,12 @@ describe('layoutCells: images', () => {
     ).toBe('Tidewater (2018)/Images/tidewater-poster.jpg');
     expect(
       cells.image(
-        { kind: 'season-poster', folder: TIDEWATER, season: 1 },
+        {
+          kind: 'season-poster',
+          folder: TIDEWATER,
+          season: 1,
+          seasonFolder: 'Season 01',
+        },
         'tidewater/season-01.jpg'
       )
     ).toBe('Tidewater (2018)/Season 01/Images/season-1-poster.png');
@@ -166,7 +171,12 @@ describe('layoutCells: images', () => {
   it('leaves blank the Season poster of a season the folder does not hold', () => {
     expect(
       cells.image(
-        { kind: 'season-poster', folder: TIDEWATER, season: 2 },
+        {
+          kind: 'season-poster',
+          folder: TIDEWATER,
+          season: 2,
+          seasonFolder: 'Season 01',
+        },
         'tidewater/season-02.jpg'
       )
     ).toBeNull();
@@ -175,7 +185,13 @@ describe('layoutCells: images', () => {
   it('answers a Still by the Episode tag it carries', () => {
     expect(
       cells.image(
-        { kind: 'still', folder: TIDEWATER, season: 1, episode: 1 },
+        {
+          kind: 'still',
+          folder: TIDEWATER,
+          season: 1,
+          episode: 1,
+          seasonFolder: 'Season 01',
+        },
         'tidewater/season-01/S01E01.jpg'
       )
     ).toBe(
@@ -186,7 +202,13 @@ describe('layoutCells: images', () => {
   it('leaves a Frame still blank: storage holds it, the folder does not', () => {
     expect(
       cells.image(
-        { kind: 'still', folder: TIDEWATER, season: 1, episode: 2 },
+        {
+          kind: 'still',
+          folder: TIDEWATER,
+          season: 1,
+          episode: 2,
+          seasonFolder: 'Season 01',
+        },
         'tidewater/season-01/Tidewater S01E02.frame.jpg'
       )
     ).toBeNull();
@@ -206,7 +228,13 @@ describe('layoutCells: tracks', () => {
   it('answers an episode’s tracks from its own tag’s folder only', () => {
     expect(
       cells.tracks(
-        { kind: 'tracks', folder: TIDEWATER, season: 1, episode: 1 },
+        {
+          kind: 'tracks',
+          folder: TIDEWATER,
+          season: 1,
+          episode: 1,
+          seasonFolder: 'Season 01',
+        },
         []
       )
     ).toEqual([
@@ -214,7 +242,13 @@ describe('layoutCells: tracks', () => {
     ]);
     expect(
       cells.tracks(
-        { kind: 'tracks', folder: TIDEWATER, season: 1, episode: 2 },
+        {
+          kind: 'tracks',
+          folder: TIDEWATER,
+          season: 1,
+          episode: 2,
+          seasonFolder: 'Season 01',
+        },
         []
       )
     ).toEqual([

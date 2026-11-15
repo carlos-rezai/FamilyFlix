@@ -14,7 +14,6 @@ import {
   foldFolderKey,
   spellFolderKey,
 } from '../../media/folderKeyOf/folderKeyOf';
-import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
 import { seasonFolderOf } from '../seasonFolderOf/seasonFolderOf';
 
@@ -37,14 +36,14 @@ export type ImagePlace =
       kind: 'season-poster';
       folder: string;
       season: number;
-      seasonFolder?: string;
+      seasonFolder: string;
     }
   | {
       kind: 'still';
       folder: string;
       season: number;
       episode: number;
-      seasonFolder?: string;
+      seasonFolder: string;
     };
 
 /** A film's tracks (no season), or an episode's. */
@@ -55,7 +54,7 @@ export type TracksPlace =
       folder: string;
       season: number;
       episode: number;
-      seasonFolder?: string;
+      seasonFolder: string;
     };
 
 /** A film's video (no season), or an episode's, with its **Source file**. */
@@ -66,17 +65,8 @@ export type VideoPlace =
       folder: string;
       season: number;
       sourceFile: string | null;
-      seasonFolder?: string;
+      seasonFolder: string;
     };
-
-/**
- * A season-scoped place's **Season folder**: the one its season lies in, as
- * `exportRows` read it (`seasonFolderOf`), else `Season NN`.
- */
-export const seasonFolderAt = (place: {
-  season: number;
-  seasonFolder?: string;
-}): string => place.seasonFolder ?? spellSeasonFolder(place.season);
 
 /** Where a video place's video lies: an episode's Source file as it lies. */
 function videoPath(place: VideoPlace, storedPath: string): string {
@@ -85,7 +75,7 @@ function videoPath(place: VideoPlace, storedPath: string): string {
   }
   return place.sourceFile
     ? `${place.folder}/${place.sourceFile}`
-    : `${place.folder}/${seasonFolderAt({ season: place.season, seasonFolder: place.seasonFolder })}/${basenameOf(storedPath)}`;
+    : `${place.folder}/${place.seasonFolder}/${basenameOf(storedPath)}`;
 }
 
 /**
