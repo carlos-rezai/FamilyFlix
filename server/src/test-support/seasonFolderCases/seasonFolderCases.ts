@@ -1,20 +1,26 @@
 /**
  * 58, Folder layout (issue #537): the **Season folder**'s one table.
  *
- * The server's `seasonNumberOf` reads `Season NN` only (issue #536), and the
- * client's `readSeasonFolder`, which seeds the **Numbering guess** off a
- * folder name, mirrors it. The client's table test and the drift guard read
- * these cases, the drift guard over both sides.
+ * The server's `seasonNumberOf` reads `Season N`, any number of digits, case
+ * folded (64, Rescan a folder, issue #619), and the client's
+ * `readSeasonFolder`, which seeds the **Numbering guess** off a folder name,
+ * mirrors it. The client's table test and the drift guard read these cases,
+ * the drift guard over both sides.
  *
  * Each group is one rule, a name and the season it says, `null` for a name
- * that is no Season folder. Log 51's wider spellings are kept, each now
- * answering `null`, so a reader that still reads one fails.
+ * that is no Season folder. Log 51's wider spellings other than `Season N`
+ * are kept, each answering `null`, so a reader that still reads one fails.
  */
 export type SeasonFolderCase = readonly [name: string, season: number | null];
 
 export const SEASON_FOLDER_CASES = {
-  /** `Season NN`: two digits or more, in either case. */
+  /** `Season N`: any number of digits, case folded. */
   layout: [
+    ['Season 1', 1],
+    ['season 1', 1],
+    ['SEASON 1', 1],
+    ['season 2', 2],
+    ['Season 001', 1],
     ['Season 01', 1],
     ['season 01', 1],
     ['SEASON 01', 1],
@@ -24,16 +30,14 @@ export const SEASON_FOLDER_CASES = {
     ['Season 12', 12],
     ['Season 100', 100],
   ],
-  /** `Season 00` is the specials, season 0. */
+  /** `Season 0` and `Season 00` are the specials, season 0. */
   specials: [
+    ['Season 0', 0],
     ['Season 00', 0],
     ['season 00', 0],
   ],
-  /** Log 51's wider spellings, no Season folder of the layout. */
+  /** Log 51's other wider spellings, no Season folder of the layout. */
   wider: [
-    ['Season 1', null],
-    ['season 2', null],
-    ['Season 0', null],
     ['Season02', null],
     ['Season01', null],
     ['Seizoen 01', null],
@@ -46,6 +50,7 @@ export const SEASON_FOLDER_CASES = {
   ],
   /** A spelling followed by anything is no Season folder. */
   trailing: [
+    ['Season 1 extra', null],
     ['Season 01 (2008)', null],
     ['Season 02 - The Return', null],
     ['S04 [1080p]', null],

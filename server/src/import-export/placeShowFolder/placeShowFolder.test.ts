@@ -72,7 +72,7 @@ describe('placeShowFolder', () => {
     expect(placeShowFolder([shows], video)).toBeNull();
   });
 
-  it.each([['Season 1'], ['Seizoen 1'], ['S01'], ['Specials']])(
+  it.each([['Seizoen 1'], ['S01'], ['Specials']])(
     'answers null for a video in a folder named %s',
     (season) => {
       const video = join(
@@ -86,6 +86,18 @@ describe('placeShowFolder', () => {
       expect(placeShowFolder([shows], video)).toBeNull();
     }
   );
+
+  // 64, Rescan a folder, Phase 2 (issue #619): a Season folder is `Season N`,
+  // any number of digits, so `Season 1` places its show.
+  it('places an episode in Death Note/Season 1/ at Death Note', () => {
+    const video = join(root, 'Shows', 'Death Note', 'Season 1', 'e.mkv');
+
+    expect(placeShowFolder([shows], video)).toEqual({
+      folderId: 'shows',
+      sourceFolder: 'Death Note',
+      sourceFile: 'Season 1/e.mkv',
+    });
+  });
 
   // 64, Rescan a folder, Phase 1 (issue #618): a show folder not named
   // `Title (Year)` is a Title folder too, placed at its own name.

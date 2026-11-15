@@ -35,7 +35,7 @@ describe('readSeasonFolders', () => {
       'Season 10/Severance.S10E01.mkv',
       'Season 02/Severance.S02E01.mkv',
       'Season 00/Severance.S00E01.mkv',
-      'Season 1/Severance.S01E01.mkv',
+      'Seizoen 1/Severance.S01E01.mkv',
       'Extras/making-of.mkv',
     ]);
 

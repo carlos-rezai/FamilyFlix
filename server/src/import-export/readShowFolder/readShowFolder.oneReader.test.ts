@@ -4,7 +4,7 @@
 //
 // The **Show folder read** reads by `readSeasonFolders` and numbers by
 // `numberShow`, the scan's own rules. A picked **Title folder** reads its
-// **Season folders** and nothing else: `Season 1/` and `Extras/` pass in
+// **Season folders** and nothing else: `Seizoen 1/` and `Extras/` pass in
 // silence. A picked Season folder stands for its show, its subfolders not
 // read. A picked folder of loose videos answers them as **Unplaced** without
 // descending. The pick and the scan number the same show identically.
@@ -51,7 +51,7 @@ async function readOf(dir: string, context: ShowFolderContext) {
 
 /**
  * `Shows/Harbor and Vine (2021)`: two Season folders, an untagged video in
- * the second, and beside them a `Season 1/` the layout does not read and an
+ * the second, and beside them a `Seizoen 1/` the layout does not read and an
  * `Extras/` holding a video and a Season folder of its own.
  */
 function harborAndVine(): { shows: string; show: string } {
@@ -62,7 +62,7 @@ function harborAndVine(): { shows: string; show: string } {
     'Season 01/Extras/Harbor.and.Vine.S01.Bloopers.mkv',
     'Season 02/Harbor.and.Vine.S02E01.Spring.Tide.mkv',
     'Season 02/bonus.mkv',
-    'Season 1/Harbor.and.Vine.S01E03.Neap.Tide.mkv',
+    'Seizoen 1/Harbor.and.Vine.S01E03.Neap.Tide.mkv',
     'Extras/making-of.mkv',
     'Extras/Season 03/Harbor.and.Vine.S03E01.Ebb.mkv',
   ]);
@@ -70,7 +70,7 @@ function harborAndVine(): { shows: string; show: string } {
 }
 
 describe('readShowFolder: a picked Title folder', () => {
-  it('reads its Season folders and nothing else: Season 1/ and Extras/ are silent', async () => {
+  it('reads its Season folders and nothing else: Seizoen 1/ and Extras/ are silent', async () => {
     const { shows, show } = harborAndVine();
 
     const read = await readOf(show, onRecord(shows));

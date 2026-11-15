@@ -85,3 +85,46 @@ describe('showFolderRows: episodes numbered by their season', () => {
     ]);
   });
 });
+
+/**
+ * 64, Rescan a folder, Phase 2 (issue #619): `Season N` read. A **Season
+ * folder** is `Season N`, any number of digits, case folded, so a pick of the
+ * show `Death Note` numbers a video under `Season 1` in season 1 and one under
+ * `Season 2` in season 2; `Season 0` is the specials. One read holds all
+ * three, so a reader that only falls back to season 1 still fails.
+ */
+describe('showFolderRows: a Season N folder', () => {
+  const DEATH_NOTE = 'E:\Series\Death Note';
+
+  /** A read of the picked `Death Note`, its videos at the paths given. */
+  const deathNoteRead = (inside: string[]): ShowFolderRead => ({
+    path: DEATH_NOTE,
+    titleGuess: 'Death Note',
+    libraryFolderId: 'shows',
+    heldSeriesId: null,
+    episodes: [],
+    unplaced: inside.map((relativePath) => ({
+      video: `${DEATH_NOTE}\${relativePath.replace('/', '\')}`,
+      relativePath,
+    })),
+    straySubtitles: 0,
+  });
+
+  it('says season 1 off Season 1, season 2 off Season 2, 0 off Season 0', () => {
+    expect(
+      numbered(
+        deathNoteRead([
+          'Season 1/rebirth.mkv',
+          'Season 2/succession.mkv',
+          'Season 0/relight.mkv',
+        ])
+      )
+        .map(([filename, season]) => [filename, season])
+        .sort(([a], [b]) => String(a).localeCompare(String(b)))
+    ).toEqual([
+      ['Season 0/relight.mkv', '0'],
+      ['Season 1/rebirth.mkv', '1'],
+      ['Season 2/succession.mkv', '2'],
+    ]);
+  });
+});

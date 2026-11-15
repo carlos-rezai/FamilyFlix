@@ -8,28 +8,28 @@ import {
 
 /**
  * 58, Folder layout (issue #537): the **Season folder**'s name read on the
- * client, the server's `seasonNumberOf` rule: `Season NN`, two digits or more, in
- * either case, and nothing else. One table shared with the drift guard; each
+ * client, the server's `seasonNumberOf` rule: `Season N`, any number of digits,
+ * case folded, and nothing else (64, Rescan a folder, issue #619). One table shared with the drift guard; each
  * group is one rule, asserted whole, so a group fails until every name in it
  * reads right.
  */
-describe('readSeasonFolder: Season NN only', () => {
+describe('readSeasonFolder: Season N only', () => {
   const readAll = (cases: readonly SeasonFolderCase[]) =>
     cases.map(([name]) => [name, readSeasonFolder(name)]);
   const expected = (cases: readonly SeasonFolderCase[]) =>
     cases.map(([name, season]) => [name, season]);
 
-  it('reads Season NN, two digits or more, in either case', () => {
+  it('reads Season N, any number of digits, case folded', () => {
     const cases = SEASON_FOLDER_CASES.layout;
     expect(readAll(cases)).toEqual(expected(cases));
   });
 
-  it('reads Season 00 as season 0', () => {
+  it('reads Season 0 and Season 00 as season 0', () => {
     const cases = SEASON_FOLDER_CASES.specials;
     expect(readAll(cases)).toEqual(expected(cases));
   });
 
-  it('reads no wider spelling: Season 1, Seizoen, S01, Specials', () => {
+  it('reads no other wider spelling: Seizoen, S01, Specials', () => {
     const cases = SEASON_FOLDER_CASES.wider;
     expect(readAll(cases)).toEqual(expected(cases));
   });

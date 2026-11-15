@@ -210,8 +210,9 @@ describe('readTitleFolder: tracks', () => {
 // 58, Folder layout, Phase 3 (issue #536): one series in the layout.
 //
 // A series is a **Title folder** of **Season folders** and no loose video.
-// A Season folder is `Season NN`, two digits or more, case folded, `Season 00`
-// the specials; `Season 1`, `Seizoen 1`, `S01` and `Specials` are not read.
+// A Season folder is `Season N`, any number of digits, case folded (64,
+// Rescan a folder, issue #619), `Season 00` the specials; `Seizoen 1`, `S01`
+// and `Specials` are not read.
 // The series' own art is read from its `Images/` by role; each season holds
 // its videos loose in name order, its **Season poster** in `Images/`, its
 // **Stills** in `Images/Stills/` keyed by the **Episode tag** their names
@@ -284,7 +285,19 @@ describe('readTitleFolder: a series', () => {
     expect(scan.seasons.map((season) => season.number)).toEqual([100]);
   });
 
-  it.each(['Season 1', 'Seizoen 1', 'S01', 'Specials', 'Season 01 (2022)'])(
+  it('reads Season 1/ as season 1', async () => {
+    const dir = titleFolder('Severance (2022)', [
+      'Season 1/Severance.S01E01.mkv',
+    ]);
+
+    const scan = await seriesIn(dir);
+
+    expect(scan.seasons.map((season) => [season.number, season.dir])).toEqual([
+      [1, join(dir, 'Season 1')],
+    ]);
+  });
+
+  it.each(['Seizoen 1', 'S01', 'Specials', 'Season 01 (2022)'])(
     'does not read %s/ beside a Season 01/',
     async (folder) => {
       const dir = titleFolder('Severance (2022)', [
@@ -300,7 +313,7 @@ describe('readTitleFolder: a series', () => {
     }
   );
 
-  it.each(['Season 1', 'Seizoen 1', 'S01', 'Specials'])(
+  it.each(['Seizoen 1', 'S01', 'Specials'])(
     'leaves out a folder holding only %s/ as empty',
     async (folder) => {
       const dir = titleFolder('Severance (2022)', [
