@@ -240,8 +240,8 @@ function episodeRow(
 }
 
 /**
- * A season's row, then its episodes' by number, every place in the **Season
- * folder** its held episodes lie in (`seasonFolderOf`).
+ * A season's row, then its episodes' by number, every place under the
+ * **Season folder name** its held episodes lie under (`seasonFolderOf`).
  */
 function seasonRows(
   season: SeasonSummary,
@@ -323,8 +323,8 @@ const byKey = (a: Planned, b: Planned): number =>
  * Folder key by its **Source folder** (`sourceFoldersOf`): the one rule for
  * both sheets since the **Export round trip** (log 61), so a title held from
  * `Heat/` is `Heat` whatever year a Sync filled ({@link titleFolderOf}). Every
- * season-scoped place carries its `seasonFolder`, the **Season folder** its
- * held episodes lie in (`seasonFolderOf`). Two titles sharing a
+ * season-scoped place carries its `seasonFolder`, the **Season folder name**
+ * its held episodes lie under (`seasonFolderOf`). Two titles sharing a
  * Folder key, compared folded (NFC, then case), are numbered `(1)`, `(2)`,
  * … in sheet order, each with a Warning line.
  */

@@ -45,8 +45,8 @@ const inTrackOrder = (subtitles: readonly Subtitle[]): Subtitle[] =>
   [...subtitles].sort((a, b) => a.position - b.position);
 
 /**
- * A place's Season folder under its Title folder, `Death Note/Season 1`: the
- * one its season lies in, else `Season 01`.
+ * A place's **Season folder name** under its Title folder,
+ * `Death Note/Season 1`: the one its season lies under, else `Season 01`.
  */
 const seasonDir = (place: { folder: string; seasonFolder: string }): string =>
   `${place.folder}/${place.seasonFolder}`;
@@ -85,11 +85,12 @@ function tracksDir(place: TracksPlace): string {
  * **Title folder**'s or Season folder's `Images/`, Stills (Frame stills too)
  * under the Season folder's `Images/Stills/` by **Episode tag**, a film's
  * tracks under `Subtitles/` by language and an episode's under the Season
- * folder's `Subtitles/<tag>/`, a second of one language `(2)`. The Season
- * folder is the one the place's season lies in (`Death Note/Season 1`), the
- * folder its Video cells name, else `Season 01`. A cell is blank where nothing travels (no
- * stored file, or its toggle off). `Video` names where the video lies, by
- * `exportRows`' own `videoCell`; no video is planned.
+ * folder's `Subtitles/<tag>/`, a second of one language `(2)`. The **Season
+ * folder name** is the one the place's season lies under (`Death
+ * Note/Season 1`), the folder its Video cells name, else `Season 01`. A cell
+ * is blank where nothing travels (no stored file, or its toggle off). `Video`
+ * names where the video lies, by `exportRows`' own `videoCell`; no video is
+ * planned.
  */
 export function filePlan(include: ExportInclude): FilePlan {
   const files: ExportFile[] = [];

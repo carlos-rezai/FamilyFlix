@@ -34,8 +34,9 @@ export interface SheetRow {
   /** Its **Row type**: `Movie` for a blank cell or a sheet with no Type column. */
   type: RowType;
   /**
-   * Its **Folder key**: the Folder cell, or `Title (Year)` spelled from the
-   * row's Title and first year when the cell is blank or the column absent.
+   * Its **Folder key**: the Folder cell, or spelled by `spellFolderKey` from
+   * the row's Title and first year (the bare title for no year) when the
+   * cell is blank or the column absent.
    */
   folder: string;
   /** A Season or Episode row's season number. */

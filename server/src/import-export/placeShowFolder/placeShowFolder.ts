@@ -10,14 +10,14 @@ export interface PlacedShowFolder {
   folderId: string;
   /** The series' **Title folder**, its **Folder key**. */
   sourceFolder: string;
-  /** The episode's **Source file**: `Season NN/<video>`, forward slashes. */
+  /** The episode's **Source file**: `Season N/<video>`, forward slashes. */
   sourceFile: string;
 }
 
 /**
  * Where a found episode video lies in the **Folder layout**: its series'
- * **Title folder**, the parent of the `Season NN` folder holding it, lying
- * directly in a listed **Library folder** and named by a **Folder key**, and
+ * **Title folder**, the parent of the `Season N` folder holding it, lying
+ * directly in a listed **Library folder**, and
  * the episode's **Source file**, its path inside the Title folder. A video in
  * no Season folder, a loose tagged one at a show's root included, a Title
  * folder deeper than the root or under no listed folder answers `null`. Read

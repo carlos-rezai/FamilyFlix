@@ -35,8 +35,8 @@ export interface HeldEpisodeFiles {
 }
 
 /**
- * One season's held files: its **Season folder** relative to the **Title
- * folder**, its **Season poster** and its episodes'.
+ * One season's held files: its **Season folder name** relative to the
+ * **Title folder**, its **Season poster** and its episodes'.
  */
 export interface HeldSeasonFiles {
   number: number;
@@ -239,9 +239,9 @@ async function writeOne(
  * **Episode tag** is there; a track only when none of its language is there,
  * a second of one language as `<Language> (2)`. Every season-scoped file (a
  * **Season poster**, a Still, an episode's track) goes under its season's
- * `folder`, the **Season folder** its episodes lie in (`seasonFolderOf`), so a
- * household's `Season 1/` is filled and no `Season 01/` is made beside it;
- * the fill spells no Season folder itself.
+ * `folder`, the **Season folder name** its episodes lie under
+ * (`seasonFolderOf`), so a household's `Season 1/` is filled and no
+ * `Season 01/` is made beside it; the fill spells no Season folder itself.
  *
  * A folder it can't write costs one Warning line and never a throw; a Title
  * folder that is not there is one Warning line and nothing written.

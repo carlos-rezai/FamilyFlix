@@ -7,9 +7,9 @@ export interface HeldSeason {
 }
 
 /**
- * The **Season folder** a show's season lies in: the first path segment of
- * its held episodes' **Source files**, the first one that has a folder, in
- * the order held (the library reads them by number), else
+ * The **Season folder name** a show's season lies under: the first path
+ * segment of its held episodes' **Source files**, the first one that has a
+ * folder, in the order held (the library reads them by number), else
  * `spellSeasonFolder(season.number)`. A Source file is stored with forward
  * slashes and split on `/`. Reads no disk.
  */
