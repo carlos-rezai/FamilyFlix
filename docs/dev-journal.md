@@ -11,6 +11,86 @@ Newest entry first.
 
 ---
 
+## 2026-11-15: Rescan a folder, the refactor (issue 625)
+
+Twelve commits against `docs/refactor-plans/64-rescan-a-folder-refactor.md`,
+one per plan commit. This is the initiative's closing round: step 47 is ✅
+and issue 617 is done. **12253 tests pass across 816 files** (one skipped),
+as at the end of the build (`0c8a9719`): no new suites, and three suites
+changed shape, not meaning. `tsc -b --force` is clean. `eslint src server
+electron` reports 1 error and 137 warnings, against 140 at `0c8a9719`: the
+three the build added are gone.
+
+### What shipped before this round
+
+The build slices 618 to 623, RED and GREEN each: any folder in the root a
+**Title folder** with its year optional, `Season N` with any digits a
+**Season folder** on both sides of the drift guard, two of one number a
+`season` **Doubled place**, the Layout fill and the Export writing into the
+**Season folder name** the episodes lie under, and a hand-made sheet row
+finding a yearless folder. The gap fix under 620 (`9bb22cb8`) and the walk
+and documents (624).
+
+### What each group changed
+
+- **Group 1, season places that carry their folder** (`7e634088`,
+  `1731b1b0`). `TracksPlace` and `VideoPlace` are unions in `ImagePlace`'s
+  shape, narrowed by `'season' in place`; every season-scoped variant
+  requires its `seasonFolder`. `seasonFolderAt` is gone, so `Season 01` is
+  spelled by `seasonFolderOf` alone, and the two lines past 120 columns
+  went with it.
+- **Group 2, one planned key** (`88a5ecf0`). `exportRows`' private
+  `titleFolderOf` answers a title's folder for films and series alike.
+- **Group 3, `seasonFolderOf` takes the season** (`5f221f1b`). It reads a
+  `HeldSeason` (a number, episodes with a `sourceFile`), which both callers
+  hold, and splits on `/` alone.
+- **Group 4, one season read** (`51df902c`, `87dfc0bf`). `groupedBy` is
+  generic over its key; a pure `oneSeasonPerNumber` sits beside
+  `oneTrackPerLanguage` over the scans a private `readEverySeasonFolder`
+  reads in name order. `readSeasonPlaces` is gone.
+- **Group 5, a named fallback** (`7e0946cc`). `matchRows`' private
+  `foldersFor` answers the folders a row weighs; `keyed` and `exact` are
+  gone.
+- **Group 6, dead code and a fixture** (`216d27b0`, `e6f1aaeb`).
+  `yearInName` and `YEAR_TAIL` are gone. `formValues.seasonGuess.test`'s
+  Death Note path holds its backslashes again, written with the Edit tool.
+- **Group 7, the docs** (`2ef4894b`, `3104c8bc` and this entry). Docblocks
+  say **Season folder name**, `placeShowFolder` says `Season N/<video>`,
+  `SheetRow.folder` names `spellFolderKey`; step 47 and its row ticked, the
+  README's season sentence and `folderKeyOf` tree line say what is read,
+  and a Rescan a folder release smoke follows Keep originals.
+
+### Where this round left the plan
+
+- **Two test helpers narrowed** in commit 1, beside the three suites the
+  plan named: `exportRows.test`'s place labels and
+  `filePlan.seasonFolder.test`'s season-scoped filter read `'season' in
+place`, since the unions carry no `season` on a film's variant. Their
+  labels and assertions are unchanged.
+- **The fixture joins with `split('/').join('\\')`**, not `replaceAll`:
+  the client's TypeScript lib predates ES2021.
+- **`HeldSeason` is exported** beside `seasonFolderOf`, as its parameter
+  type.
+- **The glossary needed no change**: **Season folder name**, **Folder
+  key**, **Match** and **Export** already said what the code does.
+- **Two runs of the full suite each failed one unrelated test under load**
+  (`routes.enrichment`'s 409 race, `loopbackGuard`'s empty list); each
+  passed alone and on the next full run.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: _What the scanner accepts_ copy, the
+client's mirror of the Season folder rule, `seasonFolderOf`'s home, step 48
+and the lint warnings that predate the initiative. No wire, schema, sheet,
+Layout warning, copy, prototype or drawn pixel changed.
+
+### Follow-ups
+
+- **The Show folder read's title guess** against `folderKeyOf`: filed as
+  626, for its own grill-me.
+
+---
+
 ## 2026-11-15: Rescan a folder, the build (issues 618 to 624)
 
 Six slices run by `issue-loop`, each a RED and a GREEN commit (618 to 623),
