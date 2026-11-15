@@ -294,6 +294,18 @@ const seriesRows =
       .flatMap((season) => seasonRows(season, folder, cells)),
   ];
 
+/**
+ * A title's planned folder: its **Source folder**, else its **Folder key**
+ * spelled by `spellFolderKey` (the bare title for a `null` year), made safe.
+ */
+const titleFolderOf = (
+  sourceFolders: ReadonlyMap<string, string>,
+  id: string,
+  title: string,
+  year: number | null
+): string =>
+  sourceFolders.get(id) ?? safeFolderName(spellFolderKey(title, year));
+
 /** Folder-key order, A to Z, without regard to case. */
 const byKey = (a: Planned, b: Planned): number =>
   a.key.localeCompare(b.key, undefined, { sensitivity: 'base' });
@@ -313,8 +325,7 @@ const byKey = (a: Planned, b: Planned): number =>
  * read** (`layoutCells`). `sourceFolders`, required, names each title's
  * Folder key by its **Source folder** (`sourceFoldersOf`): the one rule for
  * both sheets since the **Export round trip** (log 61), so a title held from
- * `Heat/` is `Heat` whatever year a Sync filled; a title the map doesn't
- * hold is spelled by `spellFolderKey`, its bare title for a `null` year. Every
+ * `Heat/` is `Heat` whatever year a Sync filled ({@link titleFolderOf}). Every
  * season-scoped place carries its `seasonFolder`, the **Season folder** its
  * held episodes lie in (`seasonFolderOf`). Two titles sharing a
  * Folder key, compared folded (NFC, then case), are numbered `(1)`, `(2)`,
@@ -329,19 +340,18 @@ export function exportRows(
   const planned: Planned[] = [
     ...movies.map(
       (movie): Planned => ({
-        key:
-          sourceFolders.get(movie.id) ??
-          safeFolderName(spellFolderKey(movie.title, movie.year)),
+        key: titleFolderOf(sourceFolders, movie.id, movie.title, movie.year),
         rows: movieRows(movie),
       })
     ),
     ...series.map(
       (detail): Planned => ({
-        key:
-          sourceFolders.get(detail.series.id) ??
-          safeFolderName(
-            spellFolderKey(detail.series.title, detail.series.year)
-          ),
+        key: titleFolderOf(
+          sourceFolders,
+          detail.series.id,
+          detail.series.title,
+          detail.series.year
+        ),
         rows: seriesRows(detail),
       })
     ),
