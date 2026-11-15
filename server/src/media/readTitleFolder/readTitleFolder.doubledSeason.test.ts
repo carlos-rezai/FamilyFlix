@@ -50,6 +50,27 @@ describe('readTitleFolder: a doubled season', () => {
     });
   });
 
+  it('reads the Season folder holding videos over an earlier one holding none', async () => {
+    const dir = titleFolder('Death Note', [
+      'Season 01/Images/poster.jpg',
+      'Season 1/Death.Note.S01E01.mkv',
+    ]);
+
+    const scan = await readTitleFolder(dir);
+
+    expect(scan.kind).toBe('series');
+    if (scan.kind !== 'series') return;
+    expect(scan.seasons.map((season) => [season.number, season.dir])).toEqual([
+      [1, join(dir, 'Season 1')],
+    ]);
+    expect(scan.doubled).toContainEqual({
+      place: 'season',
+      season: 1,
+      read: join(dir, 'Season 1'),
+      count: 2,
+    });
+  });
+
   it('numbers no two videos as one episode', async () => {
     const dir = titleFolder('Death Note', [
       'Season 1/Death.Note.S01E01.mkv',

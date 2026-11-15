@@ -310,8 +310,10 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
 /**
  * Read a folder's **Season folders**, one per number, in number order, and
  * each number two Season folders or more hold (`Season 01`, `Season 1`) as a
- * `season` **Doubled place**: the first by name order is read, the others
- * passed, never merged. Throws when the folder cannot be read.
+ * `season` **Doubled place**: the first by name order holding a video is read
+ * (the first by name order when none does), the others passed, never merged,
+ * so an empty `Season 01/` never hides the `Season 1/` beside it. Throws when
+ * the folder cannot be read.
  */
 async function readSeasonPlaces(
   dir: string
@@ -327,8 +329,17 @@ async function readSeasonPlaces(
     ...groupedBy(names, (name) => String(seasonNumberOf(name))),
   ].sort(([a], [b]) => Number(a) - Number(b));
   for (const [number, found] of byNumber) {
-    const folders = found.map((name) => join(dir, name));
-    seasons.push(await readSeasonFolder(folders[0]));
+    const read = await Promise.all(
+      found.map((name) => readSeasonFolder(join(dir, name)))
+    );
+    const pick = Math.max(
+      0,
+      read.findIndex((season) => season.videos.length > 0)
+    );
+    seasons.push(read[pick]);
+    const folders = [read[pick], ...read.filter((_, i) => i !== pick)].map(
+      (season) => season.dir
+    );
     doubled.push(
       ...doubledOf(folders, { place: 'season', season: Number(number) })
     );
@@ -339,9 +350,9 @@ async function readSeasonPlaces(
 /**
  * Read a folder's **Season folders**, and nothing else in it, in number order:
  * the one reader of a show, shared by the scan and the **Show folder read**.
- * A folder the layout does not read as a Season folder (`Season 1`,
+ * A folder the layout does not read as a Season folder (`Seizoen 1`,
  * `Extras`) is passed in silence, and of two Season folders of one number
- * only the first by name order is read. Throws when the folder cannot be read.
+ * only one is read, the first by name order holding a video. Throws when the folder cannot be read.
  */
 export async function readSeasonFolders(
   dir: string
