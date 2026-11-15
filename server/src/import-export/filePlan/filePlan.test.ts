@@ -312,11 +312,22 @@ describe('filePlan: the Video cell, where the video lies', () => {
     );
   });
 
-  it('spells the Season folder only for an episode with no Source file', () => {
+  // 64, Rescan a folder, Phase 5 (issue #622): an episode with no Source file
+  // lies in its season's folder as the household named it, the first held
+  // episode's (`seasonFolderOf`); `Season 01` only for a season none names.
+  it('puts an episode with no Source file in its season’s held folder', () => {
     const rows = rowsOf([], [LYING], OFF);
 
     expect(find(rows, 'Episode', '1', '2')?.Video).toBe(
-      'Severance (2022)/Season 01/e2.mkv'
+      'Severance (2022)/season 03/e2.mkv'
+    );
+  });
+
+  it('spells the Season folder only for a season no Source file names', () => {
+    const rows = rowsOf([], [LYING], OFF);
+
+    expect(find(rows, 'Episode', '2', '1')?.Video).toBe(
+      'Severance (2022)/Season 02/e1.mkv'
     );
   });
 

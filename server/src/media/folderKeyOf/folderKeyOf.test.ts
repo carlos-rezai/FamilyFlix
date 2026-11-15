@@ -90,6 +90,12 @@ describe('spellFolderKey: the Title (Year) speller', () => {
     expect(spellFolderKey('Heat', 1995)).toBe('Heat (1995)');
   });
 
+  // 64, Rescan a folder, Phase 5 (issue #622): a yearless title's Folder key
+  // is its bare title, never `Heat ()`.
+  it('spells the bare title for a null year', () => {
+    expect(spellFolderKey('Heat', null)).toBe('Heat');
+  });
+
   it.each([
     ['Heat', 1995],
     ['Mr. & Mrs. Smith', 2005],
