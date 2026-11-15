@@ -237,7 +237,11 @@ async function writeOne(
  * no image in `Images/` already ends in that role; a **Still** only from
  * `tmdb` or `picked`, never a **Frame still**, and only when none of its
  * **Episode tag** is there; a track only when none of its language is there,
- * a second of one language as `<Language> (2)`.
+ * a second of one language as `<Language> (2)`. Every season-scoped file (a
+ * **Season poster**, a Still, an episode's track) goes under its season's
+ * `folder`, the **Season folder** its episodes lie in (`seasonFolderOf`), so a
+ * household's `Season 1/` is filled and no `Season 01/` is made beside it;
+ * the fill spells no Season folder itself.
  *
  * A folder it can't write costs one Warning line and never a throw; a Title
  * folder that is not there is one Warning line and nothing written.

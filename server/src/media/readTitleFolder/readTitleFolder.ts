@@ -351,8 +351,10 @@ async function readSeasonPlaces(
  * Read a folder's **Season folders**, and nothing else in it, in number order:
  * the one reader of a show, shared by the scan and the **Show folder read**.
  * A folder the layout does not read as a Season folder (`Seizoen 1`,
- * `Extras`) is passed in silence, and of two Season folders of one number
- * only one is read, the first by name order holding a video. Throws when the folder cannot be read.
+ * `Extras`) is passed in silence. A **Season folder** is `Season N`, any
+ * number of digits, case folded; of two Season folders of one number only
+ * one is read, the first by name order holding a video. Throws when the
+ * folder cannot be read.
  */
 export async function readSeasonFolders(
   dir: string
@@ -361,16 +363,19 @@ export async function readSeasonFolders(
 }
 
 /**
- * Read one **Title folder** by the **Folder layout**. One loose video or more
+ * Read one **Title folder** by the **Folder layout**, whatever its name: a
+ * yearless `Heat/` reads as a `Heat (1995)/` does. One loose video or more
  * and no **Season folder** is a film: its art read by role from `Images/` (a
  * stem, case folded, ending in `poster` or `backdrop`, the first by name
  * order), its tracks from `Subtitles/` under any name, one per language. A
  * place two files or more fill reads the first by name order and is reported
- * as a **Doubled place** (log 61). Season folders and no loose video is a
- * series. Both or neither is left out,
- * with the reason the walk words as its **Layout warning**; Season folders
- * that all hold no video are as good as none, `empty`.
- * `Extras/` and anything else the layout doesn't name is passed in silence.
+ * as a **Doubled place** (log 61). Season folders (`Season N`, any number of
+ * digits) and no loose video is a series; two Season folders of one number
+ * are a `season` Doubled place, one read and never merged. Both or neither
+ * is left out, `mixed` or `empty`, the reason the walk words as its **Layout
+ * warning**; Season folders that all hold no video are as good as none,
+ * `empty`. `Extras/` and anything else the layout doesn't name is passed in
+ * silence.
  * What it answers is the folder's **Layout read**: a scan imports by it, and
  * the **Library sheet**'s path cells name what it found (`layoutCells`).
  */

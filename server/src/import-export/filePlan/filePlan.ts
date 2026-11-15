@@ -87,9 +87,11 @@ function tracksDir(place: TracksPlace): string {
  * **Folder layout** relative to the **Export folder**, and the files those
  * answers planned. The layout less the videos (log 58, Q19): art under each
  * **Title folder**'s or Season folder's `Images/`, Stills (Frame stills too)
- * under `Season NN/Images/Stills/` by **Episode tag**, a film's tracks under
- * `Subtitles/` by language and an episode's under `Season NN/Subtitles/<tag>/`,
- * a second of one language `(2)`. A cell is blank where nothing travels (no
+ * under the Season folder's `Images/Stills/` by **Episode tag**, a film's
+ * tracks under `Subtitles/` by language and an episode's under the Season
+ * folder's `Subtitles/<tag>/`, a second of one language `(2)`. The Season
+ * folder is the one the place's season lies in (`Death Note/Season 1`), the
+ * folder its Video cells name, else `Season 01`. A cell is blank where nothing travels (no
  * stored file, or its toggle off). `Video` names where the video lies, by
  * `exportRows`' own `videoCell`; no video is planned.
  */

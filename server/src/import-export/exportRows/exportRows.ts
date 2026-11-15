@@ -318,8 +318,11 @@ const byKey = (a: Planned, b: Planned): number =>
  * (`filePlan`), the Library sheet the cells of each Title folder's **Layout
  * read** (`layoutCells`). `sourceFolders`, required, names each title's
  * Folder key by its **Source folder** (`sourceFoldersOf`): the one rule for
- * both sheets since the **Export round trip** (log 61); a title the map
- * doesn't hold is spelled from its title and year. Two titles sharing a
+ * both sheets since the **Export round trip** (log 61), so a title held from
+ * `Heat/` is `Heat` whatever year a Sync filled; a title the map doesn't
+ * hold is spelled by `spellFolderKey`, its bare title for a `null` year. Every
+ * season-scoped place carries its `seasonFolder`, the **Season folder** its
+ * held episodes lie in (`seasonFolderOf`). Two titles sharing a
  * Folder key, compared folded (NFC, then case), are numbered `(1)`, `(2)`,
  * … in sheet order, each with a Warning line.
  */

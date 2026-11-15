@@ -67,7 +67,9 @@ function resolvedRow(row: SheetRow, folder: FilmScan): SheetRow {
  * A **Match** is the one **Title folder** whose name is the row's **Folder
  * key**, exactly and case folded, holding exactly one video: never a fuzzy
  * title. Only when no folder holds the key and the row has a year are the
- * folders named by the row's title alone weighed instead. Anything short of that is a verdict rather
+ * folders whose key folds equal to the row's title alone weighed instead, so
+ * a `Heat`, `1995` row with no `Folder` cell finds `Heat/`; a row without a
+ * year gets no such fallback. Anything short of that is a verdict rather
  * than a guess: two or more such folders (in two Library folders, or names
  * differing only by case) are `ambiguous`; none is `no-folder`; and the one
  * folder holding no video, or more than one, is `no-video` with its own two
