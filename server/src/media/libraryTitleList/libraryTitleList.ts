@@ -45,9 +45,24 @@ export async function libraryTitleList(
   const linked = new Map<string, string[]>(
     [...movies, ...series].map((title) => [title.id, videosOf(title)])
   );
-  /** Every other held title's linked videos, a video it shares included. */
-  const othersOf = (id: string) =>
-    [...linked].flatMap(([other, videos]) => (other === id ? [] : videos));
+  const holders = videoHolders(linked);
+  /**
+   * The other held titles' videos `linkedFiles` weighs for this title: those
+   * it links too, and one lying in its Source folder if any does. Read off
+   * the index, so the list grows with the videos, not titles times videos.
+   */
+  const othersOf = (id: string, sourceFolder: string | null) => {
+    const shared = (linked.get(id) ?? []).filter((video) =>
+      [...(holders.byPath.get(video) ?? [])].some((other) => other !== id)
+    );
+    const inFolder =
+      sourceFolder === null
+        ? undefined
+        : holders.byFolder
+            .get(normal(sourceFolder))
+            ?.find((held) => held.id !== id)?.video;
+    return inFolder === undefined ? shared : [...shared, inFolder];
+  };
 
   function placed(
     title: StoredLibraryMovie | StoredLibrarySeries,
@@ -69,7 +84,7 @@ export async function libraryTitleList(
       allLinked,
       sourceFolder,
       libraryFolder,
-      others: othersOf(title.id),
+      others: othersOf(title.id, sourceFolder),
     });
     return {
       id: title.id,
@@ -106,6 +121,41 @@ export async function libraryTitleList(
       episodes: show.episodes,
     })),
   };
+}
+
+/**
+ * A path as `folderOverlap` compares it: resolved, and case-folded on
+ * Windows.
+ */
+function normal(path: string): string {
+  const resolved = resolve(path);
+  return process.platform === 'win32' ? resolved.toLowerCase() : resolved;
+}
+
+/**
+ * Every held title's linked videos, indexed once: by the exact path, the
+ * titles linking it; by each folder a video lies in (the video's own path
+ * and every ancestor, compared as `folderOverlap` compares), the videos
+ * there and whose they are.
+ */
+function videoHolders(linked: ReadonlyMap<string, readonly string[]>) {
+  const byPath = new Map<string, Set<string>>();
+  const byFolder = new Map<string, { id: string; video: string }[]>();
+  for (const [id, videos] of linked) {
+    for (const video of videos) {
+      byPath.set(video, (byPath.get(video) ?? new Set()).add(id));
+      let folder = normal(video);
+      for (;;) {
+        const held = byFolder.get(folder) ?? [];
+        held.push({ id, video });
+        byFolder.set(folder, held);
+        const parent = dirname(folder);
+        if (parent === folder) break;
+        folder = parent;
+      }
+    }
+  }
+  return { byPath, byFolder };
 }
 
 /**
