@@ -48,22 +48,26 @@ export type ImagePlace =
     };
 
 /** A film's tracks (no season), or an episode's. */
-export interface TracksPlace {
-  kind: 'tracks';
-  folder: string;
-  season?: number;
-  episode?: number;
-  seasonFolder?: string;
-}
+export type TracksPlace =
+  | { kind: 'tracks'; folder: string }
+  | {
+      kind: 'tracks';
+      folder: string;
+      season: number;
+      episode: number;
+      seasonFolder?: string;
+    };
 
 /** A film's video (no season), or an episode's, with its **Source file**. */
-export interface VideoPlace {
-  kind: 'video';
-  folder: string;
-  season?: number;
-  sourceFile?: string | null;
-  seasonFolder?: string;
-}
+export type VideoPlace =
+  | { kind: 'video'; folder: string }
+  | {
+      kind: 'video';
+      folder: string;
+      season: number;
+      sourceFile: string | null;
+      seasonFolder?: string;
+    };
 
 /**
  * A season-scoped place's **Season folder**: the one its season lies in, as
@@ -76,7 +80,7 @@ export const seasonFolderAt = (place: {
 
 /** Where a video place's video lies: an episode's Source file as it lies. */
 function videoPath(place: VideoPlace, storedPath: string): string {
-  if (place.season === undefined) {
+  if (!('season' in place)) {
     return `${place.folder}/${basenameOf(storedPath)}`;
   }
   return place.sourceFile

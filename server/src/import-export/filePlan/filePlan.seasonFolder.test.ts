@@ -181,7 +181,7 @@ describe('exportRows: every season-scoped place carries its seasonFolder', () =>
         place.kind === 'season-poster' ||
         place.kind === 'still' ||
         ((place.kind === 'tracks' || place.kind === 'video') &&
-          place.season !== undefined)
+          'season' in place)
     );
     // One season poster, then two episodes' still, tracks and video each.
     expect(scoped).toHaveLength(7);

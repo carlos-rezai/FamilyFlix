@@ -59,7 +59,7 @@ export function layoutCells(
       }
     },
     tracks: (place) => {
-      if (place.season === undefined || place.episode === undefined) {
+      if (!('season' in place)) {
         const read = readOf(place.folder);
         return read?.kind === 'film'
           ? read.subtitles.map((track) => cell(track.path))

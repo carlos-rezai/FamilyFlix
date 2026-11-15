@@ -409,9 +409,13 @@ describe('exportRows: the path cells it is given', () => {
       case 'still':
         return `still of ${place.folder} ${place.season}x${place.episode}`;
       case 'tracks':
-        return `tracks of ${place.folder} ${place.season ?? '-'}x${place.episode ?? '-'}`;
+        return 'season' in place
+          ? `tracks of ${place.folder} ${place.season}x${place.episode}`
+          : `tracks of ${place.folder} -x-`;
       case 'video':
-        return `video of ${place.folder} ${place.season ?? '-'} ${place.sourceFile ?? '-'}`;
+        return 'season' in place
+          ? `video of ${place.folder} ${place.season} ${place.sourceFile ?? '-'}`
+          : `video of ${place.folder} - -`;
     }
   }
 

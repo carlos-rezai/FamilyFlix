@@ -76,7 +76,7 @@ function imageTarget(place: ImagePlace): { dir: string; name: string } {
 
 /** The folder a track place's files lie in. */
 function tracksDir(place: TracksPlace): string {
-  return place.season === undefined || place.episode === undefined
+  return !('season' in place)
     ? `${place.folder}/${SUBTITLES_FOLDER}`
     : `${seasonDir({ folder: place.folder, season: place.season, seasonFolder: place.seasonFolder })}/${SUBTITLES_FOLDER}/${spellEpisodeTag(place.season, place.episode)}`;
 }
