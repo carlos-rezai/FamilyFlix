@@ -221,3 +221,60 @@ describe('libraryTitleList — each title’s Linked files, the kind only', () =
     expect(named(list, 'Harbor and Vine')?.linkedFiles).toBe('folder');
   });
 });
+
+// A household library of 500+ titles linked off one drive, most of its videos
+// episodes: every detail read answers its **Delete facts** off this list, so
+// the list is read on every click into a title. It used to compare every
+// title with every other title's videos, about 3.6 seconds at this size; it
+// must grow with the videos, not with titles times videos.
+describe('libraryTitleList — a large library', () => {
+  const FILMS = 450;
+  const SHOWS = 80;
+  const EPISODES = 45;
+
+  /** The library: a film per Source folder, a show per Show folder. */
+  function large(): Fresh {
+    const at = fresh();
+    for (let film = 0; film < FILMS; film += 1) {
+      const folder = `Film ${film} (2000)`;
+      const added = at.storage.addMovie({
+        title: `Film ${film}`,
+        videoPath: `${folder}/Film ${film}.mkv`,
+        videoFolderId: at.folderId,
+        mediaFolder: `film-${film}`,
+      });
+      at.storage.setSourceFolder(added.id, at.folderId, folder);
+    }
+    for (let show = 0; show < SHOWS; show += 1) {
+      const folder = `Show ${show}`;
+      const added = at.storage.addSeries(
+        { title: `Show ${show}`, mediaFolder: `show-${show}` },
+        Array.from({ length: EPISODES }, (_, index) => ({
+          season: 1,
+          number: index + 1,
+          videoPath: `${folder}/Season 01/S01E${index + 1}.mkv`,
+          videoFolderId: at.folderId,
+        }))
+      );
+      at.storage.setSourceFolder(added.id, at.folderId, folder);
+    }
+    return at;
+  }
+
+  it('lists 530 titles over 4050 linked videos within a second, each its own folder', async () => {
+    const at = large();
+
+    const started = performance.now();
+    const list = await libraryTitleList(at.storage, at.media);
+    const elapsed = performance.now() - started;
+
+    expect(list.movies).toHaveLength(FILMS);
+    expect(list.series).toHaveLength(SHOWS);
+    expect(
+      [...list.movies, ...list.series].every(
+        (title) => title.linkedFiles === 'folder'
+      )
+    ).toBe(true);
+    expect(elapsed).toBeLessThan(1000);
+  }, 60_000);
+});
