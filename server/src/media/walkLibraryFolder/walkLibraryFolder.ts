@@ -43,6 +43,8 @@ const doubledWhere = (place: DoubledPlace): [string, string] => {
       return ['posters', ''];
     case 'backdrop':
       return ['backdrops', ''];
+    case 'season':
+      return [`Season ${place.season} folders`, ''];
     case 'season-poster':
       return ['posters', ` Season ${place.season}`];
     case 'still':

@@ -39,11 +39,12 @@ export interface FolderScan {
 
 /**
  * Where a **Doubled place** lies, by its role: a title's poster or backdrop,
- * a season's poster, an episode's Still, or a language's tracks, a film's or
- * an episode's.
+ * a show's **Season folder** of one number, a season's poster, an episode's
+ * Still, or a language's tracks, a film's or an episode's.
  */
 type DoubledWhere =
   | { place: 'poster' | 'backdrop' }
+  | { place: 'season'; season: number }
   | { place: 'season-poster'; season: number }
   | { place: 'still'; season: number; episode: number }
   | { place: 'track'; language: string }
@@ -307,22 +308,45 @@ export async function readSeasonFolder(dir: string): Promise<SeasonFolderScan> {
 }
 
 /**
+ * Read a folder's **Season folders**, one per number, in number order, and
+ * each number two Season folders or more hold (`Season 01`, `Season 1`) as a
+ * `season` **Doubled place**: the first by name order is read, the others
+ * passed, never merged. Throws when the folder cannot be read.
+ */
+async function readSeasonPlaces(
+  dir: string
+): Promise<{ seasons: SeasonFolderScan[]; doubled: DoubledPlace[] }> {
+  const entries = await readdir(dir, { withFileTypes: true });
+  const names = entries
+    .filter((entry) => entry.isDirectory() && isSeasonFolder(entry.name))
+    .map((entry) => entry.name)
+    .sort((a, b) => a.localeCompare(b));
+  const seasons: SeasonFolderScan[] = [];
+  const doubled: DoubledPlace[] = [];
+  const byNumber = [
+    ...groupedBy(names, (name) => String(seasonNumberOf(name))),
+  ].sort(([a], [b]) => Number(a) - Number(b));
+  for (const [number, found] of byNumber) {
+    const folders = found.map((name) => join(dir, name));
+    seasons.push(await readSeasonFolder(folders[0]));
+    doubled.push(
+      ...doubledOf(folders, { place: 'season', season: Number(number) })
+    );
+  }
+  return { seasons, doubled };
+}
+
+/**
  * Read a folder's **Season folders**, and nothing else in it, in number order:
  * the one reader of a show, shared by the scan and the **Show folder read**.
  * A folder the layout does not read as a Season folder (`Season 1`,
- * `Extras`) is passed in silence. Throws when the folder cannot be read.
+ * `Extras`) is passed in silence, and of two Season folders of one number
+ * only the first by name order is read. Throws when the folder cannot be read.
  */
 export async function readSeasonFolders(
   dir: string
 ): Promise<SeasonFolderScan[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const scans: SeasonFolderScan[] = [];
-  for (const entry of entries) {
-    if (entry.isDirectory() && isSeasonFolder(entry.name)) {
-      scans.push(await readSeasonFolder(join(dir, entry.name)));
-    }
-  }
-  return scans.sort((a, b) => a.number - b.number);
+  return (await readSeasonPlaces(dir)).seasons;
 }
 
 /**
@@ -344,7 +368,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
   const key = folderKeyOf(name);
   const entries = await readdir(dir, { withFileTypes: true });
   const { videos } = looseFilesIn(dir, entries);
-  const seasons = await readSeasonFolders(dir);
+  const { seasons, doubled: seasonsDoubled } = await readSeasonPlaces(dir);
 
   if (videos.length > 0 && seasons.length > 0) {
     return { kind: 'left-out', dir, name, reason: 'mixed' };
@@ -376,7 +400,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
       poster,
       backdrop,
       seasons,
-      doubled,
+      doubled: [...doubled, ...seasonsDoubled],
     };
   }
 
