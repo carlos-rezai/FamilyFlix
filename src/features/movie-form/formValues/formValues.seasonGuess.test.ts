@@ -94,7 +94,7 @@ describe('showFolderRows: episodes numbered by their season', () => {
  * three, so a reader that only falls back to season 1 still fails.
  */
 describe('showFolderRows: a Season N folder', () => {
-  const DEATH_NOTE = 'E:\Series\Death Note';
+  const DEATH_NOTE = 'E:\\Series\\Death Note';
 
   /** A read of the picked `Death Note`, its videos at the paths given. */
   const deathNoteRead = (inside: string[]): ShowFolderRead => ({
@@ -104,7 +104,7 @@ describe('showFolderRows: a Season N folder', () => {
     heldSeriesId: null,
     episodes: [],
     unplaced: inside.map((relativePath) => ({
-      video: `${DEATH_NOTE}\${relativePath.replace('/', '\')}`,
+      video: `${DEATH_NOTE}\\${relativePath.split('/').join('\\')}`,
       relativePath,
     })),
     straySubtitles: 0,
