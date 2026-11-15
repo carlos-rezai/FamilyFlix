@@ -19,7 +19,6 @@ import {
   SUBTITLES_FOLDER,
   trackLanguageOf,
 } from '../../media/folderLayout/folderLayout';
-import { spellSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
 
 /** One subtitle track FamilyFlix holds: its language and its **Stored path**. */
 export interface HeldTrack {
@@ -35,9 +34,13 @@ export interface HeldEpisodeFiles {
   subtitles: HeldTrack[];
 }
 
-/** One season's held files: its **Season poster** and its episodes'. */
+/**
+ * One season's held files: its **Season folder** relative to the **Title
+ * folder**, its **Season poster** and its episodes'.
+ */
 export interface HeldSeasonFiles {
   number: number;
+  folder: string;
   poster: string | null;
   episodes: HeldEpisodeFiles[];
 }
@@ -134,7 +137,7 @@ function folderPlans(title: HeldTitleFiles): FolderPlan[] {
     },
   ];
   for (const season of title.seasons) {
-    const folder = spellSeasonFolder(season.number);
+    const { folder } = season;
     plans.push(
       {
         at: [folder, IMAGES_FOLDER],

@@ -175,8 +175,9 @@ export interface NewEpisode {
   watched?: boolean;
   /** Its subtitle tracks, in order, already stored under the Series folder. */
   subtitles?: NewSubtitle[];
-  /** Its **Source file**, relative to the series' Source folder; none by default. */
-  sourceFile?: string;
+  /** Its **Source file**, relative to the series' Source folder; omitted or
+   *  `null`, none. */
+  sourceFile?: string | null;
   /** The **Library folder** its video is linked into; omitted or `null`, it is
    *  copied — so a {@link StoredVideo} spreads in whole. */
   videoFolderId?: string | null;

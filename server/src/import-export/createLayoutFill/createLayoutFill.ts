@@ -6,6 +6,7 @@ import {
   type HeldTitleFiles,
   type LayoutFillOutcome,
 } from '../fillLayout/fillLayout';
+import { seasonFolderOf } from '../seasonFolderOf/seasonFolderOf';
 
 /** What the **Layout fill** reads the library through and copies out of. */
 export interface LayoutFillDeps {
@@ -66,6 +67,10 @@ export function createLayoutFill({
       subtitles: [],
       seasons: detail.seasons.map((season) => ({
         number: season.number,
+        folder: seasonFolderOf(
+          season.episodes.map((episode) => episode.sourceFile),
+          season.number
+        ),
         poster: season.posterPath,
         episodes: season.episodes.map((episode) => ({
           number: episode.number,
