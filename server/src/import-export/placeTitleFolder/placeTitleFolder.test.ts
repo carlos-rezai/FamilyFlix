@@ -4,9 +4,8 @@
 //
 // `placeTitleFolder(folders, dir)` answers where a folder lies as a **Title
 // folder** (log 58 Q22): directly in a listed **Library folder** and named by
-// a **Folder key**, placed at that name. A folder one level deeper, a
-// year-less name, a folder under no listed folder and a listed folder itself
-// answer `null`. Both place units read it. Prior art: `placeFilmFolder`'s
+// a **Folder key**, placed at that name. A folder one level deeper, a folder
+// under no listed folder and a listed folder itself answer `null`. Both place units read it. Prior art: `placeFilmFolder`'s
 // cases, which it inherits; the rule reads paths only, so nothing touches the
 // disk.
 
@@ -47,15 +46,35 @@ describe('placeTitleFolder: a Title folder', () => {
   });
 });
 
+// 64, Rescan a folder, Phase 1 (issue #618): the name check is dropped, so a
+// yearless folder in the root is a Title folder too; depth and the listed
+// folder still decide.
+describe('placeTitleFolder: a yearless Title folder', () => {
+  it('places a yearless folder in the root at its own name', () => {
+    expect(placeTitleFolder([FILMS], join(FILMS.path, 'Heat'))).toEqual({
+      folderId: 'films',
+      sourceFolder: 'Heat',
+    });
+  });
+
+  it('answers null for a yearless folder one level deeper', () => {
+    expect(
+      placeTitleFolder([FILMS], join(FILMS.path, 'Drama', 'Heat'))
+    ).toBeNull();
+  });
+
+  it('answers null for a yearless folder under no listed folder', () => {
+    expect(
+      placeTitleFolder([FILMS], join(ROOT, 'Elsewhere', 'Heat'))
+    ).toBeNull();
+  });
+});
+
 describe('placeTitleFolder: nothing', () => {
   it('answers null for a Title folder one level deeper', () => {
     expect(
       placeTitleFolder([FILMS], join(FILMS.path, 'Drama', 'Heat (1995)'))
     ).toBeNull();
-  });
-
-  it('answers null for a year-less name', () => {
-    expect(placeTitleFolder([FILMS], join(FILMS.path, 'Star Wars'))).toBeNull();
   });
 
   it('answers null for a folder under no listed folder', () => {

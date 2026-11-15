@@ -6,9 +6,8 @@
 // importer records it: a **Title folder** or nothing. A video loose in a Title
 // folder directly in its listed **Library folder** is placed at its **Folder
 // key**, and a film's **Source file** is never set, not even when the folder
-// holds a second video. A video anywhere else (under a folder not named
-// `Title (Year)`, in a Title folder deeper than the root, loose in the root,
-// or under no listed folder) answers `null`. The **Collection folder** branch
+// holds a second video. A video anywhere else (in a Title folder deeper than
+// the root, loose in the root, or under no listed folder) answers `null`. The **Collection folder** branch
 // is retired.
 //
 // Against real folders under `sandboxRoot`, `readShowFolder.test.ts`' harness.
@@ -66,18 +65,23 @@ describe('placeFilmFolder: a Title folder', () => {
   });
 });
 
-describe('placeFilmFolder: nothing', () => {
-  it('answers null for a folder not named Title (Year)', async () => {
+// 64, Rescan a folder, Phase 1 (issue #618): a folder not named
+// `Title (Year)` is a Title folder too, placed at its own name.
+describe('placeFilmFolder: a yearless Title folder', () => {
+  it('places a film in a yearless folder at that name', async () => {
     const root = sandboxRoot('familyflix-place-film-');
     const listed = films(root);
-    const jedi = videoAt(
-      root,
-      join('Films', 'Star Wars', 'Return.of.the.Jedi.1983.mp4')
-    );
+    const heat = videoAt(root, join('Films', 'Heat', 'heat.mkv'));
 
-    expect(await placeFilmFolder([listed], jedi)).toBeNull();
+    expect(await placeFilmFolder([listed], heat)).toEqual({
+      folderId: 'films',
+      sourceFolder: 'Heat',
+      sourceFile: null,
+    });
   });
+});
 
+describe('placeFilmFolder: nothing', () => {
   it('answers null for a Title folder deeper than the root', async () => {
     const root = sandboxRoot('familyflix-place-film-');
     const listed = films(root);

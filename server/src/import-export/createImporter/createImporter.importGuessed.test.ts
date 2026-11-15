@@ -175,6 +175,29 @@ describe('createImporter — a no-row Problem’s guess', () => {
   });
 });
 
+// 64, Rescan a folder, Phase 1 (issue #618): the guess comes off the Folder
+// key alone, so a folder no row claimed offers its own name, or the title
+// before its year, and no Title guess.
+describe('createImporter — a yearless folder’s guess', () => {
+  it.each([
+    ['Heat', 'Heat'],
+    ['Ironwood.2018.1080p', 'Ironwood.2018.1080p'],
+    ['Heat (1995) [1080p]', 'Heat (1995) [1080p]'],
+  ])('offers %s as %s', async (name, guess) => {
+    const { problem } = await inReview(name);
+
+    expect(problem.guess).toBe(guess);
+  });
+
+  it('matches what a Folder scan names a yearless folder', async () => {
+    const { problem } = await inReview('Heat');
+    const scanned = await scannedAs('Heat');
+
+    expect(scanned).toMatchObject({ title: 'Heat', year: null });
+    expect(problem.guess).toBe(scanned.title);
+  });
+});
+
 describe('createImporter.importGuessed — the folder imported', () => {
   it('imports the folder under its guess and answers imported', async () => {
     const { importer, storage, problem } = await inReview();

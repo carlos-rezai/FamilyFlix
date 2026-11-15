@@ -98,7 +98,7 @@ interface Layout {
   heat: string;
   /** `Films/Heat (1995)/Heat.1995.srt`: a file of no video kind. */
   heatTrack: string;
-  /** `Films/Star Wars/`: a folder of three films, not named Title (Year). */
+  /** `Films/Star Wars/`: a folder of three films, named with no year. */
   jedi: string;
   /** `Downloads/Lantern.2020.mp4`: under no listed folder. */
   lantern: string;
@@ -347,8 +347,31 @@ describe('POST /api/movies — the Source folder', () => {
     });
   });
 
-  it('records nothing for a film in a folder not named Title (Year)', async () => {
-    const { storage, baseUrl, files } = freshApi();
+  /**
+   * 64, Rescan a folder, Phase 1 (issue #618): a folder in the root is a
+   * **Title folder** whatever its name, so a yearless one is recorded as the
+   * **Source folder** too.
+   */
+  it('records a yearless folder in the root as its Source folder', async () => {
+    const { storage, baseUrl, root, folderId } = freshApi();
+    const heat = videoAt(join(root, 'Films', 'Heat', 'heat.mp4'));
+
+    const response = await postMovie(baseUrl, [
+      ['mode', 'link'],
+      ...fieldsOf('Heat', '1995'),
+      ['videoPath', heat],
+    ]);
+
+    expect(response.status).toBe(201);
+    const movie = (await response.json()) as Movie;
+    expect(storage.titleSource(movie.id)).toEqual({
+      folderId,
+      sourceFolder: 'Heat',
+    });
+  });
+
+  it('records a folder not named Title (Year) by its own name', async () => {
+    const { storage, baseUrl, files, folderId } = freshApi();
 
     const response = await postMovie(baseUrl, [
       ['mode', 'link'],
@@ -358,7 +381,10 @@ describe('POST /api/movies — the Source folder', () => {
 
     expect(response.status).toBe(201);
     const movie = (await response.json()) as Movie;
-    expect(storage.titleSource(movie.id)).toBeNull();
+    expect(storage.titleSource(movie.id)).toEqual({
+      folderId,
+      sourceFolder: 'Star Wars',
+    });
   });
 
   /**

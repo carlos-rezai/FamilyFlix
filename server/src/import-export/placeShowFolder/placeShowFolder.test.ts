@@ -87,10 +87,16 @@ describe('placeShowFolder', () => {
     }
   );
 
-  it('answers null for a show folder not named Title (Year)', () => {
+  // 64, Rescan a folder, Phase 1 (issue #618): a show folder not named
+  // `Title (Year)` is a Title folder too, placed at its own name.
+  it('places an episode in a yearless show folder at that name', () => {
     const video = join(root, 'Shows', 'Harbor & Vine', 'Season 01', 'e.mkv');
 
-    expect(placeShowFolder([shows], video)).toBeNull();
+    expect(placeShowFolder([shows], video)).toEqual({
+      folderId: 'shows',
+      sourceFolder: 'Harbor & Vine',
+      sourceFile: 'Season 01/e.mkv',
+    });
   });
 
   it('answers null for a Title folder deeper than the root', () => {

@@ -172,7 +172,7 @@ describe('createImporter.scan: the Doubled place lines', () => {
       warnings(run).filter((text) => text.includes(' holds 2 '))
     ).toHaveLength(DOUBLED_LINES.length);
     expect(warnings(run)).toContain(
-      "⚠ Drama isn't named Title (Year), left out"
+      '⚠ Drama holds no video or Season folder, left out'
     );
     expect(run.problems).toEqual([]);
   });

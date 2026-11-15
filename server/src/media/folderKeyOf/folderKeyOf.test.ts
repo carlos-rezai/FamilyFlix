@@ -42,16 +42,46 @@ describe('folderKeyOf: a Title folder', () => {
   });
 });
 
-describe('folderKeyOf: a name the layout does not read', () => {
+// 64, Rescan a folder, Phase 1 (issue #618): `folderKeyOf` always answers.
+// A name ending in ` (YYYY)` or a range reads that title and the first year;
+// any other name is the title, verbatim, year `null`. No title guess.
+
+describe('folderKeyOf: a yearless name', () => {
+  it('reads Heat as title Heat, year null', () => {
+    expect(folderKeyOf('Heat')).toEqual({
+      name: 'Heat',
+      title: 'Heat',
+      year: null,
+    });
+  });
+
   it.each([
-    ['a year-less name', 'Drama'],
-    ['a range', 'Severance (2022–)'],
-    ['a release name', 'Heat.1995.1080p.BluRay.x264'],
     ['a trailing suffix', 'Heat (1995) [1080p]'],
     ['a trailing word', 'Heat (1995) Directors Cut'],
     ['a year in brackets', 'Heat [1995]'],
-  ])('answers null for %s', (_label, name) => {
-    expect(folderKeyOf(name)).toBeNull();
+    ['a release name', 'Die.Hard.1988.1080p'],
+    ['a genre shelf', 'Drama'],
+  ])('reads %s verbatim, year null', (_label, name) => {
+    expect(folderKeyOf(name)).toEqual({ name, title: name, year: null });
+  });
+
+  it('reads (1995) alone as a defined key', () => {
+    const key = folderKeyOf('(1995)');
+
+    expect(key).not.toBeNull();
+    expect(key).toBeDefined();
+    expect(key?.name).toBe('(1995)');
+  });
+});
+
+describe('folderKeyOf: a series range', () => {
+  it.each([
+    ['an open en dash range', 'Severance (2022–)'],
+    ['an open hyphen range', 'Severance (2022-)'],
+    ['a closed hyphen range', 'Severance (2022-2025)'],
+    ['a closed en dash range', 'Severance (2022–2025)'],
+  ])('reads %s by its first year', (_label, name) => {
+    expect(folderKeyOf(name)).toEqual({ name, title: 'Severance', year: 2022 });
   });
 });
 

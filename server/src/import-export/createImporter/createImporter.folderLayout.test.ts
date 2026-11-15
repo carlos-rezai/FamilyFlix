@@ -241,7 +241,7 @@ describe('createImporter.scan: the Layout warnings', () => {
     const run = await scanned(box);
 
     expect(run.log).toContainEqual({
-      text: "⚠ Drama isn't named Title (Year), left out",
+      text: '⚠ Drama holds no video or Season folder, left out',
       kind: 'warning',
     });
     expect(warnings(run).filter((text) => text.includes('Drama'))).toHaveLength(
@@ -317,7 +317,7 @@ describe('createImporter.scan: a title held from an old shape', () => {
     const run = await scanned(box, 'link');
 
     expect(run.log).toContainEqual({
-      text: "⚠ Drama isn't named Title (Year), left out",
+      text: '⚠ Drama holds no video or Season folder, left out',
       kind: 'warning',
     });
     const movie = box.storage.getMovie(held.id);

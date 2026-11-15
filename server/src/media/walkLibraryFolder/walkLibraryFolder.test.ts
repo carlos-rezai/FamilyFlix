@@ -97,14 +97,42 @@ describe('walkLibraryFolder: root entries only', () => {
 });
 
 describe('walkLibraryFolder: the Layout warnings', () => {
-  it('warns of a folder not named Title (Year)', async () => {
+  // 64, Rescan a folder, Phase 1 (issue #618): the `no-key` reason is
+  // retired, so a genre shelf is left out as holding no video or Season
+  // folder, and a yearless Title folder is read in silence.
+  it('warns of a genre shelf as holding no video or Season folder', async () => {
     const root = libraryWith(['Drama/Amelie (2001)/Amelie.mp4']);
 
     const walk = await walkLibraryFolder(root);
 
     expect(walk.titles).toEqual([]);
     expect(walk.warnings).toEqual([
-      "⚠ Drama isn't named Title (Year), left out",
+      '⚠ Drama holds no video or Season folder, left out',
+    ]);
+  });
+
+  it('reads a yearless Title folder in silence', async () => {
+    const root = libraryWith(['Heat/heat.mkv', 'Die Hard (1988)/Die Hard.mkv']);
+
+    const walk = await walkLibraryFolder(root);
+
+    expect(titleNames(walk)).toEqual(['Die Hard (1988)', 'Heat']);
+    expect(walk.warnings).toEqual([]);
+  });
+
+  it("never words isn't named Title (Year)", async () => {
+    const root = libraryWith([
+      'Drama/Amelie (2001)/Amelie.mp4',
+      'Heat (1995) [1080p]/Images/poster.jpg',
+      'Die.Hard.1988.1080p/Die.Hard.mkv',
+    ]);
+
+    const walk = await walkLibraryFolder(root);
+
+    expect(walk.warnings.join(' ')).not.toContain("isn't named Title (Year)");
+    expect([...walk.warnings].sort()).toEqual([
+      '⚠ Drama holds no video or Season folder, left out',
+      '⚠ Heat (1995) [1080p] holds no video or Season folder, left out',
     ]);
   });
 
@@ -158,8 +186,8 @@ describe('walkLibraryFolder: the Layout warnings', () => {
     const walk = await walkLibraryFolder(root);
 
     expect([...walk.warnings].sort()).toEqual([
-      "⚠ Comedy isn't named Title (Year), left out",
-      "⚠ Drama isn't named Title (Year), left out",
+      '⚠ Comedy holds no video or Season folder, left out',
+      '⚠ Drama holds no video or Season folder, left out',
     ]);
   });
 });
