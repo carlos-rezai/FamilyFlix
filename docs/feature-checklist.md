@@ -77,6 +77,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Welcome tune: a tune in sync with the intro         | ✅ Done    |
 | Row view: genre rows or one grid, Movies and Series | ✅ Done    |
 | Rescan a folder: a year and `Season 1` optional     | ✅ Done    |
+| Show folder title: a pick reads its Folder key      | ⬜ Planned |
 | Missing videos: a held title whose file is gone     | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
@@ -662,10 +663,32 @@ Settled in a grill-me on 2026-11-15 (design log 64, the layout handoff
       the title's, blank until a Sync; a hand-made row's `Heat`, `1995` with
       no `Folder` cell finds a folder `Heat` when no `Heat (1995)` exists.
 
-Step 48 is what step 47's draft held beyond the names, split out by log 64
-Q1. Not yet through a grill-me:
+Step 48 is the one reader of a folder's name step 47 left behind, found by
+its closing round (issue 625, the refactor plan's Out of Scope) and filed as
+issue 626. Not yet through a grill-me:
 
-48. ⬜ **Missing videos**: a scan notices what is no longer on disk.
+48. ⬜ **Show folder title**: the movie form's **Show folder pick** names a
+    show the way a scan does.
+    - **The gap**: `readShowFolder` still guesses a picked show's title by
+      `titleGuess`, which strips a `(YYYY)` but not a range, so a picked
+      `Severance (2022–)/` types _Severance (2022–)_ into the form, where
+      _Scan all folders_ reads the same folder through `folderKeyOf` as
+      _Severance_, 2022.
+    - **Open questions for the grill-me**: whether the pick reads the
+      **Folder key** and fills the year as well as the title; what it does
+      with a name `titleGuess` cleans today (release noise, dots for
+      spaces) and `folderKeyOf` keeps; whether `titleGuess` then has a
+      caller left.
+    - **Run the grill-me from issue 626**: read it with
+      `gh issue view 626 --comments` as the session's starting point. Once
+      the grill-me has written its design log, close issue 626 with a
+      comment naming the log; the PRD and its issues carry the work from
+      there.
+
+Step 49 is what step 47's draft held beyond the names, split out by log 64
+Q1 (which drafted it as step 48). Not yet through a grill-me:
+
+49. ⬜ **Missing videos**: a scan notices what is no longer on disk.
     - **What was removed**: a held title whose video is no longer in the
       folder (a **Missing video**, not an **Unreachable** folder) is listed
       for the household to keep or take out of the library; nothing leaves on
