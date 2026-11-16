@@ -475,6 +475,37 @@ describe('ProblemRow — a missing row’s Take out', () => {
   });
 });
 
+/**
+ * 66, Missing videos, Phase 3 (issue #637): a `missing` show's face is worded
+ * by the server, never counted by the client: _Take out of library_ with every
+ * episode gone, else _Take out N episodes_ or _Take out 1 episode_.
+ */
+describe('ProblemRow — a missing show’s Take out wording', () => {
+  it.each(['Take out of library', 'Take out 3 episodes', 'Take out 1 episode'])(
+    'draws %s from problem.takeOut, beside Skip',
+    (takeOut) => {
+      const onTakeOut = vi.fn();
+      renderRow({
+        problem: problem({
+          id: 'p8',
+          kind: 'missing',
+          title: 'Tidewater',
+          reason: 'S01E02 is no longer on disk.',
+          seriesId: 's1',
+          takeOut,
+        }),
+        onTakeOut,
+      });
+
+      fireEvent.click(screen.getByRole('button', { name: takeOut }));
+
+      expect(onTakeOut).toHaveBeenCalledTimes(1);
+      expect(skipButton()).toBeDefined();
+      expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
+    }
+  );
+});
+
 describe('ProblemRow — the other kinds draw no face', () => {
   it.each([
     'no-folder',

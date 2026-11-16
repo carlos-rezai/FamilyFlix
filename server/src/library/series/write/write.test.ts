@@ -943,3 +943,104 @@ describe('series write: addEpisodeSubtitles', () => {
     expect(tracks()).toEqual(episode.subtitles);
   });
 });
+
+// --- 66, Missing videos, Phase 3: "take out gone episodes" (issue #637) -----
+//
+// `removeEpisodes(seriesId, episodeIds)` is the **Take out** of a show's gone
+// episodes: it deletes those rows (their tracks by cascade) and answers the
+// **Stored paths** no row points at any more, for the importer to unlink.
+
+describe('series write: removeEpisodes', () => {
+  afterEach(closeTracked);
+
+  it('deletes the rows and their tracks, keeping the rest of the series', () => {
+    const path = join(sandboxRoot('familyflix-series-remove-'), 'lib.db');
+    const storage = track(createSqliteStorage(path));
+    const series = addHarbor(storage);
+    const [pilot, lowTide] = storage.listEpisodes(series.id);
+
+    storage.removeEpisodes(series.id, [lowTide.id]);
+
+    expect(storage.listEpisodes(series.id).map((e) => e.id)).toEqual([
+      pilot.id,
+    ]);
+    const probe = track(openDatabase(path));
+    expect(countRows(probe, 'episodes')).toBe(1);
+    expect(countRows(probe, 'episode_subtitles')).toBe(0);
+    expect(countRows(probe, 'series')).toBe(1);
+    expect(countRows(probe, 'series_genres')).toBe(2);
+  });
+
+  it('answers the removed episodes’ Stored paths', () => {
+    const storage = freshStorage();
+    const series = addHarbor(storage);
+    const [, lowTide] = storage.listEpisodes(series.id);
+
+    const removed = storage.removeEpisodes(series.id, [lowTide.id]);
+
+    expect([...removed].sort()).toEqual([
+      'harbor-2019/season-01/S01E02.en.srt',
+      'harbor-2019/season-01/S01E02.mp4',
+    ]);
+  });
+
+  it('answers only paths no remaining row points at', () => {
+    const storage = freshStorage();
+    const series = storage.addSeries(
+      { title: 'Harbor', year: 2019, posterPath: 'harbor-2019/poster.jpg' },
+      [
+        {
+          season: 1,
+          number: 1,
+          videoPath: 'harbor-2019/season-01/S01E01.mp4',
+          stillPath: 'harbor-2019/season-01/shared-still.jpg',
+          subtitles: [
+            {
+              path: 'harbor-2019/season-01/shared.en.srt',
+              language: 'English',
+            },
+          ],
+        },
+        {
+          season: 1,
+          number: 2,
+          videoPath: 'harbor-2019/season-01/S01E02.mp4',
+          stillPath: 'harbor-2019/season-01/shared-still.jpg',
+          subtitles: [
+            {
+              path: 'harbor-2019/season-01/shared.en.srt',
+              language: 'English',
+            },
+          ],
+        },
+      ],
+      [{ season: 1, posterPath: 'harbor-2019/S01-poster.jpg' }]
+    );
+    const [, second] = storage.listEpisodes(series.id);
+
+    const removed = storage.removeEpisodes(series.id, [second.id]);
+
+    expect(removed).toEqual(['harbor-2019/season-01/S01E02.mp4']);
+  });
+
+  it('never answers a Linked video, which is not the app’s to remove', () => {
+    const storage = freshStorage();
+    const folder = storage.addLibraryFolder(
+      sandboxRoot('familyflix-series-remove-linked-')
+    );
+    const series = storage.addSeries({ title: 'Harbor', year: 2019 }, [
+      {
+        season: 1,
+        number: 1,
+        videoPath: 'Harbor (2019)/Season 01/S01E01.mp4',
+        videoFolderId: folder.id,
+      },
+    ]);
+    const [pilot] = storage.listEpisodes(series.id);
+
+    const removed = storage.removeEpisodes(series.id, [pilot.id]);
+
+    expect(removed).toEqual([]);
+    expect(storage.listEpisodes(series.id)).toEqual([]);
+  });
+});
