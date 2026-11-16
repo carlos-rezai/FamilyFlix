@@ -336,6 +336,38 @@ describe('reviewGroups — a missing row', () => {
   });
 });
 
+/**
+ * 66 — Missing videos, Phase 4 (issue #638): `off-layout` is a hard kind,
+ * placed with the hard kinds, labelled _Off layout_: an **Off-layout folder**
+ * groups before every soft group.
+ */
+describe('reviewGroups — an off-layout row', () => {
+  it('reads off-layout as hard: its group comes before the soft ones', () => {
+    const problems = [
+      problem('s', 'Die Hard', 'missing'),
+      problem('d', 'Amélie', 'differs'),
+      problem('h', 'Heat', 'off-layout'),
+    ];
+
+    expect(shape(reviewGroups(problems, 'all'))).toEqual([
+      { title: 'Heat', ids: ['h'], kinds: ['off-layout'] },
+      { title: 'Die Hard', ids: ['s'], kinds: ['missing'] },
+      { title: 'Amélie', ids: ['d'], kinds: ['differs'] },
+    ]);
+  });
+
+  it('places off-layout among the hard kinds, before every soft kind', () => {
+    const at = PROBLEM_KINDS.indexOf('off-layout');
+
+    expect(at).toBeGreaterThan(-1);
+    expect(at).toBeLessThan(PROBLEM_KINDS.indexOf('missing-meta'));
+  });
+
+  it('labels the kind Off layout', () => {
+    expect(PROBLEM_KIND_LABELS['off-layout']).toBe('Off layout');
+  });
+});
+
 describe('reviewGroups — the filter', () => {
   const problems = [
     problem('p1', 'The Night Ferry', 'failed'),
@@ -378,13 +410,14 @@ describe('the Import review’s Kind filter — its words and order', () => {
     expect(
       kindFilter(problems, PROBLEM_KINDS, PROBLEM_KIND_LABELS, 'all').options
     ).toEqual([
-      { value: 'all', label: 'All 9' },
+      { value: 'all', label: 'All 10' },
       { value: 'no-folder', label: 'No folder 1' },
       { value: 'ambiguous', label: 'Ambiguous 1' },
       { value: 'no-video', label: 'No video 1' },
       { value: 'no-row', label: 'Not in sheet 1' },
       { value: 'failed', label: 'Failed 1' },
       { value: 'unplaced', label: 'Unplaced 1' },
+      { value: 'off-layout', label: 'Off layout 1' },
       { value: 'missing-meta', label: 'Missing details 1' },
       { value: 'differs', label: 'Differs 1' },
       { value: 'missing', label: 'Missing 1' },

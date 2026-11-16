@@ -72,6 +72,7 @@ const DOT: Record<ProblemKind, string> = {
   unplaced: DANGER,
   ambiguous: ACCENT,
   'no-row': TEXT_FAINT,
+  'off-layout': TEXT_FAINT,
   'missing-meta': TEXT_FAINT,
   differs: GOLD,
   missing: DANGER,
@@ -504,6 +505,46 @@ describe('ProblemRow — a missing show’s Take out wording', () => {
       expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
     }
   );
+});
+
+/**
+ * 66, Missing videos, Phase 4 (issue #638): an `off-layout` row is an
+ * **Off-layout folder**, fixed only on disk. It draws its folder's name and
+ * reason, a `textFaint` dot, and _Skip_ alone: no _Resolve_, no face.
+ */
+describe('ProblemRow — an off-layout row', () => {
+  const offLayout = problem({
+    id: 'p9',
+    kind: 'off-layout',
+    title: 'Heat',
+    reason: 'Holds no video or Season folder.',
+  });
+
+  it('shows the folder’s name and the reason', () => {
+    renderRow({ problem: offLayout });
+
+    expect(screen.getByText('Heat')).toBeDefined();
+    expect(screen.getByText('Holds no video or Season folder.')).toBeDefined();
+  });
+
+  it('fills the dot text-faint', () => {
+    renderRow({ problem: offLayout });
+
+    expect(getComputedStyle(dotOf('Heat')).backgroundColor).toBe(TEXT_FAINT);
+  });
+
+  it('offers no Resolve and Skip alone, and reports Skip', () => {
+    const onSkip = vi.fn();
+    renderRow({ problem: offLayout, onSkip });
+
+    expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+    expect(screen.getAllByRole('button').map((b) => b.textContent)).toEqual([
+      'Skip',
+    ]);
+    fireEvent.click(skipButton());
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('ProblemRow — the other kinds draw no face', () => {
