@@ -73,6 +73,7 @@ const DOT: Record<ProblemKind, string> = {
   'no-row': TEXT_FAINT,
   'missing-meta': TEXT_FAINT,
   differs: GOLD,
+  missing: DANGER,
 };
 
 describe('ProblemRow — what it shows', () => {
@@ -394,6 +395,40 @@ describe('ProblemRow — a differs row', () => {
 
     fireEvent.click(skipButton());
 
+    expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 66 — Missing videos, Phase 1 (issue #634): a `missing` row is a held film
+ * the **Missing check** found gone. It draws its title and reason, a `danger`
+ * dot, and _Skip_ alone: no _Resolve_.
+ */
+describe('ProblemRow — a missing row', () => {
+  const missing = problem({
+    id: 'p7',
+    kind: 'missing',
+    title: 'Die Hard',
+    reason: 'Its video, die-hard.mkv, is no longer on disk.',
+    movieId: 'm1',
+  });
+
+  it('shows the title and the reason', () => {
+    renderRow({ problem: missing });
+
+    expect(screen.getByText('Die Hard')).toBeDefined();
+    expect(
+      screen.getByText('Its video, die-hard.mkv, is no longer on disk.')
+    ).toBeDefined();
+  });
+
+  it('offers no Resolve, keeps Skip, and reports Skip', () => {
+    const onSkip = vi.fn();
+    renderRow({ problem: missing, onSkip });
+
+    expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
+    fireEvent.click(skipButton());
     expect(onSkip).toHaveBeenCalledTimes(1);
   });
 });

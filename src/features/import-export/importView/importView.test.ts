@@ -301,6 +301,41 @@ describe('reviewGroups — hard before soft', () => {
   });
 });
 
+/**
+ * 66 — Missing videos, Phase 1 (issue #634): `missing` is the last soft kind,
+ * labelled _Missing_, and groups with its title's other Problems.
+ */
+describe('reviewGroups — a missing row', () => {
+  it('groups it with its title’s other Problems, its kind last', () => {
+    const problems = [
+      problem('p1', 'Die Hard', 'no-video'),
+      problem('p2', 'Heat', 'no-row'),
+      problem('p3', 'Die Hard', 'missing'),
+    ];
+
+    expect(shape(reviewGroups(problems, 'all'))).toEqual([
+      { title: 'Die Hard', ids: ['p1', 'p3'], kinds: ['no-video', 'missing'] },
+      { title: 'Heat', ids: ['p2'], kinds: ['no-row'] },
+    ]);
+  });
+
+  it('reads missing as soft: a missing-only group comes after the hard ones', () => {
+    const problems = [
+      problem('s', 'Die Hard', 'missing'),
+      problem('h', 'Heat', 'no-folder'),
+    ];
+
+    expect(shape(reviewGroups(problems, 'all'))).toEqual([
+      { title: 'Heat', ids: ['h'], kinds: ['no-folder'] },
+      { title: 'Die Hard', ids: ['s'], kinds: ['missing'] },
+    ]);
+  });
+
+  it('labels the kind Missing', () => {
+    expect(PROBLEM_KIND_LABELS.missing).toBe('Missing');
+  });
+});
+
 describe('reviewGroups — the filter', () => {
   const problems = [
     problem('p1', 'The Night Ferry', 'failed'),
@@ -343,7 +378,7 @@ describe('the Import review’s Kind filter — its words and order', () => {
     expect(
       kindFilter(problems, PROBLEM_KINDS, PROBLEM_KIND_LABELS, 'all').options
     ).toEqual([
-      { value: 'all', label: 'All 8' },
+      { value: 'all', label: 'All 9' },
       { value: 'no-folder', label: 'No folder 1' },
       { value: 'ambiguous', label: 'Ambiguous 1' },
       { value: 'no-video', label: 'No video 1' },
@@ -352,6 +387,7 @@ describe('the Import review’s Kind filter — its words and order', () => {
       { value: 'unplaced', label: 'Unplaced 1' },
       { value: 'missing-meta', label: 'Missing details 1' },
       { value: 'differs', label: 'Differs 1' },
+      { value: 'missing', label: 'Missing 1' },
     ]);
   });
 });
