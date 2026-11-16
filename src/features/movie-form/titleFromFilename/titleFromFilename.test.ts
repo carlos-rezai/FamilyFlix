@@ -1,9 +1,9 @@
 /**
  * The **Title guess** — what a **Movie form** fills an empty title with from
- * the first video picked. The client's prefill counterpart of the importer's
- * `titleGuess`: the extension goes, dots and underscores read as spaces, and
- * everything from the first year, quality tag or **Episode tag** onward is
- * dropped. A prefill, never a write — the form decides whether to use it.
+ * the first video picked: the extension goes, dots and underscores read as
+ * spaces, and everything from the first year, quality tag or **Episode tag**
+ * onward is dropped. A prefill, never a write — the form decides whether to
+ * use it.
  */
 import { describe, expect, it } from 'vitest';
 

@@ -181,7 +181,16 @@ describe('readShowFolder: the Folder key', () => {
       const read = await readOf(show);
 
       expect([read.title, read.year]).toEqual([title, year]);
-      expect(read).not.toHaveProperty('titleGuess');
+      expect(Object.keys(read).sort()).toEqual([
+        'episodes',
+        'heldSeriesId',
+        'libraryFolderId',
+        'path',
+        'straySubtitles',
+        'title',
+        'unplaced',
+        'year',
+      ]);
     }
   );
 

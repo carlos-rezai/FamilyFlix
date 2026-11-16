@@ -140,7 +140,16 @@ describe('GET /api/show-folder', () => {
     expect(read.path).toBe(show);
     expect(read.title).toBe('Harbor and Vine');
     expect(read.year).toBe(2019);
-    expect(read).not.toHaveProperty('titleGuess');
+    expect(Object.keys(read).sort()).toEqual([
+      'episodes',
+      'heldSeriesId',
+      'libraryFolderId',
+      'path',
+      'straySubtitles',
+      'title',
+      'unplaced',
+      'year',
+    ]);
     expect(read.episodes).toEqual([
       {
         season: 1,
