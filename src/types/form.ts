@@ -165,15 +165,17 @@ export type FormKind = 'movie' | 'series';
 
 /**
  * The **Show folder read**: what `GET /api/show-folder` answers for a folder
- * picked on the series add — its **Title guess**, its numbered episodes in
+ * picked on the series add — its **Folder key**, its numbered episodes in
  * season, then episode order, each with its stem-matched subtitles, its
  * **Unplaced** videos and how many subtitles matched no episode.
  */
 export interface ShowFolderRead {
   /** The Show folder, absolute. */
   path: string;
-  /** The importer's Title guess on its name. */
-  titleGuess: string;
+  /** The title its **Folder key** spells: the folder's name, `(Year)` off. */
+  title: string;
+  /** The year its Folder key spells, or `null` for a name without one. */
+  year: number | null;
   /** The listed Library folder it lies under — Link is possible — or `null`. */
   libraryFolderId: string | null;
   /** The held series whose Show folder this is, or `null`. */

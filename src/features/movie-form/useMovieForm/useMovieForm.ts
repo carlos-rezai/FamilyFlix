@@ -31,7 +31,10 @@ import {
 } from '../useEpisodeList/useEpisodeList';
 import { useImportMode } from '../useImportMode/useImportMode';
 import { useSeasonPosters } from '../useSeasonPosters/useSeasonPosters';
-import { useShowFolderPick } from '../useShowFolderPick/useShowFolderPick';
+import {
+  type PickedKey,
+  useShowFolderPick,
+} from '../useShowFolderPick/useShowFolderPick';
 import {
   createMovie,
   createSeries,
@@ -632,20 +635,24 @@ export function useMovieForm(): UseMovieFormResult {
   }, []);
 
   // The **Show folder pick**, `useShowFolderPick`'s: an empty title, or one
-  // an earlier pick filled in, takes the read's **Title guess**, and its
-  // Library folder says whether Link can be.
-  const prefillTitle = useCallback((guess: string, picked: string | null) => {
-    setValues((current) =>
-      current.title.trim() === '' || current.title === picked
-        ? { ...current, title: guess }
-        : current
-    );
-  }, []);
+  // an earlier pick filled in, takes the read's **Folder key** title (the
+  // year is carried, not yet written), and its Library folder says whether
+  // Link can be.
+  const prefillFolderKey = useCallback(
+    (key: PickedKey, picked: PickedKey | null) => {
+      setValues((current) =>
+        current.title.trim() === '' || current.title === picked?.title
+          ? { ...current, title: key.title }
+          : current
+      );
+    },
+    []
+  );
   const showFolderPick = useShowFolderPick({
     plainAdd,
     holdShowFolder: episodeList.holdShowFolder,
     removeShowFolder: episodeList.removeShowFolder,
-    prefillTitle,
+    prefillFolderKey,
     setShowLink,
   });
 

@@ -2,9 +2,12 @@ import { useCallback, useRef, useState } from 'react';
 
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
-import type { EpisodeFormRow } from '@/types';
+import type { EpisodeFormRow, ShowFolderRead } from '@/types';
 import { readShowFolder } from '../api/api';
 import { showFolderRows } from '../formValues/formValues';
+
+/** The two fields of a read the form is prefilled from: its **Folder key**. */
+export type PickedKey = Pick<ShowFolderRead, 'title' | 'year'>;
 
 /** The refusal of a picked folder that is already a held series's Show folder. */
 const heldShowFolderRefusal = (title: string): string =>
@@ -18,11 +21,10 @@ export interface UseShowFolderPickInput {
   /** The episode list's: take the folder's rows off, the hand-added ones stay. */
   removeShowFolder: () => void;
   /**
-   * Fill the title with the read's **Title guess** when it is empty, or still
-   * `picked`, the guess an earlier pick filled in (`null` before any); a
-   * typed one stays.
+   * Offer the form the read's **Folder key**, with `picked`, the key an
+   * earlier pick offered (`null` before any), so a typed field stays.
    */
-  prefillTitle: (guess: string, picked: string | null) => void;
+  prefillFolderKey: (key: PickedKey, picked: PickedKey | null) => void;
   /** `useImportMode`'s: whether Link can be for the picked folder. */
   setShowLink: (available: boolean) => void;
 }
@@ -47,8 +49,8 @@ export interface UseShowFolderPickResult {
 /**
  * The series add's **Show folder pick**, a hook of its own on
  * `useEpisodeList`'s pattern: the folder the dialog answered, read by the
- * server, its rows after the held ones; an empty title takes the read's
- * **Title guess**, and its Library folder says whether Link can be. A cancel
+ * server, its rows after the held ones; the form is offered the read's
+ * **Folder key**, and its Library folder says whether Link can be. A cancel
  * changes nothing; a refusal — unreadable, empty, or a held series's own
  * folder, worded by that series's title — adds no rows. A second pick
  * replaces only the first pick's rows, and the title the first pick filled
@@ -58,15 +60,15 @@ export function useShowFolderPick({
   plainAdd,
   holdShowFolder,
   removeShowFolder: dropShowFolder,
-  prefillTitle,
+  prefillFolderKey,
   setShowLink,
 }: UseShowFolderPickInput): UseShowFolderPickResult {
   const [showFolder, setShowFolder] = useState<string | null>(null);
   const [refusal, setRefusal] = useState<string | null>(null);
   const [straySubtitles, setStraySubtitles] = useState(0);
-  // The **Title guess** the last pick offered, so a new pick knows the title
+  // The **Folder key** the last pick offered, so a new pick knows the fields
   // it may replace.
-  const pickedTitle = useRef<string | null>(null);
+  const pickedKey = useRef<PickedKey | null>(null);
   const bridge = folderBridge();
 
   const pickShowFolder = useCallback(async () => {
@@ -87,7 +89,7 @@ export function useShowFolderPick({
       // Already a held series's **Show folder**: refused by that series's own
       // title, and no rows land.
       const held = await fetchSeriesDetail(read.heldSeriesId).catch(() => null);
-      setRefusal(heldShowFolderRefusal(held?.series.title ?? read.titleGuess));
+      setRefusal(heldShowFolderRefusal(held?.series.title ?? read.title));
       return;
     }
     setRefusal(null);
@@ -95,9 +97,10 @@ export function useShowFolderPick({
     setStraySubtitles(read.straySubtitles);
     setShowLink(read.libraryFolderId !== null);
     holdShowFolder(showFolderRows(read));
-    prefillTitle(read.titleGuess, pickedTitle.current);
-    pickedTitle.current = read.titleGuess;
-  }, [bridge, holdShowFolder, prefillTitle, setShowLink]);
+    const key: PickedKey = { title: read.title, year: read.year };
+    prefillFolderKey(key, pickedKey.current);
+    pickedKey.current = key;
+  }, [bridge, holdShowFolder, prefillFolderKey, setShowLink]);
 
   const addShowFolder = useCallback(() => {
     void pickShowFolder();

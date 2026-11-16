@@ -1,5 +1,6 @@
 import { basename, relative } from 'node:path';
 
+import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
   readLooseFiles,
@@ -18,7 +19,6 @@ import {
 import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
-import { titleGuess } from '../titleKey/titleKey';
 import type { ShowFolderEpisode, ShowFolderRead } from '@/types';
 
 /** Why a picked folder was not read: it cannot be read, or holds no video. */
@@ -81,8 +81,8 @@ async function showUnder(
  * no second numbering rule), so a **Season folder**'s number beats the
  * filename's, and each episode keeps the tracks of its `Subtitles/S01E01/`
  * folder. A folder of loose videos, tagged ones included, answers them as
- * **Unplaced**, its subfolders not read. The **Title guess** is the importer's
- * own rule on the folder's name. A picked **Season folder** reads only its own
+ * **Unplaced**, its subfolders not read. Its title and year are the folder's
+ * **Folder key** (`folderKeyOf`), with no guess on top. A picked **Season folder** reads only its own
  * videos but stands for its Show folder (`showFolderOf`): titled by the show's
  * name, held-checked as the show, each path answered inside the show.
  *
@@ -135,11 +135,13 @@ export async function readShowFolder(
   }
 
   const listed = listedFolderOf(context.folders, dir);
+  const { title, year } = folderKeyOf(basename(showFolder));
   return {
     kind: 'read',
     read: {
       path: dir,
-      titleGuess: titleGuess(basename(showFolder)),
+      title,
+      year,
       libraryFolderId: listed?.id ?? null,
       heldSeriesId:
         listed === null
