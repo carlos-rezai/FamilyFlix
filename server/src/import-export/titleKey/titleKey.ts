@@ -14,6 +14,16 @@ const TAIL = new RegExp(
   'i'
 );
 
+/** The tail forms stripped from the end for as long as one is there. */
+function stripTails(name: string): string {
+  let rest = name;
+  for (let stripped = rest.replace(TAIL, ''); stripped !== rest; ) {
+    rest = stripped;
+    stripped = rest.replace(TAIL, '');
+  }
+  return rest;
+}
+
 /**
  * The separators a folder name uses for the spaces a title has. A hyphen is
  * among them: `die-hard-1988` is how a folder spells "Die Hard 1988".
@@ -38,18 +48,13 @@ const COMBINING_MARKS = /[\u0300-\u036f]/g;
  * out to use becomes one more row there.
  */
 export function titleKey(name: string): string {
-  let key = name
+  const folded = name
     .normalize('NFD')
     .replace(COMBINING_MARKS, '')
     .toLowerCase()
     .replace(SEPARATORS, ' ');
 
-  for (let stripped = key.replace(TAIL, ''); stripped !== key; ) {
-    key = stripped;
-    stripped = key.replace(TAIL, '');
-  }
-
-  return key
+  return stripTails(folded)
     .replace(/[^\p{L}\p{N}\s]/gu, '')
     .replace(/\s+/g, ' ')
     .trim();
@@ -58,7 +63,9 @@ export function titleKey(name: string): string {
 /**
  * The separators a **Source folder** name uses in place of the spaces a title
  * cannot carry on disk. Narrower than {@link SEPARATORS}: a hyphen stays,
- * because `Spider-Man` is a title and TMDB is asked it as one.
+ * because **Release noise** is spelled with one (`WEB-DL`, `Blu-ray`) and must
+ * still be whole when the noise is cut. {@link searchQuery} turns it into a
+ * space afterwards, like any other mark.
  */
 const SPACE_SEPARATORS = /[._]+/g;
 
@@ -112,16 +119,6 @@ const NOISE_TAIL = new RegExp(
 /** A name with its first Release noise word and everything after it cut. */
 function dropReleaseNoise(name: string): string {
   return name.replace(NOISE_TAIL, '');
-}
-
-/** The tail forms stripped from the end for as long as one is there. */
-function stripTails(name: string): string {
-  let rest = name;
-  for (let stripped = rest.replace(TAIL, ''); stripped !== rest; ) {
-    rest = stripped;
-    stripped = rest.replace(TAIL, '');
-  }
-  return rest;
 }
 
 /**
