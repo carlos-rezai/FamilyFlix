@@ -1101,6 +1101,19 @@ layout handoff `docs/handoff/handoff-folder-layout/README.md` is amended.
 | **Match** (updated)          | Since log 64, a **Sheet row** with a year whose **Folder key** no Title folder holds is matched by its title alone, folded, so a hand-made `Heat`, `1995` row with no `Folder` cell finds `Heat/`; the spelled key always wins when its folder exists, and the outcomes (`ambiguous`, `no-folder`, `no-video`) are the same. A row without a year gets no fallback. | title match, fuzzy match     |
 | **Export** (updated)         | Since log 64, a title in no Library folder is spelled by `spellFolderKey`, the bare title for a `null` year (never `Heat ()`), and every season-scoped file goes under its **Season folder name**, so a show held from `Death Note/Season 1/` exports `Death Note/Season 1/`.                                                                                       |                              |
 
+## Show folder title
+
+Design log 65: step 48, initiative `show-folder-title`. The movie form's
+**Show folder pick** reads a picked folder's name the way a scan does, by its
+**Folder key**, and fills the year as well as the title. The prototype
+comment in `docs/handoff/feat.MovieForm.dc.html` is amended.
+
+| Term                           | Definition                                                                                                                                                                                                                              | Aliases to avoid               |
+| ------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------ |
+| **Show folder read** (updated) | Since log 65, answers the picked folder's **Folder key** (`folderKeyOf` on the Show folder's name) as `title` and `year`, never a guess: `Severance (2022–)/` reads _Severance_, 2022, and `Severance.S01.1080p/` reads as named.       | title guess (for the folder's) |
+| **Show folder pick** (updated) | Since log 65, fills the form's title and its year from the read's Folder key, each only when empty or still what the earlier pick filled (`prefillFolderKey`); a typed title or year always stays, and a yearless folder fills no year. |                                |
+| **Title guess** (updated)      | Since log 65, only `titleFromFilename`'s, off a picked video's file name; a picked folder's name is read as its **Folder key**, and the server's `titleGuess` is retired.                                                               | folder guess                   |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -2073,6 +2086,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Dev:** "And _View all_ on the Drama series row?"
 > **Domain expert:** "The **Genre page** for series, `/genre/Drama?tab=series`. Switching back to **All** keeps her search and filters; the switch writes no URL."
 
+> **Dev:** "Dad picks `Severance (2022–)` with _＋ Add show folder_. What lands in the title?"
+> **Domain expert:** "_Severance_, and 2022 in the Year field. The **Show folder read** answers the folder's **Folder key**, the same reading _Scan all folders_ gives it, so the form never types a title the library wouldn't."
+> **Dev:** "And if the folder is `Severance.S01.1080p`?"
+> **Domain expert:** "That, verbatim; there is no **Title guess** on a folder's name any more. He edits the field before Save, or renames the folder."
+> **Dev:** "He'd typed 2021 first, then picked. Does the pick overwrite it?"
+> **Domain expert:** "Never. The **Show folder pick** fills a title or year only when it's empty or still what the earlier pick put there."
+
 ## Flagged ambiguities
 
 - **"Menu entry" is FamilyFlix's file only (new):** the AppImage also embeds
@@ -2097,9 +2117,10 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   every listed **Library folder** that imports. Both number a show by
   `numberShow` (until log 59 by `groupShows`, now retired); never call the
   form's pick a scan.
-- **"Title guess" has two readers (new):** the form's `titleFromFilename` on a
-  picked video and the importer's rule on a picked folder's name. One term,
-  two inputs; a **Show folder read**'s guess is the server's.
+- **"Title guess" has two readers (updated):** from log 48 to log 64, the
+  form's `titleFromFilename` on a picked video and the importer's rule on a
+  picked folder's name. Since log 65 only the first: a **Show folder read**
+  answers the folder's **Folder key**, never a guess.
 - **"Delete" never reaches a Library folder (updated):** from log 47 to log
   51 a **Delete** of a title with a **Linked video** could move its **Linked
   files** to the Recycle Bin. Since log 52 nothing FamilyFlix does takes
@@ -3062,3 +3083,4 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Jingle" names nothing (new):** the checklist row's word for the **Welcome tune**. Say **Welcome tune** for the whole, **Intro cue** or **Closing chord** for its parts; never "sound" alone, which the player's audio tracks already answer to.
 - **"Folder key" is not "Title (Year)" (new):** since log 64 a **Folder key** is the Title folder's own name, with or without a year, and the title's year lives in the sheet's `Year` cell. Never say a folder "has no key" or "isn't in the layout" for its name, and never call `Season 01` "the right name": it is only FamilyFlix's own spelling where the household has none.
 - **"Row view" includes the grid (new):** the step's name covers both values, so **All**, one grid, is a Row view too. Say **Row view** for the choice, **All** or **By genre** for its values; never "grid view" or "layout", which `layouts/` already answers to, nor "mode", which the **Genre page** and the **Import mode** own.
+- **"Show folder title" is not a Title guess (new):** since log 65 a picked folder's title is its **Folder key**'s, read as a scan reads it. Say the read's **title** and **year**; keep **Title guess** for `titleFromFilename` on a video's file name.

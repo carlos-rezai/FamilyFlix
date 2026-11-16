@@ -522,8 +522,9 @@
                      files; once a folder is picked its row above carries the label and
                      this one's is blank. It opens the one-folder dialog; a cancel changes
                      nothing. The read fills the Show folder row, then one found row per
-                     episode, season then episode order, each with its found subtitles, and
-                     an empty title takes the Title guess. -->
+                     episode, season then episode order, each with its found subtitles; an
+                     empty title takes the folder's title, and an empty year its year, both
+                     read as a scan reads the folder's name (log 65). -->
                 <sc-if
                   value="{{ form.canAddShowFolder }}"
                   hint-placeholder-val="{{ true }}"

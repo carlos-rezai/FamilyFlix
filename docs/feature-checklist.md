@@ -665,7 +665,8 @@ Settled in a grill-me on 2026-11-15 (design log 64, the layout handoff
 
 Step 48 is the one reader of a folder's name step 47 left behind, found by
 its closing round (issue 625, the refactor plan's Out of Scope) and filed as
-issue 626. Not yet through a grill-me:
+issue 626. Settled in a grill-me on 2026-11-16 (design log 65, the movie
+form prototype's Show folder comment amended):
 
 48. ⬜ **Show folder title**: the movie form's **Show folder pick** names a
     show the way a scan does.
@@ -674,16 +675,17 @@ issue 626. Not yet through a grill-me:
       `Severance (2022–)/` types _Severance (2022–)_ into the form, where
       _Scan all folders_ reads the same folder through `folderKeyOf` as
       _Severance_, 2022.
-    - **Open questions for the grill-me**: whether the pick reads the
-      **Folder key** and fills the year as well as the title; what it does
-      with a name `titleGuess` cleans today (release noise, dots for
-      spaces) and `folderKeyOf` keeps; whether `titleGuess` then has a
-      caller left.
-    - **Run the grill-me from issue 626**: read it with
-      `gh issue view 626 --comments` as the session's starting point. Once
-      the grill-me has written its design log, close issue 626 with a
-      comment naming the log; the PRD and its issues carry the work from
-      there.
+    - **The read answers the Folder key**: `readShowFolder` reads the Show
+      folder's name by `folderKeyOf`, and `ShowFolderRead` carries `title`
+      and `year` in place of `titleGuess`. A name the old guess cleaned
+      (`Severance.S01.1080p`) is typed verbatim, as a scan reads it, for
+      the maintainer to edit before Save.
+    - **The year is prefilled too**: `prefillFolderKey` fills the title and
+      the year each only when empty or still what the earlier pick filled;
+      a typed one always stays, and a yearless folder fills no year.
+    - **`titleGuess` retires**: it has no caller left; `searchQuery` keeps
+      its helpers, and `titleFromFilename` (a video's file name) is
+      untouched.
 
 Step 49 is what step 47's draft held beyond the names, split out by log 64
 Q1 (which drafted it as step 48). Not yet through a grill-me:
