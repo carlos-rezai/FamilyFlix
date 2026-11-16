@@ -11,6 +11,72 @@ Newest entry first.
 
 ---
 
+## 2026-11-16: Show folder title, the build and the refactor (issues 629 to 632)
+
+Nine commits against `docs/refactor-plans/65-show-folder-title-refactor.md`,
+one per plan commit. This is the initiative's only entry: its build had no
+walk and documents slice, so this round writes it. Step 48 is ✅ and issue
+628 is done. **12258 tests pass across 817 files** (one skipped), against
+12248 at the end of the build (`d303d818`): nine rows in the new
+`folderKeyValues` table and the one key-set test moved out of a table.
+`tsc -b --force` is clean. `eslint src server electron` reports 1 error and
+137 warnings, as at `d303d818`.
+
+### What shipped before this round
+
+The build slices 629 to 631, RED and GREEN each (`afc1a667` to
+`d303d818`): the **Show folder read** answers the picked folder's **Folder
+key** as `title` and `year` through `folderKeyOf`, the scan's own reader, so
+a picked `Severance (2022–)/` types _Severance_ and _2022_; the form fills
+the title and the year each only when empty or still what the earlier pick
+filled; and `titleGuess` is retired from `titleKey`.
+
+### What each group changed
+
+- **Group 1, the prefill rule beside the rows it fills** (`4453d872`,
+  `d338b74e`, `3aa903d4`). `PickedKey` lives in `formValues/` beside
+  `showFolderRows`; a private `yearText` is the one spelling of a year as
+  field text, which `movieFormValues` calls; the pure `folderKeyValues`
+  decides both fields by one private `takesPick`, and `useMovieForm`'s
+  `prefillFolderKey` is one `setValues` call to it.
+- **Group 2, one tail strip** (`5eb52c76`). `stripTails` sits beside `TAIL`
+  and `titleKey` calls it; `SPACE_SEPARATORS`' docblock says the hyphen
+  stays because **Release noise** is spelled with one.
+- **Group 3, words** (`d83fb83b`, `b064ab59`, `2b6f33a0`). The test headers
+  and one test name say the read's title or Folder key, not **Title
+  guess**; `readShowFolder.test`'s key set is one test of its own;
+  `useShowFolderPick`'s docblock says the title and year; the container
+  prototype's `addShowFolder` comment takes log 65 Q2's sentence.
+- **Group 4, the docs** (`76546c6e` and this entry). Step 48 and its row
+  ticked, the README's show folder sentence names the show and its year,
+  and the linked series add smoke checks a running range's title and year.
+
+### Where this round left the plan
+
+- **The hook's comment is two lines, not one**: it keeps the sentence that
+  the pick's Library folder says whether Link can be.
+- **`useShowFolderPick` dropped its `ShowFolderRead` import** in commit 1,
+  left unused once `PickedKey` moved.
+- **`titleKey` folds into a `const`**: with the loop gone, its `let key`
+  had nothing left to reassign.
+- **The glossary needed no change**: **Show folder read**, **Show folder
+  pick** and **Title guess** (log 65) already say what the code does.
+- **The full suite ran after every commit**, green each time, with no flake.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: a series' year as a span,
+`titleFromFilename` and its client copy of `SPACE_SEPARATORS`, the
+glossary's older per-log rows, step 49 and the lint warnings that predate
+the initiative. No wire, schema, route, copy, prototype state or drawn
+pixel changed.
+
+### Follow-ups
+
+None.
+
+---
+
 ## 2026-11-15: Rescan a folder, the refactor (issue 625)
 
 Twelve commits against `docs/refactor-plans/64-rescan-a-folder-refactor.md`,
