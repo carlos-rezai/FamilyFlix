@@ -50,8 +50,8 @@ export interface UseShowFolderPickResult {
  * **Folder key**, and its Library folder says whether Link can be. A cancel
  * changes nothing; a refusal — unreadable, empty, or a held series's own
  * folder, worded by that series's title — adds no rows. A second pick
- * replaces only the first pick's rows, and the title the first pick filled
- * in, never a typed one.
+ * replaces only the first pick's rows, and the title and year the first pick
+ * filled in, never a typed one.
  */
 export function useShowFolderPick({
   plainAdd,
