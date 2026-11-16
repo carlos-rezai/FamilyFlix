@@ -116,6 +116,14 @@ export function pickedSubtitle(key: string, file: File): MovieFormSubtitle {
 }
 
 /**
+ * A year as the Year field holds it. The field is text, so a year is text: a
+ * half-typed year is `'19'`, and a film with no year at all is an empty box
+ * rather than the word "null".
+ */
+const yearText = (year: number | null): string =>
+  year === null ? '' : String(year);
+
+/**
  * A stored **Movie**, read back into the box it was typed into.
  *
  * Story 46: editing one field does not mean retyping the rest — and the fields
@@ -130,9 +138,7 @@ export function pickedSubtitle(key: string, file: File): MovieFormSubtitle {
 export function movieFormValues(movie: Movie): MovieFormValues {
   return {
     title: movie.title,
-    // The field is text, so a year is text: a half-typed year is `'19'`, and a
-    // film with no year at all is an empty box rather than the word "null".
-    year: movie.year === null ? '' : String(movie.year),
+    year: yearText(movie.year),
     director: movie.director ?? '',
     // `description` is the form's word for it; `synopsis` is the column's.
     description: movie.synopsis ?? '',
