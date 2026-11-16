@@ -258,6 +258,38 @@ export const isShowFolderRow = (row: EpisodeFormRow): boolean =>
 export type PickedKey = Pick<ShowFolderRead, 'title' | 'year'>;
 
 /**
+ * Whether a field takes what a pick offers: it is empty (spaces count as
+ * empty), or it still reads what the earlier pick filled in, `picked` being
+ * `undefined` before any pick. A typed field stays.
+ */
+const takesPick = (field: string, picked: string | undefined): boolean =>
+  field.trim() === '' || field === picked;
+
+/**
+ * The form's values after a **Show folder pick** offers the read's **Folder
+ * key**: an empty title or year, or one an earlier pick (`picked`, `null`
+ * before any) filled in, takes the key's title or year, each decided apart
+ * by the one rule (log 65 Q7: the title's rule, field by field). A `null`
+ * year fills an empty box.
+ */
+export function folderKeyValues(
+  current: MovieFormValues,
+  key: PickedKey,
+  picked: PickedKey | null
+): MovieFormValues {
+  return {
+    ...current,
+    title: takesPick(current.title, picked?.title) ? key.title : current.title,
+    year: takesPick(
+      current.year,
+      picked === null ? undefined : yearText(picked.year)
+    )
+      ? yearText(key.year)
+      : current.year,
+  };
+}
+
+/**
  * A **Show folder read**'s rows: one **Episode file row** per episode, in the
  * read's season-then-episode order, each a **Found file** with its found
  * tracks in their detected languages — then one per **Unplaced** video,

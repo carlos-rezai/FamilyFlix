@@ -43,6 +43,7 @@ import {
   updateSeries,
 } from '../api/api';
 import {
+  folderKeyValues,
   movieAddValues,
   pickedFile,
   pickedSubtitle,
@@ -632,26 +633,11 @@ export function useMovieForm(): UseMovieFormResult {
     }));
   }, []);
 
-  // The **Show folder pick**, `useShowFolderPick`'s: an empty title or year,
-  // or one an earlier pick filled in, takes the read's **Folder key** title or
-  // year, each decided apart; a `null` year is `''`. Its Library folder says
-  // whether Link can be.
+  // The **Show folder pick**, `useShowFolderPick`'s: the title and year are
+  // `folderKeyValues`'s rule. Its Library folder says whether Link can be.
   const prefillFolderKey = useCallback(
     (key: PickedKey, picked: PickedKey | null) => {
-      const yearOf = (year: number | null) =>
-        year === null ? '' : String(year);
-      setValues((current) => {
-        const takesTitle =
-          current.title.trim() === '' || current.title === picked?.title;
-        const takesYear =
-          current.year.trim() === '' ||
-          (picked !== null && current.year === yearOf(picked.year));
-        return {
-          ...current,
-          title: takesTitle ? key.title : current.title,
-          year: takesYear ? yearOf(key.year) : current.year,
-        };
-      });
+      setValues((current) => folderKeyValues(current, key, picked));
     },
     []
   );

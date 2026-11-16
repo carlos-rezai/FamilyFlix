@@ -10,6 +10,7 @@ import type {
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 
 import {
+  folderKeyValues,
   isShowFolderRow,
   movieAddValues,
   movieFormValues,
@@ -793,5 +794,94 @@ describe('isShowFolderRow', () => {
 
     expect(isShowFolderRow(folderRow)).toBe(true);
     expect(isShowFolderRow({ ...folderRow, key: 'episode-1' })).toBe(false);
+  });
+});
+
+describe('folderKeyValues', () => {
+  const KEY = { title: 'Harbor Lights', year: 2019 };
+  const YEARLESS = { title: 'Harbor Lights', year: null };
+  const EARLIER = { title: 'Low Tide', year: 2011 };
+
+  /** The form holding `title` and `year`, every other field a stored movie's. */
+  const form = (title: string, year: string): MovieFormValues => ({
+    ...movieFormValues(STORED),
+    title,
+    year,
+  });
+
+  it.each([
+    ['fills an empty form', '', '', null, KEY, 'Harbor Lights', '2019'],
+    ['keeps a typed title and year', 'Mine', '1999', null, KEY, 'Mine', '1999'],
+    [
+      'keeps a typed title, fills an empty year',
+      'Mine',
+      '',
+      null,
+      KEY,
+      'Mine',
+      '2019',
+    ],
+    [
+      'fills an empty title, keeps a typed year',
+      '',
+      '1999',
+      null,
+      KEY,
+      'Harbor Lights',
+      '1999',
+    ],
+    [
+      'replaces a picked title and year',
+      'Low Tide',
+      '2011',
+      EARLIER,
+      KEY,
+      'Harbor Lights',
+      '2019',
+    ],
+    [
+      'keeps a typed title over a picked one',
+      'Mine',
+      '2011',
+      EARLIER,
+      KEY,
+      'Mine',
+      '2019',
+    ],
+    [
+      'empties a picked year for a yearless key',
+      'Low Tide',
+      '2011',
+      EARLIER,
+      YEARLESS,
+      'Harbor Lights',
+      '',
+    ],
+    [
+      'leaves an empty year empty for a yearless key',
+      '',
+      '',
+      null,
+      YEARLESS,
+      'Harbor Lights',
+      '',
+    ],
+    [
+      'counts a field cleared to spaces as empty',
+      '  ',
+      ' ',
+      null,
+      KEY,
+      'Harbor Lights',
+      '2019',
+    ],
+  ] as const)('%s', (_, title, year, picked, key, wantTitle, wantYear) => {
+    const current = form(title, year);
+
+    expect(folderKeyValues(current, key, picked)).toEqual({
+      ...current,
+      title: wantTitle,
+      year: wantYear,
+    });
   });
 });
