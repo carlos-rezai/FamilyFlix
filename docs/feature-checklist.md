@@ -77,7 +77,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Welcome tune: a tune in sync with the intro         | ✅ Done    |
 | Row view: genre rows or one grid, Movies and Series | ✅ Done    |
 | Rescan a folder: a year and `Season 1` optional     | ✅ Done    |
-| Show folder title: a pick reads its Folder key      | ⬜ Planned |
+| Show folder title: a pick reads its Folder key      | ✅ Done    |
 | Missing videos: a held title whose file is gone     | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
@@ -668,8 +668,13 @@ its closing round (issue 625, the refactor plan's Out of Scope) and filed as
 issue 626. Settled in a grill-me on 2026-11-16 (design log 65, the movie
 form prototype's Show folder comment amended):
 
-48. ⬜ **Show folder title**: the movie form's **Show folder pick** names a
+48. ✅ **Show folder title**: the movie form's **Show folder pick** names a
     show the way a scan does.
+    Built in issues 629 to 631. The closing round (issue 632) put the
+    prefill rule beside the rows it fills as a pure `folderKeyValues`, one
+    rule for the title and the year, gave `titleKey` the tail strip
+    `searchQuery` already used, and said why `SPACE_SEPARATORS` keeps the
+    hyphen.
     - **The gap**: `readShowFolder` still guesses a picked show's title by
       `titleGuess`, which strips a `(YYYY)` but not a range, so a picked
       `Severance (2022–)/` types _Severance (2022–)_ into the form, where
