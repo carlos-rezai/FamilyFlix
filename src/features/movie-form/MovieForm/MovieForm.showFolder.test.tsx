@@ -32,7 +32,7 @@ import {
  * `GET /api/show-folder?path=`, and the **Show folder read** fills the **Show
  * folder row** (_Show folder_, the path, a ✕), then one **Episode file row**
  * per episode — season, then episode order — each a **Found file** with its
- * Subtitle rows. An empty title takes the read's **Title guess**; a typed one
+ * Subtitle rows. An empty title takes the read's title; a typed one
  * is kept. A refusal of the read — `400` with its one sentence — is drawn
  * under the form's buttons and adds no rows. The ✕ takes only the folder's
  * rows off; rows from _＋ Add episode files_ stay.
@@ -320,7 +320,7 @@ describe('MovieForm — Add show folder in the shell', () => {
       ).toHaveLength(1);
     });
 
-    it('fills an empty title with the Title guess', async () => {
+    it('fills an empty title with the read’s title', async () => {
       await renderSeries();
 
       await pressAddShowFolder();

@@ -4,9 +4,10 @@
 //
 // A **Season folder** picked as the Show folder (`Tacoma FD/Season 01`) is
 // read for its own episodes only, but titled and held-checked by its Show
-// folder (`showFolderOf`): its **Title guess** is the show's, the folder on
-// record is asked for the show's folder, and every found video's path is
-// answered relative to the Show folder, so `Season 01/<name>`.
+// folder (`showFolderOf`): it is named by its Show folder's **Folder key**,
+// the folder on record is asked for the show's folder, and every found
+// video's path is answered relative to the Show folder, so
+// `Season 01/<name>`.
 //
 // Against real trees under `sandboxRoot`, the context a stub.
 

@@ -20,7 +20,7 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
  *
  * `useShowFolderPick` remembers whether the title came from a pick (log 29
  * Q19): a second **Show folder pick** replaces a picked title with its own
- * **Title guess**, and never a title the maintainer typed, before the pick
+ * read's title, and never a title the maintainer typed, before the pick
  * or after it.
  *
  * Since issue #629 the read answers the folder's **Folder key** as its

@@ -181,18 +181,26 @@ describe('readShowFolder: the Folder key', () => {
       const read = await readOf(show);
 
       expect([read.title, read.year]).toEqual([title, year]);
-      expect(Object.keys(read).sort()).toEqual([
-        'episodes',
-        'heldSeriesId',
-        'libraryFolderId',
-        'path',
-        'straySubtitles',
-        'title',
-        'unplaced',
-        'year',
-      ]);
     }
   );
+
+  it('answers `title` and `year`, and no `titleGuess`', async () => {
+    const show = join(sandboxRoot('familyflix-show-read-'), 'Heat (1995)');
+    folderWith(show, 'Season 01', ['Show.S01E01.Pilot.mkv']);
+
+    const read = await readOf(show);
+
+    expect(Object.keys(read).sort()).toEqual([
+      'episodes',
+      'heldSeriesId',
+      'libraryFolderId',
+      'path',
+      'straySubtitles',
+      'title',
+      'unplaced',
+      'year',
+    ]);
+  });
 
   it('answers a picked Season 1/ by its Show folder’s key', async () => {
     const show = join(
