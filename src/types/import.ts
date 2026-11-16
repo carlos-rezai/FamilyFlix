@@ -148,6 +148,8 @@ export interface ImportProblem {
    * _Import as_ imports it under.
    */
   guess?: string;
+  /** Set on a `missing` Problem: the press's words, _Take out of library_. */
+  takeOut?: string;
 }
 
 /**

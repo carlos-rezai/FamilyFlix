@@ -163,6 +163,25 @@ export async function applySheetChoices(
 }
 
 /**
+ * _Take out of library_ on a `missing` **Problem**: `POST` to its take-out
+ * route. `true` on the `204`, the title out and the Problem off; `null` on
+ * the `404`, the Problem not there or not `missing`. Anything else rejects,
+ * and so does a request that could not be made.
+ */
+export async function takeOutMissing(id: string): Promise<true | null> {
+  const endpoint = `${problemEndpoint(id)}/take-out`;
+  const response = await fetch(endpoint, { method: 'POST' });
+
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    throw new Error(`POST ${endpoint} failed: ${response.status}`);
+  }
+  return true;
+}
+
+/**
  * A press on an `ambiguous` **Problem**'s **Folder picker**: `POST` the
  * **Candidate folder** to the Problem's pick route. A `200` answers the row
  * redrawn — that folder's `no-video` or `failed` Problem; the `204` and the

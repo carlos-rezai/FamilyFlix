@@ -50,6 +50,7 @@ function renderReview(run: ImportRun) {
           onApply={() => undefined}
           onPick={() => undefined}
           onImportAs={() => undefined}
+          onTakeOut={() => undefined}
           onSkipMany={() => undefined}
           onImportManyAsGuessed={() => undefined}
           finishLabel="Finish and go to library"

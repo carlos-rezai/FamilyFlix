@@ -48,6 +48,8 @@ export interface ImportReviewProps {
   onPick: (id: string, folder: string) => void;
   /** _Import as_ was pressed on the `no-row` **Problem** with this id. */
   onImportAs: (id: string) => void;
+  /** _Take out of library_ was pressed on the `missing` **Problem** with this id. */
+  onTakeOut: (id: string) => void;
   /**
    * A bulk **Dismiss** was pressed — _Skip all_ on a **Review group** or
    * beside a chosen kind, or _Keep all mine_ beside `differs` — with every id
@@ -103,6 +105,7 @@ export function ImportReview({
   onApply,
   onPick,
   onImportAs,
+  onTakeOut,
   onSkipMany,
   onImportManyAsGuessed,
   finishLabel,
@@ -139,6 +142,7 @@ export function ImportReview({
       onApply={(choices) => onApply(problem.id, choices)}
       onPick={(folder) => onPick(problem.id, folder)}
       onImportAs={() => onImportAs(problem.id)}
+      onTakeOut={() => onTakeOut(problem.id)}
     />
   );
 

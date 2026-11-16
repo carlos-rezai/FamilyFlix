@@ -275,6 +275,15 @@ export interface Importer {
    */
   apply(id: string, choices: SheetChoices): boolean;
   /**
+   * _Take out of library_ on a `missing` **Problem**: the film's rows go,
+   * then its **Media folder** best-effort, as the movie Delete does, but with
+   * no **Left-out video** recorded, so a put-back file is imported by the next
+   * scan; and the Problem comes off. `true` for having gone, also when the
+   * title was already deleted elsewhere (**Gone is gone**). `false` for an id
+   * not there or not `missing`, and when there is no run, taking nothing out.
+   */
+  takeOutMissing(id: string): boolean;
+  /**
    * A press on an `ambiguous` **Problem**'s **Folder picker**: import the row
    * from one of its own **Candidate folders** and take the Problem off —
    * `imported`. A candidate holding no single video turns the row into that
@@ -361,6 +370,9 @@ const REASON = {
   differs:
     'The spreadsheet has different values for fields you already filled in.',
 } as const;
+
+/** A `missing` film's _Take out_ press, in the row's own words. */
+const TAKE_OUT_FILM = 'Take out of library';
 
 /**
  * A **Problem** as the snapshot lists it, under an id of its own — and, for
@@ -2174,9 +2186,12 @@ export function createImporter({
       }
       file(
         current,
-        problemOf('missing', movie.title, missingReason(movie.videoPath), {
-          movieId: movie.id,
-        }),
+        {
+          ...problemOf('missing', movie.title, missingReason(movie.videoPath), {
+            movieId: movie.id,
+          }),
+          takeOut: TAKE_OUT_FILM,
+        },
         { row: null, folder: null, candidates: [] }
       );
       log(
@@ -3186,6 +3201,21 @@ export function createImporter({
         return false;
       }
       writeSheetFill(held, chosenSheetFill(held.proposed, choices));
+      return takeOff(id);
+    },
+
+    takeOutMissing: (id) => {
+      const listed = run?.problems.find((problem) => problem.id === id);
+      if (listed?.kind !== 'missing' || listed.movieId === undefined) {
+        return false;
+      }
+      if (storage.getMovie(listed.movieId) !== null) {
+        const folder = storage.mediaFolderOf('movie', listed.movieId);
+        storage.deleteMovie(listed.movieId);
+        if (folder !== null) {
+          media.removeTitleFolder(folder);
+        }
+      }
       return takeOff(id);
     },
 

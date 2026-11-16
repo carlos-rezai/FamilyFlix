@@ -3172,6 +3172,28 @@ export function createApiRouter(
     }
   );
 
+  // _Take out of library_ on a `missing` row: the importer takes the title
+  // out and the Problem off. Its `false`, a Problem not there or not
+  // `missing`, is the Skip's own `404`; a write that throws is a `500` with a
+  // sentence. The route never learns what a take-out deletes.
+  router.post(
+    '/import/current/problems/:id/take-out',
+    (req: Request<{ id: string }>, res: Response) => {
+      let taken: boolean;
+      try {
+        taken = importer.takeOutMissing(req.params.id);
+      } catch {
+        res.status(500).json({ error: 'Could not take that title out' });
+        return;
+      }
+      if (!taken) {
+        res.status(404).json({ error: noSuchProblem(req.params.id) });
+        return;
+      }
+      res.status(204).end();
+    }
+  );
+
   /**
    * A review press's {@link ReviewOutcome} answered: `204` once imported,
    * `200` with the row redrawn, and a refusal through `PROBLEM_REFUSALS`.

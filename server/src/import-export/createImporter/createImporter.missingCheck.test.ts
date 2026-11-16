@@ -186,6 +186,7 @@ describe('createImporter: the Missing check over a deleted linked film', () => {
         title: 'Die Hard',
         reason: `Its video, ${DIE_HARD_FILE}, is no longer on disk.`,
         movieId: id,
+        takeOut: 'Take out of library',
       },
     ]);
     expect(

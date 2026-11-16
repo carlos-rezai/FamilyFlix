@@ -81,6 +81,7 @@ export function ImportFlow() {
     apply,
     pick,
     importAsGuessed,
+    takeOut,
   } = useImportRun();
 
   // Leaving is a step, not a push at Settings: the hub's own Back then steps
@@ -207,6 +208,16 @@ export function ImportFlow() {
     [importAsGuessed]
   );
 
+  const onTakeOut = useCallback(
+    (id: string) => {
+      void takeOut(id).catch(() => {
+        // A take-out that did not land leaves the row where it is, to press
+        // again or skip.
+      });
+    },
+    [takeOut]
+  );
+
   return (
     <>
       <PageHeader
@@ -235,6 +246,7 @@ export function ImportFlow() {
           onApply={onApply}
           onPick={onPick}
           onImportAs={onImportAs}
+          onTakeOut={onTakeOut}
           onSkipMany={onSkipMany}
           onImportManyAsGuessed={onImportManyAsGuessed}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}

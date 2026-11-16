@@ -17,6 +17,7 @@ import {
   importManyGuessed,
   pickCandidateFolder,
   startImport,
+  takeOutMissing,
 } from '../api/api';
 
 /** How often the **Current run** is read while it is still going. */
@@ -88,6 +89,12 @@ export interface ImportRunState {
    * Rejects otherwise; the row stays.
    */
   importAsGuessed: (id: string) => Promise<void>;
+  /**
+   * _Take out of library_ on a `missing` **Problem**: post it, and take the
+   * row off on the `204`. A `404` does nothing. Rejects otherwise; the row
+   * stays.
+   */
+  takeOut: (id: string) => Promise<void>;
 }
 
 /**
@@ -234,6 +241,15 @@ export function useImportRun(): ImportRunState {
     [settle]
   );
 
+  const takeOut = useCallback(
+    async (id: string) => {
+      if ((await takeOutMissing(id)) !== null) {
+        takeOff(id);
+      }
+    },
+    [takeOff]
+  );
+
   const live = isLive(run);
   useEffect(() => {
     if (!live) {
@@ -274,5 +290,6 @@ export function useImportRun(): ImportRunState {
     apply,
     pick,
     importAsGuessed,
+    takeOut,
   };
 }

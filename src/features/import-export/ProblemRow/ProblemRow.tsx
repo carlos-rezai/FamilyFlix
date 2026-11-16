@@ -25,6 +25,8 @@ export interface ProblemRowProps {
   onPick: (folder: string) => void;
   /** _Import as_ on a `no-row` row: the folder imported under its guess. */
   onImportAs: () => void;
+  /** _Take out of library_ on a `missing` row: the title taken out. */
+  onTakeOut: () => void;
 }
 
 /**
@@ -68,7 +70,8 @@ const sheetChoices = (
  * beside it, and a `no-row` row _Import as_ its guess, _Resolve_ kept the
  * same. A `differs` row has no _Resolve_: it is settled on the row, by the
  * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_. A
- * `missing` row draws _Skip_ alone. Neither knows what happens next: the row draws a problem and reports a
+ * `missing` row draws its `takeOut` words as a button beside _Skip_, pressed
+ * with no confirm. Neither knows what happens next: the row draws a problem and reports a
  * press.
  */
 export function ProblemRow({
@@ -77,6 +80,7 @@ export function ProblemRow({
   onApply,
   onPick,
   onImportAs,
+  onTakeOut,
 }: ProblemRowProps) {
   const differs = problem.kind === 'differs';
   const resolvable = !differs && problem.kind !== 'missing';
@@ -94,6 +98,14 @@ export function ProblemRow({
             variant="secondary"
             size="sm"
             to={resolveRoute(problem)}
+          />
+        ) : null}
+        {problem.kind === 'missing' && problem.takeOut !== undefined ? (
+          <Button
+            label={problem.takeOut}
+            variant="secondary"
+            size="sm"
+            onClick={onTakeOut}
           />
         ) : null}
         <Button label="Skip" variant="secondary" size="sm" onClick={onSkip} />
