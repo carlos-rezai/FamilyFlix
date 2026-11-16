@@ -70,7 +70,7 @@ describe('readShowFolder: a picked Season folder', () => {
 
     const read = await readOf(join(show, 'Season 01'), onRecord(shows));
 
-    expect(read.titleGuess).toBe('Tacoma FD');
+    expect(read.title).toBe('Tacoma FD');
   });
 
   it('reads only its own episodes, each by its path inside the show', async () => {

@@ -64,7 +64,7 @@ describe('readShowFolder: a Season 1 folder', () => {
 
     const read = await readOf(show, onRecord(shows));
 
-    expect(read.titleGuess).toBe('Death Note');
+    expect(read.title).toBe('Death Note');
     expect(numbered(read)).toEqual([
       [1, 1, 'Season 1/Death.Note.S01E01.Rebirth.mkv'],
       [1, 2, 'Season 1/Death.Note.S01E02.Confrontation.mkv'],
@@ -77,7 +77,7 @@ describe('readShowFolder: a Season 1 folder', () => {
 
     const read = await readOf(join(show, 'Season 1'), onRecord(shows));
 
-    expect(read.titleGuess).toBe('Death Note');
+    expect(read.title).toBe('Death Note');
     expect(numbered(read)).toEqual([
       [1, 1, 'Season 1/Death.Note.S01E01.Rebirth.mkv'],
       [1, 2, 'Season 1/Death.Note.S01E02.Confrontation.mkv'],

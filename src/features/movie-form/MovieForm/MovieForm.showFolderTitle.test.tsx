@@ -23,6 +23,10 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
  * **Title guess**, and never a title the maintainer typed, before the pick
  * or after it.
  *
+ * Since issue #629 the read answers the folder's **Folder key** as its
+ * `title` and `year`, and the title is prefilled from `title`: a picked
+ * `Severance (2022–)/` types _Severance_.
+ *
  * The wire is a stubbed `fetch` answering each folder's read by its path;
  * the dialog is `fakeFolderBridge`.
  */
@@ -37,11 +41,23 @@ const POOL: Genre[] = [{ id: 'g1', name: 'Comedy' }];
 
 const WRONG = 'E:\\Shows\\Reno 911';
 const RIGHT = 'E:\\Shows\\Tacoma FD';
+const SEVERANCE = 'E:\\Shows\\Severance (2022–)';
 
-/** A read of `path`, titled by its last segment, holding one episode. */
+/** The Folder key the server answers for a keyed folder's name. */
+const KEYS: Record<string, Pick<ShowFolderRead, 'title' | 'year'>> = {
+  [SEVERANCE]: { title: 'Severance', year: 2022 },
+};
+
+/**
+ * A read of `path`, keyed by `KEYS` or else titled by its last segment with
+ * no year, holding one episode.
+ */
 const readOf = (path: string): ShowFolderRead => ({
   path,
-  titleGuess: path.slice(path.lastIndexOf('\\') + 1),
+  ...(KEYS[path] ?? {
+    title: path.slice(path.lastIndexOf('\\') + 1),
+    year: null,
+  }),
   libraryFolderId: null,
   heldSeriesId: null,
   episodes: [
@@ -104,6 +120,14 @@ describe('MovieForm: the title follows the pick', () => {
     await waitFor(() => expect(screen.getByText(path)).toBeDefined());
   }
 
+  it('types the Folder key’s title for a picked Severance (2022–)/', async () => {
+    await renderSeries();
+
+    await pick(SEVERANCE);
+
+    expect(seriesTitle().value).toBe('Severance');
+  });
+
   it('replaces a picked title on a second pick', async () => {
     await renderSeries();
     await pick(WRONG);
@@ -128,6 +152,7 @@ describe('MovieForm: the title follows the pick', () => {
     await renderSeries();
     fireEvent.change(seriesTitle(), { target: { value: 'Tacoma F.D.' } });
     await pick(WRONG);
+    expect(seriesTitle().value).toBe('Tacoma F.D.');
 
     await pick(RIGHT);
 

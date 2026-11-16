@@ -73,7 +73,8 @@ const SPRING_TIDE_ROW = `Season 2/${SPRING_TIDE}`;
 /** What `GET /api/show-folder` answers for the picked show. */
 const READ = {
   path: SHOW,
-  titleGuess: 'Harbor and Vine',
+  title: 'Harbor and Vine',
+  year: null,
   libraryFolderId: null,
   heldSeriesId: null,
   episodes: [

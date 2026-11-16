@@ -92,7 +92,7 @@ describe('readShowFolder: a picked Title folder', () => {
       [1, 2, 'Season 01/Harbor.and.Vine.S01E02.Low.Tide.mkv'],
       [2, 1, 'Season 02/Harbor.and.Vine.S02E01.Spring.Tide.mkv'],
     ]);
-    expect(read.titleGuess).toBe('Harbor and Vine');
+    expect(read.title).toBe('Harbor and Vine');
     expect(read.libraryFolderId).toBe('shows');
   });
 
@@ -139,7 +139,7 @@ describe('readShowFolder: a picked Title folder', () => {
       )
     );
     expect(read.unplaced).toEqual([]);
-    expect(read.titleGuess).toBe('Tidewater');
+    expect(read.title).toBe('Tidewater');
   });
 });
 
@@ -152,7 +152,7 @@ describe('readShowFolder: a picked Season folder of the layout', () => {
       onRecord(shows, { 'Harbor and Vine (2021)': 'series-1' })
     );
 
-    expect(read.titleGuess).toBe('Harbor and Vine');
+    expect(read.title).toBe('Harbor and Vine');
     expect(read.heldSeriesId).toBe('series-1');
     expect(read.episodes.map((episode) => episode.relativePath)).toEqual([
       'Season 01/Harbor.and.Vine.S01E01.Pilot.mkv',

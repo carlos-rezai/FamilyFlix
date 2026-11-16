@@ -25,7 +25,8 @@ const seasonTwoRead = (
   episodes: ShowFolderRead['episodes'] = []
 ): ShowFolderRead => ({
   path: PICKED,
-  titleGuess: 'De Veerboot',
+  title: 'De Veerboot',
+  year: null,
   libraryFolderId: 'shows',
   heldSeriesId: null,
   episodes,
@@ -99,7 +100,8 @@ describe('showFolderRows: a Season N folder', () => {
   /** A read of the picked `Death Note`, its videos at the paths given. */
   const deathNoteRead = (inside: string[]): ShowFolderRead => ({
     path: DEATH_NOTE,
-    titleGuess: 'Death Note',
+    title: 'Death Note',
+    year: null,
     libraryFolderId: 'shows',
     heldSeriesId: null,
     episodes: [],

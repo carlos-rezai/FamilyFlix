@@ -44,7 +44,8 @@ const SHOW = 'C:\\Users\\Carlos\\Videos\\Series\\De Luizenmoeder';
 /** What `GET /api/show-folder` answers: two seasons' same-named files. */
 const READ = {
   path: SHOW,
-  titleGuess: 'De Luizenmoeder',
+  title: 'De Luizenmoeder',
+  year: null,
   libraryFolderId: null,
   heldSeriesId: null,
   episodes: [

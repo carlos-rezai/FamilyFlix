@@ -631,7 +631,8 @@ describe('showFolderRows', () => {
     unplaced: string[] = []
   ): ShowFolderRead => ({
     path: SHOW,
-    titleGuess: 'Harbor and Vine',
+    title: 'Harbor and Vine',
+    year: null,
     libraryFolderId: 'shows',
     heldSeriesId: null,
     episodes,
@@ -779,7 +780,8 @@ describe('isShowFolderRow', () => {
   it('tells a Show folder row from one added by hand', () => {
     const [folderRow] = showFolderRows({
       path: 'E:\\Shows\\Harbor',
-      titleGuess: 'Harbor',
+      title: 'Harbor',
+      year: null,
       libraryFolderId: null,
       heldSeriesId: null,
       episodes: [],

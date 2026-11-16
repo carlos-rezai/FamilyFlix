@@ -126,7 +126,7 @@ describe('readShowFolder: a picked Season folder', () => {
 
     const read = await readOf(join(show, 'Season 01'), onRecord(shows));
 
-    expect(read.titleGuess).toBe('Harbor and Vine');
+    expect(read.title).toBe('Harbor and Vine');
     expect(read.episodes.map((episode) => episode.relativePath)).toEqual([
       'Season 01/Harbor.and.Vine.S01E01.Pilot.mkv',
       'Season 01/Harbor.and.Vine.S01E02.Low.Tide.mkv',

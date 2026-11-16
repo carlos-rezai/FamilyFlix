@@ -8,13 +8,17 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { useEpisodeList } from '../useEpisodeList/useEpisodeList';
 import { useShowFolderPick } from './useShowFolderPick';
 
+/** The two fields of a read the form is prefilled from. */
+type FolderKey = Pick<ShowFolderRead, 'title' | 'year'>;
+
 /**
  * 48 — Add a show folder, refactor (issue #421): the series add's **Show
  * folder pick**, in a hook of its own on `useEpisodeList`'s pattern.
  *
  * The folder the one-folder dialog answered is read by the server; its rows
- * land after the ones added by hand, the empty title takes its **Title
- * guess**, and its Library folder says whether Link can be. A cancel changes
+ * land after the ones added by hand, the form is offered its **Folder key**
+ * (issue #629: `prefillFolderKey`, with the key the last pick offered), and
+ * its Library folder says whether Link can be. A cancel changes
  * nothing; a refusal — unreadable, empty, or a held series's own folder,
  * worded by that series's title — adds no rows. A second pick replaces only
  * the first pick's rows, and the ✕ takes off only the folder's.
@@ -25,6 +29,7 @@ import { useShowFolderPick } from './useShowFolderPick';
 
 const HARBOR = 'E:\\Shows\\Harbor and Vine';
 const LIGHTHOUSE = 'E:\\Shows\\Lighthouse Keepers';
+const SEVERANCE = 'E:\\Shows\\Severance (2022–)';
 
 /** A read of `path` holding one episode per video named. */
 const readOf = (
@@ -33,7 +38,8 @@ const readOf = (
   extra: Partial<ShowFolderRead> = {}
 ): ShowFolderRead => ({
   path,
-  titleGuess: path.slice(path.lastIndexOf('\\') + 1),
+  title: path.slice(path.lastIndexOf('\\') + 1),
+  year: null,
   libraryFolderId: 'shows',
   heldSeriesId: null,
   episodes: videos.map((video, index) => ({
@@ -76,7 +82,8 @@ const refused = (error: string) =>
 
 /** The pick over a real episode list, with the title and Link it would set. */
 function renderPick() {
-  const prefillTitle = vi.fn<(guess: string, picked: string | null) => void>();
+  const prefillFolderKey =
+    vi.fn<(key: FolderKey, picked: FolderKey | null) => void>();
   const setShowLink = vi.fn<(available: boolean) => void>();
   const rendered = renderHook(() => {
     const list = useEpisodeList();
@@ -84,12 +91,12 @@ function renderPick() {
       plainAdd: true,
       holdShowFolder: list.holdShowFolder,
       removeShowFolder: list.removeShowFolder,
-      prefillTitle,
+      prefillFolderKey,
       setShowLink,
     });
     return { list, pick };
   });
-  return { ...rendered, prefillTitle, setShowLink };
+  return { ...rendered, prefillFolderKey, setShowLink };
 }
 
 /** The rows' filenames, in order. */
@@ -116,7 +123,7 @@ describe('useShowFolderPick', () => {
     fetchMock.mockResolvedValue(
       okResponse(readOf(HARBOR, ['S01E01.mkv'], { straySubtitles: 2 }))
     );
-    const { result, prefillTitle, setShowLink } = renderPick();
+    const { result, prefillFolderKey, setShowLink } = renderPick();
 
     await act(async () => result.current.pick.addShowFolder?.());
 
@@ -124,7 +131,10 @@ describe('useShowFolderPick', () => {
     expect(filenames(result)).toEqual(['S01E01.mkv']);
     expect(result.current.pick.straySubtitles).toBe(2);
     expect(result.current.pick.refusal).toBeNull();
-    expect(prefillTitle).toHaveBeenCalledWith('Harbor and Vine', null);
+    expect(prefillFolderKey).toHaveBeenCalledWith(
+      { title: 'Harbor and Vine', year: null },
+      null
+    );
     expect(setShowLink).toHaveBeenCalledWith(true);
   });
 
@@ -146,14 +156,14 @@ describe('useShowFolderPick', () => {
   ])('draws the refusal “%s” and adds nothing', async (sentence) => {
     bridge.setPickOne(HARBOR);
     fetchMock.mockResolvedValue(refused(sentence));
-    const { result, prefillTitle } = renderPick();
+    const { result, prefillFolderKey } = renderPick();
 
     await act(async () => result.current.pick.addShowFolder?.());
 
     await waitFor(() => expect(result.current.pick.refusal).toBe(sentence));
     expect(result.current.pick.showFolder).toBeNull();
     expect(result.current.list.episodes).toEqual([]);
-    expect(prefillTitle).not.toHaveBeenCalled();
+    expect(prefillFolderKey).not.toHaveBeenCalled();
   });
 
   it('refuses a held series’s own folder by that series’s title', async () => {
@@ -221,6 +231,81 @@ describe('useShowFolderPick', () => {
     expect(result.current.pick.straySubtitles).toBe(0);
     expect(filenames(result)).toEqual(['by-hand.mkv']);
     expect(setShowLink).toHaveBeenLastCalledWith(true);
+  });
+});
+
+describe('useShowFolderPick: the Folder key (issue #629)', () => {
+  const bridge = fakeFolderBridge();
+
+  it('offers the read’s key, and `null` for the picked one, on a first pick', async () => {
+    bridge.setPickOne(SEVERANCE);
+    fetchMock.mockResolvedValue(
+      okResponse(
+        readOf(SEVERANCE, ['S01E01.mkv'], { title: 'Severance', year: 2022 })
+      )
+    );
+    const { result, prefillFolderKey } = renderPick();
+
+    await act(async () => result.current.pick.addShowFolder?.());
+
+    await waitFor(() => expect(result.current.pick.showFolder).toBe(SEVERANCE));
+    expect(prefillFolderKey).toHaveBeenCalledTimes(1);
+    expect(prefillFolderKey).toHaveBeenCalledWith(
+      { title: 'Severance', year: 2022 },
+      null
+    );
+  });
+
+  it('offers the first pick’s key as the picked one on a second pick', async () => {
+    const { result, prefillFolderKey } = renderPick();
+    bridge.setPickOne(SEVERANCE);
+    fetchMock.mockResolvedValueOnce(
+      okResponse(
+        readOf(SEVERANCE, ['S01E01.mkv'], { title: 'Severance', year: 2022 })
+      )
+    );
+    await act(async () => result.current.pick.addShowFolder?.());
+    await waitFor(() => expect(result.current.pick.showFolder).toBe(SEVERANCE));
+
+    bridge.setPickOne(LIGHTHOUSE);
+    fetchMock.mockResolvedValueOnce(okResponse(readOf(LIGHTHOUSE, ['L1.mkv'])));
+    await act(async () => result.current.pick.addShowFolder?.());
+
+    await waitFor(() =>
+      expect(result.current.pick.showFolder).toBe(LIGHTHOUSE)
+    );
+    expect(prefillFolderKey).toHaveBeenLastCalledWith(
+      { title: 'Lighthouse Keepers', year: null },
+      { title: 'Severance', year: 2022 }
+    );
+  });
+
+  it('names a held pick by the read’s title when the held series can’t be read, and offers no key', async () => {
+    bridge.setPickOne(SEVERANCE);
+    fetchMock.mockImplementation((input) =>
+      String(input).startsWith('/api/show-folder')
+        ? Promise.resolve(
+            okResponse(
+              readOf(SEVERANCE, ['S01E01.mkv'], {
+                title: 'Severance',
+                year: 2022,
+                heldSeriesId: 'severance',
+              })
+            )
+          )
+        : Promise.reject(new TypeError('Failed to fetch'))
+    );
+    const { result, prefillFolderKey } = renderPick();
+
+    await act(async () => result.current.pick.addShowFolder?.());
+
+    await waitFor(() =>
+      expect(result.current.pick.refusal).toBe(
+        'Severance is already in your library.'
+      )
+    );
+    expect(result.current.list.episodes).toEqual([]);
+    expect(prefillFolderKey).not.toHaveBeenCalled();
   });
 });
 

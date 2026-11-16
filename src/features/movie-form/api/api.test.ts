@@ -1235,7 +1235,8 @@ describe('createSeries — each episode’s subtitles', () => {
 describe('readShowFolder', () => {
   const READ: ShowFolderRead = {
     path: 'D:\\Shows\\Harbor and Vine',
-    titleGuess: 'Harbor and Vine',
+    title: 'Harbor and Vine',
+    year: null,
     libraryFolderId: 'shows',
     heldSeriesId: null,
     episodes: [],

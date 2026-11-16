@@ -70,7 +70,8 @@ const BONUS_ROW = `Season 1/${BONUS}`;
 /** A read of `SHOW`: two numbered episodes, two Unplaced videos. */
 const READ = {
   path: SHOW,
-  titleGuess: 'Harbor and Vine',
+  title: 'Harbor and Vine',
+  year: null,
   libraryFolderId: null,
   heldSeriesId: null,
   episodes: [
@@ -113,7 +114,8 @@ const OTHER_SHOW = 'E:\\Shows\\Lighthouse Keepers';
 const ARRIVAL = 'Lighthouse.Keepers.S01E01.Arrival.mkv';
 const OTHER_READ = {
   path: OTHER_SHOW,
-  titleGuess: 'Lighthouse Keepers',
+  title: 'Lighthouse Keepers',
+  year: null,
   libraryFolderId: null,
   heldSeriesId: null,
   episodes: [
@@ -346,7 +348,8 @@ describe('MovieForm — the Show folder pick’s edges', () => {
           okResponse({
             ...READ,
             // The guess off a scene-named folder is not the series's title.
-            titleGuess: 'Harbor Vine',
+            title: 'Harbor Vine',
+            year: null,
             heldSeriesId: HELD_ID,
           })
         );

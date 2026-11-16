@@ -64,7 +64,8 @@ const LOW_TIDE = 'Harbor.and.Vine.S01E02.Low.Tide.mkv';
 /** What `GET /api/show-folder` answers for a show under `libraryFolderId`. */
 const readOf = (path: string, libraryFolderId: string | null) => ({
   path,
-  titleGuess: 'Harbor and Vine',
+  title: 'Harbor and Vine',
+  year: null,
   libraryFolderId,
   heldSeriesId: null,
   episodes: [

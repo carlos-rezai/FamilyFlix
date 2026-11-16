@@ -108,7 +108,8 @@ const readFolder = (baseUrl: string, path: string): Promise<Response> =>
 
 interface ReadBody {
   path: string;
-  titleGuess: string;
+  title: string;
+  year: number | null;
   episodes: {
     season: number;
     number: number;
@@ -119,9 +120,9 @@ interface ReadBody {
 }
 
 describe('GET /api/show-folder', () => {
-  it('answers 200 with the Show folder read', async () => {
+  it('answers 200 with the Show folder read, its Folder key as title and year', async () => {
     const { baseUrl, shows } = freshApi();
-    const show = join(shows, 'Harbor.and.Vine.2019');
+    const show = join(shows, 'Harbor and Vine (2019)');
     const seasonOne = folderWith(show, 'Season 01', [
       'Harbor.and.Vine.S01E01.Pilot.mkv',
     ]);
@@ -137,7 +138,9 @@ describe('GET /api/show-folder', () => {
     expect(response.status).toBe(200);
     const read = (await response.json()) as ReadBody;
     expect(read.path).toBe(show);
-    expect(read.titleGuess).toBe('Harbor and Vine');
+    expect(read.title).toBe('Harbor and Vine');
+    expect(read.year).toBe(2019);
+    expect(read).not.toHaveProperty('titleGuess');
     expect(read.episodes).toEqual([
       {
         season: 1,

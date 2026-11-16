@@ -94,7 +94,8 @@ const PROBLEM: ImportProblemDetail = {
 const SHOW_FOLDER = 'E:\\Shows\\Harbor and Vine';
 const SHOW_READ: ShowFolderRead = {
   path: SHOW_FOLDER,
-  titleGuess: 'Harbor and Vine',
+  title: 'Harbor and Vine',
+  year: null,
   libraryFolderId: null,
   heldSeriesId: null,
   episodes: [
