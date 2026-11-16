@@ -248,6 +248,9 @@ const SHOW_FOLDER_KEY = 'show-folder-';
 export const isShowFolderRow = (row: EpisodeFormRow): boolean =>
   row.key.startsWith(SHOW_FOLDER_KEY);
 
+/** The two fields of a read the form is prefilled from: its **Folder key**. */
+export type PickedKey = Pick<ShowFolderRead, 'title' | 'year'>;
+
 /**
  * A **Show folder read**'s rows: one **Episode file row** per episode, in the
  * read's season-then-episode order, each a **Found file** with its found

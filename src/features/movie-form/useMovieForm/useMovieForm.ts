@@ -31,10 +31,7 @@ import {
 } from '../useEpisodeList/useEpisodeList';
 import { useImportMode } from '../useImportMode/useImportMode';
 import { useSeasonPosters } from '../useSeasonPosters/useSeasonPosters';
-import {
-  type PickedKey,
-  useShowFolderPick,
-} from '../useShowFolderPick/useShowFolderPick';
+import { useShowFolderPick } from '../useShowFolderPick/useShowFolderPick';
 import {
   createMovie,
   createSeries,
@@ -49,6 +46,7 @@ import {
   movieAddValues,
   pickedFile,
   pickedSubtitle,
+  type PickedKey,
 } from '../formValues/formValues';
 
 /** The most digits a year can have. */

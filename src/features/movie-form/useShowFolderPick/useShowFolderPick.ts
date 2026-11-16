@@ -2,12 +2,9 @@ import { useCallback, useRef, useState } from 'react';
 
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
-import type { EpisodeFormRow, ShowFolderRead } from '@/types';
+import type { EpisodeFormRow } from '@/types';
 import { readShowFolder } from '../api/api';
-import { showFolderRows } from '../formValues/formValues';
-
-/** The two fields of a read the form is prefilled from: its **Folder key**. */
-export type PickedKey = Pick<ShowFolderRead, 'title' | 'year'>;
+import { type PickedKey, showFolderRows } from '../formValues/formValues';
 
 /** The refusal of a picked folder that is already a held series's Show folder. */
 const heldShowFolderRefusal = (title: string): string =>
