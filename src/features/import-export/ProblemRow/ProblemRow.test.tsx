@@ -41,6 +41,7 @@ function renderRow(props: Partial<ProblemRowProps> = {}) {
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}
           onImportAs={props.onImportAs ?? (() => undefined)}
+          onTakeOut={props.onTakeOut ?? (() => undefined)}
         />
       </ThemeProvider>
     </MemoryRouter>
@@ -430,6 +431,47 @@ describe('ProblemRow — a missing row', () => {
     expect(screen.queryByRole('button', { name: 'Resolve' })).toBeNull();
     fireEvent.click(skipButton());
     expect(onSkip).toHaveBeenCalledTimes(1);
+  });
+});
+
+/**
+ * 66, Missing videos, Phase 2 (issue #635): a `missing` film's face is one
+ * `secondary` `sm` button worded by the Problem's `takeOut` field, _Take out
+ * of library_. A press reports `onTakeOut` at once: no confirm dialog. The
+ * row takes nothing off itself: the Run hook does.
+ */
+describe('ProblemRow — a missing row’s Take out', () => {
+  const missing = problem({
+    id: 'p7',
+    kind: 'missing',
+    title: 'Die Hard',
+    reason: 'Its video, die-hard.mkv, is no longer on disk.',
+    movieId: 'm1',
+    takeOut: 'Take out of library',
+  });
+  const takeOutButton = () =>
+    screen.getByRole('button', { name: 'Take out of library' });
+
+  it('draws Take out of library beside Skip, and no Resolve', () => {
+    renderRow({ problem: missing });
+
+    expect(takeOutButton()).toBeDefined();
+    expect(skipButton()).toBeDefined();
+    expect(screen.queryByRole('link', { name: 'Resolve' })).toBeNull();
+  });
+
+  it('reports onTakeOut on a press, and not onSkip, with no confirm dialog', () => {
+    const onTakeOut = vi.fn();
+    const onSkip = vi.fn();
+    renderRow({ problem: missing, onTakeOut, onSkip });
+
+    fireEvent.click(takeOutButton());
+
+    expect(onTakeOut).toHaveBeenCalledTimes(1);
+    expect(onSkip).not.toHaveBeenCalled();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.getByText('Die Hard')).toBeDefined();
   });
 });
 

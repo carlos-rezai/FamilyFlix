@@ -9,6 +9,7 @@ import {
   importGuessed,
   importManyGuessed,
   startExport,
+  takeOutMissing,
   ImportBusyError,
 } from './api';
 import type { ExportResult, StartExport } from '@/types';
@@ -323,6 +324,41 @@ describe('importGuessed', () => {
     fetchMock.mockResolvedValue(serverErrorResponse());
 
     await expect(importGuessed('p2')).rejects.toThrow();
+  });
+});
+
+// 66, Missing videos, Phase 2 (issue #635): the `missing` row's _Take out of
+// library_. It resolves on the `204`, and answers `null` on the `404`, the
+// Problem not there or not `missing`, as `applySheetChoices` reads its `404`.
+
+describe('takeOutMissing', () => {
+  it('POSTs to the Problem’s take-out route, the id encoded, with no body', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await takeOutMissing('p 2/x');
+
+    const request = onlyRequest();
+    expect(request.url).toBe('/api/import/current/problems/p%202%2Fx/take-out');
+    expect(request.method?.toUpperCase()).toBe('POST');
+    expect(request.body).toBeUndefined();
+  });
+
+  it('resolves on the 204', async () => {
+    fetchMock.mockResolvedValue(noContentResponse());
+
+    await expect(takeOutMissing('p2')).resolves.not.toBeNull();
+  });
+
+  it('answers null on the 404', async () => {
+    fetchMock.mockResolvedValue(notFoundResponse('No such problem: p2'));
+
+    await expect(takeOutMissing('p2')).resolves.toBeNull();
+  });
+
+  it('rejects when the server fell over', async () => {
+    fetchMock.mockResolvedValue(serverErrorResponse());
+
+    await expect(takeOutMissing('p2')).rejects.toThrow();
   });
 });
 

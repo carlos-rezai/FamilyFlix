@@ -73,6 +73,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}
           onImportAs={props.onImportAs ?? (() => undefined)}
+          onTakeOut={props.onTakeOut ?? (() => undefined)}
           onSkipMany={props.onSkipMany ?? (() => undefined)}
           onImportManyAsGuessed={
             props.onImportManyAsGuessed ?? (() => undefined)
@@ -97,6 +98,7 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
               onApply={props.onApply ?? (() => undefined)}
               onPick={props.onPick ?? (() => undefined)}
               onImportAs={props.onImportAs ?? (() => undefined)}
+              onTakeOut={props.onTakeOut ?? (() => undefined)}
               onSkipMany={props.onSkipMany ?? (() => undefined)}
               onImportManyAsGuessed={
                 props.onImportManyAsGuessed ?? (() => undefined)
@@ -489,6 +491,54 @@ describe('ImportReview — a no-row row', () => {
     expect(onSkip).not.toHaveBeenCalled();
     // The step removes nothing itself: the Run hook does.
     expect(screen.getByText('Ironwood.2018.1080p')).toBeDefined();
+  });
+});
+
+/**
+ * 66, Missing videos, Phase 2 (issue #635): a `missing` film's _Take out of
+ * library_ reports `onTakeOut(id)`; the step removes nothing itself, the Run
+ * hook does. There is no _Take out all_: two `missing` rows draw no bulk
+ * button for it.
+ */
+describe('ImportReview — a missing row', () => {
+  const missing = (id: string, title: string): ImportProblem => ({
+    id,
+    kind: 'missing',
+    title,
+    reason: 'Its video, film.mkv, is no longer on disk.',
+    movieId: `m-${id}`,
+    takeOut: 'Take out of library',
+  });
+
+  it('reports a Take out press with that row’s id', () => {
+    const onTakeOut = vi.fn();
+    const onSkip = vi.fn<ImportReviewProps['onSkip']>();
+    renderReview({
+      run: inReview([missing('p7', 'Die Hard'), ...PROBLEMS], 0),
+      onTakeOut,
+      onSkip,
+    });
+
+    fireEvent.click(
+      within(rowOf('Die Hard')).getByRole('button', {
+        name: 'Take out of library',
+      })
+    );
+
+    expect(onTakeOut).toHaveBeenCalledWith('p7');
+    expect(onSkip).not.toHaveBeenCalled();
+    expect(screen.getByText('Die Hard')).toBeDefined();
+  });
+
+  it('draws a Take out per missing row, and no Take out all', () => {
+    renderReview({
+      run: inReview([missing('p7', 'Die Hard'), missing('p8', 'Heat')], 0),
+    });
+
+    expect(
+      screen.getAllByRole('button', { name: 'Take out of library' })
+    ).toHaveLength(2);
+    expect(screen.queryByRole('button', { name: /take out all/i })).toBeNull();
   });
 });
 

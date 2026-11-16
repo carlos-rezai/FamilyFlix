@@ -22,7 +22,13 @@
 // real `Media` over a sandbox managed directory, and the absent **Playback
 // component**.
 
-import { copyFileSync, mkdirSync, renameSync, rmSync } from 'node:fs';
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  renameSync,
+  rmSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
@@ -350,5 +356,167 @@ describe('createImporter: the Missing check across runs', () => {
     const next = await scanOnce(box);
 
     expect(missingOf(next)).toEqual([]);
+  });
+});
+
+// 66, Missing videos, Phase 2: "take out a film" (issue #635).
+//
+// `takeOutMissing(id)`, on `apply`'s precedent, is the `missing` row's _Take
+// out of library_: the film's rows go, then its **Media folder** best-effort,
+// as the movie Delete does, and without `leaveOut`, so a put-back file is
+// imported by the next scan. Its linked video's folder is never touched. An id
+// not held, or not `missing`, answers `false`; a title already deleted
+// elsewhere answers `true` and only takes the Problem off (**Gone is gone**).
+
+/** Die Hard imported, its video deleted, and the next scan in review on it. */
+async function missingDieHard(box: Sandbox) {
+  await scanOnce(box);
+  const id = heldId(box, 'Die Hard');
+  deleteVideo(box.films, DIE_HARD, DIE_HARD_FILE);
+  const run = await scanOnce(box);
+  const [problem] = missingOf(run);
+  if (problem === undefined) {
+    throw new Error(`no missing Problem: ${JSON.stringify(run.problems)}`);
+  }
+  return { id, problem };
+}
+
+const problemIds = (importer: Importer): string[] =>
+  (importer.current()?.problems ?? []).map((problem) => problem.id);
+
+describe('createImporter: takeOutMissing on a missing film', () => {
+  it('answers true, takes the Problem off and the film out of the library', async () => {
+    const box = sandbox();
+    await scanOnce(box);
+    const id = heldId(box, 'Die Hard');
+    box.storage.setResumePosition(id, 600);
+    box.storage.setFavorite(id, true);
+    expect(
+      box.storage.getHome().continueWatching.map((movie) => movie.id)
+    ).toContain(id);
+    deleteVideo(box.films, DIE_HARD, DIE_HARD_FILE);
+    const [problem] = missingOf(await scanOnce(box));
+
+    expect(box.importer.takeOutMissing(problem?.id ?? '')).toBe(true);
+
+    expect(problemIds(box.importer)).not.toContain(problem?.id);
+    expect(box.storage.getMovie(id)).toBeNull();
+    expect(
+      box.storage.listMovies({ sort: 'a-z' }).map((movie) => movie.title)
+    ).toEqual(['Amelie']);
+    const home = box.storage.getHome();
+    expect(home.continueWatching.map((movie) => movie.id)).not.toContain(id);
+    expect(home.favorites.map((movie) => movie.id)).not.toContain(id);
+    expect(
+      box.storage.libraryTitles().movies.map((movie) => movie.id)
+    ).not.toContain(id);
+  });
+
+  it('removes its managed art and subtitles, and leaves its linked folder untouched', async () => {
+    const box = sandbox();
+    await scanOnce(box);
+    const id = heldId(box, 'Die Hard');
+    const folder = box.storage.mediaFolderOf('movie', id);
+    expect(folder).not.toBeNull();
+    expect(existsSync(join(box.media, folder ?? ''))).toBe(true);
+    deleteVideo(box.films, DIE_HARD, DIE_HARD_FILE);
+    const [problem] = missingOf(await scanOnce(box));
+
+    box.importer.takeOutMissing(problem?.id ?? '');
+
+    expect(existsSync(join(box.media, folder ?? ''))).toBe(false);
+    const titleFolder = join(box.films.path, DIE_HARD);
+    expect(existsSync(join(titleFolder, 'Images', 'poster.jpg'))).toBe(true);
+    expect(existsSync(join(titleFolder, 'Images', 'backdrop.jpg'))).toBe(true);
+    expect(
+      existsSync(join(titleFolder, 'Subtitles', 'Die.Hard.1988.1080p.en.srt'))
+    ).toBe(true);
+  });
+
+  it('records no Left-out video, and the next scan imports a put-back file', async () => {
+    const box = sandbox();
+    await scanOnce(box);
+    const video = join(box.films.path, DIE_HARD, DIE_HARD_FILE);
+    const aside = join(box.dir, DIE_HARD_FILE);
+    renameSync(video, aside);
+    const [problem] = missingOf(await scanOnce(box));
+    expect(box.importer.takeOutMissing(problem?.id ?? '')).toBe(true);
+    expect(box.storage.leftOut(box.films.id).size).toBe(0);
+
+    renameSync(aside, video);
+    const next = await scanOnce(box);
+
+    expect(missingOf(next)).toEqual([]);
+    expect(
+      box.storage.listMovies({ sort: 'a-z' }).map((movie) => movie.title)
+    ).toEqual(['Amelie', 'Die Hard']);
+  });
+
+  it('leaves the rest of the library held', async () => {
+    const box = sandbox();
+    const { problem } = await missingDieHard(box);
+    const amelie = heldId(box, 'Amelie');
+
+    box.importer.takeOutMissing(problem.id);
+
+    expect(box.storage.getMovie(amelie)).not.toBeNull();
+  });
+
+  it('answers true and only takes the Problem off for a film already deleted elsewhere', async () => {
+    const box = sandbox();
+    const { id, problem } = await missingDieHard(box);
+    box.storage.deleteMovie(id);
+
+    expect(box.importer.takeOutMissing(problem.id)).toBe(true);
+
+    expect(problemIds(box.importer)).not.toContain(problem.id);
+    expect(heldId(box, 'Amelie')).toEqual(expect.any(String));
+  });
+
+  it('answers false for an id that is not there, taking nothing out', async () => {
+    const box = sandbox();
+    const { id, problem } = await missingDieHard(box);
+
+    expect(box.importer.takeOutMissing('no-such-problem')).toBe(false);
+
+    expect(box.storage.getMovie(id)).not.toBeNull();
+    expect(problemIds(box.importer)).toContain(problem.id);
+  });
+
+  it('answers false for the same id a second time', async () => {
+    const box = sandbox();
+    const { problem } = await missingDieHard(box);
+    box.importer.takeOutMissing(problem.id);
+
+    expect(box.importer.takeOutMissing(problem.id)).toBe(false);
+  });
+
+  it('answers false for a Problem that is not missing, taking nothing out', async () => {
+    const box = sandbox();
+    await scanOnce(box);
+    // Two loose videos in one Title folder: the no-video Problem.
+    mkdirSync(join(box.films.path, HEAT));
+    copyFileSync(
+      join(box.films.path, AMELIE, AMELIE_FILE),
+      join(box.films.path, HEAT, HEAT_FILE)
+    );
+    copyFileSync(
+      join(box.films.path, AMELIE, AMELIE_FILE),
+      join(box.films.path, HEAT, 'Heat Directors Cut.mp4')
+    );
+    const run = await scanOnce(box);
+    const other = run.problems.find((problem) => problem.kind === 'no-video');
+    expect(other).toBeDefined();
+
+    expect(box.importer.takeOutMissing(other?.id ?? '')).toBe(false);
+
+    expect(problemIds(box.importer)).toContain(other?.id);
+    expect(box.storage.listMovies({ sort: 'a-z' })).toHaveLength(2);
+  });
+
+  it('answers false when there is no run', () => {
+    const box = sandbox();
+
+    expect(box.importer.takeOutMissing('p1')).toBe(false);
   });
 });
