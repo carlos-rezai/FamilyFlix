@@ -19,10 +19,9 @@ const TAIL_STARTS: readonly RegExp[] = [
 ];
 
 /**
- * The **Title guess** off a picked video's name — the client's counterpart of
- * the importer's `titleGuess`. The extension goes, dots and underscores read as
- * spaces, and everything from the first year, quality tag or **Episode tag**
- * onward is dropped. Case, accents and punctuation are kept.
+ * The **Title guess** off a picked video's name: the extension goes, dots and
+ * underscores read as spaces, and everything from the first year, quality tag
+ * or **Episode tag** onward is dropped. Case, accents and punctuation are kept.
  */
 export function titleFromFilename(filename: string): string {
   const name = filename.replace(EXTENSION, '').replace(SPACE_SEPARATORS, ' ');

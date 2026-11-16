@@ -82,8 +82,9 @@ async function showUnder(
  * filename's, and each episode keeps the tracks of its `Subtitles/S01E01/`
  * folder. A folder of loose videos, tagged ones included, answers them as
  * **Unplaced**, its subfolders not read. Its title and year are the folder's
- * **Folder key** (`folderKeyOf`), with no guess on top. A picked **Season folder** reads only its own
- * videos but stands for its Show folder (`showFolderOf`): titled by the show's
+ * **Folder key** (`folderKeyOf`): its name as it stands, a trailing `(Year)`
+ * read off as the year. A picked **Season folder** reads only its own videos
+ * but stands for its Show folder (`showFolderOf`): titled by the show's
  * name, held-checked as the show, each path answered inside the show.
  *
  * Its `libraryFolderId` is the listed **Library folder** it lies inside, by

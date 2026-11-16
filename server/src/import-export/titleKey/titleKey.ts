@@ -58,7 +58,7 @@ export function titleKey(name: string): string {
 /**
  * The separators a **Source folder** name uses in place of the spaces a title
  * cannot carry on disk. Narrower than {@link SEPARATORS}: a hyphen stays,
- * because `Spider-Man` is a title and the guess is for typing into a field.
+ * because `Spider-Man` is a title and TMDB is asked it as one.
  */
 const SPACE_SEPARATORS = /[._]+/g;
 
@@ -135,20 +135,5 @@ export function searchQuery(title: string): string {
   return stripTails(dropReleaseNoise(title.replace(SPACE_SEPARATORS, ' ')))
     .replace(/&/g, ' and ')
     .replace(/[^\p{L}\p{N}]+/gu, ' ')
-    .trim();
-}
-
-/**
- * The title a `no-row` **Source folder** name suggests: the name with the
- * **Title key**'s tail forms dropped — and only those. The key is for
- * comparing and folds everything away; the guess is for the form's title
- * field, so the case, the accents and the punctuation the folder kept are
- * kept, and a dot or an underscore is read as the space it stands for.
- * `Harbor.Lights.2019` guesses "Harbor Lights", and a guess and its folder
- * name share one key.
- */
-export function titleGuess(name: string): string {
-  return stripTails(dropReleaseNoise(name.replace(SPACE_SEPARATORS, ' ')))
-    .replace(/\s+/g, ' ')
     .trim();
 }
