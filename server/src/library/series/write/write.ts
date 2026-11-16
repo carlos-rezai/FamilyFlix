@@ -42,6 +42,13 @@ export interface SeriesWrite {
    */
   deleteSeries(id: string): void;
   /**
+   * The **Take out** of a show's gone episodes, in one transaction: delete
+   * those rows (their tracks by cascade) and answer the **Stored paths** no
+   * row points at any more, to clean up after the commit. An id the series
+   * does not hold is passed over.
+   */
+  removeEpisodes(seriesId: string, episodeIds: readonly string[]): string[];
+  /**
    * The **Series edit job**'s save, in one transaction: the fields, then the
    * **Two-pass renumber** of the held episodes, then the inserts and the
    * removals. A held episode keeps its id, so its watch state, resume position
@@ -510,8 +517,37 @@ export function createSeriesWrite(
     }
   );
 
+  const removeEpisodeRows = db.transaction(
+    (seriesId: string, episodeIds: readonly string[]): string[] => {
+      const series = reader.getSeries(seriesId);
+      if (series === null) {
+        return [];
+      }
+      const held = reader.listEpisodes(seriesId);
+      const gone = new Set(episodeIds);
+      const removed = held.filter((episode) => gone.has(episode.id));
+      for (const episode of removed) {
+        deleteEpisodeRow.run(episode.id);
+      }
+      const afterPaths = new Set([
+        ...pathsOf(series, reader.listEpisodes(seriesId)),
+        ...seasonPosterPaths(seriesId),
+      ]);
+      return [
+        ...new Set(
+          removed.flatMap((episode) =>
+            pathsOf({ ...series, posterPath: null }, [episode])
+          )
+        ),
+      ].filter((path) => !afterPaths.has(path));
+    }
+  );
+
   return {
     updateSeries: (id, edit) => updateSeriesGraph(id, edit),
+
+    removeEpisodes: (seriesId, episodeIds) =>
+      removeEpisodeRows(seriesId, episodeIds),
 
     addSeries: (input, episodes = [], seasonPosters = []) => {
       const id = randomUUID();

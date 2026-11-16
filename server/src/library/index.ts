@@ -437,6 +437,11 @@ export interface LibraryStorage {
    */
   deleteSeries(id: string): void;
   /**
+   * The **Take out** of a show's gone episodes: their rows go, tracks by
+   * cascade, answering the **Stored paths** no row points at any more.
+   */
+  removeEpisodes(seriesId: string, episodeIds: readonly string[]): string[];
+  /**
    * The **Series edit job**'s save in one transaction — the fields, the
    * **Two-pass renumber**, the inserts and the removals — answering the series
    * and the **Stored paths** left unreferenced, or `null` for a series not
@@ -643,6 +648,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     addSeries: changes.onCreated(seriesWrite.addSeries),
     addEpisode: onTitle(seriesWrite.addEpisode),
     deleteSeries: beforeTitle(seriesWrite.deleteSeries),
+    removeEpisodes: onTitle(seriesWrite.removeEpisodes),
     updateSeries: onTitle(seriesWrite.updateSeries),
     setSeriesFavorite: onTitle(seriesCuration.setSeriesFavorite),
     setSeriesRating: onTitle(seriesCuration.setSeriesRating),

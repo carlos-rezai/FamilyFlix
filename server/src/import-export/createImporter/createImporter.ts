@@ -279,7 +279,9 @@ export interface Importer {
    * then its **Media folder** best-effort, as the movie Delete does, but with
    * no **Left-out video** recorded, so a put-back file is imported by the next
    * scan; and the Problem comes off. `true` for having gone, also when the
-   * title was already deleted elsewhere (**Gone is gone**). `false` for an id
+   * title was already deleted elsewhere (**Gone is gone**). A show's press
+   * takes out only its gone episodes, checked again, or the whole show when
+   * every episode is gone. `false` for an id
    * not there or not `missing`, and when there is no run, taking nothing out.
    */
   takeOutMissing(id: string): boolean;
@@ -375,6 +377,17 @@ const REASON = {
 const TAKE_OUT_FILM = 'Take out of library';
 
 /**
+ * A `missing` show's _Take out_ press: the whole show with every episode
+ * gone, else its count of gone episodes.
+ */
+const takeOutShow = (gone: number, total: number): string =>
+  gone === total
+    ? TAKE_OUT_FILM
+    : gone === 1
+      ? 'Take out 1 episode'
+      : `Take out ${gone} episodes`;
+
+/**
  * A **Problem** as the snapshot lists it, under an id of its own — and, for
  * one about a title the library holds, its owner: the movie or the series.
  */
@@ -404,6 +417,8 @@ interface ProblemSource {
   row: SheetRow | null;
   folder: FilmScan | null;
   candidates: FilmScan[];
+  /** A `missing` show's alone: the episodes the **Missing check** found gone. */
+  gone?: string[];
 }
 
 /** A **Sheet row** as the detail carries it: the columns it has, and no nulls. */
@@ -2185,6 +2200,43 @@ export function createImporter({
   };
 
   /**
+   * A `missing` show's _Take out_: its recorded gone episodes asked of
+   * playback again, so one whose file came back is kept. With every held
+   * episode still gone, the show goes as the series Delete does; else only
+   * those rows go, and the managed files no row points at any more are
+   * unlinked. No **Left-out video** is recorded; a show deleted elsewhere is
+   * passed over (**Gone is gone**).
+   */
+  const takeOutGoneEpisodes = (seriesId: string, recorded: string[]): void => {
+    if (storage.getSeries(seriesId) === null) {
+      return;
+    }
+    const held = storage.listEpisodes(seriesId);
+    const ids = new Set(recorded);
+    const gone = held.filter(
+      (episode) =>
+        ids.has(episode.id) && playback.videoFile(episode).kind === 'missing'
+    );
+    if (gone.length === 0) {
+      return;
+    }
+    if (gone.length === held.length) {
+      const folder = storage.mediaFolderOf('series', seriesId);
+      storage.deleteSeries(seriesId);
+      if (folder !== null) {
+        media.removeTitleFolder(folder);
+      }
+      return;
+    }
+    for (const path of storage.removeEpisodes(
+      seriesId,
+      gone.map((episode) => episode.id)
+    )) {
+      media.removeFile(path);
+    }
+  };
+
+  /**
    * The **Missing check**: each film still in the run's `missing` map (a
    * film **Found again** has come off it) whose recorded **Library folder**
    * the run `read`, its video asked of playback again after the imports. A
@@ -2228,22 +2280,32 @@ export function createImporter({
         continue;
       }
       const episodes = storage.listEpisodes(series.id);
-      const gone = episodes
+      const goneEpisodes = episodes
         .filter((episode) => playback.videoFile(episode).kind === 'missing')
-        .sort((a, b) => a.season - b.season || a.number - b.number)
-        .map((episode) => spellEpisodeTag(episode.season, episode.number));
+        .sort((a, b) => a.season - b.season || a.number - b.number);
+      const gone = goneEpisodes.map((episode) =>
+        spellEpisodeTag(episode.season, episode.number)
+      );
       if (gone.length === 0) {
         continue;
       }
       file(
         current,
-        problemOf(
-          'missing',
-          series.title,
-          missingEpisodesReason(gone, episodes.length),
-          { seriesId: series.id }
-        ),
-        { row: null, folder: null, candidates: [] }
+        {
+          ...problemOf(
+            'missing',
+            series.title,
+            missingEpisodesReason(gone, episodes.length),
+            { seriesId: series.id }
+          ),
+          takeOut: takeOutShow(gone.length, episodes.length),
+        },
+        {
+          row: null,
+          folder: null,
+          candidates: [],
+          gone: goneEpisodes.map((episode) => episode.id),
+        }
       );
       log(
         current,
@@ -3257,7 +3319,14 @@ export function createImporter({
 
     takeOutMissing: (id) => {
       const listed = run?.problems.find((problem) => problem.id === id);
-      if (listed?.kind !== 'missing' || listed.movieId === undefined) {
+      if (listed?.kind !== 'missing') {
+        return false;
+      }
+      if (listed.seriesId !== undefined) {
+        takeOutGoneEpisodes(listed.seriesId, sources.get(id)?.gone ?? []);
+        return takeOff(id);
+      }
+      if (listed.movieId === undefined) {
         return false;
       }
       if (storage.getMovie(listed.movieId) !== null) {
