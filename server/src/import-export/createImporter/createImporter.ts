@@ -622,6 +622,26 @@ const unplacedReason = (n: number): string =>
 const missingReason = (videoPath: string): string =>
   `Its video, ${basename(videoPath)}, is no longer on disk.`;
 
+/**
+ * A show's `missing` Problem's reason: its gone episodes' first three
+ * **Episode tags**, in season-and-episode order, and how many more; or, with
+ * every one of its `total` episodes gone, that none is on disk.
+ */
+const missingEpisodesReason = (gone: string[], total: number): string => {
+  if (gone.length === total) {
+    return `None of its ${total} episodes' videos are on disk.`;
+  }
+  const named = gone.slice(0, 3);
+  const more = gone.length - named.length;
+  const list =
+    more > 0
+      ? `${named.join(', ')} and ${more} more`
+      : named.length === 1
+        ? (named[0] ?? '')
+        : `${named.slice(0, -1).join(', ')} and ${named.at(-1) ?? ''}`;
+  return `${list} ${gone.length === 1 ? 'is' : 'are'} no longer on disk.`;
+};
+
 /** A show's one `failed` row's reason: the count and the first error. */
 const failedShowReason = (n: number, first: string): string =>
   `${n === 1 ? '1 episode' : `${count(n)} episodes`} couldn't be copied: ${first}.`;
@@ -2169,6 +2189,8 @@ export function createImporter({
    * film **Found again** has come off it) whose recorded **Library folder**
    * the run `read`, its video asked of playback again after the imports. A
    * `missing` answer files one `missing` Problem and one **Warning line**.
+   * Then each held show of a folder the run `read`: its episodes whose videos
+   * answer `missing` fold into one Problem and one Warning line per show.
    */
   const checkMissing = (
     current: ImportRun,
@@ -2197,6 +2219,35 @@ export function createImporter({
       log(
         current,
         `⚠ ${spellFolderKey(movie.title, movie.year)} is missing its video`,
+        'warning'
+      );
+    }
+    for (const series of storage.getSeriesHome().series) {
+      const source = storage.titleSource(series.id);
+      if (source === null || !readIds.has(source.folderId)) {
+        continue;
+      }
+      const episodes = storage.listEpisodes(series.id);
+      const gone = episodes
+        .filter((episode) => playback.videoFile(episode).kind === 'missing')
+        .sort((a, b) => a.season - b.season || a.number - b.number)
+        .map((episode) => spellEpisodeTag(episode.season, episode.number));
+      if (gone.length === 0) {
+        continue;
+      }
+      file(
+        current,
+        problemOf(
+          'missing',
+          series.title,
+          missingEpisodesReason(gone, episodes.length),
+          { seriesId: series.id }
+        ),
+        { row: null, folder: null, candidates: [] }
+      );
+      log(
+        current,
+        `⚠ ${spellFolderKey(series.title, series.year)} is missing ${gone.length} episode videos`,
         'warning'
       );
     }

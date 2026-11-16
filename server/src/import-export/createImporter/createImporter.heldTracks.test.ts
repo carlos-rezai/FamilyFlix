@@ -74,7 +74,14 @@ function compose(dir: string, root: string, title: string): Sandbox {
   const importer = createImporter({
     storage,
     media,
-    playback: createPlayback(mediaDir, fixedSlot(null), () => null),
+    // Linked videos resolve, so the Missing check finds the episodes on disk.
+    playback: createPlayback(
+      mediaDir,
+      fixedSlot(null),
+      (id) =>
+        storage.libraryFolders().find((folder) => folder.id === id)?.path ??
+        null
+    ),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
   });
