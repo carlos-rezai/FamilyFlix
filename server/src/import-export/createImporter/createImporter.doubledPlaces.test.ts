@@ -174,7 +174,8 @@ describe('createImporter.scan: the Doubled place lines', () => {
     expect(warnings(run)).toContain(
       '⚠ Drama holds no video or Season folder, left out'
     );
-    expect(run.problems).toEqual([]);
+    // Drama/ is an Off-layout folder (issue #638); no Doubled place is a Problem.
+    expect(run.problems.map((problem) => problem.kind)).toEqual(['off-layout']);
   });
 
   it('logs no such line once the extra files are deleted', async () => {

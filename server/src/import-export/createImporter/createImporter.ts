@@ -20,6 +20,7 @@ import { readableFolder } from '../../media/readableFolder/readableFolder';
 import type {
   FilmScan,
   FolderScan,
+  LeftOutReason,
   SubtitleFound,
 } from '../../media/readTitleFolder/readTitleFolder';
 import {
@@ -372,6 +373,12 @@ const REASON = {
   differs:
     'The spreadsheet has different values for fields you already filled in.',
 } as const;
+
+/** An `off-layout` **Problem**'s reason, by why the layout turned it away. */
+const OFF_LAYOUT_REASON: Record<LeftOutReason, string> = {
+  empty: 'Holds no video or Season folder.',
+  mixed: 'Holds loose videos and Season folders.',
+};
 
 /** A `missing` film's _Take out_ press, in the row's own words. */
 const TAKE_OUT_FILM = 'Take out of library';
@@ -2449,6 +2456,13 @@ export function createImporter({
         );
         for (const warning of walk.warnings) {
           log(current, warning, 'warning');
+        }
+        for (const off of walk.offLayout) {
+          file(
+            current,
+            problemOf('off-layout', off.name, OFF_LAYOUT_REASON[off.reason]),
+            { row: null, folder: null, candidates: [] }
+          );
         }
         titles = walk.titles;
         if (walk.sheet !== null) {

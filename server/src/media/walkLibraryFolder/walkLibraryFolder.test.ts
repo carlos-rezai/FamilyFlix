@@ -91,6 +91,7 @@ describe('walkLibraryFolder: root entries only', () => {
     expect(await walkLibraryFolder(root)).toEqual({
       titles: [],
       warnings: [],
+      offLayout: [],
       sheet: null,
     });
   });

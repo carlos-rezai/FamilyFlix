@@ -39,10 +39,12 @@ afterEach(closeTracked);
 
 const EXPORT = 'familyflix-collection_08-10-2026';
 
-/** An Export folder's tree, with images and subtitles on: no video anywhere. */
+/**
+ * An Export folder's tree, with images and subtitles on: no video anywhere,
+ * its sheet in `Meta/` as `writeExport` writes it.
+ */
 const EXPORTED: Record<string, string> = {
-  [`${EXPORT}.csv`]: 'Type,Title,Year\nMovie,Heat,1995\n',
-  [`${EXPORT}-episodes.csv`]: 'Series,Season,Episode\n',
+  'Meta/familyflix-library.csv': 'Type,Title,Year\nMovie,Heat,1995\n',
   'Heat (1995)/poster.jpg': 'heat poster',
   'Heat (1995)/backdrop.png': 'heat backdrop',
   'Heat (1995)/en.srt': '1\n00:00:01,000 --> 00:00:02,000\nHello\n',

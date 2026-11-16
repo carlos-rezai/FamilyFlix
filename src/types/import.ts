@@ -107,6 +107,7 @@ export const PROBLEM_KINDS = [
   'no-row',
   'failed',
   'unplaced',
+  'off-layout',
   'missing-meta',
   'differs',
   'missing',

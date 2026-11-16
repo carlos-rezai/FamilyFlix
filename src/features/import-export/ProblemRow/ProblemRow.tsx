@@ -73,6 +73,7 @@ const sheetChoices = (
  * `missing` row draws its `takeOut` words as a button beside _Skip_, pressed
  * with no confirm. Neither knows what happens next: the row draws a problem and reports a
  * press.
+ * An `off-layout` row is fixed only on disk, so it draws _Skip_ alone.
  */
 export function ProblemRow({
   problem,
@@ -83,7 +84,8 @@ export function ProblemRow({
   onTakeOut,
 }: ProblemRowProps) {
   const differs = problem.kind === 'differs';
-  const resolvable = !differs && problem.kind !== 'missing';
+  const resolvable =
+    !differs && problem.kind !== 'missing' && problem.kind !== 'off-layout';
   return (
     <Card>
       <Head>

@@ -24,7 +24,18 @@ export type WalkedTitle = FilmFolderScan | SeriesFolderScan;
 export interface LayoutWalk {
   titles: WalkedTitle[];
   warnings: string[];
+  offLayout: OffLayoutFolder[];
   sheet: string | null;
+}
+
+/**
+ * An **Off-layout folder**: a root folder the **Folder layout** turns away,
+ * its path, its name and why.
+ */
+export interface OffLayoutFolder {
+  dir: string;
+  name: string;
+  reason: LeftOutReason;
 }
 
 /** The `Meta/` sheets a walk reads, the **Library sheet** first. */
@@ -131,6 +142,7 @@ export async function walkLibraryFolder(
   const entries: Dirent[] = await readdir(root, { withFileTypes: true });
   const titles: WalkedTitle[] = [];
   const warnings: string[] = [];
+  const offLayout: OffLayoutFolder[] = [];
 
   for (const entry of entries) {
     if (!entry.isDirectory()) {
@@ -153,6 +165,7 @@ export async function walkLibraryFolder(
     }
     if (scan.kind === 'left-out') {
       warnings.push(WARNING[scan.reason](scan.name));
+      offLayout.push({ dir, name: scan.name, reason: scan.reason });
       continue;
     }
     for (const place of doubledIn(scan)) {
@@ -173,5 +186,5 @@ export async function walkLibraryFolder(
     );
   }
 
-  return { titles, warnings, sheet: await sheetIn(root) };
+  return { titles, warnings, offLayout, sheet: await sheetIn(root) };
 }

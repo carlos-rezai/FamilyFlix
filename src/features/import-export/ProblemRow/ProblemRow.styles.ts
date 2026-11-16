@@ -26,6 +26,7 @@ export const DOT_TONE: Record<ProblemKind, DotTone> = {
   unplaced: 'danger',
   ambiguous: 'accent',
   'no-row': 'textFaint',
+  'off-layout': 'textFaint',
   'missing-meta': 'textFaint',
   differs: 'gold',
   missing: 'danger',

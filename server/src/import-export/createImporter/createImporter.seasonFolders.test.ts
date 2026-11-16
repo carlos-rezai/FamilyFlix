@@ -9,7 +9,7 @@
 // `Release.Show.S01.1080p.WEB-DL` and a `Specials` folder are none. Each sits
 // alone under its own **Title folder** in one **Library folder**, which holds
 // no video or Season folder and is one **Layout warning**: no series, no
-// film, no Problem.
+// film, one off-layout Problem each (issue #638).
 //
 // Composed as the series suite is: a real `freshStorage`, a real `Media` over
 // a sandbox managed directory and the absent **Playback component**. The
@@ -102,7 +102,7 @@ async function untilReview(importer: Importer): Promise<ImportRun> {
 }
 
 describe('createImporter.scan: the four shapes the layout does not read', () => {
-  it('makes no series and no film, and files no Problem', async () => {
+  it('makes no series and no film, each show one Off-layout folder', async () => {
     const { storage, importer, folder } = sandbox();
 
     await importer.scan([folder]);
@@ -110,7 +110,10 @@ describe('createImporter.scan: the four shapes the layout does not read', () => 
 
     expect(storage.listMovies({ sort: 'a-z' })).toEqual([]);
     expect(storage.getSeriesHome().series).toEqual([]);
-    expect(run.problems).toEqual([]);
+    // Issue #638: each Show folder the layout turns away is an off-layout Problem.
+    expect(
+      run.problems.map((problem) => [problem.kind, problem.title]).sort()
+    ).toEqual(SHOWS.map(([show]) => ['off-layout', show]).sort());
   });
 
   it('logs one Layout warning for each Title folder', async () => {

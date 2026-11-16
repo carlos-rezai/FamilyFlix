@@ -248,7 +248,10 @@ describe('createImporter.scan: the Layout warnings', () => {
       1
     );
     expect(titles(box.storage)).toEqual(['Die Hard']);
-    expect(run.problems).toEqual([]);
+    // Drama/ is an Off-layout folder (issue #638).
+    expect(run.problems).toEqual([
+      expect.objectContaining({ kind: 'off-layout', title: 'Drama' }),
+    ]);
   });
 
   it('logs each Layout warning text', async () => {
@@ -267,7 +270,13 @@ describe('createImporter.scan: the Layout warnings', () => {
         '⚠ Severance (2022) holds loose videos and Season folders, left out',
       ])
     );
-    expect(run.problems).toEqual([]);
+    // Each is an Off-layout folder too (issue #638).
+    expect(
+      run.problems.map((problem) => [problem.kind, problem.title]).sort()
+    ).toEqual([
+      ['off-layout', 'Heat (1995)'],
+      ['off-layout', 'Severance (2022)'],
+    ]);
   });
 
   it('logs the root loose videos as one line for the Library folder', async () => {

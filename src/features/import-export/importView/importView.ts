@@ -124,6 +124,7 @@ export const PROBLEM_KIND_LABELS: Readonly<Record<ProblemKind, string>> = {
   'no-row': 'Not in sheet',
   failed: 'Failed',
   unplaced: 'Unplaced',
+  'off-layout': 'Off layout',
   'missing-meta': 'Missing details',
   differs: 'Differs',
   missing: 'Missing',
