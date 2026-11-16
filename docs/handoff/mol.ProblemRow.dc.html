@@ -11,8 +11,9 @@
         <link rel="stylesheet" href="tokens.css" />
       </helmet>
       <!-- One Problem: the head (dot, title, reason, Resolve on every kind but differs,
-                       Skip), then the face slot under it, the Sync's Decision row layout. A face
-                       is drawn for differs, ambiguous and no-row; every other kind has none. -->
+                       missing and off-layout, Skip), then the face slot under it, the Sync's
+                       Decision row layout. A face is drawn for differs, ambiguous, no-row and
+                       missing; every other kind has none. -->
       <div
         style="
           padding: 16px;
@@ -45,7 +46,9 @@
               {{ p.reason }}
             </div>
           </div>
-          <!-- No Resolve on differs: the form edits a record, not a comparison. -->
+          <!-- No Resolve on differs: the form edits a record, not a comparison. None on
+                           missing (the form cannot bring a file back) or off-layout (the fix is
+                           on disk; the next scan reads the folder). -->
           <sc-if value="{{ p.hasResolve }}" hint-placeholder-val="{{ true }}">
             <button
               onClick="{{ p.resolve }}"
@@ -214,6 +217,33 @@
               style-hover="background:var(--color-border)"
             >
               {{ p.importAsLabel }}
+            </button>
+          </div>
+        </sc-if>
+
+        <!-- missing: Take out, the title's own words: "Take out of library" for a film or a
+                         show with every episode gone, else "Take out 3 episodes" ("1 episode").
+                         Button secondary, sm; no confirm. Skip keeps the title; the next scan
+                         lists it again while its video is gone. -->
+        <sc-if value="{{ p.isMissing }}" hint-placeholder-val="{{ false }}">
+          <div style="padding: 14px 0 0 24px">
+            <button
+              onClick="{{ p.onTakeOut }}"
+              style="
+                height: 34px;
+                padding: 0 14px;
+                background: var(--color-surface-3);
+                border: 1px solid var(--color-border);
+                border-radius: 8px;
+                color: var(--color-text);
+                font-family: var(--font-sans);
+                font-size: 14px;
+                font-weight: 600;
+                cursor: pointer;
+              "
+              style-hover="background:var(--color-border)"
+            >
+              {{ p.takeOutLabel }}
             </button>
           </div>
         </sc-if>

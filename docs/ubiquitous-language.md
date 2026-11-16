@@ -1114,6 +1114,22 @@ comment in `docs/handoff/feat.MovieForm.dc.html` is amended.
 | **Show folder pick** (updated) | Since log 65, fills the form's title and its year from the read's Folder key, each only when empty or still what the earlier pick filled (`prefillFolderKey`); a typed title or year always stays, and a yearless folder fills no year. |                                |
 | **Title guess** (updated)      | Since log 65, only `titleFromFilename`'s, off a picked video's file name; a picked folder's name is read as its **Folder key**, and the server's `titleGuess` is retired.                                                               | folder guess                   |
 
+## Missing videos
+
+Design log 66: step 49, initiative `missing-videos`. A scan lists what is no
+longer on disk for the household to keep or take out, and names every folder
+the **Folder layout** turns away in its review. The ProblemRow prototype
+`docs/handoff/mol.ProblemRow.dc.html` is amended.
+
+| Term                         | Definition                                                                                                                                                                                                                                                                                                                                    | Aliases to avoid                            |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| **Missing check** (new)      | The last pass of every run that walks **Library folders** (both scans and a sheet import), after its imports: each held title of a folder the run read whose video, or one of whose episodes' videos, is a **Missing video** is filed as one `missing` **Problem**, with one Warning line. A title **Found again** in the run is not missing. | removal pass, cleanup, prune, orphan sweep  |
+| **Take out** (new)           | The `missing` row's press, _Take out of library_ or _Take out 3 episodes_: a **Delete** of what is missing (the film, the whole series, or the gone episodes' rows) with the managed files best-effort, no confirm, and no **Left-out video** recorded, so a file put back returns on the next scan. `takeOutMissing` in code.                | remove, delete missing, purge, clean up     |
+| **Off-layout folder** (new)  | A root folder of a **Library folder** that the **Folder layout** turns away, `empty` or `mixed` (`LeftOutReason`): one **Layout warning** and one hard `off-layout` **Problem** per run, titled by its name, settled only by _Skip_ or by fixing it on disk. `LayoutWalk.offLayout` in code.                                                  | invalid folder, bad folder, left-out folder |
+| **Missing video** (updated)  | Since log 66, a held episode's video too, for the **Missing check**; the **Missing video** rule and **Found again** stay films only.                                                                                                                                                                                                          |                                             |
+| **Problem** (updated)        | Since log 66, two more kinds: `off-layout` (hard, an **Off-layout folder**, _Skip_ only) and `missing` (soft, a held title the **Missing check** found gone, settled by **Take out** or _Skip_). Neither has _Resolve_.                                                                                                                       |                                             |
+| **Layout warning** (updated) | Since log 66, an `empty` or `mixed` folder's line is also an **Off-layout folder** Problem in the run's review; the root's loose videos and a **Doubled place** stay warnings only.                                                                                                                                                           |                                             |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1297,6 +1313,8 @@ comment in `docs/handoff/feat.MovieForm.dc.html` is amended.
 - An action the user starts has one **Busy phase** at a time; its loader, a **Busy label** or a **Dialog loader**, is drawn only while it is `shown`, under **Loader timing**.
 - A **Locked** dialog is a **Delete dialog** or the **Reset dialog**, never the **Clear dialog** or the **Export dialog**, which stay live while they work.
 - A session draws at most one **Start-up splash**, in the shell only, and never a **Skeleton** and a **Logo loader** for the same wait.
+- A run's **Missing check** reads only the held titles of the **Library folders** it read, so _Scan new folders_ never lists a title of a folder it did not walk, and an **Unreachable** folder's titles are never missing (log 66).
+- A held title has at most one `missing` **Problem** per run, however many of its episodes are gone; **Take out** removes exactly what is missing, the whole title only when nothing of it is left (log 66).
 - A **Library folder** is a **New folder** until a run that walked it reaches review, by either start; a removed and re-added folder is new again. **Bring back** leaves its mark alone (log 54).
 - An import run's _Finish_, with the TMDB box ticked, opens one **Sync** in the **Just what was added** scope, bounded below by that run's `startedAt` and above by nothing (log 54).
 - A window session plays at most one **Welcome splash**, on its **Cold start**, in the place of the **Start-up splash**'s loader, which a **Slow start** alone draws (issue 509; log 55 had it after the splash, never instead).
@@ -2092,6 +2110,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "That, verbatim; there is no **Title guess** on a folder's name any more. He edits the field before Save, or renames the folder."
 > **Dev:** "He'd typed 2021 first, then picked. Does the pick overwrite it?"
 > **Domain expert:** "Never. The **Show folder pick** fills a title or year only when it's empty or still what the earlier pick put there."
+
+> **Dev:** "Mum deleted _Die Hard_ from the Movies drive. What does the next _Scan all folders_ say?"
+> **Domain expert:** "The **Missing check** finds its **Missing video** and the review lists it under _Missing_: _Its video, die-hard.mkv, is no longer on disk._ Nothing has left the library yet."
+> **Dev:** "And if she only moved it into another folder?"
+> **Domain expert:** "Then the run **Found again** it before the check ran, and it isn't listed. The check runs last."
+> **Dev:** "She presses _Take out of library_. Is the file recorded as a Left-out video, like a Delete?"
+> **Domain expert:** "No. **Take out** leaves nothing out: if she puts the file back, the next scan brings it in. And an empty `Heat/` folder she made is an **Off-layout folder**: listed, skipped, never taken out."
 
 ## Flagged ambiguities
 
@@ -3084,3 +3109,5 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Folder key" is not "Title (Year)" (new):** since log 64 a **Folder key** is the Title folder's own name, with or without a year, and the title's year lives in the sheet's `Year` cell. Never say a folder "has no key" or "isn't in the layout" for its name, and never call `Season 01` "the right name": it is only FamilyFlix's own spelling where the household has none.
 - **"Row view" includes the grid (new):** the step's name covers both values, so **All**, one grid, is a Row view too. Say **Row view** for the choice, **All** or **By genre** for its values; never "grid view" or "layout", which `layouts/` already answers to, nor "mode", which the **Genre page** and the **Import mode** own.
 - **"Show folder title" is not a Title guess (new):** since log 65 a picked folder's title is its **Folder key**'s, read as a scan reads it. Say the read's **title** and **year**; keep **Title guess** for `titleFromFilename` on a video's file name.
+- **"Take out" is not "Delete" or "Remove" (new):** a **Take out** settles a `missing` Problem from the review and records no **Left-out video**; a **Delete** is the Edit menu's, from a title's page or Manage library, and leaves its videos out; **Remove** takes a **File slot** off the form. Never call the importer's internal `takeOff` (a Problem leaving the list) a Take out.
+- **"Off-layout folder" is not a "Left-out video" (new):** a folder the layout turns away is listed every run until fixed on disk; a **Left-out video** is a file the household deleted from the library and FamilyFlix passes in silence. The code's `LeftOutReason` predates the term; say **Off-layout folder** in prose.

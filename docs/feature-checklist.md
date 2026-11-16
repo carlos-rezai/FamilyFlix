@@ -693,16 +693,26 @@ form prototype's Show folder comment amended):
       untouched.
 
 Step 49 is what step 47's draft held beyond the names, split out by log 64
-Q1 (which drafted it as step 48). Not yet through a grill-me:
+Q1 (which drafted it as step 48). Settled in a grill-me on 2026-11-16
+(design log 66, the ProblemRow prototype amended):
 
 49. ⬜ **Missing videos**: a scan notices what is no longer on disk.
-    - **What was removed**: a held title whose video is no longer in the
-      folder (a **Missing video**, not an **Unreachable** folder) is listed
-      for the household to keep or take out of the library; nothing leaves on
-      its own, and nothing on disk is ever touched.
-    - **What was left out**: a folder the **Folder layout** still turns away
-      (`empty`, `mixed`) is named in the run's review, not only in the log.
-    - **Open questions for the grill-me**: whether a removal pass runs on
-      every scan; how a missing episode is drawn against a missing film;
-      whether a renamed or moved file is still **Found again** before it is
-      called removed.
+    - **The Missing check**: every run that walks Library folders (both
+      scans and a sheet import), once its imports are done, reads the held
+      titles of the folders it read; a film or episode whose
+      `playback.videoFile` answers `missing` (never `unreachable`) is a
+      **Missing video**. Running last, it lists nothing a run found again.
+    - **One soft `missing` Problem per title**: _Its video, heat.mkv, is no
+      longer on disk._, or a series' gone episodes folded into one row
+      (_S01E02, S01E03 and 2 more are no longer on disk._), with one
+      Warning line each in the log.
+    - **Take out or keep, on the row**: _Take out of library_ (or _Take out
+      3 episodes_) deletes the rows and best-effort the managed files, no
+      confirm, and records no **Left-out video**, so a file put back comes
+      back on the next scan. _Skip_ keeps it; nothing is remembered, and
+      the next scan asks again. Nothing on disk is ever touched.
+    - **Off-layout folders**: each folder the **Folder layout** turns away
+      (`empty`, `mixed`) is a hard `off-layout` Problem, its warning's
+      words as the reason, _Skip_ only; the warning line stays.
+    - **Out**: loose root videos and Doubled places stay warnings; episodes
+      are not Found again; a bulk Take out.
