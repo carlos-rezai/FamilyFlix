@@ -67,8 +67,8 @@ const sheetChoices = (
  * button. An `ambiguous` row draws the **Folder picker**, _Resolve_ kept
  * beside it, and a `no-row` row _Import as_ its guess, _Resolve_ kept the
  * same. A `differs` row has no _Resolve_: it is settled on the row, by the
- * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_.
- * Neither knows what happens next: the row draws a problem and reports a
+ * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_. A
+ * `missing` row draws _Skip_ alone. Neither knows what happens next: the row draws a problem and reports a
  * press.
  */
 export function ProblemRow({
@@ -79,6 +79,7 @@ export function ProblemRow({
   onImportAs,
 }: ProblemRowProps) {
   const differs = problem.kind === 'differs';
+  const resolvable = !differs && problem.kind !== 'missing';
   return (
     <Card>
       <Head>
@@ -87,14 +88,14 @@ export function ProblemRow({
           <Title>{problem.title}</Title>
           <Reason>{problem.reason}</Reason>
         </Text>
-        {differs ? null : (
+        {resolvable ? (
           <Button
             label="Resolve"
             variant="secondary"
             size="sm"
             to={resolveRoute(problem)}
           />
-        )}
+        ) : null}
         <Button label="Skip" variant="secondary" size="sm" onClick={onSkip} />
       </Head>
       {differs ? (

@@ -14,7 +14,7 @@ const GOLD = '#c9a86a';
 /**
  * The dot's colour by kind: `danger` for the film that is not there and cannot
  * be got without a hand — `no-folder`, `no-video`, `failed`, and the episode
- * that is `unplaced`; `accent` for
+ * that is `unplaced`, and the held film gone `missing`; `accent` for
  * `ambiguous`, a choice to make; `text-faint` for `no-row` and the soft
  * `missing-meta`, which the library can live with; and the Sync's gold for
  * `differs`, a comparison to settle on the row.
@@ -28,6 +28,7 @@ export const DOT_TONE: Record<ProblemKind, DotTone> = {
   'no-row': 'textFaint',
   'missing-meta': 'textFaint',
   differs: 'gold',
+  missing: 'danger',
 };
 
 /** The row on the surface: its head, then a face when its kind has one. */

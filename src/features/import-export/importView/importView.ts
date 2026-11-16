@@ -78,6 +78,7 @@ export interface ReviewGroup {
 const SOFT_KINDS: ReadonlySet<ProblemKind> = new Set([
   'missing-meta',
   'differs',
+  'missing',
 ]);
 
 /**
@@ -125,4 +126,5 @@ export const PROBLEM_KIND_LABELS: Readonly<Record<ProblemKind, string>> = {
   unplaced: 'Unplaced',
   'missing-meta': 'Missing details',
   differs: 'Differs',
+  missing: 'Missing',
 };

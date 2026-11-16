@@ -96,8 +96,8 @@ export interface LogLine {
 
 /**
  * The kinds of **Problem**, in the glossary's order: the hard ones — the title
- * is not in the library — and the two soft kinds, `missing-meta` and
- * `differs`, each about a title the library holds and carrying its `movieId`
+ * is not in the library — and the three soft kinds, `missing-meta`,
+ * `differs` and `missing`, each about a title the library holds and carrying its `movieId`
  * or `seriesId`.
  */
 export const PROBLEM_KINDS = [
@@ -109,6 +109,7 @@ export const PROBLEM_KINDS = [
   'unplaced',
   'missing-meta',
   'differs',
+  'missing',
 ] as const;
 
 export type ProblemKind = (typeof PROBLEM_KINDS)[number];

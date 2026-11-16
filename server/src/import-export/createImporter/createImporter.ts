@@ -25,6 +25,7 @@ import type {
 import {
   folderKeyOf,
   sameFolderKey,
+  spellFolderKey,
 } from '../../media/folderKeyOf/folderKeyOf';
 import {
   walkLibraryFolder,
@@ -604,6 +605,10 @@ const episodeLabel = (title: string, { season, episode }: ShowEpisode) =>
 /** The reason a show's **Unplaced** videos are filed with: their count. */
 const unplacedReason = (n: number): string =>
   n === 1 ? '1 episode needs a number' : `${count(n)} episodes need numbers`;
+
+/** A `missing` Problem's reason: its video's file name. */
+const missingReason = (videoPath: string): string =>
+  `Its video, ${basename(videoPath)}, is no longer on disk.`;
 
 /** A show's one `failed` row's reason: the count and the first error. */
 const failedShowReason = (n: number, first: string): string =>
@@ -2114,12 +2119,14 @@ export function createImporter({
    * a sheet, `✓ Scan complete` for a **Folder scan**. `earlier` counts the
    * titles a sheet run already imported from its unscanned folders' own
    * sheets. A cancel stops it where it is, and the run never reaches review.
-   * Reaching review marks every folder the walk `read` as scanned, in the
-   * same step.
+   * Before the completion line, the **Missing check** over the folders it
+   * `read`. Reaching review marks every folder the walk `read` as scanned, in
+   * the same step.
    */
   const importPlaced = async (
     current: ImportRun,
     placed: PlacedTitles,
+    missing: Map<string, Movie>,
     read: StoredLibraryFolder[],
     verb: 'Import' | 'Scan',
     signal: AbortSignal,
@@ -2131,6 +2138,7 @@ export function createImporter({
       return;
     }
 
+    checkMissing(current, missing, read);
     current.currentItem = '';
     log(
       current,
@@ -2142,6 +2150,41 @@ export function createImporter({
       new Date().toISOString()
     );
     current.phase = 'review';
+  };
+
+  /**
+   * The **Missing check**: each film still in the run's `missing` map (a
+   * film **Found again** has come off it) whose recorded **Library folder**
+   * the run `read`, its video asked of playback again after the imports. A
+   * `missing` answer files one `missing` Problem and one **Warning line**.
+   */
+  const checkMissing = (
+    current: ImportRun,
+    missing: Map<string, Movie>,
+    read: StoredLibraryFolder[]
+  ): void => {
+    const readIds = new Set(read.map((folder) => folder.id));
+    for (const movie of missing.values()) {
+      const source = storage.titleSource(movie.id);
+      if (source === null || !readIds.has(source.folderId)) {
+        continue;
+      }
+      if (playback.videoFile(movie).kind !== 'missing') {
+        continue;
+      }
+      file(
+        current,
+        problemOf('missing', movie.title, missingReason(movie.videoPath), {
+          movieId: movie.id,
+        }),
+        { row: null, folder: null, candidates: [] }
+      );
+      log(
+        current,
+        `⚠ ${spellFolderKey(movie.title, movie.year)} is missing its video`,
+        'warning'
+      );
+    }
   };
 
   /**
@@ -2741,6 +2784,7 @@ export function createImporter({
     await importPlaced(
       current,
       { films: matched, shows: matchedShows, foundAgain },
+      missing,
       read,
       'Import',
       signal,
@@ -2808,7 +2852,15 @@ export function createImporter({
       return;
     }
 
-    await importPlaced(current, placed, read, 'Scan', signal, genres);
+    await importPlaced(
+      current,
+      placed,
+      index.missing,
+      read,
+      'Scan',
+      signal,
+      genres
+    );
   };
 
   /** The library's held films and series, as a placing pass reads them. */
