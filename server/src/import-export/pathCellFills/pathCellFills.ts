@@ -1,17 +1,14 @@
 import { stat } from 'node:fs/promises';
-import { basename, isAbsolute, resolve } from 'node:path';
+import { basename, join, resolve } from 'node:path';
 
 import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
 import type { ShowScan } from '../numberShow/numberShow';
-import { resolvePathCell, type SheetRow } from '../readSheet/readSheet';
-
-/**
- * A path cell against the **Title folder** `dir`, by `resolvePathCell`; a
- * cell the matcher already resolved is absolute, and stands as it is.
- */
-const resolvedCell = (dir: string, cell: string): string =>
-  isAbsolute(cell) ? cell : resolvePathCell(dir, cell);
+import {
+  cellSegments,
+  resolvePathCell,
+  type SheetRow,
+} from '../readSheet/readSheet';
 
 /** Whether `path` is a file that is there. */
 async function isFile(path: string): Promise<boolean> {
@@ -23,19 +20,42 @@ async function isFile(path: string): Promise<boolean> {
 }
 
 /**
- * The file a cell names under the Title folder `dir`, when it is there and
- * the place is empty.
+ * Where a cell's file is, the first of the two places that holds it: in the
+ * **Title folder** `dir`, the row's **Folder path** `folderPath` replaced by
+ * it, then joined as written under the run's **Sheet root**; `null` when
+ * neither does. The Sheet root is only read.
+ */
+async function foundCell(
+  dir: string,
+  folderPath: string,
+  sheetRoot: string,
+  cell: string
+): Promise<string | null> {
+  for (const path of [
+    resolvePathCell(dir, folderPath, cell),
+    join(sheetRoot, ...cellSegments(cell)),
+  ]) {
+    if (await isFile(path)) {
+      return path;
+    }
+  }
+  return null;
+}
+
+/**
+ * The file a cell names, by `foundCell`, when the place is empty.
  */
 async function fill(
   found: string | null,
   dir: string,
+  folderPath: string,
+  sheetRoot: string,
   cell: string | null
 ): Promise<string | null> {
   if (found !== null || cell === null || cell === '') {
     return found;
   }
-  const path = resolvedCell(dir, cell);
-  return (await isFile(path)) ? path : null;
+  return foundCell(dir, folderPath, sheetRoot, cell);
 }
 
 /**
@@ -49,13 +69,14 @@ async function fill(
  */
 export async function filmWithCells(
   scan: FilmScan,
-  row: SheetRow
+  row: SheetRow,
+  sheetRoot: string
 ): Promise<FilmScan> {
   const held = new Set(scan.subtitles.map(({ path }) => resolve(path)));
   const subtitles = [...scan.subtitles];
   for (const cell of row.subtitles) {
-    const path = resolvedCell(scan.dir, cell);
-    if (held.has(resolve(path)) || !(await isFile(path))) {
+    const path = await foundCell(scan.dir, row.folderPath, sheetRoot, cell);
+    if (path === null || held.has(resolve(path))) {
       continue;
     }
     held.add(resolve(path));
@@ -63,8 +84,20 @@ export async function filmWithCells(
   }
   return {
     ...scan,
-    poster: await fill(scan.poster, scan.dir, row.poster),
-    backdrop: await fill(scan.backdrop, scan.dir, row.backdrop),
+    poster: await fill(
+      scan.poster,
+      scan.dir,
+      row.folderPath,
+      sheetRoot,
+      row.poster
+    ),
+    backdrop: await fill(
+      scan.backdrop,
+      scan.dir,
+      row.folderPath,
+      sheetRoot,
+      row.backdrop
+    ),
     subtitles,
   };
 }
@@ -79,7 +112,8 @@ export async function filmWithCells(
 export async function showWithCells(
   show: ShowScan,
   row: SheetRow,
-  rows: readonly SheetRow[]
+  rows: readonly SheetRow[],
+  sheetRoot: string
 ): Promise<ShowScan> {
   const rowOf = (
     type: SheetRow['type'],
@@ -99,6 +133,8 @@ export async function showWithCells(
       poster: await fill(
         season.poster,
         show.dir,
+        row.folderPath,
+        sheetRoot,
         rowOf('Season', season.number, null)?.poster ?? null
       ),
     });
@@ -110,14 +146,28 @@ export async function showWithCells(
       still: await fill(
         episode.still,
         show.dir,
+        row.folderPath,
+        sheetRoot,
         rowOf('Episode', episode.season, episode.episode)?.still ?? null
       ),
     });
   }
   return {
     ...show,
-    poster: await fill(show.poster, show.dir, row.poster),
-    backdrop: await fill(show.backdrop, show.dir, row.backdrop),
+    poster: await fill(
+      show.poster,
+      show.dir,
+      row.folderPath,
+      sheetRoot,
+      row.poster
+    ),
+    backdrop: await fill(
+      show.backdrop,
+      show.dir,
+      row.folderPath,
+      sheetRoot,
+      row.backdrop
+    ),
     seasons,
     episodes,
   };

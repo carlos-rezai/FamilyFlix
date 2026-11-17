@@ -1,6 +1,6 @@
 import { sameFolderKey } from '../../media/folderKeyOf/folderKeyOf';
 import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
-import { resolvePathCell, type SheetRow } from '../readSheet/readSheet';
+import type { SheetRow } from '../readSheet/readSheet';
 
 /** A **Match**: one **Sheet row** and the one **Source folder** that is its film. */
 export interface Match {
@@ -46,20 +46,6 @@ export const MATCH_REASON = {
   manyVideos: 'Two videos. Pick the film.',
 } as const;
 
-/** A matched row with its path cells resolved against its Title folder. */
-function resolvedRow(row: SheetRow, folder: FilmScan): SheetRow {
-  const one = (cell: string | null): string | null =>
-    cell === null ? null : resolvePathCell(folder.dir, cell);
-  return {
-    ...row,
-    video: one(row.video),
-    subtitles: row.subtitles.map((cell) => resolvePathCell(folder.dir, cell)),
-    poster: one(row.poster),
-    backdrop: one(row.backdrop),
-    still: one(row.still),
-  };
-}
-
 /**
  * The folders a row weighs: those whose name is its **Folder key**, case
  * folded. Only when no folder holds the key and the row has a year are the
@@ -87,8 +73,8 @@ function foldersFor(row: SheetRow, folders: FilmScan[]): FilmScan[] {
  * than a guess: two or more such folders (in two Library folders, or names
  * differing only by case) are `ambiguous`; none is `no-folder`; and the one
  * folder holding no video, or more than one, is `no-video` with its own two
- * reasons. A matched row's path cells come back resolved against the Library
- * folder its key matched in. A folder no row claimed, by match or as a
+ * reasons. A matched row is carried as read: its path cells are resolved by
+ * `pathCellFills`. A folder no row claimed, by match or as a
  * candidate, is `unclaimed`.
  */
 export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
@@ -130,7 +116,7 @@ export function matchRows(rows: SheetRow[], folders: FilmScan[]): MatchResult {
       continue;
     }
 
-    matched.push({ row: resolvedRow(row, folder), folder });
+    matched.push({ row, folder });
     claimed.add(folder);
   }
 

@@ -1,5 +1,5 @@
 import ExcelJS from 'exceljs';
-import { basename, dirname, extname, join } from 'node:path';
+import { extname, join } from 'node:path';
 import { Readable } from 'node:stream';
 
 import {
@@ -211,17 +211,26 @@ const NOT_FAVORITE = new Set(['no', 'false', '0']);
 const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
 
 /**
- * A **Path cell** as the file it names, resolved against `dir`, the **Title
- * folder** its row was matched to: the cell, relative with forward slashes as
- * the sheet spells it, joined to the folder's parent, its first segment
- * spelled as the folder's own name when it is the same **Folder key** (by
- * `sameFolderKey`), so an NFC cell reaches an NFD folder.
+ * A **Path cell**'s segments, a backslash read as `/`: a v0.16.1 Export wrote
+ * one between a **Folder path**'s parent and its Title folder.
  */
-export function resolvePathCell(dir: string, cell: string): string {
-  const name = basename(dir);
-  const [first, ...rest] = cell.split('/');
-  const head = sameFolderKey(first, name) ? name : first;
-  return join(dirname(dir), head, ...rest);
+export const cellSegments = (cell: string): string[] =>
+  cell.replace(/\\/g, '/').split('/');
+
+/**
+ * A **Path cell** as the file it names, resolved against `dir`, the **Title
+ * folder** its row was matched to: the cell's leading segments, its row's
+ * **Folder path** `folderPath`, replaced by the folder itself and the rest
+ * joined to it, so an NFC cell reaches an NFD folder. The cell is already
+ * contained: the **Sheet reader** read any other as blank.
+ */
+export function resolvePathCell(
+  dir: string,
+  folderPath: string,
+  cell: string
+): string {
+  const depth = folderPath.split('/').length;
+  return join(dir, ...cellSegments(cell).slice(depth));
 }
 
 /**
@@ -240,25 +249,26 @@ const CHECKED_PATHS = {
 
 /**
  * Whether a path cell stays inside its row's **Title folder**, checked
- * lexically: its first segment the row's **Folder key** (by `sameFolderKey`,
- * so another Excel's casing still reads), no segment empty, `.` or `..`,
- * none holding a backslash or a colon, and the file naming its column's kind.
+ * lexically with a backslash read as `/`: its leading segments the row's
+ * **Folder path**, each by `sameFolderKey` (so another Excel's casing still
+ * reads), no segment empty, `.` or `..`, none holding a colon, and the file
+ * naming its column's kind.
  */
 function isContained(
   cell: string,
-  folder: string,
+  folderPath: string,
   isKind: (filename: string) => boolean
 ): boolean {
-  const segments = cell.split('/');
+  const segments = cellSegments(cell);
+  const folder = folderPath.split('/');
   return (
-    segments.length > 1 &&
-    sameFolderKey(segments[0], folder) &&
+    segments.length > folder.length &&
+    folder.every((name, index) => sameFolderKey(segments[index], name)) &&
     segments.every(
       (segment) =>
         segment !== '' &&
         segment !== '.' &&
         segment !== '..' &&
-        !segment.includes('\\') &&
         !segment.includes(':')
     ) &&
     isKind(segments[segments.length - 1])
@@ -469,7 +479,7 @@ function flagCell(
  */
 function containedPaths(
   paths: string[],
-  folder: string,
+  folderPath: string,
   column: keyof typeof CHECKED_PATHS,
   report: ReportCell
 ): string[] {
@@ -478,7 +488,7 @@ function containedPaths(
     if (text === '') {
       return false;
     }
-    if (isContained(text, folder, isKind)) {
+    if (isContained(text, folderPath, isKind)) {
       return true;
     }
     report(header, text);
@@ -672,22 +682,26 @@ export async function readSheet(
       video: cellOptional(read(row, 'video')),
       subtitles: containedPaths(
         cellList(read(row, 'subtitles'), SHEET_PATH_SEPARATOR),
-        folder,
+        folderPath,
         'subtitles',
         report
       ),
       poster:
-        containedPaths([read(row, 'poster')], folder, 'poster', report)[0] ??
-        null,
+        containedPaths(
+          [read(row, 'poster')],
+          folderPath,
+          'poster',
+          report
+        )[0] ?? null,
       backdrop:
         containedPaths(
           [read(row, 'backdrop')],
-          folder,
+          folderPath,
           'backdrop',
           report
         )[0] ?? null,
       still:
-        containedPaths([read(row, 'still')], folder, 'still', report)[0] ??
+        containedPaths([read(row, 'still')], folderPath, 'still', report)[0] ??
         null,
     });
     for (const { column, text } of unread) {

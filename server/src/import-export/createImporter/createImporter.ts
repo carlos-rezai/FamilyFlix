@@ -46,6 +46,7 @@ import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { filmSourceOf, sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
 import { filmWithCells, showWithCells } from '../pathCellFills/pathCellFills';
+import { sheetRootOf } from '../sheetRootOf/sheetRootOf';
 import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
 import { heldSeriesValues, heldValues } from '../heldValues/heldValues';
 import {
@@ -2874,7 +2875,8 @@ export function createImporter({
           await showWithCells(
             show,
             match.row,
-            partRowsOf(rows, match.row.folder)
+            partRowsOf(rows, match.row.folder),
+            sheetRootOf(sheetPath)
           ),
           heldShow(held, seriesByKey, libraryFolder, show, match.row),
           episodeRowsOf(rows, match.row.folder)
@@ -2924,7 +2926,11 @@ export function createImporter({
       matched.push({
         match: {
           ...match,
-          folder: await filmWithCells(match.folder, match.row),
+          folder: await filmWithCells(
+            match.folder,
+            match.row,
+            sheetRootOf(sheetPath)
+          ),
         },
         libraryFolder,
       });
@@ -3156,6 +3162,8 @@ export function createImporter({
     if (signal.aborted) {
       return null;
     }
+    // A folder with no sheet has no path cells: its own path stands in.
+    const sheetRoot = sheet === null ? folder.path : sheetRootOf(sheet);
     // A show is matched by the film's own rule, over a scan standing for it.
     const showOf = new Map<FilmScan, ShowScan>();
     for (const show of foundShows) {
@@ -3203,7 +3211,7 @@ export function createImporter({
             {
               kind: 'movie',
               id: heldId,
-              scan: await filmWithCells(scan, row),
+              scan: await filmWithCells(scan, row, sheetRoot),
             },
             into,
             heldArtCopy(current, row.title, signal)
@@ -3243,7 +3251,7 @@ export function createImporter({
         continue;
       }
       films.push({
-        match: { row, folder: await filmWithCells(scan, row) },
+        match: { row, folder: await filmWithCells(scan, row, sheetRoot) },
         libraryFolder: folder,
       });
     }
@@ -3257,7 +3265,8 @@ export function createImporter({
           : await showWithCells(
               show,
               sheetRow,
-              partRowsOf(rows, sheetRow.folder)
+              partRowsOf(rows, sheetRow.folder),
+              sheetRoot
             ),
         heldShow(held, seriesByKey, folder, show, row),
         sheetRow === undefined ? [] : episodeRowsOf(rows, sheetRow.folder)
