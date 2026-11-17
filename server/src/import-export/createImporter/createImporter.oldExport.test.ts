@@ -13,10 +13,21 @@
 // as Library folders and the Export's sheet uploaded from its `Meta/` folder:
 // each row's **Folder path** has a parent segment, its **Folder key** is the
 // Title folder's own name, and every title is matched with no **Problem**.
-// Path cells still fill nothing in this phase.
+//
+// Phase 2 (issue #645): the re-linked folders hold the videos alone, the art
+// lying only in the Export. Each path cell is looked for in the Title folder,
+// then under the run's **Sheet root**, the Export folder holding the sheet's
+// `Meta/`: every poster, backdrop, Still, Season poster and film subtitle
+// comes back, and nothing under the Export folder is written.
 
 import { createHash } from 'node:crypto';
-import { cpSync, mkdirSync, readFileSync } from 'node:fs';
+import {
+  cpSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  statSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -59,6 +70,26 @@ interface Sandbox {
   importer: Importer;
   /** The Export's sheet, copied into the sandbox. */
   sheet: string;
+  /** The Export folder, copied into the sandbox: the run's Sheet root. */
+  exported: string;
+}
+
+/** Copy only the videos and the folders holding them: the art stays behind. */
+const videosOnly = (source: string): boolean =>
+  statSync(source).isDirectory() || source.endsWith('.mp4');
+
+/** Every file under `dir`, relative, with its bytes and its modified time. */
+function snapshot(dir: string): Record<string, string> {
+  const files: Record<string, string> = {};
+  for (const entry of readdirSync(dir, { recursive: true })) {
+    const path = join(dir, String(entry));
+    const stats = statSync(path);
+    if (stats.isFile()) {
+      files[String(entry)] =
+        `${createHash('sha256').update(readFileSync(path)).digest('hex')} ${stats.mtimeMs}`;
+    }
+  }
+  return files;
 }
 
 /**
@@ -73,11 +104,14 @@ function sandbox(): Sandbox {
   const library = join(dir, 'Library');
   const movies = join(library, 'Movies');
   const series = join(library, 'Series');
-  cpSync(join(LIBRARY_FIXTURE, 'root'), movies, { recursive: true });
+  cpSync(join(LIBRARY_FIXTURE, 'root'), movies, {
+    recursive: true,
+    filter: videosOnly,
+  });
   cpSync(
     join(SERIES_FIXTURE, 'Tidewater (2018)'),
     join(series, 'Tidewater (2018)'),
-    { recursive: true }
+    { recursive: true, filter: videosOnly }
   );
   const exported = join(dir, 'Backups', 'familyflix-collection_15-11-2026');
   cpSync(OLD_EXPORT, exported, { recursive: true });
@@ -94,7 +128,7 @@ function sandbox(): Sandbox {
   });
   storage.addLibraryFolder(movies);
   storage.addLibraryFolder(series);
-  return { storage, importer, sheet: join(exported, SHEET) };
+  return { storage, importer, sheet: join(exported, SHEET), exported };
 }
 
 /** The snapshot once the run has reached review, or a failure if it never does. */
@@ -160,5 +194,69 @@ describe('createImporter: a v0.16.1 Export over a re-linked inner folder', () =>
         .map((title) => title.sourceFolder)
         .sort()
     ).toEqual(['Amelie (2001)', 'Die Hard (1988)', 'Tidewater (2018)']);
+  });
+});
+
+describe('createImporter: a v0.16.1 Export’s art comes back from its sheet', () => {
+  it('sets every film’s poster and backdrop', async () => {
+    const box = sandbox();
+
+    await uploaded(box);
+
+    expect(
+      box.storage.listMovies({ sort: 'a-z' }).map((movie) => ({
+        title: movie.title,
+        poster: movie.posterPath !== null,
+        backdrop: movie.backdropPath !== null,
+      }))
+    ).toEqual([
+      { title: 'Amelie', poster: true, backdrop: true },
+      { title: 'Die Hard', poster: true, backdrop: true },
+    ]);
+  });
+
+  it('brings every film’s subtitle back', async () => {
+    const box = sandbox();
+
+    await uploaded(box);
+
+    expect(
+      box.storage.listMovies({ sort: 'a-z' }).map((movie) => ({
+        title: movie.title,
+        subtitles: movie.subtitles.length,
+      }))
+    ).toEqual([
+      { title: 'Amelie', subtitles: 1 },
+      { title: 'Die Hard', subtitles: 2 },
+    ]);
+  });
+
+  it('sets Tidewater’s Season poster and its first episode’s Still', async () => {
+    const box = sandbox();
+
+    await uploaded(box);
+
+    const [tidewater] = box.storage.getSeriesHome().series;
+    const detail = box.storage.getSeriesDetail(tidewater.id);
+    const [season] = detail?.seasons ?? [];
+    expect(season?.posterPath ?? null).not.toBeNull();
+    expect(
+      season?.episodes.map((episode) => [
+        episode.number,
+        episode.stillPath !== null,
+      ])
+    ).toEqual([
+      [1, true],
+      [2, false],
+    ]);
+  });
+
+  it('writes nothing under the Export folder', async () => {
+    const box = sandbox();
+    const before = snapshot(box.exported);
+
+    await uploaded(box);
+
+    expect(snapshot(box.exported)).toEqual(before);
   });
 });

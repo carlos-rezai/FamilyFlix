@@ -77,7 +77,8 @@ describe('filmWithCells: a film’s empty places', () => {
         poster: 'Heat (1995)/heat.jpg',
         backdrop: 'Heat (1995)/gone.jpg',
         subtitles: ['Heat (1995)/heat.fr.srt'],
-      })
+      }),
+      root
     );
     expect(filled.poster).toBe(join(root, 'Heat (1995)', 'heat.jpg'));
     expect(filled.backdrop).toBeNull();
@@ -98,7 +99,8 @@ describe('filmWithCells: a film’s empty places', () => {
       row({
         poster: 'Heat (1995)/heat.jpg',
         subtitles: ['Heat (1995)/heat.en.srt'],
-      })
+      }),
+      root
     );
     expect(filled.poster).toBe(scan.poster);
     expect(filled.subtitles).toEqual(scan.subtitles);
@@ -127,15 +129,20 @@ describe('showWithCells: a series’ empty places', () => {
       backdrop: null,
       seasons: [{ number: 1, poster: null }],
     };
-    const filled = await showWithCells(show, row({ type: 'Series' }), [
-      row({ type: 'Season', season: 1, poster: 'Heat (1995)/cover.jpg' }),
-      row({
-        type: 'Episode',
-        season: 1,
-        episode: 1,
-        still: 'Heat (1995)/still.jpg',
-      }),
-    ]);
+    const filled = await showWithCells(
+      show,
+      row({ type: 'Series' }),
+      [
+        row({ type: 'Season', season: 1, poster: 'Heat (1995)/cover.jpg' }),
+        row({
+          type: 'Episode',
+          season: 1,
+          episode: 1,
+          still: 'Heat (1995)/still.jpg',
+        }),
+      ],
+      root
+    );
     expect(filled.seasons[0].poster).toBe(
       join(root, 'Heat (1995)', 'cover.jpg')
     );

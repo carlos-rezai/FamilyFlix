@@ -6,9 +6,8 @@
 // `Title (Year)` spelled by the reader) and matches it to the Title folder of
 // that name, exactly and case folded: never by a fuzzy title, never by the
 // row's Title. A key no folder holds is `no-folder`; a key two Library folders
-// hold is `ambiguous`, both folders its candidates. A matched row's path
-// cells, relative to the root holding the Title folder, come back resolved
-// against the Library folder its key matched in.
+// hold is `ambiguous`, both folders its candidates. Since log 67 a matched
+// row is carried as read: its path cells are resolved by `pathCellFills`.
 
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
@@ -158,40 +157,24 @@ describe('matchRows: by Folder key', () => {
   });
 });
 
-describe('matchRows: path cells resolved against the matched Library folder', () => {
-  const cells = {
-    video: 'Heat (1995)/Heat.1995.1080p.mkv',
-    subtitles: ['Heat (1995)/Subtitles/en.srt', 'Heat (1995)/Subtitles/nl.srt'],
-    poster: 'Heat (1995)/Images/poster.jpg',
-    backdrop: 'Heat (1995)/Images/backdrop.jpg',
-  };
-
-  it('resolves every path cell against the Library folder holding the Title folder', () => {
-    const { matched } = matchRows(
-      [
-        row('Heat (1995)', 'Heat', {
-          ...cells,
-          year: 1995,
-          endYear: 1995,
-          synopsis: 'A thief and a detective.',
-        }),
+describe('matchRows: a matched row carried as read', () => {
+  it('carries every path cell as the sheet spells it', () => {
+    const read = row('Heat (1995)', 'Heat', {
+      video: 'Heat (1995)/Heat.1995.1080p.mkv',
+      subtitles: [
+        'Heat (1995)/Subtitles/en.srt',
+        'Heat (1995)/Subtitles/nl.srt',
       ],
-      [folder('Heat (1995)', SECOND)]
-    );
+      poster: 'Heat (1995)/Images/poster.jpg',
+      backdrop: 'Heat (1995)/Images/backdrop.jpg',
+      year: 1995,
+      endYear: 1995,
+      synopsis: 'A thief and a detective.',
+    });
+
+    const { matched } = matchRows([read], [folder('Heat (1995)', SECOND)]);
 
     expect(matched).toHaveLength(1);
-    expect(matched[0].row).toMatchObject({
-      title: 'Heat',
-      year: 1995,
-      synopsis: 'A thief and a detective.',
-      video: join(SECOND, 'Heat (1995)', 'Heat.1995.1080p.mkv'),
-      subtitles: [
-        join(SECOND, 'Heat (1995)', 'Subtitles', 'en.srt'),
-        join(SECOND, 'Heat (1995)', 'Subtitles', 'nl.srt'),
-      ],
-      poster: join(SECOND, 'Heat (1995)', 'Images', 'poster.jpg'),
-      backdrop: join(SECOND, 'Heat (1995)', 'Images', 'backdrop.jpg'),
-      still: null,
-    });
+    expect(matched[0].row).toEqual(read);
   });
 });

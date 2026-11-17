@@ -5,8 +5,8 @@
 //
 // The **Sheet reader** reads a path cell only when it is contained: its first
 // segment the row's **Folder key** (by `sameFolderKey`), no segment empty,
-// `.` or `..`, none holding a backslash or a colon, and the file naming its
-// column's kind. A cell that fails reads as blank and is one **Unread cell**,
+// `.` or `..`, none holding a colon, and the file naming its column's kind;
+// since log 67 a backslash reads as `/` (`readSheet.exportCells.test.ts`). A cell that fails reads as blank and is one **Unread cell**,
 // reported through `onSkip` as an `unread-cell` skip. `Video` is never
 // checked. `onBlankTitle` is gone: a titleless row is a `blank-title` skip.
 
@@ -48,7 +48,6 @@ describe('readSheet: a path cell that leaves its Title folder', () => {
     ['holds an empty segment', 'Heat (1995)//poster.jpg'],
     ['holds a . segment', 'Heat (1995)/./poster.jpg'],
     ['holds a .. segment', 'Heat (1995)/../Heat (1995)/poster.jpg'],
-    ['holds a backslash', 'Heat (1995)/art\\poster.jpg'],
     ['holds a colon', 'Heat (1995)/C:poster.jpg'],
   ])(
     'reads a Poster cell that %s as blank, one Unread cell',

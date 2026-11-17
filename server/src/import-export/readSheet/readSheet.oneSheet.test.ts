@@ -355,11 +355,22 @@ describe('isTitleRow: a row that names a title', () => {
   });
 });
 
-describe('resolvePathCell: a path cell joined to its Library folder', () => {
+describe('resolvePathCell: a path cell joined to its Title folder', () => {
+  it('replaces a nested Folder path by the Title folder', () => {
+    expect(
+      resolvePathCell(
+        join('library', 'Amelie (2001)'),
+        'Movies/Amelie (2001)',
+        'Movies/Amelie (2001)/Images/poster.png'
+      )
+    ).toBe(join('library', 'Amelie (2001)', 'Images', 'poster.png'));
+  });
+
   it('joins a nested cell segment by segment', () => {
     expect(
       resolvePathCell(
         join('library', 'Tidewater (2018)'),
+        'Tidewater (2018)',
         'Tidewater (2018)/Season 01/Subtitles/S01E01/en.srt'
       )
     ).toBe(
@@ -378,6 +389,7 @@ describe('resolvePathCell: a path cell joined to its Library folder', () => {
     expect(
       resolvePathCell(
         join('library', 'Die Hard (1988)'),
+        'Die Hard (1988)',
         'Die Hard (1988)/Die Hard.mkv'
       )
     ).toBe(join('library', 'Die Hard (1988)', 'Die Hard.mkv'));
@@ -386,6 +398,7 @@ describe('resolvePathCell: a path cell joined to its Library folder', () => {
   it('keeps a Windows root in the Library folder', () => {
     const resolved = resolvePathCell(
       join('D:\\Movies', 'Heat (1995)'),
+      'Heat (1995)',
       'Heat (1995)/poster.jpg'
     );
 
@@ -404,6 +417,7 @@ describe('resolvePathCell: under the matched folder’s name on disk', () => {
     expect(
       resolvePathCell(
         join('library', AMELIE_NFD),
+        AMELIE_NFC,
         `${AMELIE_NFC}/Images/poster.jpg`
       )
     ).toBe(join('library', AMELIE_NFD, 'Images', 'poster.jpg'));
