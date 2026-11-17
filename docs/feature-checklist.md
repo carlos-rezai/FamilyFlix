@@ -79,6 +79,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Rescan a folder: a year and `Season 1` optional     | ✅ Done    |
 | Show folder title: a pick reads its Folder key      | ✅ Done    |
 | Missing videos: a held title whose file is gone     | ✅ Done    |
+| Export paths: a nested Export imports back whole    | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -725,3 +726,50 @@ Q1 (which drafted it as step 48). Settled in a grill-me on 2026-11-16
       are not Found again; a bulk Take out. A show with every episode gone
       listed under _Off layout_ too, and the log's _1 episode videos_, are
       issue 640.
+
+Step 50 came out of testing v0.16.1 on the real library (`D:\Movies`, its
+`Movies\` and `Series\` linked as two Library folders): an Export uploaded
+after an emptied library gave almost nothing back. To be settled in a
+grill-me:
+
+50. ⬜ **Export paths**: an Export whose titles lie a level deeper than
+    their Library folder's root still imports back whole, its art included. - **What happened**: the Export, taken from the library before the
+    folders were re-linked, wrote every `Folder` cell as
+    `Movies\Guardians of the Galaxy` and every path cell as
+    `Movies\Guardians of the Galaxy/Images/poster.jpg`: a **Source
+    folder** one segment deep, recorded against `D:\Movies` rather than
+    `D:\Movies\Movies`, its separator Windows' `\` beside the cell's `/`.
+    _Import from spreadsheet_ with that sheet and both Library folders
+    matched only _Guardians of the Galaxy_; nearly every other row was a
+    `no-folder` **Problem**, and no title came back with its poster. - **Bug 1, the Folder key never matches**: a Source folder is stored
+    as `path.relative` answers it (`placeTitleFolder`, `placeFilmFolder`,
+    `createImporter`'s show placing), native separators and all, and the
+    Export writes it verbatim (`exportRows`' `titleFolderOf`).
+    `matchRows`' `foldersFor` compares the scanned **Title folder**'s own
+    name (`Guardians of the Galaxy`) against the whole cell, so a key with
+    a segment before it never matches. The bare-title fallback, only for a
+    row with a year, saves a title whose folder is spelled exactly as its
+    title and no other (`Vol 2` misses `Vol. 2/`, `Rogue One A Star Wars
+Story` misses its `(2016)` folder). - **Bug 2, the art is never reached**: the Export's path cells name its
+    own copies, relative to the **Export folder**, but `pathCellFills`
+    resolves them against the Title folder in the Library folder, where
+    nothing lies, so a sheet upload fills no poster, backdrop or Still.
+    Copying the Export's folders over a Library folder, the round trip's
+    other road, lands them a level too deep
+    (`D:\Movies\Movies\Movies\…`). - **Seen beside them, by design today**: the household's posters lie
+    loose in each Title folder (`Guardians of the Galaxy\poster.jpg`),
+    and the **Layout read** takes art only from `Images/`, so a scan
+    reads none of them whatever the sheet says. Whether a loose
+    `poster`/`backdrop` beside the video counts is a spec change for the
+    grill-me, not a bug fix. - **A side effect to look at**: a `no-folder` row resolved by picking
+    its video in the resolve form uploads the file, so it is copied into
+    the **Managed media directory** even in a Link run (_Guardians of the
+    Galaxy Vol 2_ came back with no Library folder). - **The goal**: the **Export round trip** holds for any library shape.
+    Source folders and every sheet path are written with `/` on every
+    platform; a row's `Folder` cell finds its Title folder whether it
+    names the folder alone or the folder under a parent segment; an
+    Export's art comes back from a sheet uploaded out of its `Meta/`
+    folder (resolved against the Export folder) and from its folders
+    copied over the Library folder; and an emptied library, re-linked and
+    fed its own Export, returns every title with no Problem and every
+    poster set.
