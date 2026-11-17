@@ -381,19 +381,22 @@ const OFF_LAYOUT_REASON: Record<LeftOutReason, string> = {
   mixed: 'Holds loose videos and Season folders.',
 };
 
-/** A `missing` film's _Take out_ press, in the row's own words. */
-const TAKE_OUT_FILM = 'Take out of library';
+/**
+ * A `missing` title's _Take out_ press, in the row's own words: a film's, and
+ * a show's with every episode gone.
+ */
+const TAKE_OUT_TITLE = 'Take out of library';
 
 /**
- * A `missing` show's _Take out_ press: the whole show with every episode
- * gone, else its count of gone episodes.
+ * The words of a `missing` show's _Take out_ press: the whole show with every
+ * episode gone, else its count of gone episodes.
  */
-const takeOutShow = (gone: number, total: number): string =>
+const takeOutWords = (gone: number, total: number): string =>
   gone === total
-    ? TAKE_OUT_FILM
+    ? TAKE_OUT_TITLE
     : gone === 1
       ? 'Take out 1 episode'
-      : `Take out ${gone} episodes`;
+      : `Take out ${count(gone)} episodes`;
 
 /**
  * A **Problem** as the snapshot lists it, under an id of its own — and, for
@@ -2299,7 +2302,7 @@ export function createImporter({
           ...problemOf('missing', movie.title, missingReason(movie.videoPath), {
             movieId: movie.id,
           }),
-          takeOut: TAKE_OUT_FILM,
+          takeOut: TAKE_OUT_TITLE,
         },
         { row: null, folder: null, candidates: [] }
       );
@@ -2333,7 +2336,7 @@ export function createImporter({
             missingEpisodesReason(gone, episodes.length),
             { seriesId: series.id }
           ),
-          takeOut: takeOutShow(gone.length, episodes.length),
+          takeOut: takeOutWords(gone.length, episodes.length),
         },
         {
           row: null,
