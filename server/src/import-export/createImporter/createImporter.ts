@@ -2218,6 +2218,24 @@ export function createImporter({
   };
 
   /**
+   * A **Take out** of a whole title: its recorded **Media folder** read
+   * first, then its rows deleted, then the folder removed best-effort. The
+   * movie and series `DELETE` routes' step, without their `leaveOut`, so a
+   * put-back file is imported by the next scan (log 66 Q9).
+   */
+  const takeOutTitle = (kind: 'movie' | 'series', id: string): void => {
+    const folder = storage.mediaFolderOf(kind, id);
+    if (kind === 'movie') {
+      storage.deleteMovie(id);
+    } else {
+      storage.deleteSeries(id);
+    }
+    if (folder !== null) {
+      media.removeTitleFolder(folder);
+    }
+  };
+
+  /**
    * A `missing` show's _Take out_: its recorded gone episodes asked of
    * playback again, so one whose file came back is kept. With every held
    * episode still gone, the show goes as the series Delete does; else only
@@ -2239,11 +2257,7 @@ export function createImporter({
       return;
     }
     if (gone.length === held.length) {
-      const folder = storage.mediaFolderOf('series', seriesId);
-      storage.deleteSeries(seriesId);
-      if (folder !== null) {
-        media.removeTitleFolder(folder);
-      }
+      takeOutTitle('series', seriesId);
       return;
     }
     for (const path of storage.removeEpisodes(
@@ -3379,11 +3393,7 @@ export function createImporter({
         return false;
       }
       if (storage.getMovie(listed.movieId) !== null) {
-        const folder = storage.mediaFolderOf('movie', listed.movieId);
-        storage.deleteMovie(listed.movieId);
-        if (folder !== null) {
-          media.removeTitleFolder(folder);
-        }
+        takeOutTitle('movie', listed.movieId);
       }
       return takeOff(id);
     },
