@@ -78,7 +78,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Row view: genre rows or one grid, Movies and Series | ✅ Done    |
 | Rescan a folder: a year and `Season 1` optional     | ✅ Done    |
 | Show folder title: a pick reads its Folder key      | ✅ Done    |
-| Missing videos: a held title whose file is gone     | ⬜ Planned |
+| Missing videos: a held title whose file is gone     | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -696,8 +696,12 @@ Step 49 is what step 47's draft held beyond the names, split out by log 64
 Q1 (which drafted it as step 48). Settled in a grill-me on 2026-11-16
 (design log 66, the ProblemRow prototype amended):
 
-49. 🔜 **Missing videos**: a scan notices what is no longer on disk.
+49. ✅ **Missing videos**: a scan notices what is no longer on disk.
     Built in issues 634 to 639; the walk ran in the shell on the dev library.
+    The closing round (issue 641) gave the series write one rule for the
+    paths a removal lets go, gave Take out one named step per title shape
+    over the Delete's own, and split the Missing check into its film and
+    show passes.
     - **The Missing check**: every run that walks Library folders (both
       scans and a sheet import), once its imports are done, reads the held
       titles of the folders it read; a film or episode whose
@@ -711,12 +715,13 @@ Q1 (which drafted it as step 48). Settled in a grill-me on 2026-11-16
       title appears once.
     - **Take out or keep, on the row**: _Take out of library_ (or _Take out
       3 episodes_) deletes the rows (the whole show once every episode is
-      gone) and best-effort the managed files, no
-      confirm, and records no **Left-out video**, so a file put back comes
-      back on the next scan. _Skip_ keeps it; nothing is remembered, and
+      gone) and best-effort the managed files, no confirm, and records no
+      **Left-out video**, so a file put back comes back on the next scan. _Skip_ keeps it; nothing is remembered, and
       the next scan asks again. Nothing on disk is ever touched.
     - **Off-layout folders**: each folder the **Folder layout** turns away
       (`empty`, `mixed`) is a hard `off-layout` Problem, its warning's
       words as the reason, _Skip_ only; the warning line stays.
     - **Out**: loose root videos and Doubled places stay warnings; episodes
-      are not Found again; a bulk Take out.
+      are not Found again; a bulk Take out. A show with every episode gone
+      listed under _Off layout_ too, and the log's _1 episode videos_, are
+      issue 640.

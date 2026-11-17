@@ -104,6 +104,12 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       year and no `isn't named` line. Sync Death Note: its poster lands in
       `Death Note/Season 1/Images/` and no `Season 01/` appears. A second
       scan adds nothing.
+- [ ] Missing videos: on a sandbox Library folder holding a copy of the dev
+      library, delete one film's video and one episode's, and make an empty
+      `Heat/`. _Scan all folders_ lists the film and the show under
+      _Missing_, and `Heat` under _Off layout_. _Take out of library_ and
+      _Take out 1 episode_ settle their rows, and the grid loses the film;
+      the original files are untouched.
 - [ ] The Media directory refusal: on Settings → Library folders, type
       `%APPDATA%\FamilyFlix\media` and _Add_: it is refused with _That folder
       overlaps where FamilyFlix keeps its own copies. Choose another one._,
