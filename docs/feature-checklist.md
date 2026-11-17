@@ -696,7 +696,8 @@ Step 49 is what step 47's draft held beyond the names, split out by log 64
 Q1 (which drafted it as step 48). Settled in a grill-me on 2026-11-16
 (design log 66, the ProblemRow prototype amended):
 
-49. ⬜ **Missing videos**: a scan notices what is no longer on disk.
+49. 🔜 **Missing videos**: a scan notices what is no longer on disk.
+    Built in issues 634 to 639; the walk ran in the shell on the dev library.
     - **The Missing check**: every run that walks Library folders (both
       scans and a sheet import), once its imports are done, reads the held
       titles of the folders it read; a film or episode whose
@@ -705,9 +706,12 @@ Q1 (which drafted it as step 48). Settled in a grill-me on 2026-11-16
     - **One soft `missing` Problem per title**: _Its video, heat.mkv, is no
       longer on disk._, or a series' gone episodes folded into one row
       (_S01E02, S01E03 and 2 more are no longer on disk._), with one
-      Warning line each in the log.
+      Warning line each in the log. A gone film's Title folder, left
+      holding only its art, is not listed again under _Off layout_: a gone
+      title appears once.
     - **Take out or keep, on the row**: _Take out of library_ (or _Take out
-      3 episodes_) deletes the rows and best-effort the managed files, no
+      3 episodes_) deletes the rows (the whole show once every episode is
+      gone) and best-effort the managed files, no
       confirm, and records no **Left-out video**, so a file put back comes
       back on the next scan. _Skip_ keeps it; nothing is remembered, and
       the next scan asks again. Nothing on disk is ever touched.

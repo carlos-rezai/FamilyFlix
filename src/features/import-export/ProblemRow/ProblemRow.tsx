@@ -70,10 +70,11 @@ const sheetChoices = (
  * beside it, and a `no-row` row _Import as_ its guess, _Resolve_ kept the
  * same. A `differs` row has no _Resolve_: it is settled on the row, by the
  * _Yours | Spreadsheet_ diff, whose _Keep all mine_ is the row's _Skip_. A
- * `missing` row draws its `takeOut` words as a button beside _Skip_, pressed
- * with no confirm. Neither knows what happens next: the row draws a problem and reports a
- * press.
- * An `off-layout` row is fixed only on disk, so it draws _Skip_ alone.
+ * `missing` row, a film or a show's gone episodes, has no _Resolve_: it
+ * draws its `takeOut` words (_Take out of library_, _Take out 1 episode_) as
+ * a button beside _Skip_, pressed with no confirm. An `off-layout` row is
+ * fixed only on disk, so it draws _Skip_ alone. None knows what happens
+ * next: the row draws a problem and reports a press.
  */
 export function ProblemRow({
   problem,

@@ -385,6 +385,41 @@ async function missingDieHard(box: Sandbox) {
 const problemIds = (importer: Importer): string[] =>
   (importer.current()?.problems ?? []).map((problem) => problem.id);
 
+describe('createImporter: the Missing check over a folder left with its art', () => {
+  // Issue #639's walk: Die Hard's video deleted leaves its Title folder
+  // holding only Images/ and Subtitles/, a folder the walk turns away.
+  const kindsAndTitles = (run: ImportRun): string[] =>
+    run.problems.map((problem) => `${problem.kind} ${problem.title}`);
+
+  it('lists a missing film once, under Missing, not again under Off layout', async () => {
+    const box = sandbox();
+    await scanOnce(box);
+    deleteVideo(box.films, DIE_HARD, DIE_HARD_FILE);
+
+    const run = await scanOnce(box);
+
+    expect(kindsAndTitles(run)).toEqual(['missing Die Hard']);
+    expect(run.log.map((line) => line.text)).toContain(
+      `⚠ ${DIE_HARD} holds no video or Season folder, left out`
+    );
+  });
+
+  it('still lists the folder a film Found again left behind', async () => {
+    const box = sandbox();
+    await scanOnce(box);
+    const moved = join(box.films.path, 'Die Hard Collection (1988)');
+    mkdirSync(moved);
+    renameSync(
+      join(box.films.path, DIE_HARD, DIE_HARD_FILE),
+      join(moved, DIE_HARD_FILE)
+    );
+
+    const run = await scanOnce(box);
+
+    expect(kindsAndTitles(run)).toEqual([`off-layout ${DIE_HARD}`]);
+  });
+});
+
 describe('createImporter: takeOutMissing on a missing film', () => {
   it('answers true, takes the Problem off and the film out of the library', async () => {
     const box = sandbox();

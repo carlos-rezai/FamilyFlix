@@ -11,6 +11,66 @@ Newest entry first.
 
 ---
 
+## 2026-11-17: Missing videos, the build (issues 634 to 639)
+
+Five slices run by `issue-loop`, each a RED and a GREEN commit (634 to 638),
+and this walk and documents slice (639), which carries the one gap the walk
+found. **12357 tests pass across 825 files** (one skipped); `tsc -b --force`
+is clean. Step 49 stays 🔜 until the refactor.
+
+### What shipped
+
+- **A gone film is listed** (634). The **Missing check** runs last in every
+  run that walks Library folders, over the held titles of the folders the
+  run read: a film whose video `playback.videoFile` answers `missing` (never
+  `unreachable`) files one soft `missing` **Problem** and one Warning line.
+  A film **Found again** in the run is not missing.
+- **Take out a film** (635). _Take out of library_ on the row deletes the
+  film's rows and best-effort its Media folder, no confirm, and records no
+  **Left-out video**, so a file put back is imported by the next scan.
+- **Gone episodes, one row per show** (636). A show's gone episodes fold
+  into one Problem, _S01E02 is no longer on disk._, with one Warning line.
+- **Take out a show or its episodes** (637). The press takes out only the
+  gone episodes, checked again, or the whole show when every episode is
+  gone; its words are _Take out 1 episode_, _Take out N episodes_ or _Take
+  out of library_.
+- **Off-layout folders are Problems** (638). Each root folder the walk turns
+  away (`empty`, `mixed`) is a hard `off-layout` Problem, _Skip_ only; the
+  warning line stays.
+- **The walk** (639). `createImporter.missingWalk.test` puts the two films
+  and the two shows in one Library folder and proves log 66 end to end: Die
+  Hard's video deleted is listed, taken out, put back and imported again;
+  one Tidewater episode deleted is listed once and taken out alone, Harbor &
+  Vine untouched; an empty `Heat/` is listed under _Off layout_ scan after
+  scan.
+
+### Judgement calls worth knowing
+
+- **A gone film was listed twice** (fixed in 639). Deleting a film's video
+  leaves its Title folder holding only `Images/` and `Subtitles/`, which the
+  walk turns away as `empty`; the run filed both an `off-layout` Problem and
+  the `missing` one for the same title. An off-layout Problem now carries its
+  folder, and the Missing check takes it off when the folder is a listed
+  title's own. The Layout warning line stays, as for any folder turned away.
+  A film that was moved and Found again elsewhere still leaves its old folder
+  listed under _Off layout_, since nothing is missing.
+- **The shell walk ran on a sandbox copy**, as log 64's did: `electron:start`
+  shape (`FAMILYFLIX_SHELL_PROD=1`) with `FAMILYFLIX_DB_PATH` and
+  `FAMILYFLIX_MEDIA_PATH` in a scratch folder and `--remote-debugging-port`,
+  driven over the DevTools MCP; the Library folder (both fixtures in one
+  root) listed through `POST /api/library-folders`. The first _Scan all
+  folders_ imported 4 titles, 0 Problems. With Die Hard's video moved away,
+  `Tidewater.S01E02` deleted and an empty `Heat/` made, the second listed
+  _Off layout 1_ (Heat) and _Missing 2_ (Die Hard once, Tidewater's S01E02);
+  each press settled its row, leaving Amelie and Tidewater with S01E01. With
+  the video put back, the third scan imported Die Hard and listed Heat again.
+
+### Follow-ups for the refactor
+
+None found by the walk.
+
+---
+
 ## 2026-11-16: Show folder title, the build and the refactor (issues 629 to 632)
 
 Nine commits against `docs/refactor-plans/65-show-folder-title-refactor.md`,

@@ -1315,6 +1315,7 @@ the **Folder layout** turns away in its review. The ProblemRow prototype
 - A session draws at most one **Start-up splash**, in the shell only, and never a **Skeleton** and a **Logo loader** for the same wait.
 - A run's **Missing check** reads only the held titles of the **Library folders** it read, so _Scan new folders_ never lists a title of a folder it did not walk, and an **Unreachable** folder's titles are never missing (log 66).
 - A held title has at most one `missing` **Problem** per run, however many of its episodes are gone; **Take out** removes exactly what is missing, the whole title only when nothing of it is left (log 66).
+- A gone title appears once: a film's Title folder left holding only its art is turned away by the walk, but its `missing` **Problem** stands in for the **Off-layout folder** one (log 66, found by the walk).
 - A **Library folder** is a **New folder** until a run that walked it reaches review, by either start; a removed and re-added folder is new again. **Bring back** leaves its mark alone (log 54).
 - An import run's _Finish_, with the TMDB box ticked, opens one **Sync** in the **Just what was added** scope, bounded below by that run's `startedAt` and above by nothing (log 54).
 - A window session plays at most one **Welcome splash**, on its **Cold start**, in the place of the **Start-up splash**'s loader, which a **Slow start** alone draws (issue 509; log 55 had it after the splash, never instead).

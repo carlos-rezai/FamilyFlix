@@ -95,8 +95,13 @@ export interface ImportReviewProps {
  * video bytes, so it can reach review inside one poll and the Running step is
  * never seen; this is where its lines are read.
  *
- * The step draws the run it is handed and reports a press — _Skip_ and
- * _Apply choices_ name the problem's id — and never removes a row itself: the
+ * The **Kind filter**'s chips include _Off layout_ and _Missing_ once a run
+ * files them: a folder the walk turned away, and a held title whose video is
+ * no longer on disk, one row per film and one per show.
+ *
+ * The step draws the run it is handed and reports a press (_Skip_, _Apply
+ * choices_ and _Take out_ name the problem's id), and never removes a row
+ * itself: the
  * **Run hook** does, and the next `run` shows it.
  */
 export function ImportReview({

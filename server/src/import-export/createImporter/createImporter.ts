@@ -14,6 +14,7 @@ import type {
   HeldTitle,
   LibraryStorage,
   StoredLibraryFolder,
+  TitleSource,
 } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
@@ -426,6 +427,8 @@ interface ProblemSource {
   candidates: FilmScan[];
   /** A `missing` show's alone: the episodes the **Missing check** found gone. */
   gone?: string[];
+  /** An `off-layout` Problem's alone: the Title folder the walk turned away. */
+  dir?: string;
 }
 
 /** A **Sheet row** as the detail carries it: the columns it has, and no nulls. */
@@ -2174,7 +2177,8 @@ export function createImporter({
    * titles a sheet run already imported from its unscanned folders' own
    * sheets. A cancel stops it where it is, and the run never reaches review.
    * Before the completion line, the **Missing check** over the folders it
-   * `read`. Reaching review marks every folder the walk `read` as scanned, in
+   * `read`, so the line's count of those needing attention includes each
+   * `missing` film and show. Reaching review marks every folder the walk `read` as scanned, in
    * the same step.
    */
   const importPlaced = async (
@@ -2250,21 +2254,45 @@ export function createImporter({
    * `missing` answer files one `missing` Problem and one **Warning line**.
    * Then each held show of a folder the run `read`: its episodes whose videos
    * answer `missing` fold into one Problem and one Warning line per show.
+   * A listed title's own Title folder, turned away by the walk because only
+   * its art is left, is not listed again under `off-layout`: a gone title
+   * appears once.
    */
   const checkMissing = (
     current: ImportRun,
     missing: Map<string, Movie>,
     read: StoredLibraryFolder[]
   ): void => {
-    const readIds = new Set(read.map((folder) => folder.id));
+    const readPaths = new Map(read.map((folder) => [folder.id, folder.path]));
+    /** Take the `off-layout` Problem off a listed title's own folder. */
+    const listedOnce = (source: TitleSource): void => {
+      const root = readPaths.get(source.folderId);
+      if (root === undefined) {
+        return;
+      }
+      const dir = resolve(root, source.sourceFolder);
+      const at = current.problems.findIndex((problem) => {
+        const off = sources.get(problem.id)?.dir;
+        return (
+          problem.kind === 'off-layout' &&
+          off !== undefined &&
+          resolve(off) === dir
+        );
+      });
+      if (at !== -1) {
+        const [gone] = current.problems.splice(at, 1);
+        sources.delete(gone?.id ?? '');
+      }
+    };
     for (const movie of missing.values()) {
       const source = storage.titleSource(movie.id);
-      if (source === null || !readIds.has(source.folderId)) {
+      if (source === null || !readPaths.has(source.folderId)) {
         continue;
       }
       if (playback.videoFile(movie).kind !== 'missing') {
         continue;
       }
+      listedOnce(source);
       file(
         current,
         {
@@ -2283,7 +2311,7 @@ export function createImporter({
     }
     for (const series of storage.getSeriesHome().series) {
       const source = storage.titleSource(series.id);
-      if (source === null || !readIds.has(source.folderId)) {
+      if (source === null || !readPaths.has(source.folderId)) {
         continue;
       }
       const episodes = storage.listEpisodes(series.id);
@@ -2461,7 +2489,7 @@ export function createImporter({
           file(
             current,
             problemOf('off-layout', off.name, OFF_LAYOUT_REASON[off.reason]),
-            { row: null, folder: null, candidates: [] }
+            { row: null, folder: null, candidates: [], dir: off.dir }
           );
         }
         titles = walk.titles;

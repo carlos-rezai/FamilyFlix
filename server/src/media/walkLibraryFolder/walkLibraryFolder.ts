@@ -19,7 +19,8 @@ export type WalkedTitle = FilmFolderScan | SeriesFolderScan;
 
 /**
  * What a walk of one **Library folder** answers: the **Title folders** read,
- * each **Layout warning**'s text, and the `Meta/` sheet's path, or `null`.
+ * each **Layout warning**'s text, each **Off-layout folder** the walk turned
+ * away, and the `Meta/` sheet's path, or `null`.
  */
 export interface LayoutWalk {
   titles: WalkedTitle[];
@@ -123,7 +124,8 @@ async function sheetIn(root: string): Promise<string | null> {
  * are read, each folder by `readTitleFolder`, a **Title folder** whatever its
  * name (`Heat` as well as `Heat (1995)`): no folder is ever warned about its
  * name or its missing year. A folder left out of the layout (`empty`,
- * `mixed`) is one **Layout warning**, and the root's loose videos one line
+ * `mixed`) is one **Layout warning** and one `offLayout` entry, which the
+ * importer files as an `off-layout` **Problem**; the root's loose videos one line
  * for the whole folder. Each **Doubled place** a Title folder's read reports,
  * a doubled season (`Death Note holds 2 Season 1 folders, Season 01 read`)
  * among them, is one Layout warning too. `Meta/`, an **Export folder** (a

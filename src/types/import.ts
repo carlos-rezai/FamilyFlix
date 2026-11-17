@@ -95,10 +95,11 @@ export interface LogLine {
 }
 
 /**
- * The kinds of **Problem**, in the glossary's order: the hard ones — the title
- * is not in the library — and the three soft kinds, `missing-meta`,
- * `differs` and `missing`, each about a title the library holds and carrying its `movieId`
- * or `seriesId`.
+ * The kinds of **Problem**, in the glossary's order: the hard ones, whose
+ * title is not in the library (`off-layout` among them: a root folder the walk
+ * turned away, fixed only on disk), and the three soft kinds, `missing-meta`,
+ * `differs` and `missing`, each about a title the library holds and carrying
+ * its `movieId` or `seriesId`.
  */
 export const PROBLEM_KINDS = [
   'no-folder',
@@ -132,11 +133,12 @@ export interface ImportProblem {
   kind: ProblemKind;
   title: string;
   reason: string;
-  /** Set for the soft kind: the movie already in the library. */
+  /** Set on a soft kind about a film: the movie already in the library. */
   movieId?: string;
   /**
    * Set on an `unplaced` Problem whose show the library holds: the series a
-   * _Resolve_ joins.
+   * _Resolve_ joins; and on a show's `missing` Problem, the series its
+   * gone episodes belong to.
    */
   seriesId?: string;
   /** Set on a `differs` Problem: its **Sheet differences**, in field order. */
@@ -149,7 +151,11 @@ export interface ImportProblem {
    * _Import as_ imports it under.
    */
   guess?: string;
-  /** Set on a `missing` Problem: the press's words, _Take out of library_. */
+  /**
+   * Set on a `missing` Problem: the press's words, _Take out of library_ for
+   * a film or a show whose every episode is gone, else _Take out 1 episode_
+   * or _Take out N episodes_.
+   */
   takeOut?: string;
 }
 
