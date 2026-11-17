@@ -6,7 +6,7 @@
   },
   "linux": {
     "version": "9.0.2",
-    "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-11-03-12-50/ffmpeg-n9.0.2-45-g1e65c6cd5d-linux64-gpl-9.0.tar.xz",
-    "sha256": "1e541f07bff565a18d952e71a3fb7efa1c672f8a5f25a0a950e75957f4f07eee"
+    "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-31-12-59/ffmpeg-n9.0.2-39-g7adfbe40dc-linux64-gpl-9.0.tar.xz",
+    "sha256": "73e29a56974ae5a651133a04584c7483b21afe941e17dc91d79814a758b608d3"
   }
 }
