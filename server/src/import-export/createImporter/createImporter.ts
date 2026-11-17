@@ -14,7 +14,6 @@ import type {
   HeldTitle,
   LibraryStorage,
   StoredLibraryFolder,
-  TitleSource,
 } from '../../library';
 import type { Media } from '../../media/createMedia/createMedia';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
@@ -2295,35 +2294,51 @@ export function createImporter({
     read: StoredLibraryFolder[]
   ): void => {
     const readPaths = new Map(read.map((folder) => [folder.id, folder.path]));
-    /** Take the `off-layout` Problem off a listed title's own folder. */
-    const listedOnce = (source: TitleSource): void => {
-      const root = readPaths.get(source.folderId);
-      if (root === undefined) {
-        return;
-      }
-      const dir = resolve(root, source.sourceFolder);
-      const at = current.problems.findIndex((problem) => {
-        const off = sources.get(problem.id)?.dir;
-        return (
-          problem.kind === 'off-layout' &&
-          off !== undefined &&
-          resolve(off) === dir
-        );
-      });
-      if (at !== -1) {
-        const [gone] = current.problems.splice(at, 1);
-        sources.delete(gone?.id ?? '');
-      }
-    };
+    checkMissingFilms(current, missing, readPaths);
+    checkMissingShows(current, readPaths);
+  };
+
+  /**
+   * Take the `off-layout` Problem filed for the folder at `dir` off
+   * `current`, if there is one, and its source with it: a listed title's own
+   * folder, so a gone title appears once.
+   */
+  const dropOffLayoutAt = (current: ImportRun, dir: string): void => {
+    const at = current.problems.findIndex((problem) => {
+      const off = sources.get(problem.id)?.dir;
+      return (
+        problem.kind === 'off-layout' &&
+        off !== undefined &&
+        resolve(off) === dir
+      );
+    });
+    if (at !== -1) {
+      const [gone] = current.problems.splice(at, 1);
+      sources.delete(gone?.id ?? '');
+    }
+  };
+
+  /**
+   * The **Missing check**'s films: each still in `missing` whose recorded
+   * **Library folder** is in `readPaths` and whose video playback answers
+   * `missing` files one `missing` Problem and one **Warning line**, in place
+   * of its own folder's `off-layout` one.
+   */
+  const checkMissingFilms = (
+    current: ImportRun,
+    missing: Map<string, Movie>,
+    readPaths: ReadonlyMap<string, string>
+  ): void => {
     for (const movie of missing.values()) {
       const source = storage.titleSource(movie.id);
-      if (source === null || !readPaths.has(source.folderId)) {
+      const root = source === null ? undefined : readPaths.get(source.folderId);
+      if (source === null || root === undefined) {
         continue;
       }
       if (playback.videoFile(movie).kind !== 'missing') {
         continue;
       }
-      listedOnce(source);
+      dropOffLayoutAt(current, resolve(root, source.sourceFolder));
       file(
         current,
         {
@@ -2340,6 +2355,17 @@ export function createImporter({
         'warning'
       );
     }
+  };
+
+  /**
+   * The **Missing check**'s shows: each held show of a folder in
+   * `readPaths` with episodes whose videos answer `missing` files one
+   * `missing` Problem and one **Warning line**, however many are gone.
+   */
+  const checkMissingShows = (
+    current: ImportRun,
+    readPaths: ReadonlyMap<string, string>
+  ): void => {
     for (const series of storage.getSeriesHome().series) {
       const source = storage.titleSource(series.id);
       if (source === null || !readPaths.has(source.folderId)) {
