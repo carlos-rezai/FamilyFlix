@@ -125,12 +125,12 @@ async function sheetIn(root: string): Promise<string | null> {
  * name (`Heat` as well as `Heat (1995)`): no folder is ever warned about its
  * name or its missing year. A folder left out of the layout (`empty`,
  * `mixed`) is one **Layout warning** and one `offLayout` entry, which the
- * importer files as an `off-layout` **Problem**; the root's loose videos one line
- * for the whole folder. Each **Doubled place** a Title folder's read reports,
- * a doubled season (`Death Note holds 2 Season 1 folders, Season 01 read`)
- * among them, is one Layout warning too. `Meta/`, an **Export folder** (a
- * folder holding `Meta/`) and system folders pass in silence; nothing else
- * inside a Title folder warns.
+ * importer files as an `off-layout` **Problem**; the root's loose videos one
+ * line for the whole folder. Each **Doubled place** a Title folder's read
+ * reports, a doubled season (`Death Note holds 2 Season 1 folders, Season 01
+ * read`) among them, is one Layout warning too. `Meta/`, an **Export folder**
+ * (a folder holding `Meta/`) and system folders pass in silence; nothing
+ * else inside a Title folder warns.
  *
  * `onFound` is told of each Title folder as it is read. A Title folder that
  * cannot be read is told to `onUnreadable` and skipped; the root itself is

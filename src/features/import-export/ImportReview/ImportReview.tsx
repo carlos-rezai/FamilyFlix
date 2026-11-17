@@ -101,8 +101,7 @@ export interface ImportReviewProps {
  *
  * The step draws the run it is handed and reports a press (_Skip_, _Apply
  * choices_ and _Take out_ name the problem's id), and never removes a row
- * itself: the
- * **Run hook** does, and the next `run` shows it.
+ * itself: the **Run hook** does, and the next `run` shows it.
  */
 export function ImportReview({
   run,

@@ -2184,8 +2184,8 @@ export function createImporter({
    * sheets. A cancel stops it where it is, and the run never reaches review.
    * Before the completion line, the **Missing check** over the folders it
    * `read`, so the line's count of those needing attention includes each
-   * `missing` film and show. Reaching review marks every folder the walk `read` as scanned, in
-   * the same step.
+   * `missing` film and show. Reaching review marks every folder the walk
+   * `read` as scanned, in the same step.
    */
   const importPlaced = async (
     current: ImportRun,
