@@ -361,6 +361,25 @@ export function createSeriesWrite(
     ]),
   ];
 
+  /**
+   * The files to clean up after a change: each path a series pointed at
+   * `before` (once) that no row of it points at now, its own poster, its
+   * episodes' tracks, stills and Managed videos, and its Season posters.
+   */
+  const removedPathsOf = (
+    seriesId: string,
+    before: readonly string[]
+  ): string[] => {
+    const afterPaths = new Set([
+      ...pathsOf(
+        reader.getSeries(seriesId) as Series,
+        reader.listEpisodes(seriesId)
+      ),
+      ...seasonPosterPaths(seriesId),
+    ]);
+    return [...new Set(before)].filter((path) => !afterPaths.has(path));
+  };
+
   /** Throw for an id the series does not hold, an id twice or a pair twice. */
   const checkEpisodes = (
     held: ReadonlyMap<string, Episode>,
@@ -503,16 +522,9 @@ export function createSeriesWrite(
 
       writeSeasonPosters(id, edit.seasonPosters ?? []);
 
-      const series = reader.getSeries(id) as Series;
-      const afterPaths = new Set([
-        ...pathsOf(series, reader.listEpisodes(id)),
-        ...seasonPosterPaths(id),
-      ]);
       return {
-        series,
-        removedPaths: [...new Set(beforePaths)].filter(
-          (path) => !afterPaths.has(path)
-        ),
+        series: reader.getSeries(id) as Series,
+        removedPaths: removedPathsOf(id, beforePaths),
       };
     }
   );
@@ -524,22 +536,17 @@ export function createSeriesWrite(
         return [];
       }
       const held = reader.listEpisodes(seriesId);
-      const gone = new Set(episodeIds);
-      const removed = held.filter((episode) => gone.has(episode.id));
-      for (const episode of removed) {
-        deleteEpisodeRow.run(episode.id);
-      }
-      const afterPaths = new Set([
-        ...pathsOf(series, reader.listEpisodes(seriesId)),
+      const beforePaths = [
+        ...pathsOf(series, held),
         ...seasonPosterPaths(seriesId),
-      ]);
-      return [
-        ...new Set(
-          removed.flatMap((episode) =>
-            pathsOf({ ...series, posterPath: null }, [episode])
-          )
-        ),
-      ].filter((path) => !afterPaths.has(path));
+      ];
+      const gone = new Set(episodeIds);
+      for (const episode of held) {
+        if (gone.has(episode.id)) {
+          deleteEpisodeRow.run(episode.id);
+        }
+      }
+      return removedPathsOf(seriesId, beforePaths);
     }
   );
 
