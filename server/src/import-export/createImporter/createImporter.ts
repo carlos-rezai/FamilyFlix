@@ -2346,9 +2346,10 @@ export function createImporter({
         continue;
       }
       const episodes = storage.listEpisodes(series.id);
-      const goneEpisodes = episodes
-        .filter((episode) => playback.videoFile(episode).kind === 'missing')
-        .sort((a, b) => a.season - b.season || a.number - b.number);
+      const goneEpisodes = episodes.filter(
+        (episode) => playback.videoFile(episode).kind === 'missing'
+      );
+      // `listEpisodes` answers in season-and-episode order, so the tags do too.
       const gone = goneEpisodes.map((episode) =>
         spellEpisodeTag(episode.season, episode.number)
       );
