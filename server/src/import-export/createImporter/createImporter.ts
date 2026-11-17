@@ -651,24 +651,28 @@ const missingReason = (videoPath: string): string =>
   `Its video, ${basename(videoPath)}, is no longer on disk.`;
 
 /**
+ * **Episode tags** as a list: the first three, _A, B and C_, then _and N
+ * more_ for the rest.
+ */
+const tagList = (tags: readonly string[]): string => {
+  const named = tags.slice(0, 3);
+  const more = tags.length - named.length;
+  if (more > 0) {
+    return `${named.join(', ')} and ${count(more)} more`;
+  }
+  // A tag holds no comma, so the last one is where the list's _and_ goes.
+  return named.join(', ').replace(/, ([^,]*)$/, ' and $1');
+};
+
+/**
  * A show's `missing` Problem's reason: its gone episodes' first three
  * **Episode tags**, in season-and-episode order, and how many more; or, with
  * every one of its `total` episodes gone, that none is on disk.
  */
-const missingEpisodesReason = (gone: string[], total: number): string => {
-  if (gone.length === total) {
-    return `None of its ${total} episodes' videos are on disk.`;
-  }
-  const named = gone.slice(0, 3);
-  const more = gone.length - named.length;
-  const list =
-    more > 0
-      ? `${named.join(', ')} and ${more} more`
-      : named.length === 1
-        ? (named[0] ?? '')
-        : `${named.slice(0, -1).join(', ')} and ${named.at(-1) ?? ''}`;
-  return `${list} ${gone.length === 1 ? 'is' : 'are'} no longer on disk.`;
-};
+const missingEpisodesReason = (gone: string[], total: number): string =>
+  gone.length === total
+    ? `None of its ${count(total)} episodes' videos are on disk.`
+    : `${tagList(gone)} ${gone.length === 1 ? 'is' : 'are'} no longer on disk.`;
 
 /** A show's one `failed` row's reason: the count and the first error. */
 const failedShowReason = (n: number, first: string): string =>
