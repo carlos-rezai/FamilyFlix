@@ -1,0 +1,7 @@
+﻿Type,Folder,Season,Episode,Title,Year,Air date,Runtime,Genres,Director,Cast,Synopsis,Rating,TMDB rating,TMDB id,Status,Favorite,Video,Subtitles,Poster,Backdrop,Still
+Movie,Movies\Amelie (2001),,,Amelie,2001,,122,,,,,,,,Unwatched,,Movies\Amelie (2001)/Amelie.mp4,Movies\Amelie (2001)/Subtitles/English.srt,Movies\Amelie (2001)/Images/poster.png,Movies\Amelie (2001)/Images/backdrop.png,
+Movie,Movies\Die Hard (1988),,,Die Hard,1988,,132,,,,,,,,Unwatched,,Movies\Die Hard (1988)/Die.Hard.1988.1080p.mp4,"Movies\Die Hard (1988)/Subtitles/English.srt|Movies\Die Hard (1988)/Subtitles/Portuguese.srt",Movies\Die Hard (1988)/Images/poster.jpg,Movies\Die Hard (1988)/Images/backdrop.jpg,
+Series,Series\Tidewater (2018),,,Tidewater,2018–,,,,,,,,,,,,,,,,
+Season,Series\Tidewater (2018),1,,,,,,,,,,,,,,,,,Series\Tidewater (2018)/Season 01/Images/poster.jpg,,
+Episode,Series\Tidewater (2018),1,1,Low Water,,,132,,,,,,,,Unwatched,,Series\Tidewater (2018)/Season 01/Tidewater.S01E01.Low.Water.mp4,Series\Tidewater (2018)/Season 01/Subtitles/S01E01/English.srt,,,Series\Tidewater (2018)/Season 01/Images/Stills/S01E01.jpg
+Episode,Series\Tidewater (2018),1,2,The Crossing,,,132,,,,,,,,Unwatched,,Series\Tidewater (2018)/Season 01/Tidewater.S01E02.The.Crossing.mp4,,,,
