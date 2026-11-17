@@ -11,6 +11,75 @@ Newest entry first.
 
 ---
 
+## 2026-11-17: Missing videos, the refactor (issue 641)
+
+Eleven commits against `docs/refactor-plans/66-missing-videos-refactor.md`,
+one per plan commit. This is the initiative's closing round: step 49 is ✅
+and issue 633 is done. **12357 tests pass across 825 files** (one skipped),
+as at `f88d54c7`: the round added no test and changed none. `tsc -b --force`
+is clean. `eslint src server electron` reports 1 error and 137 warnings, as
+at `f88d54c7`.
+
+### What each group changed
+
+- **Group 1, the series write's one rule** (`115401a9`). A private
+  `removedPathsOf` answers the paths a series pointed at before a change
+  that no row of it points at now; `updateSeriesGraph` and
+  `removeEpisodeRows` both read their before-paths the same way and call
+  it, and the `posterPath: null` spread is gone.
+- **Group 2, the press's words** (`0e34982d`, `7a0ed0f3`). `TAKE_OUT_FILM`
+  is `TAKE_OUT_TITLE` and the words' function is `takeOutWords`, counted
+  through `count()`; a private `tagList` spells the gone **Episode tags**,
+  so `missingEpisodesReason` is one expression with no nested ternary.
+- **Group 3, Take out per title shape** (`90ffbd3e`, `c5f14a31`).
+  `takeOutTitle(kind, id)` is the Delete's rows-then-folder step without
+  its `leaveOut`; `takeOutFilm` sits beside `takeOutShow` (the old
+  `takeOutGoneEpisodes`), and `takeOutMissing` picks between them.
+- **Group 4, the Missing check in its two passes** (`2ceebd02`,
+  `53b5351d`). The second sort of the gone episodes is gone, since
+  `listEpisodes` already answers in order; `checkMissing` builds
+  `readPaths` and calls `checkMissingFilms` and `checkMissingShows`, and
+  `listedOnce` is the importer's `dropOffLayoutAt(current, dir)`.
+- **Group 5, the client, the words and the docs** (`9334e68f`, `a45bb48c`,
+  `be85732b` and this entry). `ProblemRow` reads a `NO_RESOLVE` set; the
+  `importPlaced`, `walkLibraryFolder` and `ImportReview` docblocks are
+  rewrapped at 80 columns; step 49 and its row ticked, the README says a
+  rescan lists what is gone and what it could not read, and the release
+  checklist has a _Missing videos_ smoke.
+
+### Where this round left the plan
+
+- **`tagList` joins by one regex**: the last `, ` becomes `and`, which
+  holds because an Episode tag never holds a comma. It needs neither the
+  plan's `?? ''` fallbacks nor a `pop()`.
+- **`takeOutMissing`'s `movieId === undefined` guard** became an
+  `else if`: a `missing` Problem with neither id, which nothing files, is
+  now taken off rather than refused.
+- **`Importer.takeOutMissing`'s docblock** was rewrapped in commit 5, so
+  commit 9 rewrapped three, not four.
+- **`createImporter` dropped its `TitleSource` import** in commit 7, left
+  unused once `listedOnce` took a folder rather than a source.
+- **The glossary needed no change**: **Missing check**, **Take out** and
+  **Off-layout folder** already say what the code does.
+- **The full suite ran after every code commit**, green each time, with no
+  flake.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the routes' `DELETE`s sharing
+`takeOutTitle`, Found again for episodes, a bulk Take out, the source
+literal written across the importer, and the lint warnings that predate the
+initiative. No wire, schema, route, copy, prototype state or drawn pixel
+changed.
+
+### Follow-ups
+
+- Issue 640: a show with every episode gone is listed under _Off layout_
+  too, and one gone episode logs _is missing 1 episode videos_.
+  `dropOffLayoutAt` is the unit its show pass will call.
+
+---
+
 ## 2026-11-17: Missing videos, the build (issues 634 to 639)
 
 Five slices run by `issue-loop`, each a RED and a GREEN commit (634 to 638),
