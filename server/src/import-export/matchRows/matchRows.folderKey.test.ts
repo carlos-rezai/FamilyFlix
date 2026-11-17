@@ -29,6 +29,7 @@ function row(
   return {
     type: 'Movie',
     folder,
+    folderPath: folder,
     season: null,
     episode: null,
     title,

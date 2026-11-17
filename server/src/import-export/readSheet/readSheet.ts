@@ -36,9 +36,16 @@ export interface SheetRow {
   /**
    * Its **Folder key**: the Folder cell, or spelled by `spellFolderKey` from
    * the row's Title and first year (the bare title for no year) when the
-   * cell is blank or the column absent.
+   * cell is blank or the column absent. A cell read as a path answers its
+   * last segment.
    */
   folder: string;
+  /**
+   * Its **Folder path**: the Folder cell's segments, `\` and `/` both
+   * separating, joined by `/`; the Folder key itself for a one-segment or
+   * blank cell.
+   */
+  folderPath: string;
   /** A Season or Episode row's season number. */
   season: number | null;
   /** An Episode row's number within its season. */
@@ -284,16 +291,35 @@ function skipLabel(
   return folder;
 }
 
+/** What separates one segment of a Folder cell from the next. */
+const FOLDER_SEPARATORS = /[\\/]/;
+
 /**
- * The key two rows naming one row share: its type, **Folder key**, season
- * and episode, the key folded, as `sameFolderKey` compares.
+ * A Folder cell as its **Folder path** and **Folder key**: its non-empty
+ * segments joined by `/`, and the last of them; `null` for a cell naming none.
+ */
+function folderCell(
+  text: string
+): { folder: string; folderPath: string } | null {
+  const segments = text
+    .split(FOLDER_SEPARATORS)
+    .filter((segment) => segment !== '');
+  const folder = segments[segments.length - 1];
+  return folder === undefined
+    ? null
+    : { folder, folderPath: segments.join('/') };
+}
+
+/**
+ * The key two rows naming one row share: its type, **Folder path**, season
+ * and episode, the path folded, as `sameFolderKey` compares.
  */
 const rowKey = (
   type: RowType,
-  folder: string,
+  folderPath: string,
   season: number | null,
   episode: number | null
-): string => JSON.stringify([type, foldFolderKey(folder), season, episode]);
+): string => JSON.stringify([type, foldFolderKey(folderPath), season, episode]);
 
 /** The rating column's own scale — the same ten the library stores. */
 const MAX_RATING = 10;
@@ -516,7 +542,7 @@ async function openWorkbook(
  *
  * Three things are passed over, each a {@link SheetSkip} told to `onSkip`: a
  * Movie or Series row with a blank title; an **Unread cell**, read as blank;
- * and a row repeating an earlier one's type, **Folder key**, season and
+ * and a row repeating an earlier one's type, **Folder path**, season and
  * episode, the first row read. A path cell reads only when it is contained,
  * under **Path cells**' rule; `Video` is read unchecked.
  */
@@ -580,7 +606,11 @@ export async function readSheet(
       year: null,
       endYear: null,
     };
-    const folder = read(row, 'folder') || spellFolderKey(title, span.year);
+    const spelled = spellFolderKey(title, span.year);
+    const { folder, folderPath } = folderCell(read(row, 'folder')) ?? {
+      folder: spelled,
+      folderPath: spelled,
+    };
     const season = parsedCell(read(row, 'season'), 'Season', cellWhole, report);
     const episode = parsedCell(
       read(row, 'episode'),
@@ -590,7 +620,7 @@ export async function readSheet(
     );
     const label = skipLabel(type, folder, season, episode);
     // The first of two rows naming one row is read; each repeat is reported.
-    const key = rowKey(type, folder, season, episode);
+    const key = rowKey(type, folderPath, season, episode);
     if (seen.has(key)) {
       onSkip({ kind: 'duplicate', label });
       return;
@@ -606,6 +636,7 @@ export async function readSheet(
     rows.push({
       type,
       folder,
+      folderPath,
       season,
       episode,
       title,

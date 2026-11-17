@@ -40,6 +40,7 @@ const BARE: HeldValues = {
 const BLANK_ROW: SheetRow = {
   type: 'Movie',
   folder: 'Die Hard',
+  folderPath: 'Die Hard',
   season: null,
   episode: null,
   airDate: null,

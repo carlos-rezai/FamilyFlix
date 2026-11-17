@@ -26,6 +26,7 @@ function row(folder: string, title: string, year: number | null): SheetRow {
   return {
     type: 'Movie',
     folder,
+    folderPath: folder,
     season: null,
     episode: null,
     title,

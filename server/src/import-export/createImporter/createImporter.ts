@@ -841,6 +841,7 @@ const guessedRow = (name: string): SheetRow => {
   return {
     type: 'Movie',
     folder: name,
+    folderPath: name,
     season: null,
     episode: null,
     title: key.title,

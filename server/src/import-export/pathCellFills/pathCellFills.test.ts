@@ -23,6 +23,7 @@ import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 const row = (cells: Partial<SheetRow>): SheetRow => ({
   type: 'Movie',
   folder: 'Heat (1995)',
+  folderPath: 'Heat (1995)',
   season: null,
   episode: null,
   title: 'Heat',
