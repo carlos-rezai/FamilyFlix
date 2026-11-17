@@ -729,47 +729,32 @@ Q1 (which drafted it as step 48). Settled in a grill-me on 2026-11-16
 
 Step 50 came out of testing v0.16.1 on the real library (`D:\Movies`, its
 `Movies\` and `Series\` linked as two Library folders): an Export uploaded
-after an emptied library gave almost nothing back. To be settled in a
-grill-me:
+after an emptied library gave almost nothing back. Settled in a grill-me
+on 2026-11-17 (design log 67, no prototype amended):
 
 50. ⬜ **Export paths**: an Export whose titles lie a level deeper than
-    their Library folder's root still imports back whole, its art included. - **What happened**: the Export, taken from the library before the
-    folders were re-linked, wrote every `Folder` cell as
-    `Movies\Guardians of the Galaxy` and every path cell as
-    `Movies\Guardians of the Galaxy/Images/poster.jpg`: a **Source
-    folder** one segment deep, recorded against `D:\Movies` rather than
-    `D:\Movies\Movies`, its separator Windows' `\` beside the cell's `/`.
-    _Import from spreadsheet_ with that sheet and both Library folders
-    matched only _Guardians of the Galaxy_; nearly every other row was a
-    `no-folder` **Problem**, and no title came back with its poster. - **Bug 1, the Folder key never matches**: a Source folder is stored
-    as `path.relative` answers it (`placeTitleFolder`, `placeFilmFolder`,
-    `createImporter`'s show placing), native separators and all, and the
-    Export writes it verbatim (`exportRows`' `titleFolderOf`).
-    `matchRows`' `foldersFor` compares the scanned **Title folder**'s own
-    name (`Guardians of the Galaxy`) against the whole cell, so a key with
-    a segment before it never matches. The bare-title fallback, only for a
-    row with a year, saves a title whose folder is spelled exactly as its
-    title and no other (`Vol 2` misses `Vol. 2/`, `Rogue One A Star Wars
-Story` misses its `(2016)` folder). - **Bug 2, the art is never reached**: the Export's path cells name its
-    own copies, relative to the **Export folder**, but `pathCellFills`
-    resolves them against the Title folder in the Library folder, where
-    nothing lies, so a sheet upload fills no poster, backdrop or Still.
-    Copying the Export's folders over a Library folder, the round trip's
-    other road, lands them a level too deep
-    (`D:\Movies\Movies\Movies\…`). - **Seen beside them, by design today**: the household's posters lie
-    loose in each Title folder (`Guardians of the Galaxy\poster.jpg`),
-    and the **Layout read** takes art only from `Images/`, so a scan
-    reads none of them whatever the sheet says. Whether a loose
-    `poster`/`backdrop` beside the video counts is a spec change for the
-    grill-me, not a bug fix. - **A side effect to look at**: a `no-folder` row resolved by picking
-    its video in the resolve form uploads the file, so it is copied into
-    the **Managed media directory** even in a Link run (_Guardians of the
-    Galaxy Vol 2_ came back with no Library folder). - **The goal**: the **Export round trip** holds for any library shape.
-    Source folders and every sheet path are written with `/` on every
-    platform; a row's `Folder` cell finds its Title folder whether it
-    names the folder alone or the folder under a parent segment; an
-    Export's art comes back from a sheet uploaded out of its `Meta/`
-    folder (resolved against the Export folder) and from its folders
-    copied over the Library folder; and an emptied library, re-linked and
-    fed its own Export, returns every title with no Problem and every
-    poster set.
+    their Library folder's root still imports back whole, its art included.
+    - **One spelling**: a **Source folder** is written with `/` on every
+      platform (`sourceFolderOf`, beside `placeTitleFolder`), as a Source
+      file already is; stored `\` values are left, every reader splitting
+      on both.
+    - **The Export writes the layout**: a sheet's `Folder` cell is the
+      Title folder's own name, the Source folder's last segment
+      (`titleFolderName`), so an Export is flat and copied over a re-linked
+      Library folder lands where a scan reads it; the Library sheet's path
+      cells are relative to the folder holding each Title folder.
+    - **A Folder cell is a Folder path**: `\` read as `/`, its last segment
+      the **Folder key** a row is matched by, exactly as today; a path cell
+      is contained when it lies under the whole Folder path.
+    - **The Sheet root**: a path cell's file is looked for in the matched
+      Title folder, then under the folder holding the sheet's `Meta/`
+      folder (`sheetRootOf`), so an Export's sheet uploaded from its
+      `Meta/` brings its art back. `pathCellFills` alone resolves cells;
+      `matchRows` no longer does.
+    - **A Resolve links**: in the shell a Resolve's picked video under a
+      Library folder travels as its path, a **Found file** the run's
+      **Import mode** places, so a Link run links it.
+    - **Out**: loose art beside the video (the Folder layout stays one
+      shape); a fuzzier bare-title fallback; a v0.16.1 Export's nested
+      folders copied over a Library folder (its sheet is the road back); a
+      migration of stored Source folders.

@@ -1130,6 +1130,23 @@ the **Folder layout** turns away in its review. The ProblemRow prototype
 | **Problem** (updated)        | Since log 66, two more kinds: `off-layout` (hard, an **Off-layout folder**, _Skip_ only) and `missing` (soft, a held title the **Missing check** found gone, settled by **Take out** or _Skip_). Neither has _Resolve_.                                                                                                                       |                                             |
 | **Layout warning** (updated) | Since log 66, an `empty` or `mixed` folder's line is also an **Off-layout folder** Problem in the run's review; the root's loose videos and a **Doubled place** stay warnings only.                                                                                                                                                           |                                             |
 
+## Export paths
+
+Design log 67: step 50, initiative `export-paths`. An Export of a library
+whose titles lie a level deeper than their Library folder's root still gives
+the library back whole, its art included; a sheet's paths read the same on
+every platform. No prototype is amended.
+
+| Term                            | Definition                                                                                                                                                                                                                                                        | Aliases to avoid                       |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **Folder path** (new)           | A sheet row's `Folder` cell read as a path, `\` read as `/`, its segments joined by `/` (`Movies/Guardians of the Galaxy`); its last segment is the row's **Folder key**, and every path cell of the row lies under it. `SheetRow.folderPath` in code.            | folder cell, parent path, full key     |
+| **Sheet root** (new)            | The folder a sheet's path cells are joined to when its Title folder holds no such file: the folder holding the sheet's `Meta/` folder, else the sheet's own folder; an Export's sheet's is its **Export folder**. `sheetRootOf` in code.                          | export root, base folder, sheet folder |
+| **Source folder** (updated)     | Since log 67, always spelled with `/` (`sourceFolderOf`, beside `placeTitleFolder`), as a **Source file** is; a value stored with `\` before it is left as it is, every reader splitting on both.                                                                 |                                        |
+| **Folder key** (updated)        | Since log 67, the last segment of a **Folder path**: a sheet writes a title's Title folder's own name (`titleFolderName`, the Source folder's last segment), and a row whose cell names the folder under a parent segment is matched by that last segment.        |                                        |
+| **Sheet columns** (updated)     | Since log 67, a path cell lies under its row's **Folder path**, `\` read as `/`; its file is looked for in the matched **Title folder** first, then under the **Sheet root**. The Library sheet writes each cell relative to the folder holding its Title folder. |                                        |
+| **Export round trip** (updated) | Since log 67, for any library shape: an Export is written flat in the **Folder layout**, one Title folder per title by its own name, and its art comes back from its sheet uploaded out of its `Meta/` folder, through the **Sheet root**.                        |                                        |
+| **Resolve** (updated)           | Since log 67, in the shell a picked video lying under a **Library folder** travels as its path, a **Found file** placed by the run's **Import mode**, so a Link run links it; a pick under none, or in a browser, is uploaded and copied.                         |                                        |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1331,6 +1348,7 @@ the **Folder layout** turns away in its review. The ProblemRow prototype
 - A sheet's path cell fills only a **Layout place** the Title folder left empty; the folder wins, and the `Video` cell is never read (log 59 Q14).
 - A **Cold start** plays at most one **Welcome tune**, with its **Welcome splash**; a skip fades it over 150ms, and only a **Wordmark handoff** strikes its **Closing chord** (log 62).
 - A **Library tab** has exactly one **Row view** at a time, the household's; the two tabs' are independent, and neither is in the URL (log 63).
+- A sheet row has exactly one **Folder path** and one **Folder key**, its last segment; a path cell fills a place from the **Title folder** first and the **Sheet root** second, and the folder's own read wins over both (log 67).
 
 ## Example dialogue
 
@@ -2118,6 +2136,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "Then the run **Found again** it before the check ran, and it isn't listed. The check runs last."
 > **Dev:** "She presses _Take out of library_. Is the file recorded as a Left-out video, like a Delete?"
 > **Domain expert:** "No. **Take out** leaves nothing out: if she puts the file back, the next scan brings it in. And an empty `Heat/` folder she made is an **Off-layout folder**: listed, skipped, never taken out."
+
+> **Dev:** "The old Export says `Movies\Guardians of the Galaxy` in every `Folder` cell, but the Library folder is now `D:\Movies\Movies`. Does the row still find its folder?"
+> **Domain expert:** "Yes. The cell is read as a **Folder path**, `Movies/Guardians of the Galaxy`, and the row is matched by its **Folder key**, the last segment."
+> **Dev:** "And its poster? The cell names the Export's own copy."
+> **Domain expert:** "Nothing lies there in the **Title folder**, so the cell is joined to the **Sheet root**, the Export folder holding the sheet's `Meta/`, and the poster is found there."
+> **Dev:** "Will a new Export still write `Movies/…`?"
+> **Domain expert:** "No. A sheet writes each Title folder's own name, so the Export is flat in the **Folder layout** and copied over the Library folder it lands where a scan reads it."
 
 ## Flagged ambiguities
 
@@ -3112,3 +3137,5 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Show folder title" is not a Title guess (new):** since log 65 a picked folder's title is its **Folder key**'s, read as a scan reads it. Say the read's **title** and **year**; keep **Title guess** for `titleFromFilename` on a video's file name.
 - **"Take out" is not "Delete" or "Remove" (new):** a **Take out** settles a `missing` Problem from the review and records no **Left-out video**; a **Delete** is the Edit menu's, from a title's page or Manage library, and leaves its videos out; **Remove** takes a **File slot** off the form. Never call the importer's internal `takeOff` (a Problem leaving the list) a Take out.
 - **"Off-layout folder" is not a "Left-out video" (new):** a folder the layout turns away is listed every run until fixed on disk; a **Left-out video** is a file the household deleted from the library and FamilyFlix passes in silence. The code's `LeftOutReason` predates the term; say **Off-layout folder** in prose.
+- **"Folder key" is not "Folder path" (new):** since log 67 a row's `Folder` cell may name its Title folder under a parent segment; the whole cell is its **Folder path**, the last segment its **Folder key**. A sheet FamilyFlix writes makes the two equal; never call a parent segment part of the key.
+- **"Sheet root" is not the "Library folder" (new):** for a Library sheet the two are one folder, but an uploaded Export's **Sheet root** is its **Export folder**, which is never a Library folder and is only read from.
