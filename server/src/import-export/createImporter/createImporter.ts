@@ -283,8 +283,8 @@ export interface Importer {
    * scan; and the Problem comes off. `true` for having gone, also when the
    * title was already deleted elsewhere (**Gone is gone**). A show's press
    * takes out only its gone episodes, checked again, or the whole show when
-   * every episode is gone. `false` for an id
-   * not there or not `missing`, and when there is no run, taking nothing out.
+   * every episode is gone. `false` for an id not there or not `missing`, and
+   * when there is no run, taking nothing out.
    */
   takeOutMissing(id: string): boolean;
   /**
@@ -2243,7 +2243,7 @@ export function createImporter({
    * unlinked. No **Left-out video** is recorded; a show deleted elsewhere is
    * passed over (**Gone is gone**).
    */
-  const takeOutGoneEpisodes = (seriesId: string, recorded: string[]): void => {
+  const takeOutShow = (seriesId: string, recorded: string[]): void => {
     if (storage.getSeries(seriesId) === null) {
       return;
     }
@@ -2265,6 +2265,16 @@ export function createImporter({
       gone.map((episode) => episode.id)
     )) {
       media.removeFile(path);
+    }
+  };
+
+  /**
+   * A `missing` film's _Take out_: the whole film by {@link takeOutTitle}; a
+   * film deleted elsewhere is passed over (**Gone is gone**).
+   */
+  const takeOutFilm = (movieId: string): void => {
+    if (storage.getMovie(movieId) !== null) {
+      takeOutTitle('movie', movieId);
     }
   };
 
@@ -3386,14 +3396,9 @@ export function createImporter({
         return false;
       }
       if (listed.seriesId !== undefined) {
-        takeOutGoneEpisodes(listed.seriesId, sources.get(id)?.gone ?? []);
-        return takeOff(id);
-      }
-      if (listed.movieId === undefined) {
-        return false;
-      }
-      if (storage.getMovie(listed.movieId) !== null) {
-        takeOutTitle('movie', listed.movieId);
+        takeOutShow(listed.seriesId, sources.get(id)?.gone ?? []);
+      } else if (listed.movieId !== undefined) {
+        takeOutFilm(listed.movieId);
       }
       return takeOff(id);
     },
