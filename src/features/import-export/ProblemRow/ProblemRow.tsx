@@ -1,6 +1,11 @@
 import { FieldDiff, type FieldDiffSide } from '@/components';
 import { Button } from '@/primitives';
-import type { ImportProblem, SheetChoices, SheetField } from '@/types';
+import type {
+  ImportProblem,
+  ProblemKind,
+  SheetChoices,
+  SheetField,
+} from '@/types';
 import { movieFormPath, opensSeriesResolve } from '@/utils';
 import { FolderPicker } from '../FolderPicker/FolderPicker';
 import {
@@ -46,6 +51,17 @@ const resolveRoute = (problem: ImportProblem): string =>
       })
     : movieFormPath({ movie: problem.movieId, problem: problem.id });
 
+/**
+ * The kinds that draw no _Resolve_: a `differs` row is settled on the row by
+ * the diff, a `missing` row on the row by _Take out_, and an `off-layout`
+ * row is fixed only on disk.
+ */
+const NO_RESOLVE: ReadonlySet<ProblemKind> = new Set<ProblemKind>([
+  'differs',
+  'missing',
+  'off-layout',
+]);
+
 /** The diff's `'theirs'` read back as the import's own `'sheet'`. */
 const sheetChoices = (
   choices: Partial<Record<SheetField, FieldDiffSide>>
@@ -85,8 +101,7 @@ export function ProblemRow({
   onTakeOut,
 }: ProblemRowProps) {
   const differs = problem.kind === 'differs';
-  const resolvable =
-    !differs && problem.kind !== 'missing' && problem.kind !== 'off-layout';
+  const resolvable = !NO_RESOLVE.has(problem.kind);
   return (
     <Card>
       <Head>
