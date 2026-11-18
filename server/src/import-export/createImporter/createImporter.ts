@@ -2868,6 +2868,7 @@ export function createImporter({
     // read with the series its Folder key names, never matched on its own.
     const titleRows = rows.filter(isTitleRow);
     const verdicts = matchRows(titleRows, [...films, ...showOf.keys()]);
+    const sheetRoot = sheetRootOf(sheetPath);
     const matched: Placed<Match>[] = [];
     const matchedShows: Placed<ShowMatch>[] = [];
     const foundAgain: Placed<FoundAgain>[] = [];
@@ -2884,7 +2885,7 @@ export function createImporter({
             show,
             match.row,
             partRowsOf(rows, match.row.folder),
-            sheetRootOf(sheetPath)
+            sheetRoot
           ),
           heldShow(held, seriesByKey, libraryFolder, show, match.row),
           episodeRowsOf(rows, match.row.folder)
@@ -2934,11 +2935,7 @@ export function createImporter({
       matched.push({
         match: {
           ...match,
-          folder: await filmWithCells(
-            match.folder,
-            match.row,
-            sheetRootOf(sheetPath)
-          ),
+          folder: await filmWithCells(match.folder, match.row, sheetRoot),
         },
         libraryFolder,
       });
@@ -3177,7 +3174,7 @@ export function createImporter({
     for (const show of foundShows) {
       showOf.set(asMatchable(show), show);
     }
-    // Each folder a row names, with that row, its path cells resolved.
+    // Each folder a row names, with that row as read (log 67 Q12).
     const named = new Map<FilmScan, SheetRow>();
     const titleRows = rows.filter(isTitleRow);
     if (titleRows.length > 0) {
