@@ -766,5 +766,11 @@ on 2026-11-17 (design log 67, no prototype amended):
     - **Out**: loose art beside the video (the Folder layout stays one
       shape); a fuzzier bare-title fallback; a v0.16.1 Export's nested
       folders copied over a Library folder (its sheet is the road back); a
-      migration of stored Source folders. A Resolve's poster slot prefilled
-      from its row's `Poster` cell is issue 650.
+      migration of stored Source folders.
+    - **Resolve cells** (issue 650, design log 68): a `no-folder` row's
+      Resolve opens with the poster and tracks its row's cells name under
+      the Sheet root, each a **Found file** drawn as any found file is; the
+      save copies found art from under the Library folders or the Sheet
+      root, a found video only from under the Library folders. The
+      backdrop (no slot) and an `ambiguous` or `no-video` row's cells stay
+      out.

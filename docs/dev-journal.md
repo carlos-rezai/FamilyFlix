@@ -11,6 +11,42 @@ Newest entry first.
 
 ---
 
+## 2026-11-18: Resolve cells (issue 650)
+
+A grill-me (design log 68, two questions put to the maintainer, the rest
+read off the code), a RED commit and a GREEN one. **12458 tests pass across
+844 files** (one skipped); `tsc -b --force` is clean.
+
+### What shipped
+
+- **A `no-folder` row's detail offers its cell art.** `rowCellFiles` (in
+  `pathCellFills`) reads the row's `Poster` and `Subtitles` cells under the
+  run's Sheet root alone; the importer keeps the answer on the Problem's
+  source, and `problem()` hands it out as `files.poster` and
+  `files.subtitles`. No client change: `problemFormValues` already draws
+  both as Found files.
+- **The save may read found art from the Sheet root.** One
+  `refuseUnreadable` replaces the two Resolves' copied loops: a found video
+  still has to lie under a Library folder, a found poster or track may also
+  lie under the run's Sheet root (`sheetRootPath`, `null` for a Folder
+  scan, whose sheets lie in its own folders).
+
+### Judgement calls worth knowing
+
+- **Two refusal tests moved their stray file.** The fixture's sheet lies at
+  the sandbox's top, so the whole sandbox became the Sheet root:
+  `createImporter.test`'s `..` poster and `routes.import.test`'s outside
+  track now climb out of the sandbox. Each still pins what its name says.
+- **No shell walk.** Nothing drawn or sent changed on the client, and the
+  importer suite drives the case end to end against real files.
+
+### Follow-ups
+
+- An `ambiguous` or `no-video` Problem's first folder is still kept as
+  scanned, its cells unread (log 68 Q4). Not filed.
+
+---
+
 ## 2026-11-18: Export paths, the refactor (issue 651)
 
 Twelve commits against `docs/refactor-plans/67-export-paths-refactor.md`,
