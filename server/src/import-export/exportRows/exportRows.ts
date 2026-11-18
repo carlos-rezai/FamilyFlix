@@ -331,11 +331,11 @@ const byKey = (a: Planned, b: Planned): number =>
  * `Heat/` is `Heat` whatever year a Sync filled ({@link titleFolderOf}). A
  * nested Source folder is keyed by its last segment (`titleFolderName`), so
  * `Movies/Heat` is `Heat` and an Export is flat, one Title folder per title
- * directly in it, whatever depth its titles lie at. Every
- * season-scoped place carries its `seasonFolder`, the **Season folder name**
- * its held episodes lie under (`seasonFolderOf`). Two titles sharing a
- * Folder key, compared folded (NFC, then case), are numbered `(1)`, `(2)`,
- * … in sheet order, each with a Warning line.
+ * directly in it, whatever depth its titles lie at. Every season-scoped place
+ * carries its `seasonFolder`, the **Season folder name** its held episodes lie
+ * under (`seasonFolderOf`). Two titles sharing a Folder key, compared folded
+ * (NFC, then case), are numbered `(1)`, `(2)`, … in sheet order, each with a
+ * Warning line.
  */
 export function exportRows(
   movies: readonly Movie[],
