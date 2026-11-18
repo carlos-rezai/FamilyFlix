@@ -27,15 +27,13 @@ export function layoutCells(
     const read = reads.get(folder);
     return read === undefined || read.kind === 'left-out' ? null : read;
   };
-  /** `path` as a cell: relative to the folder holding `folder`'s read. */
-  const cellIn = (folder: string, path: string): string =>
-    relative(dirname(reads.get(folder)?.dir ?? ''), path)
-      .split(sep)
-      .join('/');
+  /** `path` as a cell: relative to the folder holding `read`'s folder. */
+  const cellIn = (read: TitleFolderScan, path: string): string =>
+    relative(dirname(read.dir), path).split(sep).join('/');
   const cellOrNull = (
-    folder: string,
+    read: TitleFolderScan | null,
     path: string | null | undefined
-  ): string | null => (path ? cellIn(folder, path) : null);
+  ): string | null => (read !== null && path ? cellIn(read, path) : null);
   const seasonOf = (
     folder: string,
     season: number
@@ -48,18 +46,16 @@ export function layoutCells(
 
   return {
     image: (place) => {
+      const read = readOf(place.folder);
       switch (place.kind) {
         case 'poster':
         case 'backdrop':
-          return cellOrNull(place.folder, readOf(place.folder)?.[place.kind]);
+          return cellOrNull(read, read?.[place.kind]);
         case 'season-poster':
-          return cellOrNull(
-            place.folder,
-            seasonOf(place.folder, place.season)?.poster
-          );
+          return cellOrNull(read, seasonOf(place.folder, place.season)?.poster);
         case 'still':
           return cellOrNull(
-            place.folder,
+            read,
             seasonOf(place.folder, place.season)?.stills[
               spellEpisodeTag(place.season, place.episode)
             ]
@@ -67,16 +63,19 @@ export function layoutCells(
       }
     },
     tracks: (place) => {
+      const read = readOf(place.folder);
+      if (read === null) {
+        return [];
+      }
       if (!('season' in place)) {
-        const read = readOf(place.folder);
-        return read?.kind === 'film'
-          ? read.subtitles.map((track) => cellIn(place.folder, track.path))
+        return read.kind === 'film'
+          ? read.subtitles.map((track) => cellIn(read, track.path))
           : [];
       }
       const tag = spellEpisodeTag(place.season, place.episode);
       return (seasonOf(place.folder, place.season)?.subtitles ?? [])
         .filter((track) => basename(dirname(track.path)) === tag)
-        .map((track) => cellIn(place.folder, track.path));
+        .map((track) => cellIn(read, track.path));
     },
     video: (place, storedPath) =>
       readOf(place.folder) === null ? null : videoCell(place, storedPath),
