@@ -16,6 +16,7 @@ import {
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import {
   foldFolderKey,
+  pathSegments,
   sameFolderKey,
   spellFolderKey,
 } from '../../media/folderKeyOf/folderKeyOf';
@@ -212,7 +213,9 @@ const TITLED: ReadonlySet<RowType> = new Set<RowType>(['Movie', 'Series']);
 
 /**
  * A **Path cell**'s segments, a backslash read as `/`: a v0.16.1 Export wrote
- * one between a **Folder path**'s parent and its Title folder.
+ * one between a **Folder path**'s parent and its Title folder. Not
+ * `pathSegments`: an empty segment is kept, so the **Sheet reader** refuses a
+ * cell holding one (`a//b`).
  */
 export const cellSegments = (cell: string): string[] =>
   cell.replace(/\\/g, '/').split('/');
@@ -301,9 +304,6 @@ function skipLabel(
   return folder;
 }
 
-/** What separates one segment of a Folder cell from the next. */
-const FOLDER_SEPARATORS = /[\\/]/;
-
 /**
  * A Folder cell as its **Folder path** and **Folder key**: its non-empty
  * segments joined by `/`, and the last of them; `null` for a cell naming none.
@@ -311,9 +311,7 @@ const FOLDER_SEPARATORS = /[\\/]/;
 function folderCell(
   text: string
 ): { folder: string; folderPath: string } | null {
-  const segments = text
-    .split(FOLDER_SEPARATORS)
-    .filter((segment) => segment !== '');
+  const segments = pathSegments(text);
   const folder = segments[segments.length - 1];
   return folder === undefined
     ? null

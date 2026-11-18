@@ -44,12 +44,17 @@ export const spellFolderKey = (title: string, year: number | null): string =>
   year === null ? title : `${title} (${year})`;
 
 /**
+ * A path's non-empty segments, `/` and `\` both separating, as a stored
+ * **Source folder**, a Folder cell and a **Folder path** are read (log 67 Q4,
+ * Q7): `Movies\Amelie (2001)/` answers `Movies` and `Amelie (2001)`.
+ */
+export const pathSegments = (path: string): string[] =>
+  path.split(/[/\\]/).filter((segment) => segment !== '');
+
+/**
  * The **Title folder** a **Source folder** names: its last non-empty segment,
  * split on `/` and `\` alike, so `Movies\Amelie (2001)` and `Amelie (2001)`
  * answer one **Folder key**.
  */
 export const titleFolderName = (path: string): string =>
-  path
-    .split(/[/\\]+/)
-    .filter((segment) => segment !== '')
-    .pop() ?? '';
+  pathSegments(path).pop() ?? '';

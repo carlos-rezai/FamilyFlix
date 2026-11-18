@@ -7,7 +7,10 @@ import {
   LIBRARY_SHEET_STEM,
   META_FOLDER,
 } from '../../media/folderLayout/folderLayout';
-import { titleFolderName } from '../../media/folderKeyOf/folderKeyOf';
+import {
+  pathSegments,
+  titleFolderName,
+} from '../../media/folderKeyOf/folderKeyOf';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
   readTitleFolder,
@@ -28,9 +31,6 @@ export const LIBRARY_SHEET_DELAY_MS = 3000;
 
 /** The temporary file a rewrite lands through, beside the sheet in `Meta/`. */
 const TEMPORARY_SHEET = `${LIBRARY_SHEET}.tmp`;
-
-/** What separates a stored **Source folder**'s segments, either slash. */
-const SEGMENT = /[/\\]/;
 
 /**
  * What one Library folder's sheet is written from: the titles recorded
@@ -96,7 +96,7 @@ async function readTitleFolders(
     try {
       reads.set(
         titleFolderName(source),
-        await readTitleFolder(join(root, ...source.split(SEGMENT)))
+        await readTitleFolder(join(root, ...pathSegments(source)))
       );
     } catch {
       // An unreadable Title folder keeps every cell but its paths.
