@@ -25,9 +25,15 @@ export interface UseImportModeResult {
   /** The movie's picked video's path, as the **Path bridge** read it, or `''`. */
   videoPath: string;
   /**
-   * A movie video was picked: on a shell add, read its path through the Path
-   * bridge and ask the containing read whether Link can be. A later pick's
-   * answer wins.
+   * Whether the containing read answered that the movie's picked video lies
+   * under a **Library folder**: on a **Resolve**, the pick then travels as its
+   * path, a **Found file**, which the run's own Import mode places.
+   */
+  videoUnderFolder: boolean;
+  /**
+   * A movie video was picked: on a shell add or Resolve, read its path through
+   * the Path bridge and ask the containing read whether it lies under a
+   * Library folder. A later pick's answer wins.
    */
   readVideo: (file: File) => void;
   /** The movie's video slot was emptied: its path and its answer go. */
@@ -47,15 +53,19 @@ export interface UseImportModeResult {
 export function useImportMode({
   kind,
   plainAdd,
+  resolve = false,
 }: {
   kind: FormKind;
   plainAdd: boolean;
+  /** The form is a **Resolve**: its pick is read, but no mode is drawn. */
+  resolve?: boolean;
 }): UseImportModeResult {
   const showImportMode = folderBridge() !== null && plainAdd;
   const [chosen, setChosen] = useState<ImportMode>('link');
   const [showLinkDisabled, setShowLinkDisabled] = useState(false);
   const [videoLinkDisabled, setVideoLinkDisabled] = useState(false);
   const [videoPath, setVideoPath] = useState('');
+  const [videoUnderFolder, setVideoUnderFolder] = useState(false);
   // Counts the movie's picks, so a containing answer that lands after a later
   // pick, or after the slot was emptied, changes nothing.
   const videoPick = useRef(0);
@@ -77,12 +87,13 @@ export function useImportMode({
   const readVideo = useCallback(
     (file: File) => {
       const shell = folderBridge();
-      if (shell === null || !plainAdd) {
+      if (shell === null || !(plainAdd || resolve)) {
         return;
       }
       const pick = ++videoPick.current;
       const path = shell.pathOf(file);
       setVideoPath(path);
+      setVideoUnderFolder(false);
       if (path === '') {
         setVideoLinkDisabled(true);
         return;
@@ -92,16 +103,18 @@ export function useImportMode({
         .then((folderId) => {
           if (pick === videoPick.current) {
             setVideoLinkDisabled(folderId === null);
+            setVideoUnderFolder(folderId !== null);
           }
         })
         .catch(() => undefined);
     },
-    [plainAdd]
+    [plainAdd, resolve]
   );
 
   const forgetVideo = useCallback(() => {
     videoPick.current += 1;
     setVideoPath('');
+    setVideoUnderFolder(false);
     setVideoLinkDisabled(false);
   }, []);
 
@@ -115,6 +128,7 @@ export function useImportMode({
     setImportMode,
     linkDisabled,
     videoPath,
+    videoUnderFolder,
     readVideo,
     forgetVideo,
     setShowLink,

@@ -460,10 +460,11 @@ export function useMovieForm(): UseMovieFormResult {
     setImportMode,
     linkDisabled,
     videoPath,
+    videoUnderFolder,
     readVideo,
     forgetVideo,
     setShowLink,
-  } = useImportMode({ kind, plainAdd });
+  } = useImportMode({ kind, plainAdd, resolve: job.kind === 'resolve' });
   const setParam = useQueryParamWriter();
   const setKind = useCallback(
     (next: FormKind) => setParam(KIND_PARAM, next, 'movie'),
@@ -723,7 +724,15 @@ export function useMovieForm(): UseMovieFormResult {
             // opened from, and the row it fixed is gone from the list anyway,
             // because the list is the **Current run**'s state rather than the
             // entry's.
-            return resolveProblem(problemId, values).then(() => goBack);
+            // A shell pick under a **Library folder** travels as its path, a
+            // **Found file**, which the run's own Import mode places; any
+            // other pick travels as bytes, to be copied.
+            return resolveProblem(
+              problemId,
+              videoUnderFolder
+                ? movieAddValues(values, 'link', videoPath)
+                : values
+            ).then(() => goBack);
           }
           // Over the **Edit job** it is the edit's own `PATCH` instead — the
           // film is in the library already, and a resolve would put it there
@@ -804,6 +813,7 @@ export function useMovieForm(): UseMovieFormResult {
     enrich,
     importMode,
     videoPath,
+    videoUnderFolder,
     navigate,
     goBack,
     editing,
