@@ -1,5 +1,7 @@
 import { basename, dirname } from 'node:path';
 
+import { META_FOLDER } from '../../media/folderLayout/folderLayout';
+
 /**
  * A run's **Sheet root**, the folder a sheet's **Path cells** are joined to
  * when the matched **Title folder** holds no such file: the folder holding the
@@ -9,5 +11,5 @@ import { basename, dirname } from 'node:path';
  */
 export function sheetRootOf(sheetPath: string): string {
   const folder = dirname(sheetPath);
-  return basename(folder) === 'Meta' ? dirname(folder) : folder;
+  return basename(folder) === META_FOLDER ? dirname(folder) : folder;
 }
