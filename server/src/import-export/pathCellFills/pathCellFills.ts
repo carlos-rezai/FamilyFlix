@@ -23,15 +23,23 @@ async function isFile(path: string): Promise<boolean> {
 }
 
 /**
- * Where a cell's file is, the first of the two places that holds it: in the
- * **Title folder** `dir`, the row's **Folder path** `folderPath` replaced by
- * it, then joined as written under the run's **Sheet root**; `null` when
- * neither does. The Sheet root is only read.
+ * Where one row's **Path cells** are looked for, in log 67 Q10's order: the
+ * matched **Title folder** `dir`, the row's **Folder path** `folderPath`
+ * replaced by it, then the run's **Sheet root** `sheetRoot`, the cell joined
+ * under it as written. The Sheet root is only read.
+ */
+interface CellSearch {
+  dir: string;
+  folderPath: string;
+  sheetRoot: string;
+}
+
+/**
+ * Where a cell's file is, the first place `search` names that holds it;
+ * `null` when neither does.
  */
 async function foundCell(
-  dir: string,
-  folderPath: string,
-  sheetRoot: string,
+  { dir, folderPath, sheetRoot }: CellSearch,
   cell: string
 ): Promise<string | null> {
   for (const path of [
@@ -49,16 +57,14 @@ async function foundCell(
  * The file a cell names, by `foundCell`, when the place is empty.
  */
 async function fill(
+  search: CellSearch,
   found: string | null,
-  dir: string,
-  folderPath: string,
-  sheetRoot: string,
   cell: string | null
 ): Promise<string | null> {
   if (found !== null || cell === null || cell === '') {
     return found;
   }
-  return foundCell(dir, folderPath, sheetRoot, cell);
+  return foundCell(search, cell);
 }
 
 /**
@@ -68,16 +74,14 @@ async function fill(
  * are read alike.
  */
 async function withTrackCells(
+  search: CellSearch,
   found: readonly SubtitleFound[],
-  dir: string,
-  folderPath: string,
-  sheetRoot: string,
   cells: readonly string[]
 ): Promise<SubtitleFound[]> {
   const held = new Set(found.map(({ path }) => resolve(path)));
   const subtitles = [...found];
   for (const cell of cells) {
-    const path = await foundCell(dir, folderPath, sheetRoot, cell);
+    const path = await foundCell(search, cell);
     if (path === null || held.has(resolve(path))) {
       continue;
     }
@@ -90,41 +94,25 @@ async function withTrackCells(
 /**
  * A film's scan with its **Sheet row**'s **Path cells** read into the places
  * the folder's read left empty: the poster and backdrop when the read found
- * none, and each track the read did not find. The read always wins, a cell
- * naming a file that is not there fills nothing, and the `Video` cell is
- * never read. Every cell is already contained: the **Sheet reader** read any
- * other as blank. A new film's import and a held film's `fillHeldFiles` both
- * read their cells through it.
+ * none, and each track the read did not find. A cell's file is looked for in
+ * the matched **Title folder**, then under the run's **Sheet root**
+ * `sheetRoot`, which is only read. The read always wins, a cell naming a file
+ * that is not there fills nothing, and the `Video` cell is never read. Every
+ * cell is already contained: the **Sheet reader** read any other as blank. A
+ * new film's import and a held film's `fillHeldFiles` both read their cells
+ * through it.
  */
 export async function filmWithCells(
   scan: FilmScan,
   row: SheetRow,
   sheetRoot: string
 ): Promise<FilmScan> {
-  const subtitles = await withTrackCells(
-    scan.subtitles,
-    scan.dir,
-    row.folderPath,
-    sheetRoot,
-    row.subtitles
-  );
+  const search = { dir: scan.dir, folderPath: row.folderPath, sheetRoot };
   return {
     ...scan,
-    poster: await fill(
-      scan.poster,
-      scan.dir,
-      row.folderPath,
-      sheetRoot,
-      row.poster
-    ),
-    backdrop: await fill(
-      scan.backdrop,
-      scan.dir,
-      row.folderPath,
-      sheetRoot,
-      row.backdrop
-    ),
-    subtitles,
+    poster: await fill(search, scan.poster, row.poster),
+    backdrop: await fill(search, scan.backdrop, row.backdrop),
+    subtitles: await withTrackCells(search, scan.subtitles, row.subtitles),
   };
 }
 
@@ -133,8 +121,10 @@ export async function filmWithCells(
  * into the places the folder's read left empty: the Series row's poster and
  * backdrop, each Season row's **Season poster**, and each Episode row's
  * **Still** and each track its read did not find. `rows` are the show's
- * Season and Episode rows. The read always wins, and a cell naming a file
- * that is not there fills nothing.
+ * Season and Episode rows. A cell's file is looked for in the show's **Title
+ * folder**, then under the run's **Sheet root** `sheetRoot`, which is only
+ * read. The read always wins, and a cell naming a file that is not there
+ * fills nothing.
  */
 export async function showWithCells(
   show: ShowScan,
@@ -142,6 +132,7 @@ export async function showWithCells(
   rows: readonly SheetRow[],
   sheetRoot: string
 ): Promise<ShowScan> {
+  const search = { dir: show.dir, folderPath: row.folderPath, sheetRoot };
   const rowOf = (
     type: SheetRow['type'],
     season: number,
@@ -158,10 +149,8 @@ export async function showWithCells(
     seasons.push({
       ...season,
       poster: await fill(
+        search,
         season.poster,
-        show.dir,
-        row.folderPath,
-        sheetRoot,
         rowOf('Season', season.number, null)?.poster ?? null
       ),
     });
@@ -172,37 +161,17 @@ export async function showWithCells(
     episodes.push({
       ...episode,
       subtitles: await withTrackCells(
+        search,
         episode.subtitles,
-        show.dir,
-        row.folderPath,
-        sheetRoot,
         cells?.subtitles ?? []
       ),
-      still: await fill(
-        episode.still,
-        show.dir,
-        row.folderPath,
-        sheetRoot,
-        cells?.still ?? null
-      ),
+      still: await fill(search, episode.still, cells?.still ?? null),
     });
   }
   return {
     ...show,
-    poster: await fill(
-      show.poster,
-      show.dir,
-      row.folderPath,
-      sheetRoot,
-      row.poster
-    ),
-    backdrop: await fill(
-      show.backdrop,
-      show.dir,
-      row.folderPath,
-      sheetRoot,
-      row.backdrop
-    ),
+    poster: await fill(search, show.poster, row.poster),
+    backdrop: await fill(search, show.backdrop, row.backdrop),
     seasons,
     episodes,
   };
