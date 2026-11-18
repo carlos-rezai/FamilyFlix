@@ -2060,7 +2060,9 @@ describe('createImporter — resolve: Save & continue', () => {
     await expect(
       importer.resolve(problem.id, {
         ...dieHardForm(dieHard),
-        poster: { found: join(dieHard, '..', '..', 'elsewhere.jpg') },
+        // Out of the Library folder, and of the sandbox the sheet lies at
+        // the top of: the run's Sheet root (log 68).
+        poster: { found: join(dieHard, '..', '..', '..', 'elsewhere.jpg') },
       })
     ).rejects.toBeInstanceOf(ImportPathError);
 

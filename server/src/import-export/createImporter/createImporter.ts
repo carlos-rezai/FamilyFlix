@@ -45,7 +45,12 @@ import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { filmSourceOf, sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
-import { filmWithCells, showWithCells } from '../pathCellFills/pathCellFills';
+import {
+  filmWithCells,
+  rowCellFiles,
+  showWithCells,
+  type RowCellFiles,
+} from '../pathCellFills/pathCellFills';
 import { sheetRootOf } from '../sheetRootOf/sheetRootOf';
 import { sourceFolderOf } from '../sourceFolderOf/sourceFolderOf';
 import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
@@ -433,6 +438,8 @@ interface ProblemSource {
   gone?: string[];
   /** An `off-layout` Problem's alone: the Title folder the walk turned away. */
   dir?: string;
+  /** A `no-folder` row's alone: the art its cells name under the Sheet root. */
+  cells?: RowCellFiles;
 }
 
 /** A **Sheet row** as the detail carries it: the columns it has, and no nulls. */
@@ -462,6 +469,23 @@ const filesOf = (scan: FilmScan): ImportProblemDetail['files'] => ({
   ...(scan.poster === null ? {} : { poster: scan.poster }),
   ...(scan.backdrop === null ? {} : { backdrop: scan.backdrop }),
   subtitles: scan.subtitles.map(({ path, language }) => ({ path, language })),
+});
+
+/**
+ * The **Found files** a row no folder holds offers: the art its cells name
+ * (log 68), and no video; nothing for a source with no cells read.
+ */
+const cellFilesOf = (
+  cells: RowCellFiles | undefined
+): ImportProblemDetail['files'] => ({
+  videos: [],
+  ...(cells === undefined || cells.poster === null
+    ? {}
+    : { poster: cells.poster }),
+  subtitles: (cells?.subtitles ?? []).map(({ path, language }) => ({
+    path,
+    language,
+  })),
 });
 
 /** A series' Episode rows: those of `rows` naming its **Folder key**. */
@@ -1009,8 +1033,13 @@ export function createImporter({
     }
     heldSheets.clear();
   };
-  /** The run's **Library folders**: the only places a found file may be. */
+  /** The run's **Library folders**: the only places a found video may be. */
   let listedPaths: string[] = [];
+  /**
+   * A sheet run's **Sheet root**, where a Resolve's found art may also be
+   * (log 68); `null` for a Folder scan, whose sheets lie in its folders.
+   */
+  let sheetRootPath: string | null = null;
   /** What the run knew when it filed each **Problem**, by the problem's id. */
   const sources = new Map<string, ProblemSource>();
   /**
@@ -1027,6 +1056,31 @@ export function createImporter({
     run === null
       ? null
       : { ...run, log: [...run.log], problems: [...run.problems] };
+
+  /**
+   * Refuse with {@link ImportPathError} a Resolve's found file lying where
+   * the save may not read: a video under none of the run's **Library
+   * folders**, art (a poster, a track) under none of them nor its **Sheet
+   * root** (log 68). A stored or picked file is never refused here.
+   */
+  const refuseUnreadable = (
+    videos: readonly ResolveFile[],
+    art: readonly ResolveFile[]
+  ): void => {
+    const artRoots =
+      sheetRootPath === null ? listedPaths : [...listedPaths, sheetRootPath];
+    const check = (slot: ResolveFile, roots: readonly string[]): void => {
+      if ('found' in slot && !roots.some((root) => isUnder(root, slot.found))) {
+        throw new ImportPathError(slot.found);
+      }
+    };
+    for (const slot of videos) {
+      check(slot, listedPaths);
+    }
+    for (const slot of art) {
+      check(slot, artRoots);
+    }
+  };
 
   /** File one **Problem** on a run, and keep what the run knew beside it. */
   const file = (
@@ -2982,6 +3036,10 @@ export function createImporter({
             row,
             folder: candidates[0] ?? null,
             candidates: kind === 'ambiguous' ? candidates : [],
+            // A row no folder holds offers the art its cells name (log 68).
+            ...(kind === 'no-folder'
+              ? { cells: await rowCellFiles(row, sheetRoot) }
+              : {}),
           }
         );
       }
@@ -3350,6 +3408,7 @@ export function createImporter({
     const current = freshRun(source, enrich, mode);
     run = current;
     listedPaths = runFolders;
+    sheetRootPath = null;
     sources.clear();
     differing.clear();
     stop = new AbortController();
@@ -3374,6 +3433,7 @@ export function createImporter({
         mode,
         folders.map((folder) => folder.path)
       );
+      sheetRootPath = sheetRootOf(sheetPath);
 
       // Not awaited: the run goes on in the background, and `current` answers
       // where it has got to. Nothing in `execute` throws past its own catches.
@@ -3517,8 +3577,7 @@ export function createImporter({
             ? { title: guessedRow(listed.title).title, genres: [] }
             : rowDetail(source.row),
         ...(folder === null ? {} : { folder: folder.dir }),
-        files:
-          folder === null ? { videos: [], subtitles: [] } : filesOf(folder),
+        files: folder === null ? cellFilesOf(source.cells) : filesOf(folder),
       };
     },
 
@@ -3536,19 +3595,12 @@ export function createImporter({
       // Every found path is checked before the first is copied: a refusal
       // copies nothing at all, not even the files named inside a Library folder
       // beside the one named outside it.
-      const slots: ResolveFile[] = [
-        form.video,
+      const art: ResolveFile[] = [
         ...(form.poster === null ? [] : [form.poster]),
         ...form.subtitles.map((track) => track.file),
       ];
-      for (const slot of slots) {
-        if (
-          'found' in slot &&
-          !listedPaths.some((listed) => isUnder(listed, slot.found))
-        ) {
-          throw new ImportPathError(slot.found);
-        }
-      }
+      refuseUnreadable([form.video], art);
+      const slots: ResolveFile[] = [form.video, ...art];
 
       // The folder is the one the route's bytes already went into, when there
       // are any — a found film beside a picked poster is one movie in one
@@ -3648,14 +3700,15 @@ export function createImporter({
           ...episode.subtitles.map((track) => track.file),
         ]),
       ];
-      for (const slot of slots) {
-        if (
-          'found' in slot &&
-          !listedPaths.some((listed) => isUnder(listed, slot.found))
-        ) {
-          throw new ImportPathError(slot.found);
-        }
-      }
+      refuseUnreadable(
+        form.episodes.map((episode) => episode.video),
+        [
+          ...(poster === null ? [] : [poster]),
+          ...form.episodes.flatMap((episode) =>
+            episode.subtitles.map((track) => track.file)
+          ),
+        ]
+      );
       for (const { season, number } of form.episodes) {
         const tag = spellEpisodeTag(season, number);
         if (heldTags.has(tag)) {

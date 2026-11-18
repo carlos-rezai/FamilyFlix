@@ -1066,16 +1066,18 @@ describe('POST /api/import/current/problems/:id/resolve', () => {
     expect(after.problems.map((p) => p.id)).toEqual([problem.id]);
   });
 
-  it('refuses a poster or a subtitle outside every library folder as firmly as the video', async () => {
+  it('refuses a poster or a subtitle outside every library folder and the Sheet root as firmly as the video', async () => {
     const { baseUrl, media, problem, dieHard, scratch } =
       await failedDieHardApi();
-    writeFileSync(join(scratch, 'elsewhere.srt'), '');
+    // The sheet lies at the sandbox's top, so the whole sandbox is the run's
+    // Sheet root (log 68): the track climbs out of it.
+    const outside = join(scratch, '..', '..', 'elsewhere.srt');
 
     const response = await postResolve(baseUrl, problem.id, [
       ...dieHardFields(),
       ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
       ['subtitleLanguage', 'English'],
-      ['subtitlePath', join(scratch, 'elsewhere.srt')],
+      ['subtitlePath', outside],
     ]);
 
     // The film named inside the root is not copied either: a refusal copies

@@ -29,21 +29,22 @@ async function isFile(path: string): Promise<boolean> {
  * under it as written. The Sheet root is only read.
  */
 interface CellSearch {
-  dir: string;
+  /** `null` for a row no Title folder holds: the Sheet root alone is read. */
+  dir: string | null;
   folderPath: string;
   sheetRoot: string;
 }
 
 /**
  * Where a cell's file is, the first place `search` names that holds it;
- * `null` when neither does.
+ * `null` when none does.
  */
 async function foundCell(
   { dir, folderPath, sheetRoot }: CellSearch,
   cell: string
 ): Promise<string | null> {
   for (const path of [
-    resolvePathCell(dir, folderPath, cell),
+    ...(dir === null ? [] : [resolvePathCell(dir, folderPath, cell)]),
     join(sheetRoot, ...cellSegments(cell)),
   ]) {
     if (await isFile(path)) {
@@ -113,6 +114,30 @@ export async function filmWithCells(
     poster: await fill(search, scan.poster, row.poster),
     backdrop: await fill(search, scan.backdrop, row.backdrop),
     subtitles: await withTrackCells(search, scan.subtitles, row.subtitles),
+  };
+}
+
+/** The art a row's cells name when no Title folder holds the row. */
+export interface RowCellFiles {
+  poster: string | null;
+  subtitles: SubtitleFound[];
+}
+
+/**
+ * A `no-folder` row's **Path cells** read under the run's **Sheet root**
+ * `sheetRoot` alone, for its **Resolve** (log 68): the poster its `Poster`
+ * cell names, and each track its `Subtitles` cells name, in the language its
+ * file name reads. A cell naming nothing finds nothing; the `Backdrop` cell
+ * is not read, the Resolve having no slot for it, nor the `Video` cell.
+ */
+export async function rowCellFiles(
+  row: SheetRow,
+  sheetRoot: string
+): Promise<RowCellFiles> {
+  const search = { dir: null, folderPath: row.folderPath, sheetRoot };
+  return {
+    poster: await fill(search, null, row.poster),
+    subtitles: await withTrackCells(search, [], row.subtitles),
   };
 }
 
