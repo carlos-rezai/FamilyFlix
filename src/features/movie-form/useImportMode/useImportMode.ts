@@ -49,6 +49,9 @@ export interface UseImportModeResult {
  * Library folder, the movie by the containing read of its video's path — and
  * while the kind on screen can't link, Copy stands chosen until a later answer
  * says Link can be again. A browser has no path to link, so it sends Copy.
+ * On a **Resolve** in the shell the movie's pick is read the same way but no
+ * mode is drawn: under a Library folder it travels as a **Found file**, which
+ * the run's own Import mode places; under none it is uploaded and copied.
  */
 export function useImportMode({
   kind,

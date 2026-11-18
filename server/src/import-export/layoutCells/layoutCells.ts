@@ -12,8 +12,8 @@ import { videoCell, type PathCells } from '../exportRows/exportRows';
  * `reads` holds each recorded **Title folder** as `readTitleFolder` read it,
  * keyed by its **Folder key**, and every cell is relative to the folder
  * holding that Title folder, with forward slashes, so it starts with the
- * Title folder's own name wherever in the **Library folder** it lies. A cell names what the folder
- * holds at its **Layout place**, never what storage holds: a poster or
+ * Title folder's own name wherever in the **Library folder** it lies. A cell
+ * names what the folder holds at its **Layout place**, never what storage holds: a poster or
  * backdrop by its own name, a **Season poster**, a **Still** by its **Episode
  * tag**, every track of the place's `Subtitles/` by its own name. A **Frame
  * still**, a place the folder holds nothing in, and a folder with no read (or

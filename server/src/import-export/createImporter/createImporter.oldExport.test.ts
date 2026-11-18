@@ -251,6 +251,25 @@ describe('createImporter: a v0.16.1 Export’s art comes back from its sheet', (
     ]);
   });
 
+  // Found by issue #649's walk: the Episode row's track did not come back.
+  it('brings Tidewater’s first episode’s subtitle back', async () => {
+    const box = sandbox();
+
+    await uploaded(box);
+
+    const [tidewater] = box.storage.getSeriesHome().series;
+    const [season] = box.storage.getSeriesDetail(tidewater.id)?.seasons ?? [];
+    expect(
+      season?.episodes.map((episode) => [
+        episode.number,
+        episode.subtitles.map(({ language }) => language),
+      ])
+    ).toEqual([
+      [1, ['English']],
+      [2, []],
+    ]);
+  });
+
   it('writes nothing under the Export folder', async () => {
     const box = sandbox();
     const before = snapshot(box.exported);

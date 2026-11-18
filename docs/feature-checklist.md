@@ -732,28 +732,32 @@ Step 50 came out of testing v0.16.1 on the real library (`D:\Movies`, its
 after an emptied library gave almost nothing back. Settled in a grill-me
 on 2026-11-17 (design log 67, no prototype amended):
 
-50. ⬜ **Export paths**: an Export whose titles lie a level deeper than
+50. 🔜 **Export paths**: an Export whose titles lie a level deeper than
     their Library folder's root still imports back whole, its art included.
     - **One spelling**: a **Source folder** is written with `/` on every
       platform (`sourceFolderOf`, beside `placeTitleFolder`), as a Source
-      file already is; stored `\` values are left, every reader splitting
-      on both.
+      file already is; stored `\` values are left, and `titleAt` reads them
+      with `\` as `/`.
     - **The Export writes the layout**: a sheet's `Folder` cell is the
       Title folder's own name, the Source folder's last segment
       (`titleFolderName`), so an Export is flat and copied over a re-linked
-      Library folder lands where a scan reads it; the Library sheet's path
-      cells are relative to the folder holding each Title folder.
+      Library folder lands where a scan reads it; two titles sharing a
+      name number `(1)`, `(2)` with a warning line. The Library sheet's
+      path cells are relative to the folder holding each Title folder
+      (`layoutCells(reads)`, no root).
     - **A Folder cell is a Folder path**: `\` read as `/`, its last segment
       the **Folder key** a row is matched by, exactly as today; a path cell
       is contained when it lies under the whole Folder path.
     - **The Sheet root**: a path cell's file is looked for in the matched
       Title folder, then under the folder holding the sheet's `Meta/`
       folder (`sheetRootOf`), so an Export's sheet uploaded from its
-      `Meta/` brings its art back. `pathCellFills` alone resolves cells;
-      `matchRows` no longer does.
+      `Meta/` brings its art back: posters, backdrops, Season posters,
+      Stills, and film and episode tracks. `pathCellFills` alone resolves
+      cells; `matchRows` no longer does.
     - **A Resolve links**: in the shell a Resolve's picked video under a
       Library folder travels as its path, a **Found file** the run's
-      **Import mode** places, so a Link run links it.
+      **Import mode** places, so a Link run links it; under none, or in a
+      browser, it is uploaded and copied. No Import mode control is drawn.
     - **Out**: loose art beside the video (the Folder layout stays one
       shape); a fuzzier bare-title fallback; a v0.16.1 Export's nested
       folders copied over a Library folder (its sheet is the road back); a

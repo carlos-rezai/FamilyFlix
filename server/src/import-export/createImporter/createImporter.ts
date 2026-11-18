@@ -955,7 +955,12 @@ export interface ImporterDeps {
  * folder by **Folder key** folded (`sameFolderKey`), so a folder a Mac named
  * in NFD matches a row typed in NFC, and its path cells reach that folder's
  * files under the name on disk. Each **Doubled place** the walk finds is one
- * **Layout warning** line, and the scan imports the file read.
+ * **Layout warning** line, and the scan imports the file read. A row's
+ * **Path cells** fill what its folder's own read left empty
+ * (`pathCellFills`), each file looked for first in the matched Title folder,
+ * then under the run's **Sheet root** (`sheetRootOf`), so an Export's sheet
+ * uploaded from its `Meta/` folder brings its art back from the Export
+ * folder, which is only read.
  *
  * Each match is imported by the **Movie form**'s own sequence: reserve the
  * **Movie folder**, copy in the video, the poster, the backdrop and each
@@ -970,8 +975,10 @@ export interface ImporterDeps {
  * counts them all. `dismiss` takes one off — the **Review step**'s _Skip_.
  * What the run knew when it filed each one — the row, the folders — is kept
  * beside the snapshot for `problem`, the **Problem detail** _Resolve_ opens
- * the form on; `resolve` is that form's _Save & continue_, copying **Found
- * files** in from under the Library folders and nowhere else.
+ * the form on; `resolve` is that form's _Save & continue_. A **Found file**
+ * video under a listed Library folder is placed by the run's **Import mode**
+ * (linked where it lies in a Link run, copied in a Copy run); a picked file
+ * is copied.
  *
  * `cancel` aborts the copy in flight through the signal every copy is handed,
  * which makes the match it was in a match that failed: the folder goes the

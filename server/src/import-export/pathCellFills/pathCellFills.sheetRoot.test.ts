@@ -224,4 +224,65 @@ describe('showWithCells: a Season poster and a Still under the Sheet root', () =
       )
     );
   });
+
+  // Found by issue #649's walk: an Episode row's `Subtitles` cell was never
+  // read, so a v0.16.1 Export's episode tracks did not come back.
+  it('fills an episode’s track from the Sheet root, once beside its read', async () => {
+    const ENGLISH_TRACK = `${FOLDER_PATH}/Season 01/Subtitles/S01E01/English.srt`;
+    const DUTCH_TRACK = `${FOLDER_PATH}/Season 01/Subtitles/S01E01/Dutch.srt`;
+    const { dir, sheetRoot } = places(
+      ['Season 01/Subtitles/S01E01/Dutch.srt'],
+      [ENGLISH_TRACK]
+    );
+    const dutch = join(dir, 'Season 01', 'Subtitles', 'S01E01', 'Dutch.srt');
+    const show: ShowScan = {
+      dir,
+      name: HEAT,
+      episodes: [
+        {
+          season: 1,
+          episode: 1,
+          title: null,
+          video: join(dir, 'Season 01', 'S01E01.mp4'),
+          subtitles: [{ path: dutch, language: 'Dutch' }],
+          still: null,
+        },
+      ],
+      unplaced: [],
+      straySubtitles: [],
+      poster: null,
+      backdrop: null,
+      seasons: [{ number: 1, poster: null }],
+    };
+
+    const filled = await showWithCells(
+      show,
+      row({ type: 'Series' }),
+      [
+        row({
+          type: 'Episode',
+          season: 1,
+          episode: 1,
+          subtitles: [ENGLISH_TRACK, DUTCH_TRACK],
+        }),
+      ],
+      sheetRoot
+    );
+
+    expect(filled.episodes[0].subtitles).toEqual([
+      { path: dutch, language: 'Dutch' },
+      {
+        path: join(
+          sheetRoot,
+          'Movies',
+          HEAT,
+          'Season 01',
+          'Subtitles',
+          'S01E01',
+          'English.srt'
+        ),
+        language: 'English',
+      },
+    ]);
+  });
 });

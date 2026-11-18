@@ -2,7 +2,10 @@ import { stat } from 'node:fs/promises';
 import { basename, join, resolve } from 'node:path';
 
 import { detectSubtitleLanguage } from '../../media/detectSubtitleLanguage/detectSubtitleLanguage';
-import type { FilmScan } from '../../media/readTitleFolder/readTitleFolder';
+import type {
+  FilmScan,
+  SubtitleFound,
+} from '../../media/readTitleFolder/readTitleFolder';
 import type { ShowScan } from '../numberShow/numberShow';
 import {
   cellSegments,
@@ -59,6 +62,32 @@ async function fill(
 }
 
 /**
+ * The tracks a read found, then each `Subtitles` cell's file by `foundCell`
+ * that none of them is already: a cell naming nothing adds nothing, and its
+ * language is read from its file name. A film's tracks and each episode's
+ * are read alike.
+ */
+async function withTrackCells(
+  found: readonly SubtitleFound[],
+  dir: string,
+  folderPath: string,
+  sheetRoot: string,
+  cells: readonly string[]
+): Promise<SubtitleFound[]> {
+  const held = new Set(found.map(({ path }) => resolve(path)));
+  const subtitles = [...found];
+  for (const cell of cells) {
+    const path = await foundCell(dir, folderPath, sheetRoot, cell);
+    if (path === null || held.has(resolve(path))) {
+      continue;
+    }
+    held.add(resolve(path));
+    subtitles.push({ path, language: detectSubtitleLanguage(basename(path)) });
+  }
+  return subtitles;
+}
+
+/**
  * A film's scan with its **Sheet row**'s **Path cells** read into the places
  * the folder's read left empty: the poster and backdrop when the read found
  * none, and each track the read did not find. The read always wins, a cell
@@ -72,16 +101,13 @@ export async function filmWithCells(
   row: SheetRow,
   sheetRoot: string
 ): Promise<FilmScan> {
-  const held = new Set(scan.subtitles.map(({ path }) => resolve(path)));
-  const subtitles = [...scan.subtitles];
-  for (const cell of row.subtitles) {
-    const path = await foundCell(scan.dir, row.folderPath, sheetRoot, cell);
-    if (path === null || held.has(resolve(path))) {
-      continue;
-    }
-    held.add(resolve(path));
-    subtitles.push({ path, language: detectSubtitleLanguage(basename(path)) });
-  }
+  const subtitles = await withTrackCells(
+    scan.subtitles,
+    scan.dir,
+    row.folderPath,
+    sheetRoot,
+    row.subtitles
+  );
   return {
     ...scan,
     poster: await fill(
@@ -105,9 +131,10 @@ export async function filmWithCells(
 /**
  * A show's scan with its sheet's **Path cells**, each already contained, read
  * into the places the folder's read left empty: the Series row's poster and
- * backdrop, each Season row's **Season poster** and each Episode row's
- * **Still**. `rows` are the show's Season and Episode rows. The read always
- * wins, and a cell naming a file that is not there fills nothing.
+ * backdrop, each Season row's **Season poster**, and each Episode row's
+ * **Still** and each track its read did not find. `rows` are the show's
+ * Season and Episode rows. The read always wins, and a cell naming a file
+ * that is not there fills nothing.
  */
 export async function showWithCells(
   show: ShowScan,
@@ -141,14 +168,22 @@ export async function showWithCells(
   }
   const episodes = [];
   for (const episode of show.episodes) {
+    const cells = rowOf('Episode', episode.season, episode.episode);
     episodes.push({
       ...episode,
+      subtitles: await withTrackCells(
+        episode.subtitles,
+        show.dir,
+        row.folderPath,
+        sheetRoot,
+        cells?.subtitles ?? []
+      ),
       still: await fill(
         episode.still,
         show.dir,
         row.folderPath,
         sheetRoot,
-        rowOf('Episode', episode.season, episode.episode)?.still ?? null
+        cells?.still ?? null
       ),
     });
   }

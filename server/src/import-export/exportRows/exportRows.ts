@@ -328,7 +328,10 @@ const byKey = (a: Planned, b: Planned): number =>
  * read** (`layoutCells`). `sourceFolders`, required, names each title's
  * Folder key by its **Source folder** (`sourceFoldersOf`): the one rule for
  * both sheets since the **Export round trip** (log 61), so a title held from
- * `Heat/` is `Heat` whatever year a Sync filled ({@link titleFolderOf}). Every
+ * `Heat/` is `Heat` whatever year a Sync filled ({@link titleFolderOf}). A
+ * nested Source folder is keyed by its last segment (`titleFolderName`), so
+ * `Movies/Heat` is `Heat` and an Export is flat, one Title folder per title
+ * directly in it, whatever depth its titles lie at. Every
  * season-scoped place carries its `seasonFolder`, the **Season folder name**
  * its held episodes lie under (`seasonFolderOf`). Two titles sharing a
  * Folder key, compared folded (NFC, then case), are numbered `(1)`, `(2)`,
