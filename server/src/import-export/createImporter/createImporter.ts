@@ -47,6 +47,7 @@ import { MATCH_REASON, matchRows, type Match } from '../matchRows/matchRows';
 import { filmSourceOf, sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
 import { filmWithCells, showWithCells } from '../pathCellFills/pathCellFills';
 import { sheetRootOf } from '../sheetRootOf/sheetRootOf';
+import { sourceFolderOf } from '../sourceFolderOf/sourceFolderOf';
 import { placeFoundVideo } from '../placeFoundVideo/placeFoundVideo';
 import { heldSeriesValues, heldValues } from '../heldValues/heldValues';
 import {
@@ -1709,7 +1710,7 @@ export function createImporter({
     // Where the show came from, relative to its Library folder: on a held
     // series too, so a re-run backfills a library imported before it was
     // remembered.
-    const sourceFolder = relative(libraryFolder.path, show.dir);
+    const sourceFolder = sourceFolderOf(libraryFolder.path, show.dir);
     if (held !== null) {
       storage.setSourceFolder(held.series.id, libraryFolder.id, sourceFolder);
     }
@@ -2730,7 +2731,7 @@ export function createImporter({
   ): HeldSeries | null => {
     const atFolder = storage.titleAt(
       folder.id,
-      relative(folder.path, show.dir)
+      sourceFolderOf(folder.path, show.dir)
     );
     const holder = heldByVideo(
       storage.titleHolding,

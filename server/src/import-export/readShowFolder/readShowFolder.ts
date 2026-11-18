@@ -1,4 +1,4 @@
-import { basename, relative } from 'node:path';
+import { basename } from 'node:path';
 
 import { folderKeyOf } from '../../media/folderKeyOf/folderKeyOf';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
@@ -19,6 +19,7 @@ import {
 import { heldByVideo } from '../heldByVideo/heldByVideo';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { sourceFileOf } from '../placeFilmFolder/placeFilmFolder';
+import { sourceFolderOf } from '../sourceFolderOf/sourceFolderOf';
 import type { ShowFolderEpisode, ShowFolderRead } from '@/types';
 
 /** Why a picked folder was not read: it cannot be read, or holds no video. */
@@ -149,7 +150,7 @@ export async function readShowFolder(
           ? null
           : (context.heldSeriesAt(
               listed.id,
-              relative(listed.path, showFolder)
+              sourceFolderOf(listed.path, showFolder)
             ) ??
             heldByVideo(
               context.titleHolding,

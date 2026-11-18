@@ -2,6 +2,7 @@ import { dirname, relative, sep } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
 import { placeTitleFolder } from '../placeTitleFolder/placeTitleFolder';
+import { sourceFolderOf } from '../sourceFolderOf/sourceFolderOf';
 
 /** Where a found film lies, as `setSourceFolder` records it. */
 export interface FilmSource {
@@ -30,7 +31,7 @@ export const filmSourceOf = (
   scan: { dir: string }
 ): FilmSource => ({
   folderId: folder.id,
-  sourceFolder: relative(folder.path, scan.dir),
+  sourceFolder: sourceFolderOf(folder.path, scan.dir),
   sourceFile: null,
 });
 

@@ -2,6 +2,7 @@ import { dirname, relative } from 'node:path';
 
 import type { StoredLibraryFolder } from '../../library';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
+import { sourceFolderOf } from '../sourceFolderOf/sourceFolderOf';
 
 /** A **Title folder** placed in its listed **Library folder**. */
 export interface PlacedTitleFolder {
@@ -22,8 +23,11 @@ export function placeTitleFolder(
   dir: string
 ): PlacedTitleFolder | null {
   const listed = listedFolderOf(folders, dir);
-  if (listed === null || relative(listed.path, dirname(dir)) !== '') {
+  if (listed === null || relative(dirname(dir), listed.path) !== '') {
     return null;
   }
-  return { folderId: listed.id, sourceFolder: relative(listed.path, dir) };
+  return {
+    folderId: listed.id,
+    sourceFolder: sourceFolderOf(listed.path, dir),
+  };
 }

@@ -309,14 +309,18 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
   const updateSeriesSource = db.prepare(
     'UPDATE series SET library_folder_id = ?, source_folder = ? WHERE id = ?'
   );
+  // A Source folder a Windows run stored with `\` (char 92) reads as `/`.
   const selectAt = db.prepare(
-    `SELECT id FROM movies WHERE library_folder_id = @folderId AND source_folder = @sourceFolder
-     UNION ALL SELECT id FROM series WHERE library_folder_id = @folderId AND source_folder = @sourceFolder
+    `SELECT id FROM movies WHERE library_folder_id = @folderId
+       AND REPLACE(source_folder, char(92), '/') = @sourceFolder
+     UNION ALL SELECT id FROM series WHERE library_folder_id = @folderId
+       AND REPLACE(source_folder, char(92), '/') = @sourceFolder
      LIMIT 1`
   );
   const selectFileAt = db.prepare(
     `SELECT id FROM movies WHERE library_folder_id = @folderId
-       AND source_folder = @sourceFolder AND source_file = @sourceFile
+       AND REPLACE(source_folder, char(92), '/') = @sourceFolder
+       AND source_file = @sourceFile
      LIMIT 1`
   );
   const selectSource = db.prepare(
