@@ -13,6 +13,7 @@ import { spellYearSpan } from '../../library/series/yearSpan/yearSpan';
 import {
   foldFolderKey,
   spellFolderKey,
+  titleFolderName,
 } from '../../media/folderKeyOf/folderKeyOf';
 import { FORBIDDEN_IN_NAME } from '../exportName/exportName';
 import { seasonFolderOf } from '../seasonFolderOf/seasonFolderOf';
@@ -292,16 +293,21 @@ const seriesRows =
   ];
 
 /**
- * A title's planned folder: its **Source folder**, else its **Folder key**
- * spelled by `spellFolderKey` (the bare title for a `null` year), made safe.
+ * A title's planned folder: the **Title folder** its **Source folder** names
+ * (`titleFolderName`), else its **Folder key** spelled by `spellFolderKey`
+ * (the bare title for a `null` year), made safe.
  */
 const titleFolderOf = (
   sourceFolders: ReadonlyMap<string, string>,
   id: string,
   title: string,
   year: number | null
-): string =>
-  sourceFolders.get(id) ?? safeFolderName(spellFolderKey(title, year));
+): string => {
+  const source = sourceFolders.get(id);
+  return source === undefined
+    ? safeFolderName(spellFolderKey(title, year))
+    : titleFolderName(source);
+};
 
 /** Folder-key order, A to Z, without regard to case. */
 const byKey = (a: Planned, b: Planned): number =>

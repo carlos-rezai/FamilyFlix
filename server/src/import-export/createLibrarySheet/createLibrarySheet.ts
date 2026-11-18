@@ -7,6 +7,7 @@ import {
   LIBRARY_SHEET_STEM,
   META_FOLDER,
 } from '../../media/folderLayout/folderLayout';
+import { titleFolderName } from '../../media/folderKeyOf/folderKeyOf';
 import { readableFolder } from '../../media/readableFolder/readableFolder';
 import {
   readTitleFolder,
@@ -27,6 +28,9 @@ export const LIBRARY_SHEET_DELAY_MS = 3000;
 
 /** The temporary file a rewrite lands through, beside the sheet in `Meta/`. */
 const TEMPORARY_SHEET = `${LIBRARY_SHEET}.tmp`;
+
+/** What separates a stored **Source folder**'s segments, either slash. */
+const SEGMENT = /[/\\]/;
 
 /**
  * What one Library folder's sheet is written from: the titles recorded
@@ -78,18 +82,22 @@ async function sheetReads(bytes: Buffer): Promise<boolean> {
 }
 
 /**
- * The **Layout read** of each recorded **Title folder** under `root`, by its
- * own name; a folder that cannot be read has none, so its path cells are
- * blank.
+ * The **Layout read** of each recorded **Title folder** under `root`, read
+ * where its **Source folder** says it lies and keyed by its **Folder key**
+ * (`titleFolderName`); a folder that cannot be read has none, so its path
+ * cells are blank.
  */
 async function readTitleFolders(
   root: string,
-  names: Iterable<string>
+  sourceFolders: Iterable<string>
 ): Promise<Map<string, TitleFolderScan>> {
   const reads = new Map<string, TitleFolderScan>();
-  for (const name of new Set(names)) {
+  for (const source of new Set(sourceFolders)) {
     try {
-      reads.set(name, await readTitleFolder(join(root, name)));
+      reads.set(
+        titleFolderName(source),
+        await readTitleFolder(join(root, ...source.split(SEGMENT)))
+      );
     } catch {
       // An unreadable Title folder keeps every cell but its paths.
     }
@@ -156,7 +164,7 @@ export function createLibrarySheet({
     const { table } = exportRows(
       movies,
       series,
-      layoutCells(reads, folder.path),
+      layoutCells(reads),
       sourceFolders
     );
     const sheet = join(folder.path, LIBRARY_SHEET);

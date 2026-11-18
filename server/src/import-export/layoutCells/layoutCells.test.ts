@@ -2,11 +2,11 @@
 //
 // 59, Rebuild whole, Phase 6 (issue #553): the Library sheet's Path cells.
 //
-// `layoutCells(reads, root)` answers the **Library sheet**'s **Path cells**
+// `layoutCells(reads)` answers the **Library sheet**'s **Path cells**
 // from the **Layout read**: each recorded **Title folder** as
 // `readTitleFolder` read it, keyed by the folder's own name (the place's
-// `folder`), and `root`, the **Library folder** every cell is relative to,
-// with forward slashes. A path cell names what the folder holds, never what
+// `folder`), every cell relative to the folder holding that Title folder
+// (here `ROOT`, the **Library folder**), with forward slashes. A path cell names what the folder holds, never what
 // storage holds: a poster or backdrop by its own name, a **Season poster**,
 // a **Still** by the **Episode tag** it carries, every track of the place's
 // `Subtitles/` by its own name. A **Frame still** (in storage, never in the
@@ -113,7 +113,7 @@ const tidewater: SeriesFolderScan = {
 const reads = (...scans: TitleFolderScan[]): Map<string, TitleFolderScan> =>
   new Map(scans.map((scan) => [scan.name, scan]));
 
-const cells = layoutCells(reads(dieHard, tidewater), ROOT);
+const cells = layoutCells(reads(dieHard, tidewater));
 
 /** A track as storage holds it, its path a Stored path in managed media. */
 const stored = (language: string, position: number): Subtitle => ({
@@ -279,8 +279,7 @@ describe('layoutCells: a folder with no read', () => {
         dir: onDisk('Heat (1995)'),
         name: 'Heat (1995)',
         reason: 'mixed',
-      }),
-      ROOT
+      })
     );
 
     expect(

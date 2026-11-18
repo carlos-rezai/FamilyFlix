@@ -42,3 +42,14 @@ export const sameFolderKey = (a: string, b: string): boolean =>
  */
 export const spellFolderKey = (title: string, year: number | null): string =>
   year === null ? title : `${title} (${year})`;
+
+/**
+ * The **Title folder** a **Source folder** names: its last non-empty segment,
+ * split on `/` and `\` alike, so `Movies\Amelie (2001)` and `Amelie (2001)`
+ * answer one **Folder key**.
+ */
+export const titleFolderName = (path: string): string =>
+  path
+    .split(/[/\\]+/)
+    .filter((segment) => segment !== '')
+    .pop() ?? '';
