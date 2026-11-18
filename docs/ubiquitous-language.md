@@ -1147,6 +1147,17 @@ every platform. No prototype is amended.
 | **Export round trip** (updated) | Since log 67, for any library shape: an Export is written flat in the **Folder layout**, one Title folder per title by its own name, and its art comes back from its sheet uploaded out of its `Meta/` folder, through the **Sheet root**.                        |                                        |
 | **Resolve** (updated)           | Since log 67, in the shell a picked video lying under a **Library folder** travels as its path, a **Found file** placed by the run's **Import mode**, so a Link run links it; a pick under none, or in a browser, is uploaded and copied.                         |                                        |
 
+## Resolve cells
+
+Design log 68: issue 650, initiative `resolve-cells`. A `no-folder` row's
+Resolve opens with the art its row's path cells name under the **Sheet
+root**. No prototype is amended.
+
+| Term                     | Definition                                                                                                                                                                                                                                                   | Aliases to avoid |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| **Resolve** (updated)    | Since log 68, a `no-folder` row's Resolve opens with its `Poster` cell's file in the poster slot and each `Subtitles` cell's file as a track, each a **Found file** looked for under the run's **Sheet root**; the backdrop is not drawn, so it is not read. |                  |
+| **Found file** (updated) | Since log 68, a **Resolve** copies a found poster or track from under the **Current run**'s Library folders or its **Sheet root**; a found video only from under its Library folders.                                                                        |                  |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
