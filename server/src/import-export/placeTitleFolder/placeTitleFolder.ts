@@ -1,5 +1,3 @@
-import { dirname, relative } from 'node:path';
-
 import type { StoredLibraryFolder } from '../../library';
 import { listedFolderOf } from '../listedFolderOf/listedFolderOf';
 import { sourceFolderOf } from '../sourceFolderOf/sourceFolderOf';
@@ -23,11 +21,13 @@ export function placeTitleFolder(
   dir: string
 ): PlacedTitleFolder | null {
   const listed = listedFolderOf(folders, dir);
-  if (listed === null || relative(dirname(dir), listed.path) !== '') {
+  if (listed === null) {
     return null;
   }
-  return {
-    folderId: listed.id,
-    sourceFolder: sourceFolderOf(listed.path, dir),
-  };
+  // Strictly inside, so never empty and never climbing: one segment is the
+  // root's own child.
+  const sourceFolder = sourceFolderOf(listed.path, dir);
+  return sourceFolder.includes('/')
+    ? null
+    : { folderId: listed.id, sourceFolder };
 }
