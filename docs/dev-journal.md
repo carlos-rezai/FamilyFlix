@@ -11,6 +11,77 @@ Newest entry first.
 
 ---
 
+## 2026-11-18: Export paths, the refactor (issue 651)
+
+Twelve commits against `docs/refactor-plans/67-export-paths-refactor.md`,
+one per plan commit. This is the initiative's closing round: step 50 is ✅
+and issue 643 is done. **12449 tests pass across 842 files** (one skipped),
+against 12448 across 841 at `da070a63`: the round added the `pathSegments`
+and `withFoundVideo` tables (9 tests) and removed the source-text suite
+(8). `tsc -b --force` is clean. `eslint src server electron` reports 1
+error and 137 warnings, as at `da070a63`.
+
+### What each group changed
+
+- **Group 1, a path's segments** (`11a14264`, `75f54583`).
+  `pathSegments` sits beside `titleFolderName` in `media/folderKeyOf/`,
+  which now reads its last segment; `readSheet`'s `folderCell` and
+  `createLibrarySheet`'s `readTitleFolders` call it, and
+  `FOLDER_SEPARATORS` and `SEGMENT` are gone. `cellSegments` stays and
+  says why: it keeps an empty segment so the reader refuses `a//b`.
+  `sheetRootOf` reads `META_FOLDER`.
+- **Group 2, one search for a path cell's file** (`c1d76e62`,
+  `be17f4e4`). `execute`'s sheet run reads its Sheet root once, before the
+  match loop, as `placeFolder` does. A private `CellSearch` (the matched
+  Title folder, its row's Folder path, the Sheet root) is what `foundCell`,
+  `fill` and `withTrackCells` take first; both exports' docblocks say
+  where a cell's file is looked for.
+- **Group 3, the Source folder's depth** (`7c4b8f42`, `9e0ce8c5`).
+  `placeTitleFolder` spells its Source folder once and answers `null` when
+  it holds a `/`; no `relative` is left in it. `sourceFolderOf.test` no
+  longer reads shipping files' text: its behaviour suite stays.
+- **Group 4, `layoutCells`** (`0996d57d`, `2562ddce`). `cellIn` takes the
+  read it is relative to, each branch reading `readOf` once, and the
+  `?? ''` fallback is gone. `layoutCells`' and `exportRows`' docblocks are
+  rewrapped at 80 columns.
+- **Group 5, the Resolve's found video** (`93920452`, `6791257e`).
+  `withFoundVideo` sits beside `foundFile`; `movieAddValues` is Link's
+  `withFoundVideo` and Copy's values as given, and the Resolve sends
+  `withFoundVideo` with no literal mode. `useImportMode`'s `resolve` is
+  required, as `plainAdd` is.
+- **Group 6, the docs** (`e1fe0cdd` and this entry). Step 50 and its row
+  ticked, `sourceFolderOf` named as its own unit in the checklist and the
+  glossary, the README says an export gives the whole library back
+  whatever shape its folders were in, and the release checklist has an
+  _Export paths_ smoke.
+
+### Where this round left the plan
+
+- **`layoutCells`' `tracks` reads `readOf` once up front** and answers `[]`
+  for no read, so its episode branch hands the same read to `cellIn`; the
+  plan named only the image branches.
+- **`placeTitleFolder`'s comment** says why a Source folder there is never
+  empty and never climbs (`listedFolderOf` answers only a folder strictly
+  inside), rather than leaving it to the docblock.
+- **The full suite ran after every code commit**, green each time, with no
+  flake.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: one home for a path relative to a
+folder spelled with `/`, `sourceFileOf` moving, one state for the movie
+pick's containing answer, `enrich`'s `REPLACE`, everything log 67 left out,
+and the lint warnings that predate the initiative. No wire, schema, route,
+sheet column, copy, prototype state or drawn pixel changed.
+
+### Follow-ups
+
+- Issue 650: a Resolve's poster slot prefilled from its row's contained
+  `Poster` cell under the Sheet root. A product question for a grill-me
+  first.
+
+---
+
 ## 2026-11-18: Export paths, the build (issues 644 to 649)
 
 Five slices run by `issue-loop`, each a RED and a GREEN commit (644 to 648),
