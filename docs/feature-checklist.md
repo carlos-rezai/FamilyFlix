@@ -79,7 +79,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Rescan a folder: a year and `Season 1` optional     | ✅ Done    |
 | Show folder title: a pick reads its Folder key      | ✅ Done    |
 | Missing videos: a held title whose file is gone     | ✅ Done    |
-| Export paths: a nested Export imports back whole    | ⬜ Planned |
+| Export paths: a nested Export imports back whole    | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -732,10 +732,15 @@ Step 50 came out of testing v0.16.1 on the real library (`D:\Movies`, its
 after an emptied library gave almost nothing back. Settled in a grill-me
 on 2026-11-17 (design log 67, no prototype amended):
 
-50. 🔜 **Export paths**: an Export whose titles lie a level deeper than
+50. ✅ **Export paths**: an Export whose titles lie a level deeper than
     their Library folder's root still imports back whole, its art included.
+    Built in issues 644 to 649; the walk ran in the shell on a sandbox copy.
+    The closing round (issue #651) gave a path's segments one rule
+    (`pathSegments`), handed the cell fills one search per row with the
+    Sheet root read once per run, checked a Title folder's depth by its own
+    Source folder, and named the Resolve's found video (`withFoundVideo`).
     - **One spelling**: a **Source folder** is written with `/` on every
-      platform (`sourceFolderOf`, beside `placeTitleFolder`), as a Source
+      platform (`sourceFolderOf`, its own unit), as a Source
       file already is; stored `\` values are left, and `titleAt` reads them
       with `\` as `/`.
     - **The Export writes the layout**: a sheet's `Folder` cell is the
@@ -761,4 +766,5 @@ on 2026-11-17 (design log 67, no prototype amended):
     - **Out**: loose art beside the video (the Folder layout stays one
       shape); a fuzzier bare-title fallback; a v0.16.1 Export's nested
       folders copied over a Library folder (its sheet is the road back); a
-      migration of stored Source folders.
+      migration of stored Source folders. A Resolve's poster slot prefilled
+      from its row's `Poster` cell is issue 650.

@@ -224,6 +224,13 @@ Quit the app. Open a Command Prompt in the install directory,
       _Import from spreadsheet_ with the Export's
       `Meta\familyflix-library.csv`: the title comes back under its new
       name with its rating, and review lists no Problem.
+- [ ] Export paths, over a sandbox holding a copy of the
+      `server/src/import-export/createImporter/v0.16.1-export/` fixture and
+      the dev library's Title folders under one inner folder: list that
+      inner folder and _Import from spreadsheet_ with the fixture's
+      `Meta\familyflix-library.csv`. Every title comes back with its poster,
+      backdrop, Season poster, Still and tracks, and review lists no
+      Problem. A new _Export_ is flat, one folder per title beside `Meta/`.
 
 ## 9. Back on the dev machine
 
