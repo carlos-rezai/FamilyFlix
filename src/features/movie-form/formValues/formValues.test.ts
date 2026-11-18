@@ -18,6 +18,7 @@ import {
   pickedFile,
   seriesFormData,
   showFolderRows,
+  withFoundVideo,
 } from './formValues';
 
 /**
@@ -614,6 +615,41 @@ describe('movieAddValues', () => {
     const values = movieFormValues(STORED);
 
     expect(movieAddValues(values, 'link', PATH)).toBe(values);
+  });
+});
+
+describe('withFoundVideo', () => {
+  const PATH = 'D:/Films/new-lantern.mp4';
+
+  it('turns a pick with a path into a found file of it, its name kept', () => {
+    const values = {
+      ...movieFormValues(STORED),
+      video: pickedFile(someFile()),
+    };
+
+    expect(withFoundVideo(values, PATH)).toEqual({
+      ...values,
+      video: {
+        kind: 'found',
+        path: PATH,
+        filename: values.video.filename,
+      },
+    });
+  });
+
+  it('leaves a pick the Path bridge read no path for as it is', () => {
+    const values = {
+      ...movieFormValues(STORED),
+      video: pickedFile(someFile()),
+    };
+
+    expect(withFoundVideo(values, '')).toBe(values);
+  });
+
+  it('leaves a held file as it is', () => {
+    const values = movieFormValues(STORED);
+
+    expect(withFoundVideo(values, PATH)).toBe(values);
   });
 });
 

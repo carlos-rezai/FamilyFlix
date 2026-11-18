@@ -341,17 +341,15 @@ export function foundFile(
 }
 
 /**
- * The values a movie add sends: in **Link**, a picked video the **Path
- * bridge** read a path for travels as a **Found file** of that path, its name
- * kept; otherwise the values go as they are — in Copy, a picked video as its
- * bytes. The series' equivalent is {@link seriesFormData}'s folder rows.
+ * The values with a picked video the **Path bridge** read a path for, as a
+ * **Found file** of that path, its name kept; otherwise the values as they
+ * are: a pick with no path, or a held file.
  */
-export function movieAddValues(
+export function withFoundVideo(
   values: MovieFormValues,
-  mode: ImportMode,
   videoPath: string
 ): MovieFormValues {
-  return mode === 'link' && values.video?.kind === 'picked' && videoPath !== ''
+  return values.video?.kind === 'picked' && videoPath !== ''
     ? {
         ...values,
         video: {
@@ -361,6 +359,20 @@ export function movieAddValues(
         },
       }
     : values;
+}
+
+/**
+ * The values a movie add sends: in **Link**, {@link withFoundVideo}'s, a
+ * picked video travelling as the path the **Path bridge** read; in Copy, the
+ * values as given, a picked video as its bytes. The series' equivalent is
+ * {@link seriesFormData}'s folder rows.
+ */
+export function movieAddValues(
+  values: MovieFormValues,
+  mode: ImportMode,
+  videoPath: string
+): MovieFormValues {
+  return mode === 'link' ? withFoundVideo(values, videoPath) : values;
 }
 
 /**

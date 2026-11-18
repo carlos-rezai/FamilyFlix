@@ -48,6 +48,7 @@ import {
   pickedFile,
   pickedSubtitle,
   type PickedKey,
+  withFoundVideo,
 } from '../formValues/formValues';
 
 /** The most digits a year can have. */
@@ -729,9 +730,7 @@ export function useMovieForm(): UseMovieFormResult {
             // other pick travels as bytes, to be copied.
             return resolveProblem(
               problemId,
-              videoUnderFolder
-                ? movieAddValues(values, 'link', videoPath)
-                : values
+              videoUnderFolder ? withFoundVideo(values, videoPath) : values
             ).then(() => goBack);
           }
           // Over the **Edit job** it is the edit's own `PATCH` instead — the
