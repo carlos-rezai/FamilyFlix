@@ -56,12 +56,12 @@ export interface UseImportModeResult {
 export function useImportMode({
   kind,
   plainAdd,
-  resolve = false,
+  resolve,
 }: {
   kind: FormKind;
   plainAdd: boolean;
   /** The form is a **Resolve**: its pick is read, but no mode is drawn. */
-  resolve?: boolean;
+  resolve: boolean;
 }): UseImportModeResult {
   const showImportMode = folderBridge() !== null && plainAdd;
   const [chosen, setChosen] = useState<ImportMode>('link');

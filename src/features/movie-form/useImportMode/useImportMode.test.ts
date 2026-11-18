@@ -51,7 +51,8 @@ const containing = (libraryFolderId: string | null) =>
 
 const render = (kind: FormKind = 'movie', plainAdd = true) =>
   renderHook(
-    (props: { kind: FormKind }) => useImportMode({ ...props, plainAdd }),
+    (props: { kind: FormKind }) =>
+      useImportMode({ ...props, plainAdd, resolve: false }),
     {
       initialProps: { kind },
     }
