@@ -80,6 +80,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Show folder title: a pick reads its Folder key      | ✅ Done    |
 | Missing videos: a held title whose file is gone     | ✅ Done    |
 | Export paths: a nested Export imports back whole    | ✅ Done    |
+| Silent waits: every press shows it is working       | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -774,3 +775,47 @@ on 2026-11-17 (design log 67, no prototype amended):
       root, a found video only from under the Library folders. The
       backdrop (no slot) and an `ambiguous` or `no-video` row's cells stay
       out.
+
+Step 51 came out of syncing a show with TMDB and picking its poster: the
+card stayed put for seconds with no sign anything was happening, and a
+second press on the poster sent a second pick. An audit of every screen
+(2026-11-19, the dev app with each write held open in the browser) found
+the same gap wherever a press waits on the server outside the **Busy
+button**s step 36 gave the forms and dialogs. Not yet grilled:
+
+51. ⬜ **Silent waits**: every press that waits on the server shows it is
+    working, under **Loader timing**, and can't be pressed twice. Each spot
+    below takes the loader its neighbours already use: a **Busy button**
+    where the press is a button, the row locked and dimmed with a **Busy
+    label** where it is a card or a row, a **Skeleton** where a screen
+    waits on a read.
+    - **Sync review** (seen live): picking a candidate poster, _Apply
+      choices_, _Skip_, _Skip all_ and _Search_ on a Decision row draw
+      nothing until the route answers, and the row stays pressable; two
+      presses on a poster sent two picks. A **Season choice**'s poster
+      press is the same (read in code; it needs a single-series run).
+    - **Start sync** (seen live): nothing drawn and still pressable until
+      the first snapshot lands; a slow TMDB start invites a second press.
+    - **Import review** (read in code): _Import as guessed_, _Import all
+      as guessed_, _Take out of library_, _Skip_, _Skip all_, a picked
+      candidate folder and _Apply_ on a sheet row run with no busy state,
+      as the Sync review does. _Start import_ is only disabled by its form.
+    - **Library folders** (seen live): a folder's ✕ shows nothing and stays
+      pressable while the remove runs; _Bring back_ on a left-out count is
+      the same (read in code). _Scan new folders_ and _Scan all folders_
+      lock but draw no _Scanning…_ label until the progress screen opens.
+    - **Edit form** (seen live): `/add?movie=…`, `?series=…` and a Resolve
+      open as a blank _Add a movie_ form, its _Add to library_ shown, until
+      the record lands; a slow read then overwrites whatever was typed. It
+      wants a **Skeleton** of the form, not the add's empty face.
+    - **Show folder pick** (read in code, shell only): after the folder
+      dialog closes, a large show is read with nothing drawn until its
+      episode rows appear.
+    - **Already covered**, checked and left alone: the browse and detail
+      **Skeleton**s, the forms' and dialogs' **Busy button**s and **Dialog
+      loader**, the Sync and Import progress screens, the Export, the TMDB
+      key's _Testing…_, the codec drop zone's busy face, Software update's
+      _Checking_, the player's buffering **Player notice**, and the
+      optimistic Favorite, Watched, Rating and Settings writes, which need
+      no loader. Settings sub-pages drawing nothing until their read lands
+      is the Product Rule, not a gap.
