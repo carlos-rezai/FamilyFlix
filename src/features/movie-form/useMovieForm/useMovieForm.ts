@@ -101,6 +101,11 @@ export interface UseMovieFormResult {
    * `series` for the two series jobs — and on an add, whichever the tabs say.
    */
   kind: FormKind;
+  /**
+   * Whether the job names a record whose read has not answered yet: the
+   * **Form skeleton** is drawn in the form's place until it has.
+   */
+  loading: boolean;
   /** Whether the **Kind tabs** are drawn: on a plain add, and only there. */
   showKindTabs: boolean;
   /** Switch the kind, writing `?kind=` as a `replace`. */
@@ -430,6 +435,12 @@ export function useMovieForm(): UseMovieFormResult {
 
   const plainAdd = job.kind === 'add';
 
+  // The job whose record read has answered, found or gone: until it is this
+  // one, a job naming a record draws the **Form skeleton**. A plain add names
+  // none, and never waits.
+  const [answered, setAnswered] = useState<typeof job | null>(null);
+  const loading = !plainAdd && answered !== job;
+
   // The kind is the URL's, on a plain add alone: beside a context there is
   // nothing to switch. A series edit is the series kind, with no tabs to
   // switch it.
@@ -490,7 +501,14 @@ export function useMovieForm(): UseMovieFormResult {
 
     let current = true;
 
+    const settle = () => {
+      if (current) {
+        setAnswered(job);
+      }
+    };
+
     void loadFormRecord(job).then((record) => {
+      settle();
       if (!current || record === null) {
         return;
       }
@@ -506,7 +524,7 @@ export function useMovieForm(): UseMovieFormResult {
       setEditingSeries(record.editingSeries);
       setResolving(record.resolving);
       setUnplaced(record.unplaced);
-    });
+    }, settle);
 
     return () => {
       current = false;
@@ -835,6 +853,7 @@ export function useMovieForm(): UseMovieFormResult {
   }, [resolving, goBack]);
 
   return {
+    loading,
     kind,
     showKindTabs,
     setKind,

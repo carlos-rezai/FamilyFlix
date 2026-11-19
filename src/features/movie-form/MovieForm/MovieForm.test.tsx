@@ -3981,13 +3981,15 @@ describe('MovieForm — the landing, and leaving an edit', () => {
     expect(navigationType()).toBe('POP');
   });
 
-  it('lands a deep-linked edit on its movie’s page, pressed before the record has been read', () => {
-    renderUnread('/add?movie=a1');
+  it('lands a deep-linked edit on its movie’s page, though its record is gone', async () => {
+    // Since the **Form skeleton** (issue #659) nothing can be pressed while the
+    // record reads, so the guard is the other state `editing` stays `null`
+    // in: a record that turned out to be gone. The fields are empty and the
+    // screen wears the Add context's own labels; the URL is the whole of what
+    // the landing can be built from here.
+    answerMovie = () => Promise.resolve(notFoundResponse('Unknown movie: a1'));
+    await renderAt(['/add?movie=a1']);
 
-    // Nothing has been read: the fields are empty and the screen is still
-    // wearing the Add context's own labels, because the record that would
-    // change either is still in flight. The URL is the whole of what the
-    // landing can be built from here.
     expect(titleField().value).toBe('');
     fireEvent.click(backPill());
 
@@ -4009,15 +4011,19 @@ describe('MovieForm — the landing, and leaving an edit', () => {
     expect(navigationType()).toBe('PUSH');
   });
 
-  it('lands a deep-linked Resolve on the Review step, before the detail has been read', () => {
+  it('lands a deep-linked Resolve on the Review step, though its problem is gone', async () => {
     // The third arm of the same mapping, and — since 20 — Back navigation,
     // Phase 5 (issue #175) took the last three pushes out of the Import
     // context — the *only* way the form reaches `/import` without a history
     // step. Green from the day it was written: the landing was #174's, and
     // this press has always gone through it because `resolving` is still
-    // `null` here. It stays as the guard on the deep-linked case, where there
-    // is no review entry to step onto and the URL is all there is to read.
-    renderUnread('/add?problem=p1');
+    // `null` here, now because the problem is gone (the **Form skeleton**
+    // leaves nothing to press while it reads). It stays as the guard on the
+    // deep-linked case, where there is no review entry to step onto and the
+    // URL is all there is to read.
+    answerMovie = () =>
+      Promise.resolve(notFoundResponse('No such problem: p1'));
+    await renderAt(['/add?problem=p1']);
 
     fireEvent.click(backPill());
 

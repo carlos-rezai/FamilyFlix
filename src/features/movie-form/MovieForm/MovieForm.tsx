@@ -9,6 +9,7 @@ import { useKeyStored } from '@/hooks/useKeyStored/useKeyStored';
 import { Button, Textarea, TextField } from '@/primitives';
 import type { FormKind } from '@/types';
 import { GenrePicker } from '../GenrePicker/GenrePicker';
+import { LoadingForm } from '../LoadingForm/LoadingForm';
 import { MovieFormFiles } from '../MovieFormFiles/MovieFormFiles';
 import { SeriesFormFiles } from '../SeriesFormFiles/SeriesFormFiles';
 import { useGenrePool } from '../useGenrePool/useGenrePool';
@@ -147,6 +148,7 @@ const ALSO_MATCHED_LEAD = ', also matched: ';
 export function MovieForm() {
   const genrePool = useGenrePool();
   const {
+    loading,
     kind,
     showKindTabs,
     setKind,
@@ -209,6 +211,12 @@ export function MovieForm() {
   const wording = WORDING[kind];
   const heading = editing ? HEADING.edit : wording.heading;
   const copy = SAVE[resolving !== null ? 'import' : editing ? 'edit' : 'add'];
+
+  // The **Form skeleton** while the job's record reads: no heading, no field
+  // and no save until it lands, so nothing is typed over or added twice.
+  if (loading) {
+    return <LoadingForm kind={kind} />;
+  }
 
   return (
     <>
