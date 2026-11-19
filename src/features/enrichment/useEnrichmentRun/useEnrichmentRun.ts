@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useDelayedBusyByKey } from '@/hooks/useDelayedBusyByKey/useDelayedBusyByKey';
 import type {
+  BusyPhase,
   ConflictChoices,
   EnrichmentRun,
   StartEnrichment,
@@ -92,6 +94,11 @@ export interface EnrichmentRunState {
    * _movies enriched_. Rejects when the route refuses.
    */
   pick: (id: string, tmdbId: number) => Promise<void>;
+  /**
+   * Decision row `id`'s phase on the **Loader timing** while its press is
+   * sent; `idle` for a row with nothing sent.
+   */
+  rowPhase: (id: string) => BusyPhase;
   /**
    * _Apply choices_ on a `conflict` row: the settled row leaves the list and
    * counts into _movies enriched_. Rejects when the route refuses.
@@ -210,10 +217,16 @@ export function useEnrichmentRun(
     );
   }, []);
 
-  const pick = useCallback(async (id: string, tmdbId: number) => {
-    await pickCandidate(id, tmdbId);
-    setRun((held) => settled(held, id, { counted: true }));
-  }, []);
+  const rows = useDelayedBusyByKey();
+  const timeRow = rows.run;
+
+  const pick = useCallback(
+    async (id: string, tmdbId: number) => {
+      await timeRow(id, () => pickCandidate(id, tmdbId));
+      setRun((held) => settled(held, id, { counted: true }));
+    },
+    [timeRow]
+  );
 
   const apply = useCallback(async (id: string, choices: ConflictChoices) => {
     await applyChoices(id, choices);
@@ -279,6 +292,7 @@ export function useEnrichmentRun(
     cancel,
     search,
     pick,
+    rowPhase: rows.phaseOf,
     apply,
     dismiss,
     skipMany,

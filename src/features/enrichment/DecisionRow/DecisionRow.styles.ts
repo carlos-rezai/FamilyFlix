@@ -1,9 +1,11 @@
 import styled from 'styled-components';
 
-import type { Decision } from '@/types';
+import { busyRow } from '@/styles/busyRow';
+import type { BusyPhase, Decision } from '@/types';
 
 /** One Decision row: the surface card inside the soft border. */
-export const Card = styled.div`
+export const Card = styled.div<{ $busy: BusyPhase }>`
+  ${busyRow}
   padding: 18px;
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};

@@ -1,8 +1,13 @@
 import { useState } from 'react';
 
 import { FieldDiff, type FieldDiffSide } from '@/components';
-import { Button } from '@/primitives';
-import type { ConflictChoices, ConflictField, Decision } from '@/types';
+import { Button, LogoLoader } from '@/primitives';
+import type {
+  BusyPhase,
+  ConflictChoices,
+  ConflictField,
+  Decision,
+} from '@/types';
 import { CandidatePicker } from '../CandidatePicker/CandidatePicker';
 import { TitleSearch } from '../TitleSearch/TitleSearch';
 import {
@@ -27,8 +32,17 @@ const tmdbChoices = (
     ])
   );
 
+/** The presses a row is timed across, and what its loader reads for each. */
+type Press = 'pick';
+const PRESS_LABELS: Record<Press, string> = { pick: 'Saving match…' };
+
 export interface DecisionRowProps {
   decision: Decision;
+  /**
+   * The row's phase on the **Loader timing**, handed by the review: from
+   * `waiting` it is locked, once `shown` its loader stands in the dot's slot.
+   */
+  busy?: BusyPhase;
   onSkip: () => void;
   onPick: (tmdbId: number) => void;
   onSearch: (query: string) => void;
@@ -42,20 +56,35 @@ export interface DecisionRowProps {
  * one face — the candidate picker for `ambiguous`, the search box for
  * `missing`, the field diff for `conflict`, whose _Keep all mine_ is a Skip.
  * It draws a Decision and reports presses, nothing more.
+ *
+ * A **Busy row**: from `waiting` its root is `inert` and `aria-busy`, every
+ * control keeping its own face; once `shown` it dims, and an 18px inline
+ * **Logo loader** naming its press stands in the kind dot's slot.
  */
 export function DecisionRow({
   decision,
+  busy = 'idle',
   onSkip,
   onPick,
   onSearch,
   onApply,
 }: DecisionRowProps) {
   const [searching, setSearching] = useState(false);
+  const [press, setPress] = useState<Press | null>(null);
+  const locked = busy !== 'idle';
 
   return (
-    <Card>
+    <Card
+      $busy={busy}
+      inert={locked || undefined}
+      aria-busy={locked || undefined}
+    >
       <Head>
-        <Dot $kind={decision.kind} />
+        {busy === 'shown' && press !== null ? (
+          <LogoLoader size={18} inline label={PRESS_LABELS[press]} />
+        ) : (
+          <Dot $kind={decision.kind} />
+        )}
         <Text>
           <Title>{decision.title}</Title>
           <Reason>{decision.reason}</Reason>
@@ -69,7 +98,10 @@ export function DecisionRow({
       {decision.kind === 'ambiguous' && !searching ? (
         <CandidatePicker
           candidates={decision.candidates}
-          onPick={onPick}
+          onPick={(tmdbId) => {
+            setPress('pick');
+            onPick(tmdbId);
+          }}
           onSearchByTitle={() => setSearching(true)}
         />
       ) : null}

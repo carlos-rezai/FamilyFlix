@@ -1,6 +1,11 @@
 import { useState } from 'react';
 
-import type { ConflictChoices, DecisionKind, EnrichmentRun } from '@/types';
+import type {
+  BusyPhase,
+  ConflictChoices,
+  DecisionKind,
+  EnrichmentRun,
+} from '@/types';
 import { PillTabs } from '@/components';
 import { Button } from '@/primitives';
 import { kindFilter } from '@/utils';
@@ -40,6 +45,8 @@ export interface EnrichmentReviewProps {
    */
   onSkipMany: (ids: string[]) => void;
   onPick: (id: string, tmdbId: number) => void;
+  /** Each Decision row's phase on the **Loader timing**; `idle` when left out. */
+  rowPhase?: (id: string) => BusyPhase;
   onSearch: (id: string, query: string) => void;
   onApply: (id: string, choices: ConflictChoices) => void;
   /** A **Season choice** taken in the Seasons section. */
@@ -68,6 +75,7 @@ export function EnrichmentReview({
   onSkip,
   onSkipMany,
   onPick,
+  rowPhase,
   onSearch,
   onApply,
   onChooseSeasonPoster,
@@ -137,6 +145,7 @@ export function EnrichmentReview({
             <DecisionRow
               key={`${decision.id}:${decision.kind}:${decision.query}`}
               decision={decision}
+              busy={rowPhase?.(decision.id) ?? 'idle'}
               onSkip={() => onSkip(decision.id)}
               onPick={(tmdbId) => onPick(decision.id, tmdbId)}
               onSearch={(query) => onSearch(decision.id, query)}

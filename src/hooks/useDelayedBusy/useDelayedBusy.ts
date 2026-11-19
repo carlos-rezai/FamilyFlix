@@ -19,42 +19,56 @@ export interface DelayedBusy {
 }
 
 /**
- * The **Loader timing** (log 53): an action locks at once (`waiting`), draws
- * its loader only once its work has run 300ms (`shown`), and once drawn holds
- * it for at least 500ms. Work done in under 300ms settles at once, never
- * having been shown.
+ * The **Loader timing** (log 53), stated once: `setPhase('waiting')` at once,
+ * `setPhase('shown')` only once `work` has run 300ms, and once shown held for
+ * at least 500ms before `setPhase('idle')`. Work done in under 300ms settles
+ * at once, never having been shown. Its result or its error passes through
+ * only after the hold, so the caller's outcome follows it.
+ */
+export async function onLoaderTiming<T>(
+  work: () => Promise<T>,
+  setPhase: (phase: BusyPhase) => void
+): Promise<T> {
+  setPhase('waiting');
+  let shownAt: number | null = null;
+  const showing = setTimeout(() => {
+    shownAt = Date.now();
+    setPhase('shown');
+  }, SHOW_AFTER_MS);
+
+  const finish = async () => {
+    clearTimeout(showing);
+    if (shownAt !== null) {
+      const left = shownAt + MIN_SHOWN_MS - Date.now();
+      if (left > 0) {
+        await new Promise<void>((resolve) => setTimeout(resolve, left));
+      }
+    }
+    setPhase('idle');
+  };
+
+  try {
+    const value = await work();
+    await finish();
+    return value;
+  } catch (error: unknown) {
+    await finish();
+    throw error;
+  }
+}
+
+/**
+ * The **Loader timing** for one piece of work at a time: an action locks at
+ * once (`waiting`), draws its loader only once its work has run 300ms
+ * (`shown`), and once drawn holds it for at least 500ms.
  */
 export function useDelayedBusy(): DelayedBusy {
   const [phase, setPhase] = useState<BusyPhase>('idle');
 
-  const run = useCallback(async <T>(work: () => Promise<T>): Promise<T> => {
-    setPhase('waiting');
-    let shownAt: number | null = null;
-    const showing = setTimeout(() => {
-      shownAt = Date.now();
-      setPhase('shown');
-    }, SHOW_AFTER_MS);
-
-    const finish = async () => {
-      clearTimeout(showing);
-      if (shownAt !== null) {
-        const left = shownAt + MIN_SHOWN_MS - Date.now();
-        if (left > 0) {
-          await new Promise<void>((resolve) => setTimeout(resolve, left));
-        }
-      }
-      setPhase('idle');
-    };
-
-    try {
-      const value = await work();
-      await finish();
-      return value;
-    } catch (error: unknown) {
-      await finish();
-      throw error;
-    }
-  }, []);
+  const run = useCallback(
+    <T>(work: () => Promise<T>): Promise<T> => onLoaderTiming(work, setPhase),
+    []
+  );
 
   return { phase, run };
 }

@@ -100,6 +100,7 @@ export function EnrichmentFlow() {
     cancel,
     search,
     pick,
+    rowPhase,
     apply,
     dismiss,
     skipMany,
@@ -176,6 +177,11 @@ export function EnrichmentFlow() {
 
   const onPick = useCallback(
     (id: string, tmdbId: number) => {
+      // A locked row sends nothing more; `inert` is the browser's lock, this
+      // is the same rule where `inert` is not honoured.
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       pick(id, tmdbId)
         .then(() => {
           notify({ variant: 'success', message: 'Match saved.' });
@@ -184,7 +190,7 @@ export function EnrichmentFlow() {
           // A refused pick leaves the row where it is, to pick again.
         });
     },
-    [pick, notify]
+    [pick, rowPhase, notify]
   );
 
   const onApply = useCallback(
@@ -316,6 +322,7 @@ export function EnrichmentFlow() {
           onSkip={onSkip}
           onSkipMany={onSkipMany}
           onPick={onPick}
+          rowPhase={rowPhase}
           onSearch={onSearch}
           onApply={onApply}
           onChooseSeasonPoster={onChooseSeasonPoster}

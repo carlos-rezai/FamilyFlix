@@ -120,6 +120,9 @@ describe('useDelayedBusyByKey', () => {
     await act(async () => {
       b.resolve('second');
     });
+    // b was shown at 500, so it lands at 800 inside its own hold, to 1000.
+    expect(runningB.settled).toBe(false);
+    await advanceClock(200);
     expect(runningB.settled).toBe(true);
     expect(runningB.value).toBe('second');
     expect(result.current.phaseOf('b')).toBe('idle');
