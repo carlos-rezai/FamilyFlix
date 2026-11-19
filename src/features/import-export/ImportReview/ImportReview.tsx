@@ -4,6 +4,7 @@ import { Accordion, LogConsole, PillTabs } from '@/components';
 import { Button } from '@/primitives';
 import {
   PROBLEM_KINDS,
+  type BusyPhase,
   type ImportProblem,
   type ImportRun,
   type ProblemKind,
@@ -50,6 +51,8 @@ export interface ImportReviewProps {
   onImportAs: (id: string) => void;
   /** _Take out of library_ was pressed on the `missing` **Problem** with this id. */
   onTakeOut: (id: string) => void;
+  /** Each **Problem** row's phase on the **Loader timing**, by its id. */
+  rowPhase?: (id: string) => BusyPhase;
   /**
    * A bulk **Dismiss** was pressed — _Skip all_ on a **Review group** or
    * beside a chosen kind, or _Keep all mine_ beside `differs` — with every id
@@ -110,6 +113,7 @@ export function ImportReview({
   onPick,
   onImportAs,
   onTakeOut,
+  rowPhase,
   onSkipMany,
   onImportManyAsGuessed,
   finishLabel,
@@ -142,6 +146,7 @@ export function ImportReview({
     <ProblemRow
       key={problem.id}
       problem={problem}
+      busy={rowPhase?.(problem.id) ?? 'idle'}
       onSkip={() => onSkip(problem.id)}
       onApply={(choices) => onApply(problem.id, choices)}
       onPick={(folder) => onPick(problem.id, folder)}

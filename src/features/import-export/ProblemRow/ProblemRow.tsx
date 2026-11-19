@@ -1,6 +1,9 @@
+import { useState } from 'react';
+
 import { FieldDiff, type FieldDiffSide } from '@/components';
-import { Button } from '@/primitives';
+import { Button, LogoLoader } from '@/primitives';
 import type {
+  BusyPhase,
   ImportProblem,
   ProblemKind,
   SheetChoices,
@@ -22,6 +25,11 @@ import {
 export interface ProblemRowProps {
   /** The **Problem** the row is about. */
   problem: ImportProblem;
+  /**
+   * The row's phase on the **Loader timing**, handed by the review: from
+   * `waiting` it is locked, once `shown` its loader stands in the dot's slot.
+   */
+  busy?: BusyPhase;
   /** _Skip_ was pressed: the row reports it, and the **Run hook** removes it. */
   onSkip: () => void;
   /** _Apply choices_ on a `differs` row: the side kept for each field. */
@@ -62,6 +70,15 @@ const NO_RESOLVE: ReadonlySet<ProblemKind> = new Set<ProblemKind>([
   'off-layout',
 ]);
 
+/** The presses a row is timed across, and what its loader reads for each. */
+type Press = 'import' | 'takeOut' | 'apply' | 'skip';
+const PRESS_LABELS: Record<Press, string> = {
+  import: 'Importing…',
+  takeOut: 'Taking out…',
+  apply: 'Updating details…',
+  skip: 'Skipping…',
+};
+
 /** The diff's `'theirs'` read back as the import's own `'sheet'`. */
 const sheetChoices = (
   choices: Partial<Record<SheetField, FieldDiffSide>>
@@ -91,21 +108,43 @@ const sheetChoices = (
  * a button beside _Skip_, pressed with no confirm. An `off-layout` row is
  * fixed only on disk, so it draws _Skip_ alone. None knows what happens
  * next: the row draws a problem and reports a press.
+ *
+ * A **Busy row**: from `waiting` its root is `inert` and `aria-busy`, every
+ * control keeping its own face; once `shown` it dims, and an 18px inline
+ * **Logo loader** naming its press stands in the kind dot's slot.
  */
 export function ProblemRow({
   problem,
+  busy = 'idle',
   onSkip,
   onApply,
   onPick,
   onImportAs,
   onTakeOut,
 }: ProblemRowProps) {
+  const [press, setPress] = useState<Press | null>(null);
+  const locked = busy !== 'idle';
+  const pressed =
+    <A extends unknown[]>(which: Press, report: (...args: A) => void) =>
+    (...args: A) => {
+      setPress(which);
+      report(...args);
+    };
+  const skip = pressed('skip', onSkip);
   const differs = problem.kind === 'differs';
   const resolvable = !NO_RESOLVE.has(problem.kind);
   return (
-    <Card>
+    <Card
+      $busy={busy}
+      inert={locked || undefined}
+      aria-busy={locked || undefined}
+    >
       <Head>
-        <Dot $tone={DOT_TONE[problem.kind]} />
+        {busy === 'shown' && press !== null ? (
+          <LogoLoader size={18} inline label={PRESS_LABELS[press]} />
+        ) : (
+          <Dot $tone={DOT_TONE[problem.kind]} />
+        )}
         <Text>
           <Title>{problem.title}</Title>
           <Reason>{problem.reason}</Reason>
@@ -123,10 +162,10 @@ export function ProblemRow({
             label={problem.takeOut}
             variant="secondary"
             size="sm"
-            onClick={onTakeOut}
+            onClick={pressed('takeOut', onTakeOut)}
           />
         ) : null}
-        <Button label="Skip" variant="secondary" size="sm" onClick={onSkip} />
+        <Button label="Skip" variant="secondary" size="sm" onClick={skip} />
       </Head>
       {differs ? (
         <FieldDiff<SheetField>
@@ -139,15 +178,18 @@ export function ProblemRow({
             })
           )}
           theirsLabel="Spreadsheet"
-          onApply={(choices) => onApply(sheetChoices(choices))}
-          onKeepAll={onSkip}
+          onApply={(choices) => {
+            setPress('apply');
+            onApply(sheetChoices(choices));
+          }}
+          onKeepAll={skip}
         />
       ) : null}
       {problem.kind === 'ambiguous' ? (
         <FolderPicker
           candidates={problem.candidates ?? []}
           label={`Folders for ${problem.title}`}
-          onPick={onPick}
+          onPick={pressed('import', onPick)}
         />
       ) : null}
       {problem.kind === 'no-row' && problem.guess !== undefined ? (
@@ -156,7 +198,7 @@ export function ProblemRow({
             label={`Import as “${problem.guess}”`}
             variant="secondary"
             size="sm"
-            onClick={onImportAs}
+            onClick={pressed('import', onImportAs)}
           />
         </ImportAsSlot>
       ) : null}

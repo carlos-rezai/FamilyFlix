@@ -82,6 +82,7 @@ export function ImportFlow() {
     pick,
     importAsGuessed,
     takeOut,
+    rowPhase,
   } = useImportRun();
 
   // Leaving is a step, not a push at Settings: the hub's own Back then steps
@@ -150,12 +151,16 @@ export function ImportFlow() {
 
   const onSkip = useCallback(
     (id: string) => {
+      // A row already waiting on a press takes no second one.
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       void skip(id).catch(() => {
         // A skip that did not land leaves the row where it is, and the button
         // is still there to press again.
       });
     },
-    [skip]
+    [skip, rowPhase]
   );
 
   const onSkipMany = useCallback(
@@ -180,42 +185,58 @@ export function ImportFlow() {
 
   const onApply = useCallback(
     (id: string, choices: SheetChoices) => {
+      // A row already waiting on a press takes no second one.
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       void apply(id, choices).catch(() => {
         // An apply that did not land leaves the row where it is, its choices
         // still there to apply again.
       });
     },
-    [apply]
+    [apply, rowPhase]
   );
 
   const onPick = useCallback(
     (id: string, folder: string) => {
+      // A row already waiting on a press takes no second one.
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       void pick(id, folder).catch(() => {
         // A pick that did not land leaves the row where it is, its folders
         // still there to press again.
       });
     },
-    [pick]
+    [pick, rowPhase]
   );
 
   const onImportAs = useCallback(
     (id: string) => {
+      // A row already waiting on a press takes no second one.
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       void importAsGuessed(id).catch(() => {
         // An import that did not land leaves the row where it is, to press
         // again or settle another way.
       });
     },
-    [importAsGuessed]
+    [importAsGuessed, rowPhase]
   );
 
   const onTakeOut = useCallback(
     (id: string) => {
+      // A row already waiting on a press takes no second one.
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       void takeOut(id).catch(() => {
         // A take-out that did not land leaves the row where it is, to press
         // again or skip.
       });
     },
-    [takeOut]
+    [takeOut, rowPhase]
   );
 
   return (
@@ -247,6 +268,7 @@ export function ImportFlow() {
           onPick={onPick}
           onImportAs={onImportAs}
           onTakeOut={onTakeOut}
+          rowPhase={rowPhase}
           onSkipMany={onSkipMany}
           onImportManyAsGuessed={onImportManyAsGuessed}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}

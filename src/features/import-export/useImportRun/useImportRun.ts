@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
+import { useDelayedBusyByKey } from '@/hooks/useDelayedBusyByKey/useDelayedBusyByKey';
 import type {
+  BusyPhase,
   ImportMode,
   ImportProblem,
   ImportRun,
@@ -95,6 +97,13 @@ export interface ImportRunState {
    * stays.
    */
   takeOut: (id: string) => Promise<void>;
+  /**
+   * **Problem** row `id`'s phase on the **Loader timing** while its press
+   * (_Import as_, a picked folder, _Take out_, _Apply choices_, _Skip_) is
+   * sent; `idle` for a row with nothing sent. The row settles only once the
+   * hold is out.
+   */
+  rowPhase: (id: string) => BusyPhase;
 }
 
 /**
@@ -178,12 +187,16 @@ export function useImportRun(): ImportRunState {
     );
   }, []);
 
+  const rows = useDelayedBusyByKey();
+  const timeRow = rows.run;
+  const rowPhase = rows.phaseOf;
+
   const skip = useCallback(
     async (id: string) => {
-      await dismissProblem(id);
+      await timeRow(id, () => dismissProblem(id));
       takeOff(id);
     },
-    [takeOff]
+    [timeRow, takeOff]
   );
 
   const skipMany = useCallback(async (ids: string[]) => {
@@ -196,10 +209,10 @@ export function useImportRun(): ImportRunState {
 
   const apply = useCallback(
     async (id: string, choices: SheetChoices) => {
-      await applySheetChoices(id, choices);
+      await timeRow(id, () => applySheetChoices(id, choices));
       takeOff(id);
     },
-    [takeOff]
+    [timeRow, takeOff]
   );
 
   /**
@@ -229,25 +242,25 @@ export function useImportRun(): ImportRunState {
 
   const pick = useCallback(
     async (id: string, folder: string) => {
-      settle(id, await pickCandidateFolder(id, folder));
+      settle(id, await timeRow(id, () => pickCandidateFolder(id, folder)));
     },
-    [settle]
+    [timeRow, settle]
   );
 
   const importAsGuessed = useCallback(
     async (id: string) => {
-      settle(id, await importGuessed(id));
+      settle(id, await timeRow(id, () => importGuessed(id)));
     },
-    [settle]
+    [timeRow, settle]
   );
 
   const takeOut = useCallback(
     async (id: string) => {
-      if ((await takeOutMissing(id)) !== null) {
+      if ((await timeRow(id, () => takeOutMissing(id))) !== null) {
         takeOff(id);
       }
     },
-    [takeOff]
+    [timeRow, takeOff]
   );
 
   const live = isLive(run);
@@ -291,5 +304,6 @@ export function useImportRun(): ImportRunState {
     pick,
     importAsGuessed,
     takeOut,
+    rowPhase,
   };
 }

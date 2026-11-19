@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 
-import type { ProblemKind } from '@/types';
+import { busyRow } from '@/styles/busyRow';
+import type { BusyPhase, ProblemKind } from '@/types';
 
 /**
  * The inks a dot can take: what the kind's colour is named after, and `gold`,
@@ -33,7 +34,8 @@ export const DOT_TONE: Record<ProblemKind, DotTone> = {
 };
 
 /** The row on the surface: its head, then a face when its kind has one. */
-export const Card = styled.div`
+export const Card = styled.div<{ $busy: BusyPhase }>`
+  ${busyRow}
   padding: 16px;
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};
