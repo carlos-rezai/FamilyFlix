@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
-import type { SeasonChoice } from '@/types';
+import { LogoLoader } from '@/primitives';
+import type { BusyPhase, SeasonChoice } from '@/types';
 import { formatEpisodeTag, gradientFromId } from '@/utils';
 import {
   Cards,
@@ -23,6 +24,8 @@ export interface SeasonChoicesProps {
   seasons: readonly SeasonChoice[];
   /** A choice pressed: its season, and the TMDB path it names. */
   onChoose: (season: number, path: string) => void;
+  /** Each season's phase on the **Loader timing**; `idle` when left out. */
+  seasonPhase?: (season: number) => BusyPhase;
 }
 
 const HEADING_ID = 'enrichment-seasons-heading';
@@ -35,8 +38,16 @@ const HEADING_ID = 'enrichment-seasons-heading';
  * the server caps them at `SEASON_CHOICE_CAP` — with no title, meta or score,
  * the series' marked _Series poster_. A press reports
  * `onChoose(season, path)`; which choice was pressed is the section's own.
+ *
+ * Each season's card is a **Busy row**: from `waiting` it is `inert` and
+ * `aria-busy`; once `shown` it dims, and an 18px inline **Logo loader**
+ * reading _Saving poster…_ stands in its held-poster caption.
  */
-export function SeasonChoices({ seasons, onChoose }: SeasonChoicesProps) {
+export function SeasonChoices({
+  seasons,
+  onChoose,
+  seasonPhase,
+}: SeasonChoicesProps) {
   const [picked, setPicked] = useState<Record<number, string>>({});
   // The held poster urls that failed to load: a held tile whose poster is one
   // of them draws the gradient alone, as a poster-less tile does.
@@ -52,8 +63,15 @@ export function SeasonChoices({ seasons, onChoose }: SeasonChoicesProps) {
             heldUrl !== null && failed.has(heldUrl) ? null : heldUrl;
           const label = formatEpisodeTag({ season });
           const { g1, g2 } = gradientFromId(label);
+          const busy = seasonPhase?.(season) ?? 'idle';
+          const locked = busy !== 'idle';
           return (
-            <SeasonCard key={season}>
+            <SeasonCard
+              key={season}
+              $busy={busy}
+              inert={locked || undefined}
+              aria-busy={locked || undefined}
+            >
               <Picker role="group" aria-label={`Posters for ${label}`}>
                 <Held>
                   <HeldTile>
@@ -70,9 +88,13 @@ export function SeasonChoices({ seasons, onChoose }: SeasonChoicesProps) {
                     />
                     <Numeral>{label}</Numeral>
                   </HeldTile>
-                  <HeldCaption>
-                    {posterUrl === null ? 'No poster yet' : 'Current poster'}
-                  </HeldCaption>
+                  {busy === 'shown' ? (
+                    <LogoLoader size={18} inline label="Saving poster…" />
+                  ) : (
+                    <HeldCaption>
+                      {posterUrl === null ? 'No poster yet' : 'Current poster'}
+                    </HeldCaption>
+                  )}
                 </Held>
                 <Rule aria-hidden="true" />
                 {choices.map((choice, i) => {

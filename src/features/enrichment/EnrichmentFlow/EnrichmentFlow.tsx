@@ -105,6 +105,7 @@ export function EnrichmentFlow() {
     dismiss,
     skipMany,
     chooseSeasonPoster,
+    seasonPhase,
   } = useEnrichmentRun(single);
   // `?added=` is set by the Import flow's Finish alone, and only a library
   // Sync reads it.
@@ -158,11 +159,14 @@ export function EnrichmentFlow() {
 
   const onSkip = useCallback(
     (id: string) => {
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       dismiss(id).catch(() => {
         // A refused Skip leaves the row where it is, to press again.
       });
     },
-    [dismiss]
+    [dismiss, rowPhase]
   );
 
   const onSkipMany = useCallback(
@@ -195,6 +199,9 @@ export function EnrichmentFlow() {
 
   const onApply = useCallback(
     (id: string, choices: ConflictChoices) => {
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       apply(id, choices)
         .then(() => {
           notify({ variant: 'success', message: 'Details updated.' });
@@ -203,26 +210,33 @@ export function EnrichmentFlow() {
           // A refused apply leaves the row where it is, to apply again.
         });
     },
-    [apply, notify]
+    [apply, rowPhase, notify]
   );
 
   const onSearch = useCallback(
     (id: string, query: string) => {
+      if (rowPhase(id) !== 'idle') {
+        return;
+      }
       notify({ variant: 'info', message: 'Searching TMDB…' });
       search(id, query).catch(() => {
         // A refused search leaves the row as it was, to search again.
       });
     },
-    [search, notify]
+    [search, rowPhase, notify]
   );
 
   const onChooseSeasonPoster = useCallback(
     (season: number, path: string) => {
+      // A locked season sends nothing more, as a locked row does.
+      if (seasonPhase(season) !== 'idle') {
+        return;
+      }
       chooseSeasonPoster(season, path).catch(() => {
         // A refused choice leaves the held poster drawn, to choose again.
       });
     },
-    [chooseSeasonPoster]
+    [chooseSeasonPoster, seasonPhase]
   );
 
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
@@ -323,6 +337,7 @@ export function EnrichmentFlow() {
           onSkipMany={onSkipMany}
           onPick={onPick}
           rowPhase={rowPhase}
+          seasonPhase={seasonPhase}
           onSearch={onSearch}
           onApply={onApply}
           onChooseSeasonPoster={onChooseSeasonPoster}

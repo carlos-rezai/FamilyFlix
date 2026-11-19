@@ -1,6 +1,8 @@
 import styled from 'styled-components';
 
 import { Artwork } from '@/primitives';
+import { busyRow } from '@/styles/busyRow';
+import type { BusyPhase } from '@/types';
 import { CandidateCard } from '../CandidatePicker/CandidatePicker.styles';
 
 export { GroupHeading } from '../../settings/section.styles';
@@ -14,7 +16,8 @@ export const Cards = styled.div`
 `;
 
 /** One Season choice's card, on the surface inside the soft border. */
-export const SeasonCard = styled.div`
+export const SeasonCard = styled.div<{ $busy: BusyPhase }>`
+  ${busyRow}
   padding: 18px;
   background: ${({ theme }) => theme.colors.surface};
   border: 1px solid ${({ theme }) => theme.colors.borderSoft};

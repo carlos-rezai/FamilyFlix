@@ -51,6 +51,8 @@ export interface EnrichmentReviewProps {
   onApply: (id: string, choices: ConflictChoices) => void;
   /** A **Season choice** taken in the Seasons section. */
   onChooseSeasonPoster: (season: number, path: string) => void;
+  /** Each season's phase on the **Loader timing**; `idle` when left out. */
+  seasonPhase?: (season: number) => BusyPhase;
 }
 
 /**
@@ -79,6 +81,7 @@ export function EnrichmentReview({
   onSearch,
   onApply,
   onChooseSeasonPoster,
+  seasonPhase,
 }: EnrichmentReviewProps) {
   const [chosen, setChosen] = useState<DecisionKind | 'all'>('all');
   const filter = kindFilter(
@@ -106,7 +109,11 @@ export function EnrichmentReview({
       </Tiles>
 
       {run.seasons === undefined ? null : (
-        <SeasonChoices seasons={run.seasons} onChoose={onChooseSeasonPoster} />
+        <SeasonChoices
+          seasons={run.seasons}
+          onChoose={onChooseSeasonPoster}
+          seasonPhase={seasonPhase}
+        />
       )}
 
       {run.decisions.length === 0 ? (

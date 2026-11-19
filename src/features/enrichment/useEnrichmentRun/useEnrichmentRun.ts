@@ -85,7 +85,8 @@ export interface EnrichmentRunState {
    */
   cancel: () => void;
   /**
-   * Search TMDB for Decision `id` and draw the answer in its place. Rejects
+   * Search TMDB for Decision `id` and draw the answer in its place once the
+   * row's hold is out. Rejects
    * when the route refuses.
    */
   search: (id: string, query: string) => Promise<void>;
@@ -118,6 +119,11 @@ export interface EnrichmentRunState {
    * the run stays as it was.
    */
   chooseSeasonPoster: (season: number, path: string) => Promise<void>;
+  /**
+   * Season `season`'s phase on the **Loader timing** while its **Season
+   * choice** is sent; `idle` for a season with nothing sent.
+   */
+  seasonPhase: (season: number) => BusyPhase;
 }
 
 /**
@@ -203,22 +209,32 @@ export function useEnrichmentRun(
     });
   }, []);
 
-  const search = useCallback(async (id: string, query: string) => {
-    const answer = await searchDecision(id, query);
-    setRun((held) =>
-      held === null
-        ? held
-        : {
-            ...held,
-            decisions: held.decisions.map((each) =>
-              each.id === id ? answer : each
-            ),
-          }
-    );
-  }, []);
-
   const rows = useDelayedBusyByKey();
   const timeRow = rows.run;
+  const seasons = useDelayedBusyByKey();
+  const timeSeason = seasons.run;
+  const seasonsPhaseOf = seasons.phaseOf;
+  const seasonPhase = useCallback(
+    (season: number) => seasonsPhaseOf(String(season)),
+    [seasonsPhaseOf]
+  );
+
+  const search = useCallback(
+    async (id: string, query: string) => {
+      const answer = await timeRow(id, () => searchDecision(id, query));
+      setRun((held) =>
+        held === null
+          ? held
+          : {
+              ...held,
+              decisions: held.decisions.map((each) =>
+                each.id === id ? answer : each
+              ),
+            }
+      );
+    },
+    [timeRow]
+  );
 
   const pick = useCallback(
     async (id: string, tmdbId: number) => {
@@ -228,15 +244,21 @@ export function useEnrichmentRun(
     [timeRow]
   );
 
-  const apply = useCallback(async (id: string, choices: ConflictChoices) => {
-    await applyChoices(id, choices);
-    setRun((held) => settled(held, id, { counted: true }));
-  }, []);
+  const apply = useCallback(
+    async (id: string, choices: ConflictChoices) => {
+      await timeRow(id, () => applyChoices(id, choices));
+      setRun((held) => settled(held, id, { counted: true }));
+    },
+    [timeRow]
+  );
 
-  const dismiss = useCallback(async (id: string) => {
-    await dismissDecision(id);
-    setRun((held) => settled(held, id, { counted: false }));
-  }, []);
+  const dismiss = useCallback(
+    async (id: string) => {
+      await timeRow(id, () => dismissDecision(id));
+      setRun((held) => settled(held, id, { counted: false }));
+    },
+    [timeRow]
+  );
 
   const skipMany = useCallback(async (ids: string[]) => {
     setRun(await dismissDecisions(ids));
@@ -244,7 +266,9 @@ export function useEnrichmentRun(
 
   const chooseSeasonPoster = useCallback(
     async (season: number, path: string) => {
-      const echo = await saveSeasonPoster(season, path);
+      const echo = await timeSeason(String(season), () =>
+        saveSeasonPoster(season, path)
+      );
       setRun((held) =>
         held?.seasons === undefined
           ? held
@@ -256,7 +280,7 @@ export function useEnrichmentRun(
             }
       );
     },
-    []
+    [timeSeason]
   );
 
   const live = run !== null && run.phase === 'running';
@@ -297,5 +321,6 @@ export function useEnrichmentRun(
     dismiss,
     skipMany,
     chooseSeasonPoster,
+    seasonPhase,
   };
 }

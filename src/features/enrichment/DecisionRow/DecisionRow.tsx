@@ -33,8 +33,13 @@ const tmdbChoices = (
   );
 
 /** The presses a row is timed across, and what its loader reads for each. */
-type Press = 'pick';
-const PRESS_LABELS: Record<Press, string> = { pick: 'Saving match…' };
+type Press = 'pick' | 'apply' | 'skip' | 'search';
+const PRESS_LABELS: Record<Press, string> = {
+  pick: 'Saving match…',
+  apply: 'Updating details…',
+  skip: 'Skipping…',
+  search: 'Searching TMDB…',
+};
 
 export interface DecisionRowProps {
   decision: Decision;
@@ -72,6 +77,14 @@ export function DecisionRow({
   const [searching, setSearching] = useState(false);
   const [press, setPress] = useState<Press | null>(null);
   const locked = busy !== 'idle';
+  const skip = () => {
+    setPress('skip');
+    onSkip();
+  };
+  const search = (query: string) => {
+    setPress('search');
+    onSearch(query);
+  };
 
   return (
     <Card
@@ -91,7 +104,7 @@ export function DecisionRow({
           {decision.path === null ? null : <Path>{decision.path}</Path>}
         </Text>
         <SkipSlot>
-          <Button label="Skip" variant="ghost" size="md" onClick={onSkip} />
+          <Button label="Skip" variant="ghost" size="md" onClick={skip} />
         </SkipSlot>
       </Head>
 
@@ -107,11 +120,11 @@ export function DecisionRow({
       ) : null}
 
       {decision.kind === 'ambiguous' && searching ? (
-        <TitleSearch initial={decision.title} onSearch={onSearch} />
+        <TitleSearch initial={decision.title} onSearch={search} />
       ) : null}
 
       {decision.kind === 'missing' ? (
-        <TitleSearch initial={decision.query} onSearch={onSearch} />
+        <TitleSearch initial={decision.query} onSearch={search} />
       ) : null}
 
       {decision.kind === 'conflict' ? (
@@ -123,8 +136,11 @@ export function DecisionRow({
             theirs: tmdb,
           }))}
           theirsLabel="TMDB"
-          onApply={(choices) => onApply(tmdbChoices(choices))}
-          onKeepAll={onSkip}
+          onApply={(choices) => {
+            setPress('apply');
+            onApply(tmdbChoices(choices));
+          }}
+          onKeepAll={skip}
         />
       ) : null}
     </Card>
