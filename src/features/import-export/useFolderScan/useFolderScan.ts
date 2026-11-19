@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import type { ImportMode, ScanScope } from '@/types';
+import type { BusyPhase, ImportMode, ScanScope } from '@/types';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { ImportBusyError, startFolderScan } from '../api/api';
 
 export interface FolderScan {
-  /** A scan was asked for and has not answered: both presses are held. */
-  scanning: boolean;
+  /**
+   * The scan's **Busy phase**, on the **Loader timing**: from `waiting` both
+   * presses are held, and the move to `/import` waits out the hold.
+   */
+  scanning: BusyPhase;
+  /** The **Scan scope** last pressed, `null` before any press. */
+  scope: ScanScope | null;
   /** Post the **Folder scan**, carrying the box, the **Import mode** and the
    *  **Scan scope**, and go where it leads. */
   scan: (enrich: boolean, mode: ImportMode, scope: ScanScope) => Promise<void>;
@@ -17,25 +23,28 @@ export interface FolderScan {
  * for the Library folders page: a `201` pushes `/import`, where the run just
  * started is shown; a `409` pushes there too, so the run already in flight is
  * the one shown; any other failure lets go of `scanning`, to press again.
- * Never rejects.
+ * Both pushes come once the loader's hold is out. Never rejects.
  */
 export function useFolderScan(): FolderScan {
   const navigate = useNavigate();
-  const [scanning, setScanning] = useState(false);
+  const { phase: scanning, run } = useDelayedBusy();
+  const [scope, setScope] = useState<ScanScope | null>(null);
 
-  const scan = async (enrich: boolean, mode: ImportMode, scope: ScanScope) => {
-    setScanning(true);
+  const scan = async (
+    enrich: boolean,
+    mode: ImportMode,
+    pressed: ScanScope
+  ) => {
+    setScope(pressed);
     try {
-      await startFolderScan(enrich, mode, scope);
+      await run(() => startFolderScan(enrich, mode, pressed));
       navigate('/import');
     } catch (error) {
       if (error instanceof ImportBusyError) {
         navigate('/import');
-        return;
       }
-      setScanning(false);
     }
   };
 
-  return { scanning, scan };
+  return { scanning, scope, scan };
 }

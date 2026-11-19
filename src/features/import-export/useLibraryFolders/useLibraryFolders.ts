@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 
 import type { BusyPhase, LibraryFolderView } from '@/types';
 import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
+import { useDelayedBusyByKey } from '@/hooks/useDelayedBusyByKey/useDelayedBusyByKey';
 import {
   addLibraryFolder,
   bringBackLeftOut,
@@ -33,6 +34,11 @@ export interface LibraryFoldersState {
    */
   adding: BusyPhase;
   /**
+   * One folder's ✕ or **Bring back** as a **Busy phase**, on the **Loader
+   * timing** and keyed by the folder; its outcome lands once the hold is out.
+   */
+  rowPhase: (id: string) => BusyPhase;
+  /**
    * The route's own sentence for the last refused add, `null` once one lands.
    */
   refusal: string | null;
@@ -52,6 +58,7 @@ export interface LibraryFoldersState {
 export function useLibraryFolders(): LibraryFoldersState {
   const [folders, setFolders] = useState<LibraryFolderView[] | null>(null);
   const { phase: adding, run } = useDelayedBusy();
+  const { phaseOf: rowPhase, run: runRow } = useDelayedBusyByKey();
   const [refusal, setRefusal] = useState<string | null>(null);
   const [removeRefusal, setRemoveRefusal] = useState<{
     id: string;
@@ -95,35 +102,41 @@ export function useLibraryFolders(): LibraryFoldersState {
     [run]
   );
 
-  const remove = useCallback(async (id: string) => {
-    try {
-      const outcome = await removeLibraryFolder(id);
-      if (outcome.kind === 'refused') {
-        setRemoveRefusal({ id, sentence: outcome.sentence });
-        return;
+  const remove = useCallback(
+    async (id: string) => {
+      try {
+        const outcome = await runRow(id, () => removeLibraryFolder(id));
+        if (outcome.kind === 'refused') {
+          setRemoveRefusal({ id, sentence: outcome.sentence });
+          return;
+        }
+        setRemoveRefusal(null);
+        setFolders(
+          (listed) => listed?.filter((folder) => folder.id !== id) ?? null
+        );
+      } catch {
+        // The row stays: the route did not take it off.
       }
-      setRemoveRefusal(null);
-      setFolders(
-        (listed) => listed?.filter((folder) => folder.id !== id) ?? null
-      );
-    } catch {
-      // The row stays: the route did not take it off.
-    }
-  }, []);
+    },
+    [runRow]
+  );
 
-  const bringBack = useCallback(async (id: string) => {
-    try {
-      await bringBackLeftOut(id);
-      setFolders(
-        (listed) =>
-          listed?.map((folder) =>
-            folder.id === id ? { ...folder, leftOut: 0 } : folder
-          ) ?? null
-      );
-    } catch {
-      // The line stays: the route did not forget them.
-    }
-  }, []);
+  const bringBack = useCallback(
+    async (id: string) => {
+      try {
+        await runRow(id, () => bringBackLeftOut(id));
+        setFolders(
+          (listed) =>
+            listed?.map((folder) =>
+              folder.id === id ? { ...folder, leftOut: 0 } : folder
+            ) ?? null
+        );
+      } catch {
+        // The line stays: the route did not forget them.
+      }
+    },
+    [runRow]
+  );
 
   return {
     folders,
@@ -131,6 +144,7 @@ export function useLibraryFolders(): LibraryFoldersState {
     remove,
     bringBack,
     adding,
+    rowPhase,
     refusal,
     removeRefusal,
   };

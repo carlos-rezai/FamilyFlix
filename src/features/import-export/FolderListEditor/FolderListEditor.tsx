@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { Button, FolderIcon, TextField } from '@/primitives';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
-import type { LibraryFolderView } from '@/types';
+import type { BusyPhase, LibraryFolderView } from '@/types';
 import { FolderRow } from '../FolderRow/FolderRow';
 import type { LibraryFoldersState } from '../useLibraryFolders/useLibraryFolders';
 import {
@@ -14,9 +14,14 @@ import {
   Rows,
 } from './FolderListEditor.styles';
 
-export type FolderListEditorProps = Omit<LibraryFoldersState, 'folders'> & {
+export type FolderListEditorProps = Omit<
+  LibraryFoldersState,
+  'folders' | 'rowPhase'
+> & {
   /** The listed folders, landed — the caller draws nothing while `null`. */
   folders: LibraryFolderView[];
+  /** A row's phase on the **Loader timing**, by folder id; `idle` if absent. */
+  rowPhase?: (id: string) => BusyPhase;
 };
 
 /**
@@ -28,6 +33,7 @@ export type FolderListEditorProps = Omit<LibraryFoldersState, 'folders'> & {
  * field, the typed path kept; a refused remove the same line under its row.
  * _Add_ locks from the press and reads _Adding…_ once the add has run 300ms,
  * on the **Loader timing**; _Browse…_ is disabled until the add settles.
+ * A row's ✕ and _Bring back_ lock that row alone, on its own clock.
  *
  * The list is the caller's `useLibraryFolders()`, handed in, because the
  * caller decides what a listed folder enables — **Scan all folders** on the
@@ -39,6 +45,7 @@ export function FolderListEditor({
   remove,
   bringBack,
   adding,
+  rowPhase,
   refusal,
   removeRefusal,
 }: FolderListEditorProps) {
@@ -65,22 +72,28 @@ export function FolderListEditor({
         <Empty>No folders yet.</Empty>
       ) : (
         <Rows>
-          {folders.map((folder) => (
-            <div key={folder.id}>
-              <FolderRow
-                folder={folder}
-                onBringBack={() => {
-                  void bringBack(folder.id);
-                }}
-                onRemove={() => {
-                  void remove(folder.id);
-                }}
-              />
-              {removeRefusal?.id === folder.id ? (
-                <Refusal>{removeRefusal.sentence}</Refusal>
-              ) : null}
-            </div>
-          ))}
+          {folders.map((folder) => {
+            const busy = rowPhase?.(folder.id) ?? 'idle';
+            // The row is `inert` while busy; this holds where `inert` is not.
+            const idle = busy === 'idle';
+            return (
+              <div key={folder.id}>
+                <FolderRow
+                  folder={folder}
+                  busy={busy}
+                  onBringBack={() => {
+                    if (idle) void bringBack(folder.id);
+                  }}
+                  onRemove={() => {
+                    if (idle) void remove(folder.id);
+                  }}
+                />
+                {removeRefusal?.id === folder.id ? (
+                  <Refusal>{removeRefusal.sentence}</Refusal>
+                ) : null}
+              </div>
+            );
+          })}
         </Rows>
       )}
       <Divider />

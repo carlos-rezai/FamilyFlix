@@ -84,7 +84,7 @@ describe('useFolderScan', () => {
 
       fireEvent.click(screen.getByRole('button', { name }));
 
-      expect(screen.getByTestId('scanning').textContent).toBe('true');
+      expect(screen.getByTestId('scanning').textContent).toBe('waiting');
       const [input, init] = fetchMock.mock.calls[0];
       expect(input).toBe('/api/library-folders/scan');
       expect(init?.method).toBe('POST');
@@ -127,7 +127,7 @@ describe('useFolderScan', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Scan all folders' }));
 
     await waitFor(() =>
-      expect(screen.getByTestId('scanning').textContent).toBe('false')
+      expect(screen.getByTestId('scanning').textContent).toBe('idle')
     );
     expect(pathname()).toBe('/settings/folders');
   });

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 
-import type { ImportMode } from '@/types';
+import type { ImportMode, ScanScope } from '@/types';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { Button } from '@/primitives';
 import { EnrichCheckCard, ImportModeChoice, PageHeader } from '@/components';
@@ -26,7 +26,8 @@ const ENRICH_HINT =
  * **New folder** listed) and **Scan all folders** (`secondary`, disabled with
  * no folder listed). Each posts the **Folder scan** with its **Scan scope**,
  * the box and the mode, and pushes `/import` (on a `409` too, so the run
- * already in flight is the one shown); both are held while either is asked.
+ * already in flight is the one shown) once the loader's hold is out. The
+ * pressed one reads _Scanning…_ past 300ms; the other is disabled meanwhile.
  *
  * **Blank until it lands**: nothing under the header is drawn while the list
  * is `null`. Back is the one **Back rule** with Settings as the **Landing**.
@@ -35,7 +36,10 @@ export function LibraryFolders() {
   const library = useLibraryFolders();
   const { folders } = library;
   const goBack = useGoBack('/settings');
-  const { scanning, scan } = useFolderScan();
+  const { scanning, scope, scan } = useFolderScan();
+  const held = scanning !== 'idle';
+  /** The pressed scan's own phase; the other press is only disabled. */
+  const busyFor = (which: ScanScope) => (scope === which ? scanning : 'idle');
   const [enrich, setEnrich] = useState(false);
   const [mode, setMode] = useState<ImportMode>('link');
   const keySet = useKeyStored();
@@ -68,21 +72,24 @@ export function LibraryFolders() {
                 label="Scan new folders"
                 variant="primary"
                 size="lg"
+                busyLabel="Scanning…"
+                busy={busyFor('new')}
                 disabled={
-                  scanning ||
-                  !folders.some((folder) => folder.scannedAt === null)
+                  held || !folders.some((folder) => folder.scannedAt === null)
                 }
                 onClick={() => {
-                  void scan(enrich, mode, 'new');
+                  if (!held) void scan(enrich, mode, 'new');
                 }}
               />
               <Button
                 label="Scan all folders"
                 variant="secondary"
                 size="lg"
-                disabled={scanning || folders.length === 0}
+                busyLabel="Scanning…"
+                busy={busyFor('all')}
+                disabled={held || folders.length === 0}
                 onClick={() => {
-                  void scan(enrich, mode, 'all');
+                  if (!held) void scan(enrich, mode, 'all');
                 }}
               />
             </ScanActions>
