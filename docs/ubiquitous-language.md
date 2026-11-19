@@ -1158,6 +1158,20 @@ root**. No prototype is amended.
 | **Resolve** (updated)    | Since log 68, a `no-folder` row's Resolve opens with its `Poster` cell's file in the poster slot and each `Subtitles` cell's file as a track, each a **Found file** looked for under the run's **Sheet root**; the backdrop is not drawn, so it is not read. |                  |
 | **Found file** (updated) | Since log 68, a **Resolve** copies a found poster or track from under the **Current run**'s Library folders or its **Sheet root**; a found video only from under its Library folders.                                                                        |                  |
 
+## Silent waits
+
+Design log 69: step 51, initiative `silent-waits`. Every press that waits on
+the server locks at once and, under **Loader timing**, says it is working, in
+a face the loading-states handoff already draws. No prototype is amended.
+
+| Term                        | Definition                                                                                                                                                                                                                                                                                                                                                 | Aliases to avoid                       |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **Silent wait** (new)       | A press that waits on the server with nothing drawn and can be pressed again; what step 51's audit lists and log 69 removes.                                                                                                                                                                                                                               | dead click, unresponsive button, lag   |
+| **Busy row** (new)          | A row or card whose press is past `idle`: from `waiting`, `inert` and `aria-busy`, its controls keeping their faces; once **Shown**, at opacity .75 with an 18px `inline` **Logo loader** and its _-ing_ label in its status slot (the handoff's _Inside a row_). A **Decision row**, a review's **Problem** row, a **Folder row** or a **Season choice**. | dimmed row, loading row, row spinner   |
+| **Row phase** (new)         | A row's own **Busy phase**, `rowPhase(id)` on the hook that owns its request (`useEnrichmentRun`, `useImportRun`, `useLibraryFolders`), timed per key by `useDelayedBusyByKey`; a bulk press hands every row `waiting`, so it is locked and its button alone draws the loader.                                                                             | row loading flag, pending ids          |
+| **Form skeleton** (new)     | The **Skeleton** of the **Movie form**, `LoadingForm`, drawn at once while a job naming a record (an edit, a series edit, a **Resolve**) reads it: no heading, no fields, no save, so nothing is added twice or typed over.                                                                                                                                | blank form, loading form, form spinner |
+| **Loader timing** (updated) | Since log 69 stated once as `onLoaderTiming` beside `useDelayedBusy`, which it and its keyed sibling `useDelayedBusyByKey` both call.                                                                                                                                                                                                                      |                                        |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1360,6 +1374,8 @@ root**. No prototype is amended.
 - A **Cold start** plays at most one **Welcome tune**, with its **Welcome splash**; a skip fades it over 150ms, and only a **Wordmark handoff** strikes its **Closing chord** (log 62).
 - A **Library tab** has exactly one **Row view** at a time, the household's; the two tabs' are independent, and neither is in the URL (log 63).
 - A sheet row has exactly one **Folder path** and one **Folder key**, its last segment; a path cell fills a place from the **Title folder** first and the **Sheet root** second, and the folder's own read wins over both (log 67).
+- A row has at most one **Row phase** past `idle` at a time, and a review draws at most one loader per wait: a bulk press's **Busy button**, or each pressed row's **Busy row**, never both (log 69).
+- A **Form skeleton** stands for one read of one job's record; once it answers, the form is drawn whole, or the add if the record is gone (log 69).
 
 ## Example dialogue
 
@@ -2154,6 +2170,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "Nothing lies there in the **Title folder**, so the cell is joined to the **Sheet root**, the Export folder holding the sheet's `Meta/`, and the poster is found there."
 > **Dev:** "Will a new Export still write `Movies/…`?"
 > **Domain expert:** "No. A sheet writes each Title folder's own name, so the Export is flat in the **Folder layout** and copied over the Library folder it lands where a scan reads it."
+
+> **Dev:** "Dad picks a poster on a **Decision row** and TMDB is slow. What does he see?"
+> **Domain expert:** "The row is a **Busy row** from his press: nothing in it answers a second press. At 300ms it dims and _Saving match…_ beats in place of the dot. That is not a **Silent wait** any more."
+> **Dev:** "And if he presses _Skip all_ instead?"
+> **Domain expert:** "The button is the **Busy button**, _Skipping…_; every row it covers takes the **Row phase** `waiting`, locked but drawing nothing, so there is one loader for the one wait."
+> **Dev:** "Opening _Edit details_ on a big series?"
+> **Domain expert:** "The **Form skeleton**, at once: a read is no action, so no **Loader timing**. The form appears whole when the record lands."
 
 ## Flagged ambiguities
 
@@ -3150,3 +3173,11 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Off-layout folder" is not a "Left-out video" (new):** a folder the layout turns away is listed every run until fixed on disk; a **Left-out video** is a file the household deleted from the library and FamilyFlix passes in silence. The code's `LeftOutReason` predates the term; say **Off-layout folder** in prose.
 - **"Folder key" is not "Folder path" (new):** since log 67 a row's `Folder` cell may name its Title folder under a parent segment; the whole cell is its **Folder path**, the last segment its **Folder key**. A sheet FamilyFlix writes makes the two equal; never call a parent segment part of the key.
 - **"Sheet root" is not the "Library folder" (new):** for a Library sheet the two are one folder, but an uploaded Export's **Sheet root** is its **Export folder**, which is never a Library folder and is only read from.
+- **"Busy row" is not "Busy label" (new):** a **Busy label** is a
+  **Busy button**'s shine on its own _-ing_ text; a **Busy row** draws an
+  18px **Logo loader** with a label in the row's status slot. Step 51's
+  checklist first said rows take a Busy label; log 69 corrected it. Never
+  call a card's loader a Busy label.
+- **"Form skeleton" is not a loader (new):** it is a **Skeleton**, a read's
+  face, drawn at once; never time it with **Loader timing**, and never draw
+  the **Logo loader** in the form for its read.

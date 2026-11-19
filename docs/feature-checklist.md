@@ -781,14 +781,14 @@ card stayed put for seconds with no sign anything was happening, and a
 second press on the poster sent a second pick. An audit of every screen
 (2026-11-19, the dev app with each write held open in the browser) found
 the same gap wherever a press waits on the server outside the **Busy
-button**s step 36 gave the forms and dialogs. Not yet grilled:
+button**s step 36 gave the forms and dialogs. Grilled in design log 69:
 
 51. ⬜ **Silent waits**: every press that waits on the server shows it is
     working, under **Loader timing**, and can't be pressed twice. Each spot
     below takes the loader its neighbours already use: a **Busy button**
-    where the press is a button, the row locked and dimmed with a **Busy
-    label** where it is a card or a row, a **Skeleton** where a screen
-    waits on a read.
+    where the press is a button, a **Busy row** (locked, dimmed, an 18px
+    **Logo loader** in its status slot) where it is a card or a row, a
+    **Skeleton** where a screen waits on a read.
     - **Sync review** (seen live): picking a candidate poster, _Apply
       choices_, _Skip_, _Skip all_ and _Search_ on a Decision row draw
       nothing until the route answers, and the row stays pressable; two
