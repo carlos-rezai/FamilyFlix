@@ -1,6 +1,7 @@
 import {
   ENRICH_FIELD_LABELS,
   ENRICH_FIELDS,
+  type BusyPhase,
   type EnrichField,
   type EnrichmentSummary,
   type EnrichScope,
@@ -66,6 +67,11 @@ export interface EnrichmentSetupProps {
   onToggleField: (field: EnrichField) => void;
   onStart: () => void;
   /**
+   * Start's phase on the **Loader timing** while a start is sent: locked from
+   * `waiting`, reading _Starting…_ or _Fetching…_ once `shown`.
+   */
+  starting?: BusyPhase;
+  /**
    * The **let-go line** under Start while a **Waiting run** has Decisions —
    * `null` draws none.
    */
@@ -96,6 +102,7 @@ export function EnrichmentSetup({
   onChooseScope,
   onToggleField,
   onStart,
+  starting = 'idle',
   letGo,
   onRetry,
   onOpenKeySettings,
@@ -205,6 +212,8 @@ export function EnrichmentSetup({
           variant={ready ? 'primary' : 'secondary'}
           size="md"
           onClick={onStart}
+          busy={starting}
+          busyLabel={single ? 'Fetching…' : 'Starting…'}
         />
         <Estimate>{enrichmentEstimate(summary, scope)}</Estimate>
       </StartRow>

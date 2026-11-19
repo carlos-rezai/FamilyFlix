@@ -44,6 +44,8 @@ export interface EnrichmentReviewProps {
    * of that kind, in the run's order.
    */
   onSkipMany: (ids: string[]) => void;
+  /** _Skip all_'s phase on the **Loader timing**; `idle` when left out. */
+  skippingAll?: BusyPhase;
   onPick: (id: string, tmdbId: number) => void;
   /** Each Decision row's phase on the **Loader timing**; `idle` when left out. */
   rowPhase?: (id: string) => BusyPhase;
@@ -76,6 +78,7 @@ export function EnrichmentReview({
   onAgain,
   onSkip,
   onSkipMany,
+  skippingAll = 'idle',
   onPick,
   rowPhase,
   onSearch,
@@ -142,6 +145,8 @@ export function EnrichmentReview({
                     onClick={() =>
                       onSkipMany(shown.map((decision) => decision.id))
                     }
+                    busy={skippingAll}
+                    busyLabel="Skipping…"
                   />
                 )}
               </BulkActions>

@@ -97,6 +97,7 @@ export function EnrichmentFlow() {
     waiting,
     attaching,
     start,
+    starting,
     cancel,
     search,
     pick,
@@ -104,6 +105,7 @@ export function EnrichmentFlow() {
     apply,
     dismiss,
     skipMany,
+    skippingAll,
     chooseSeasonPoster,
     seasonPhase,
   } = useEnrichmentRun(single);
@@ -171,12 +173,16 @@ export function EnrichmentFlow() {
 
   const onSkipMany = useCallback(
     (ids: string[]) => {
+      // A Skip all already sent sends nothing more, as a locked row does.
+      if (skippingAll !== 'idle') {
+        return;
+      }
       skipMany(ids).catch(() => {
         // A Skip all that did not land leaves every row where it is, and the
         // button is still there to press again.
       });
     },
-    [skipMany]
+    [skipMany, skippingAll]
   );
 
   const onPick = useCallback(
@@ -242,7 +248,8 @@ export function EnrichmentFlow() {
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
 
   const onStart = useCallback(() => {
-    if (summary === null) {
+    // A start already sent sends nothing more.
+    if (summary === null || starting !== 'idle') {
       return;
     }
     if (!summary.keySet) {
@@ -272,7 +279,17 @@ export function EnrichmentFlow() {
         notify({ variant: 'warning', message: 'A sync is already running.' });
       }
     });
-  }, [summary, openSettings, notify, start, scope, single, since, fields]);
+  }, [
+    summary,
+    starting,
+    openSettings,
+    notify,
+    start,
+    scope,
+    single,
+    since,
+    fields,
+  ]);
 
   const startOnArrival = single !== null && query.start === true;
   const decided = useRef(false);
@@ -322,6 +339,7 @@ export function EnrichmentFlow() {
             onChooseScope={setLibraryScope}
             onToggleField={onToggleField}
             onStart={onStart}
+            starting={starting}
             letGo={letGoLine(waiting)}
             onRetry={retry}
             onOpenKeySettings={openSettings}
@@ -335,6 +353,7 @@ export function EnrichmentFlow() {
           onAgain={cancel}
           onSkip={onSkip}
           onSkipMany={onSkipMany}
+          skippingAll={skippingAll}
           onPick={onPick}
           rowPhase={rowPhase}
           seasonPhase={seasonPhase}

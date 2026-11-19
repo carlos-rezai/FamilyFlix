@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { useDelayedBusyByKey } from '@/hooks/useDelayedBusyByKey/useDelayedBusyByKey';
 import type {
   BusyPhase,
@@ -80,6 +81,11 @@ export interface EnrichmentRunState {
    */
   start: (options: StartEnrichment) => Promise<void>;
   /**
+   * The start's phase on the **Loader timing**, the whole of `start`: the
+   * post and, after a `409`, the read that follows it.
+   */
+  starting: BusyPhase;
+  /**
    * _Stop_ and _Sync again_: drop the run — running or finished — on the
    * server and from the screen, back to setup. Every row written stays.
    */
@@ -97,7 +103,8 @@ export interface EnrichmentRunState {
   pick: (id: string, tmdbId: number) => Promise<void>;
   /**
    * Decision row `id`'s phase on the **Loader timing** while its press is
-   * sent; `idle` for a row with nothing sent.
+   * sent; `waiting` for a row a running _Skip all_ covers; `idle` for a row
+   * with nothing sent.
    */
   rowPhase: (id: string) => BusyPhase;
   /**
@@ -113,6 +120,8 @@ export interface EnrichmentRunState {
    * the run stays as it was.
    */
   skipMany: (ids: string[]) => Promise<void>;
+  /** _Skip all_'s phase on the **Loader timing**; `idle` while none is sent. */
+  skippingAll: BusyPhase;
   /**
    * A **Season choice** taken: the route's echo held in place of that
    * season, the rest of the run as it was. Rejects when the route refuses;
@@ -179,25 +188,29 @@ export function useEnrichmentRun(
     };
   }, [here]);
 
+  const starts = useDelayedBusy();
+  const timeStart = starts.run;
   const start = useCallback(
     async (options: StartEnrichment) => {
       generation.current += 1;
-      let held: EnrichmentRun | null;
-      try {
-        held = await startEnrichment(options);
-      } catch (error) {
-        if (!(error instanceof EnrichmentBusyError)) {
-          throw error;
+      const held = await timeStart(async () => {
+        try {
+          return await startEnrichment(options);
+        } catch (error) {
+          if (!(error instanceof EnrichmentBusyError)) {
+            throw error;
+          }
+          const going = await fetchCurrentEnrichment();
+          if (going !== null && !belongsHere(going, here)) {
+            throw error;
+          }
+          return going;
         }
-        held = await fetchCurrentEnrichment();
-        if (held !== null && !belongsHere(held, here)) {
-          throw error;
-        }
-      }
+      });
       setRun(held);
       setWaiting(null);
     },
-    [here]
+    [here, timeStart]
   );
 
   const cancel = useCallback(() => {
@@ -211,6 +224,18 @@ export function useEnrichmentRun(
 
   const rows = useDelayedBusyByKey();
   const timeRow = rows.run;
+  const rowsPhaseOf = rows.phaseOf;
+  const bulk = useDelayedBusy();
+  const timeBulk = bulk.run;
+  /** The ids a running _Skip all_ covers; empty while none runs. */
+  const [covered, setCovered] = useState<ReadonlySet<string>>(() => new Set());
+  const rowPhase = useCallback(
+    (id: string): BusyPhase => {
+      const own = rowsPhaseOf(id);
+      return own === 'idle' && covered.has(id) ? 'waiting' : own;
+    },
+    [rowsPhaseOf, covered]
+  );
   const seasons = useDelayedBusyByKey();
   const timeSeason = seasons.run;
   const seasonsPhaseOf = seasons.phaseOf;
@@ -260,9 +285,17 @@ export function useEnrichmentRun(
     [timeRow]
   );
 
-  const skipMany = useCallback(async (ids: string[]) => {
-    setRun(await dismissDecisions(ids));
-  }, []);
+  const skipMany = useCallback(
+    async (ids: string[]) => {
+      setCovered(new Set(ids));
+      try {
+        setRun(await timeBulk(() => dismissDecisions(ids)));
+      } finally {
+        setCovered(new Set());
+      }
+    },
+    [timeBulk]
+  );
 
   const chooseSeasonPoster = useCallback(
     async (season: number, path: string) => {
@@ -313,13 +346,15 @@ export function useEnrichmentRun(
     waiting,
     attaching,
     start,
+    starting: starts.phase,
     cancel,
     search,
     pick,
-    rowPhase: rows.phaseOf,
+    rowPhase,
     apply,
     dismiss,
     skipMany,
+    skippingAll: bulk.phase,
     chooseSeasonPoster,
     seasonPhase,
   };
