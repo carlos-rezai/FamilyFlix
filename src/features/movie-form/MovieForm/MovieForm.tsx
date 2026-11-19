@@ -186,6 +186,7 @@ export function MovieForm() {
     showFolder,
     removeShowFolder,
     showFolderRefusal,
+    readingShowFolder,
     saveRefusal,
     straySubtitles,
     setSeason,
@@ -360,6 +361,7 @@ export function MovieForm() {
             refusals={episodeRefusals}
             onAddEpisodeFiles={addEpisodeFiles}
             onAddShowFolder={addShowFolder}
+            readingShowFolder={readingShowFolder}
             showFolder={showFolder}
             onRemoveShowFolder={removeShowFolder}
             straySubtitles={straySubtitles}

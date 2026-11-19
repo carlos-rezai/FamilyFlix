@@ -2,7 +2,8 @@ import { useCallback, useRef, useState } from 'react';
 
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
-import type { EpisodeFormRow } from '@/types';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
+import type { BusyPhase, EpisodeFormRow } from '@/types';
 import { readShowFolder } from '../api/api';
 import { type PickedKey, showFolderRows } from '../formValues/formValues';
 
@@ -41,6 +42,11 @@ export interface UseShowFolderPickResult {
   refusal: string | null;
   /** How many subtitles the picked Show folder matched to no episode. */
   straySubtitles: number;
+  /**
+   * The read's **Busy phase** on the **Loader timing**: the folder read and
+   * a held series' title read, never the dialog.
+   */
+  reading: BusyPhase;
 }
 
 /**
@@ -67,28 +73,41 @@ export function useShowFolderPick({
   // it may replace.
   const pickedKey = useRef<PickedKey | null>(null);
   const bridge = folderBridge();
+  const { phase: reading, run } = useDelayedBusy();
 
   const pickShowFolder = useCallback(async () => {
     const path = await bridge?.pickOne();
     if (path === null || path === undefined) {
       return;
     }
-    const answer = await readShowFolder(path).catch(() => null);
-    if (answer === null) {
+    // The read and a held series' title read, timed together; the dialog
+    // above never is.
+    const outcome = await run(async () => {
+      const answer = await readShowFolder(path).catch(() => null);
+      if (answer === null || answer.kind === 'refused') {
+        return answer;
+      }
+      const { read } = answer;
+      if (read.heldSeriesId === null) {
+        return answer;
+      }
+      const held = await fetchSeriesDetail(read.heldSeriesId).catch(() => null);
+      return { kind: 'held' as const, title: held?.series.title ?? read.title };
+    });
+    if (outcome === null) {
       return;
     }
-    if (answer.kind === 'refused') {
-      setRefusal(answer.sentence);
+    if (outcome.kind === 'refused') {
+      setRefusal(outcome.sentence);
       return;
     }
-    const { read } = answer;
-    if (read.heldSeriesId !== null) {
+    if (outcome.kind === 'held') {
       // Already a held series's **Show folder**: refused by that series's own
       // title, and no rows land.
-      const held = await fetchSeriesDetail(read.heldSeriesId).catch(() => null);
-      setRefusal(heldShowFolderRefusal(held?.series.title ?? read.title));
+      setRefusal(heldShowFolderRefusal(outcome.title));
       return;
     }
+    const { read } = outcome;
     setRefusal(null);
     setShowFolder(read.path);
     setStraySubtitles(read.straySubtitles);
@@ -97,7 +116,7 @@ export function useShowFolderPick({
     const key: PickedKey = { title: read.title, year: read.year };
     prefillFolderKey(key, pickedKey.current);
     pickedKey.current = key;
-  }, [bridge, holdShowFolder, prefillFolderKey, setShowLink]);
+  }, [bridge, run, holdShowFolder, prefillFolderKey, setShowLink]);
 
   const addShowFolder = useCallback(() => {
     void pickShowFolder();
@@ -116,5 +135,6 @@ export function useShowFolderPick({
     removeShowFolder,
     refusal,
     straySubtitles,
+    reading,
   };
 }

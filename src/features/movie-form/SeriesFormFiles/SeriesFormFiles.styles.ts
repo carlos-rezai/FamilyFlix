@@ -1,5 +1,8 @@
 import styled from 'styled-components';
 
+import type { BusyPhase } from '@/types';
+import { busyRow } from '@/styles/busyRow';
+
 /**
  * The series' Files card draws on the form's Files card furniture
  * (`filesCard.styles.ts`): the card, its caption, and its **Episode file
@@ -46,7 +49,7 @@ export const StrayLine = styled.p`
  * _＋ Add show folder_: the File picker's dashed 42px box, as a `<button>` —
  * it opens the **Folder bridge**'s dialog, not a file input.
  */
-export const AddShowFolder = styled.button`
+export const AddShowFolder = styled.button<{ $busy: BusyPhase }>`
   display: flex;
   align-items: center;
   justify-content: center;
@@ -66,4 +69,6 @@ export const AddShowFolder = styled.button`
     border-color: ${({ theme }) => theme.colors.accentLine};
     color: ${({ theme }) => theme.colors.text};
   }
+
+  ${busyRow}
 `;

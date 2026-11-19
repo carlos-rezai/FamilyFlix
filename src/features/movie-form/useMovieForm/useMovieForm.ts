@@ -193,6 +193,8 @@ export interface UseMovieFormResult {
   removeShowFolder: () => void;
   /** The sentence a refused Show folder read is drawn as, or `null`. */
   showFolderRefusal: string | null;
+  /** The **Show folder pick**'s read on the **Loader timing**. */
+  readingShowFolder: BusyPhase;
   /** The sentence the route refused the last save with, or `null`. */
   saveRefusal: string | null;
   /** How many subtitles the picked Show folder matched to no episode. */
@@ -891,6 +893,7 @@ export function useMovieForm(): UseMovieFormResult {
     showFolder: showFolderPick.showFolder,
     removeShowFolder: showFolderPick.removeShowFolder,
     showFolderRefusal: showFolderPick.refusal,
+    readingShowFolder: showFolderPick.reading,
     saveRefusal,
     straySubtitles: showFolderPick.straySubtitles,
     setSeason: episodeList.setSeason,

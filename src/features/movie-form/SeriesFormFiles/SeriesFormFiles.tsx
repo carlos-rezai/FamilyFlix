@@ -1,7 +1,8 @@
 import { EpisodeFileRow, FileField, SubtitleRow } from '@/components';
-import { FileIcon, FilePicker, ImageIcon } from '@/primitives';
+import { FileIcon, FilePicker, ImageIcon, LogoLoader } from '@/primitives';
 import {
   LANGUAGE_POOL,
+  type BusyPhase,
   type EpisodeFormRow,
   type MovieFormFile,
   type SeasonPosterSlot,
@@ -39,6 +40,7 @@ const EPISODES_ADD = 'Add episode files';
 
 /** The **Show folder pick**'s button, and its row's label. */
 const SHOW_FOLDER_ADD = 'Add show folder';
+const SHOW_FOLDER_READING = 'Reading folder…';
 const SHOW_FOLDER_LABEL = 'Show folder';
 const SHOW_FOLDER_REMOVES = 'show folder';
 
@@ -97,6 +99,12 @@ export interface SeriesFormFilesProps {
    * button: a browser has no **Folder bridge**.
    */
   onAddShowFolder: (() => void) | null;
+  /**
+   * The Show folder read's phase on the **Loader timing**: from `waiting`
+   * _＋ Add show folder_ is locked, once `shown` the 18px inline mark reading
+   * _Reading folder…_ stands in its label's place.
+   */
+  readingShowFolder?: BusyPhase;
   /** The picked **Show folder**, absolute — `null` draws no Show folder row. */
   showFolder: string | null;
   /** Reports that the Show folder row's ✕ was pressed. */
@@ -151,6 +159,7 @@ export function SeriesFormFiles({
   refusals,
   onAddEpisodeFiles,
   onAddShowFolder,
+  readingShowFolder = 'idle',
   showFolder,
   onRemoveShowFolder,
   straySubtitles,
@@ -218,9 +227,20 @@ export function SeriesFormFiles({
           <ShowFolderLabel>
             {showFolder === null ? SHOW_FOLDER_LABEL : ''}
           </ShowFolderLabel>
-          <ShowFolderRows>
-            <AddShowFolder type="button" onClick={onAddShowFolder}>
-              ＋ {SHOW_FOLDER_ADD}
+          <ShowFolderRows
+            inert={readingShowFolder !== 'idle' || undefined}
+            aria-busy={readingShowFolder !== 'idle' || undefined}
+          >
+            <AddShowFolder
+              type="button"
+              onClick={onAddShowFolder}
+              $busy={readingShowFolder}
+            >
+              {readingShowFolder === 'shown' ? (
+                <LogoLoader size={18} inline label={SHOW_FOLDER_READING} />
+              ) : (
+                <>＋ {SHOW_FOLDER_ADD}</>
+              )}
             </AddShowFolder>
           </ShowFolderRows>
         </ShowFolderSection>
