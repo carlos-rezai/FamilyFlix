@@ -58,6 +58,11 @@ export interface UseShowFolderPickResult {
  * folder, worded by that series's title — adds no rows. A second pick
  * replaces only the first pick's rows, and the title and year the first pick
  * filled in, never a typed one.
+ *
+ * `reading` is the read's **Busy phase** on `useDelayedBusy`: it wraps the
+ * folder read and the held series' title read, never the dialog, so it is
+ * `idle` while the dialog is open, `waiting` from the folder chosen, and
+ * `shown` past 300ms. A refusal settles it back to `idle`.
  */
 export function useShowFolderPick({
   plainAdd,

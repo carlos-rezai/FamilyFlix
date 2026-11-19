@@ -11,6 +11,86 @@ Newest entry first.
 
 ---
 
+## 2026-11-19: Silent waits, the build (issues 653 to 661)
+
+Eight slices run by `issue-loop`, each a RED and a GREEN commit (653 to
+660), and this walk and documents slice (661), which carries the two gaps
+the walk found. **12673 tests pass across 871 files** (one skipped);
+`tsc -b --force` is clean. Step 51 stays 🔜 until the refactor.
+
+### What shipped
+
+- **One Busy row** (653). `onLoaderTiming` states the Loader timing once;
+  `useDelayedBusy` and the new shared `useDelayedBusyByKey` call it. The
+  Decision row's pick runs through `useEnrichmentRun`'s keyed timing,
+  answered as `rowPhase(id)`; the row is `inert` and `aria-busy` from the
+  press and, once shown, dimmed by the shared busy-row style with an 18px
+  inline Logo loader reading _Saving match…_.
+- **The Sync review whole** (654, 655). _Search_, _Apply choices_, _Skip_
+  and _Keep all mine_ on a Decision row, and a Season choice's poster
+  (`seasonPhase`); _Skip all_ and Start as Busy buttons on `skippingAll`
+  and `starting`.
+- **The Import review** (656, 657). Every Problem row press on
+  `useImportRun`'s `rowPhase`; _Import all as guessed_, _Skip all_ and
+  _Start import_ on `importingAll`, `skippingAll` and `starting`, the bulk
+  buttons restyled to the prototype's 34px bulk faces over `Button`.
+- **Library folders** (658). ✕ and _Bring back_ on `useLibraryFolders`'
+  `rowPhase`; `useFolderScan`'s `scanning` a Busy phase beside `scope`, the
+  push to `/import` after the hold.
+- **The form** (659, 660). `LoadingForm`, the Form skeleton, while
+  `useMovieForm`'s `loading`; `useShowFolderPick`'s `reading` wraps the
+  folder read, passed on as `readingShowFolder` to the dashed add-row.
+- **The walk** (661). See below; its two gaps are fixed in `ImportReview`.
+
+### Judgement calls worth knowing
+
+- **The walk faked the server's answers in the page.** The dev app ran on
+  the dev library, but the dev machine has no TMDB key and the dev
+  database's one Library folder is `D:\Movies`, so `window.fetch` was
+  wrapped from the page: each write was held, sampled at 50, 350, 700 and
+  1000ms and released at about 450ms, pressed twice 30ms apart; the Sync
+  and Import runs, the folder list and the write answers were served from
+  the wrapper, other reads went to the real server. Nothing was written to
+  the database or a Library folder. Every spot listed below locked at once,
+  read its words at 350ms, was still drawn at 700ms and settled by 1000ms,
+  with one request sent: the Sync review's pick, _Search_ (the snackbar
+  kept), _Apply choices_, _Skip_, _Keep all mine_, a Season choice, _Skip
+  all_, _Start sync_, _Fetch details_ and a start on arrival; the Import
+  review's folder pick, _Import as_, _Take out of library_, _Apply
+  choices_, _Skip_, _Keep all mine_, _Import all as guessed_, both _Skip
+  all_s and \_Start import_; Library folders' ✕, _Bring back_ and both
+  scans. Refusals (a pick, a remove, an import start, a scan `409`) came
+  back idle with today's sentences. An edit, a series edit, a Resolve and
+  a gone record drew _Loading movie_ or _Loading series_ with no save
+  until the held read was let go; a plain add drew none.
+- **The Show folder pick was not walked.** It needs the shell's Path
+  bridge, which the browser has not; `useShowFolderPick.reading.test` and
+  `MovieForm.showFolderReading.test` prove it.
+- **A Review group's _Skip all_ drew no busy face** (fixed in 661). It was
+  a plain `button`, since `Button` took no `aria-label`, so its press
+  locked the rows and said nothing; and with a kind chosen, _Skip all_
+  beside the filter read _Skipping…_ for a press it never had. `Button`
+  takes an `ariaLabel`, the group's _Skip all_ is a Busy button, and the
+  review remembers which _Skip all_ was pressed so only it reads
+  _Skipping…_.
+- **The bulk _Keep all mine_ read its own label** (fixed in 661). It had
+  no `busyLabel`, so past 300ms it shone _Keep all mine_; it now reads
+  _Skipping…_, as the row's _Keep all mine_ does.
+- **The keyed hold test.** 653's build added 200ms to the two-keys test of
+  `useDelayedBusyByKey`: key b, shown at 500, holds to 1000. That is the
+  PRD's "a shown key holds 500ms", per key; left as it is.
+- **`LogoLoader` inside a button.** Its docblock said it is never drawn
+  inside a button; log 69 Q14 draws it in the dashed _＋ Add show folder_
+  row, a row-shaped button. The docblock now names that one case.
+
+### Follow-ups for the refactor
+
+- The walk's fetch wrapper (hold, sample, release, fake routes) was typed
+  into the page by hand; if a later walk wants it, it could
+  live in `test-support/` as a dev-only script.
+
+---
+
 ## 2026-11-18: Resolve cells (issue 650)
 
 A grill-me (design log 68, two questions put to the maintainer, the rest

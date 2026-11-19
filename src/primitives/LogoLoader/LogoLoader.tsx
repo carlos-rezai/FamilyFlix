@@ -38,8 +38,10 @@ export interface LogoLoaderProps {
  * named by its label and detail (_Loading_ when it has neither); what it
  * draws is kept out of the accessible tree. The clip id comes from `useId`,
  * stripped of what a `url(#...)` reference cannot carry. Its Fs and their
- * viewBox are the brand tokens of `src/tokens/brand.ts`. Never drawn inside a
- * button: a **Busy button** shines its label instead.
+ * viewBox are the brand tokens of `src/tokens/brand.ts`. A **Busy button**
+ * shines its label instead of drawing one; the one button that draws it is a
+ * row-shaped control, the dashed _＋ Add show folder_ row, whose whole face it
+ * replaces as a **Busy row**'s status slot would (log 69 Q14).
  */
 export function LogoLoader({
   size = 48,

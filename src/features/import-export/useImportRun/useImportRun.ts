@@ -134,6 +134,14 @@ export interface ImportRunState {
  * A skip in review edits the snapshot in place rather than reading it again:
  * the run is not polled in review, and the route's answer already says the
  * problem is gone.
+ *
+ * Every write runs on the **Loader timing** (log 69). A **Problem** row's
+ * press runs under its id on `useDelayedBusyByKey`, answered as
+ * `rowPhase(id)`; the row leaves only once the hold is out, and a refusal
+ * settles it back to `idle` with the run unchanged. _Start import_, _Skip
+ * all_ (and _Keep all mine_) and _Import all as guessed_ each sit on their
+ * own `useDelayedBusy`, answered as `starting`, `skippingAll` and
+ * `importingAll`.
  */
 export function useImportRun(): ImportRunState {
   const [run, setRun] = useState<ImportRun | null>(null);

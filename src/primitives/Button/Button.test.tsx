@@ -588,3 +588,29 @@ describe('Button: busy', () => {
     });
   });
 });
+
+/**
+ * 69, Silent waits, the walk (issue #661): an `ariaLabel` names a button whose
+ * visible label is shorter than what it does, such as a Review group's
+ * _Skip all_; the visible label, idle or busy, is still the one drawn.
+ */
+describe('Button: ariaLabel', () => {
+  it('names the button by its ariaLabel and draws its label', () => {
+    renderButton({ label: 'Skip all', ariaLabel: 'Skip all for Heat' });
+
+    const button = screen.getByRole('button', { name: 'Skip all for Heat' });
+    expect(button.textContent).toBe('Skip all');
+  });
+
+  it('keeps its ariaLabel while busy, drawing its busyLabel', () => {
+    renderButton({
+      label: 'Skip all',
+      ariaLabel: 'Skip all for Heat',
+      busy: 'shown',
+      busyLabel: 'Skipping…',
+    });
+
+    const button = screen.getByRole('button', { name: 'Skip all for Heat' });
+    expect(button.textContent).toBe('Skipping…');
+  });
+});

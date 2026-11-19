@@ -360,6 +360,13 @@ export interface UseMovieFormResult {
  * exit lands on the review, as the film Resolve's does. Beside any other kind
  * of problem the ask is ignored.
  *
+ * **While a job's record is read, `loading` is true** (log 69): every job but
+ * the plain add names a record, and until its read answers the screen draws
+ * the **Form skeleton**, with no save and nothing to type into, at once and
+ * with no Loader timing, since it is a read rather than an action. A record
+ * that is gone ends `loading` on the add. `readingShowFolder` passes on the
+ * **Show folder pick**'s `reading`.
+ *
  * ---
  *
  * **Why this file has no `useMovieForm.test.ts`**, asked and settled in the

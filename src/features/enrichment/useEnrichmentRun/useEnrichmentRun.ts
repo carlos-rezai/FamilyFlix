@@ -147,6 +147,14 @@ export interface EnrichmentRunState {
  *
  * A read that lands after a newer start, a cancel, or the screen was left
  * puts back neither a run nor a Waiting run.
+ *
+ * Every write runs on the **Loader timing** (log 69). A row's pick, search,
+ * apply and dismiss run under that Decision's id on `useDelayedBusyByKey`,
+ * answered as `rowPhase(id)`, and a Season choice's poster under its season,
+ * answered as `seasonPhase(season)`; the row leaves, redraws or says
+ * _Match saved._ only once the hold is out, and a refusal settles it back to
+ * `idle` with the run unchanged. Start and _Skip all_ each sit on their own
+ * `useDelayedBusy`, answered as `starting` and `skippingAll`.
  */
 export function useEnrichmentRun(
   title: TitleReference | null

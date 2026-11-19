@@ -783,34 +783,45 @@ second press on the poster sent a second pick. An audit of every screen
 the same gap wherever a press waits on the server outside the **Busy
 button**s step 36 gave the forms and dialogs. Grilled in design log 69:
 
-51. ⬜ **Silent waits**: every press that waits on the server shows it is
+51. 🔜 **Silent waits**: every press that waits on the server shows it is
     working, under **Loader timing**, and can't be pressed twice. Each spot
-    below takes the loader its neighbours already use: a **Busy button**
-    where the press is a button, a **Busy row** (locked, dimmed, an 18px
-    **Logo loader** in its status slot) where it is a card or a row, a
-    **Skeleton** where a screen waits on a read.
-    - **Sync review** (seen live): picking a candidate poster, _Apply
-      choices_, _Skip_, _Skip all_ and _Search_ on a Decision row draw
-      nothing until the route answers, and the row stays pressable; two
-      presses on a poster sent two picks. A **Season choice**'s poster
-      press is the same (read in code; it needs a single-series run).
-    - **Start sync** (seen live): nothing drawn and still pressable until
-      the first snapshot lands; a slow TMDB start invites a second press.
-    - **Import review** (read in code): _Import as guessed_, _Import all
-      as guessed_, _Take out of library_, _Skip_, _Skip all_, a picked
-      candidate folder and _Apply_ on a sheet row run with no busy state,
-      as the Sync review does. _Start import_ is only disabled by its form.
-    - **Library folders** (seen live): a folder's ✕ shows nothing and stays
-      pressable while the remove runs; _Bring back_ on a left-out count is
-      the same (read in code). _Scan new folders_ and _Scan all folders_
-      lock but draw no _Scanning…_ label until the progress screen opens.
-    - **Edit form** (seen live): `/add?movie=…`, `?series=…` and a Resolve
-      open as a blank _Add a movie_ form, its _Add to library_ shown, until
-      the record lands; a slow read then overwrites whatever was typed. It
-      wants a **Skeleton** of the form, not the add's empty face.
-    - **Show folder pick** (read in code, shell only): after the folder
-      dialog closes, a large show is read with nothing drawn until its
-      episode rows appear.
+    takes the loader its neighbours already use: a **Busy button** where
+    the press is a button, a **Busy row** (locked, dimmed, an 18px **Logo
+    loader** in its status slot) where it is a card or a row, a **Skeleton**
+    where a screen waits on a read. Built in issues 653 to 661; the walk
+    ran in the dev app in the browser with each write held open.
+    - **One timing**: `onLoaderTiming` states the Loader timing once (nothing
+      for 300ms, then at least 500ms shown, the outcome after the hold);
+      `useDelayedBusy` and the keyed `useDelayedBusyByKey` both call it. The
+      run hooks time each request themselves and answer `rowPhase(id)`.
+    - **Sync review**: a candidate pick, _Search_, _Apply choices_, _Skip_
+      and _Keep all mine_ lock their Decision row at once and, past 300ms,
+      read _Saving match…_, _Searching TMDB…_, _Updating details…_ or
+      _Skipping…_; the row leaves, redraws or says _Match saved._ after the
+      hold. A **Season choice** locks its season and reads _Saving
+      poster…_. _Skip all_ reads _Skipping…_ and locks every row it covers
+      with no loader of its own; _Start sync_ and _Fetch details_ read
+      _Starting…_ and _Fetching…_, a start on arrival included.
+    - **Import review**: a picked candidate folder and _Import as “…”_ read
+      _Importing…_, _Apply choices_ _Updating details…_, _Take out of
+      library_ _Taking out…_, _Skip_ and _Keep all mine_ _Skipping…_.
+      _Import all as guessed_ reads _Importing…_; every _Skip all_ (beside a
+      chosen kind or on a **Review group**) and the bulk _Keep all mine_
+      read _Skipping…_, only the one pressed. _Start import_ reads
+      _Starting…_ and stays disabled while its form is unfilled.
+    - **Library folders**: a folder's ✕ and _Bring back_ lock the row and
+      read _Removing…_ or _Bringing back…_ in place of its line; the pressed
+      scan button reads _Scanning…_, the other disabled, and the move to
+      the progress screen (a `409` too) waits out the hold.
+    - **The form**: an edit, a series edit and a Resolve open on a **Form
+      skeleton** (`LoadingForm`), drawn at once with no save, named
+      _Loading movie_ or _Loading series_; a gone record still falls back
+      to the add, and a plain add draws no skeleton. The **Show folder
+      pick** locks _＋ Add show folder_ while the picked folder is read and
+      past 300ms draws the mark with _Reading folder…_ (shell only; proved
+      by its tests, not walked).
+    - **Refusals** return a row or button to its idle face, pressable, with
+      the refusal sentences of today.
     - **Already covered**, checked and left alone: the browse and detail
       **Skeleton**s, the forms' and dialogs' **Busy button**s and **Dialog
       loader**, the Sync and Import progress screens, the Export, the TMDB

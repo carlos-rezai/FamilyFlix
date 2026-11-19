@@ -33,6 +33,12 @@ import {
   Tiles,
 } from './ImportReview.styles';
 
+/**
+ * The key of the Kind filter's _Skip all_ and _Keep all mine_: empty, which
+ * no group's title is.
+ */
+const KIND_SKIP = '';
+
 /** The console's height in the log's Accordion — the Running step's own 220. */
 const LOG_HEIGHT = 220;
 
@@ -95,7 +101,8 @@ export interface ImportReviewProps {
  * _Import all as guessed_ before it for `no-row`, or _Keep all mine_ in its
  * place for `differs` — and each group carries
  * _Skip all_ among its Accordion actions; every one reports its ids at once,
- * no confirm.
+ * no confirm. Each is a **Busy button** on `skippingAll` or `importingAll`,
+ * and only the _Skip all_ pressed reads _Skipping…_, the step's own state.
  *
  * Between the tiles and the list, the run's **Activity log** on one closed
  * **Accordion** — _Activity log_ and its line count — opening onto the Running
@@ -135,6 +142,16 @@ export function ImportReview({
   );
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const [logOpen, setLogOpen] = useState(false);
+  // Which _Skip all_ was pressed, `kind` or a group's title, so only it reads
+  // _Skipping…_: one loader for one wait. A press while a bulk runs sends
+  // nothing, so it moves nothing either.
+  const [skipFrom, setSkipFrom] = useState<string | null>(null);
+  const skipBusy = (from: string): BusyPhase =>
+    skipFrom === from ? skippingAll : 'idle';
+  const skipManyFrom = (from: string, ids: string[]) => {
+    if (skippingAll === 'idle' && importingAll === 'idle') setSkipFrom(from);
+    onSkipMany(ids);
+  };
   const toggle = (title: string) =>
     setOpen((was) => {
       const next = new Set(was);
@@ -221,8 +238,9 @@ export function ImportReview({
                     label="Keep all mine"
                     variant="secondary"
                     size="sm"
-                    onClick={() => onSkipMany(kindIds)}
-                    busy={skippingAll}
+                    onClick={() => skipManyFrom(KIND_SKIP, kindIds)}
+                    busy={skipBusy(KIND_SKIP)}
+                    busyLabel="Skipping…"
                   />
                 ) : filter.value !== 'all' ? (
                   <>
@@ -240,8 +258,8 @@ export function ImportReview({
                       label="Skip all"
                       variant="ghost"
                       size="sm"
-                      onClick={() => onSkipMany(kindIds)}
-                      busy={skippingAll}
+                      onClick={() => skipManyFrom(KIND_SKIP, kindIds)}
+                      busy={skipBusy(KIND_SKIP)}
                       busyLabel="Skipping…"
                     />
                   </>
@@ -262,14 +280,19 @@ export function ImportReview({
                   onToggle={() => toggle(group.title)}
                   actions={
                     <SkipAllButton
-                      type="button"
-                      aria-label={`Skip all for ${group.title}`}
+                      label="Skip all"
+                      ariaLabel={`Skip all for ${group.title}`}
+                      variant="ghost"
+                      size="sm"
                       onClick={() =>
-                        onSkipMany(group.problems.map((problem) => problem.id))
+                        skipManyFrom(
+                          group.title,
+                          group.problems.map((problem) => problem.id)
+                        )
                       }
-                    >
-                      Skip all
-                    </SkipAllButton>
+                      busy={skipBusy(group.title)}
+                      busyLabel="Skipping…"
+                    />
                   }
                   marks={group.kinds.map((kind) => (
                     <KindMark

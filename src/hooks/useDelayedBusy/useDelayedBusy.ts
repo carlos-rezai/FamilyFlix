@@ -60,7 +60,9 @@ export async function onLoaderTiming<T>(
 /**
  * The **Loader timing** for one piece of work at a time: an action locks at
  * once (`waiting`), draws its loader only once its work has run 300ms
- * (`shown`), and once drawn holds it for at least 500ms.
+ * (`shown`), and once drawn holds it for at least 500ms. Its `run` is
+ * `onLoaderTiming` over the hook's own phase; `useDelayedBusyByKey` keeps one
+ * such phase per key.
  */
 export function useDelayedBusy(): DelayedBusy {
   const [phase, setPhase] = useState<BusyPhase>('idle');

@@ -151,8 +151,11 @@ export const BulkSkipAllButton = styled(Button)`
   ${skipAllFace}
 `;
 
-/** _Skip all_ among a Review group's Accordion actions: 40px. */
-export const SkipAllButton = styled.button`
+/**
+ * _Skip all_ among a Review group's Accordion actions: 40px, a **Busy
+ * button** over `Button`'s own lock and label.
+ */
+export const SkipAllButton = styled(Button)`
   height: 40px;
   ${skipAllFace}
 `;

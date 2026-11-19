@@ -12,8 +12,13 @@ import {
 
 /** Everything both forms share — the whole of what the control looks like. */
 interface ButtonFace {
-  /** The button's visible text, and its accessible name. */
+  /** The button's visible text, and its accessible name unless `ariaLabel` is given. */
   label: string;
+  /**
+   * The accessible name, for a control whose visible label is shorter than
+   * what it does: a Review group's _Skip all_ is `Skip all for <title>`.
+   */
+  ariaLabel?: string;
   /** primary = accent fill; secondary/danger = bordered; ghost = text-only. */
   variant?: ButtonVariant;
   /** sm = 40px / radius-sm; md = 50px / radius-md; lg = 58px / pill. */
@@ -78,6 +83,7 @@ export function Button({
   size = 'md',
   icon = 'none',
   fullWidth = false,
+  ariaLabel,
   className,
   ...form
 }: ButtonProps) {
@@ -95,6 +101,7 @@ export function Button({
 
   const face = {
     className,
+    'aria-label': ariaLabel,
     $variant: variant,
     $size: size,
     $fullWidth: fullWidth,

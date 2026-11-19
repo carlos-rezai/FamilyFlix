@@ -54,6 +54,12 @@ export interface LibraryFoldersState {
  * it lands** — then kept from the routes' echoes. An add appends the folder
  * the route answered and clears the refusal; refused, it holds the route's
  * sentence and keeps the list. A remove drops the row once the route agrees.
+ *
+ * A row's remove and _Bring back_ run on the **Loader timing** under the
+ * folder's id (`useDelayedBusyByKey`), answered as `rowPhase(id)`: the row
+ * locks at once, says _Removing…_ or _Bringing back…_ past 300ms, and drops
+ * or redraws only once the hold is out. A refused remove settles back to
+ * `idle` and holds its sentence, as before.
  */
 export function useLibraryFolders(): LibraryFoldersState {
   const [folders, setFolders] = useState<LibraryFolderView[] | null>(null);

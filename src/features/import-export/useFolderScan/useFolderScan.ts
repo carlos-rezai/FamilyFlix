@@ -24,6 +24,10 @@ export interface FolderScan {
  * started is shown; a `409` pushes there too, so the run already in flight is
  * the one shown; any other failure lets go of `scanning`, to press again.
  * Both pushes come once the loader's hold is out. Never rejects.
+ *
+ * `scanning` is the press's **Busy phase** on `useDelayedBusy`, and `scope`
+ * the scope pressed, so the page draws _Scanning…_ on that button alone and
+ * disables the other.
  */
 export function useFolderScan(): FolderScan {
   const navigate = useNavigate();
