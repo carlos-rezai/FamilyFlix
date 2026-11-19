@@ -1,4 +1,6 @@
-import styled from 'styled-components';
+import styled, { css } from 'styled-components';
+
+import { Button } from '@/primitives';
 import { controlStates } from '@/styles/interactionStates/interactionStates';
 import { Dot } from '../ProblemRow/ProblemRow.styles';
 
@@ -99,41 +101,58 @@ export const BulkActions = styled.div`
   gap: 4px;
 `;
 
-/** _Keep all mine_: the filled, bordered bulk button. */
-export const BulkButton = styled.button`
+/**
+ * _Keep all mine_ and _Import all as guessed_: the filled, bordered bulk
+ * button, a **Busy button** over `Button`'s own lock and label.
+ */
+export const BulkButton = styled(Button)`
   height: 34px;
   padding: 0 14px;
   background: ${({ theme }) => theme.colors.surface3};
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: 8px;
   color: ${({ theme }) => theme.colors.text};
-  font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 14px;
   font-weight: 600;
-  cursor: pointer;
   ${controlStates('scale(.97)')}
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled),
+  &:active:not(:disabled) {
     background: ${({ theme }) => theme.colors.border};
+    border-color: ${({ theme }) => theme.colors.border};
   }
 `;
 
-/**
- * _Skip all_: the faint text button — 34px beside the Kind filter, and 40px
- * among a Review group's Accordion actions.
- */
-export const SkipAllButton = styled.button<{ $tall?: boolean }>`
-  height: ${({ $tall }) => ($tall ? '40px' : '34px')};
+/** _Skip all_'s face: the faint text button. */
+const skipAllFace = css`
   padding: 0 14px;
   background: transparent;
   border: none;
   color: ${({ theme }) => theme.colors.textFaint};
   font-family: ${({ theme }) => theme.fonts.sans};
   font-size: 14px;
+  font-weight: 400;
   cursor: pointer;
   ${controlStates('scale(.97)')}
 
-  &:hover:not(:disabled) {
+  &:hover:not(:disabled),
+  &:active:not(:disabled) {
+    background: transparent;
     color: ${({ theme }) => theme.colors.textDim};
   }
+`;
+
+/**
+ * _Skip all_ beside the Kind filter: 34px, a **Busy button** over `Button`'s
+ * own lock and label.
+ */
+export const BulkSkipAllButton = styled(Button)`
+  height: 34px;
+  ${skipAllFace}
+`;
+
+/** _Skip all_ among a Review group's Accordion actions: 40px. */
+export const SkipAllButton = styled.button`
+  height: 40px;
+  ${skipAllFace}
 `;

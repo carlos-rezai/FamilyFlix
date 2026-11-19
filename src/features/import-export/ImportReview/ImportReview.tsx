@@ -23,6 +23,7 @@ import {
   AllDoneLine,
   BulkActions,
   BulkButton,
+  BulkSkipAllButton,
   FilterRow,
   FilterScroll,
   KindMark,
@@ -64,6 +65,10 @@ export interface ImportReviewProps {
    * `no-row` id in the run's order.
    */
   onImportManyAsGuessed: (ids: string[]) => void;
+  /** _Skip all_'s and _Keep all mine_'s phase on the **Loader timing**; `idle` when left out. */
+  skippingAll?: BusyPhase;
+  /** _Import all as guessed_'s phase on the **Loader timing**; `idle` when left out. */
+  importingAll?: BusyPhase;
   /** Finish's words: where it goes, which the flow knows and this step does not. */
   finishLabel: string;
   onFinish: () => void;
@@ -116,6 +121,8 @@ export function ImportReview({
   rowPhase,
   onSkipMany,
   onImportManyAsGuessed,
+  skippingAll = 'idle',
+  importingAll = 'idle',
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
@@ -210,25 +217,33 @@ export function ImportReview({
               </FilterScroll>
               <BulkActions>
                 {filter.value === 'differs' ? (
-                  <BulkButton type="button" onClick={() => onSkipMany(kindIds)}>
-                    Keep all mine
-                  </BulkButton>
+                  <BulkButton
+                    label="Keep all mine"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => onSkipMany(kindIds)}
+                    busy={skippingAll}
+                  />
                 ) : filter.value !== 'all' ? (
                   <>
                     {filter.value === 'no-row' && (
                       <BulkButton
-                        type="button"
+                        label="Import all as guessed"
+                        variant="secondary"
+                        size="sm"
                         onClick={() => onImportManyAsGuessed(kindIds)}
-                      >
-                        Import all as guessed
-                      </BulkButton>
+                        busy={importingAll}
+                        busyLabel="Importing…"
+                      />
                     )}
-                    <SkipAllButton
-                      type="button"
+                    <BulkSkipAllButton
+                      label="Skip all"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onSkipMany(kindIds)}
-                    >
-                      Skip all
-                    </SkipAllButton>
+                      busy={skippingAll}
+                      busyLabel="Skipping…"
+                    />
                   </>
                 ) : null}
               </BulkActions>
@@ -248,7 +263,6 @@ export function ImportReview({
                   actions={
                     <SkipAllButton
                       type="button"
-                      $tall
                       aria-label={`Skip all for ${group.title}`}
                       onClick={() =>
                         onSkipMany(group.problems.map((problem) => problem.id))

@@ -74,10 +74,13 @@ export function ImportFlow() {
     run,
     attaching,
     start,
+    starting,
     cancel,
     skip,
     skipMany,
+    skippingAll,
     importManyAsGuessed,
+    importingAll,
     apply,
     pick,
     importAsGuessed,
@@ -109,6 +112,10 @@ export function ImportFlow() {
   }, []);
 
   const onStart = useCallback(async () => {
+    // A start already sent sends nothing more.
+    if (starting !== 'idle') {
+      return;
+    }
     setSheetError(null);
     setFoldersError(null);
     try {
@@ -123,7 +130,7 @@ export function ImportFlow() {
         );
       }
     }
-  }, [start, sheet, enrich, mode]);
+  }, [start, starting, sheet, enrich, mode]);
 
   const onCancel = useCallback(() => {
     void cancel().catch(() => {
@@ -165,22 +172,30 @@ export function ImportFlow() {
 
   const onSkipMany = useCallback(
     (ids: string[]) => {
+      // A bulk press already sent sends nothing more, as a locked row does.
+      if (skippingAll !== 'idle' || importingAll !== 'idle') {
+        return;
+      }
       void skipMany(ids).catch(() => {
         // A bulk dismiss that did not land leaves every row where it is, and
         // the button is still there to press again.
       });
     },
-    [skipMany]
+    [skipMany, skippingAll, importingAll]
   );
 
   const onImportManyAsGuessed = useCallback(
     (ids: string[]) => {
+      // A bulk press already sent sends nothing more, as a locked row does.
+      if (skippingAll !== 'idle' || importingAll !== 'idle') {
+        return;
+      }
       void importManyAsGuessed(ids).catch(() => {
         // A bulk import that did not land leaves every row where it is, and
         // the button is still there to press again.
       });
     },
-    [importManyAsGuessed]
+    [importManyAsGuessed, skippingAll, importingAll]
   );
 
   const onApply = useCallback(
@@ -254,6 +269,7 @@ export function ImportFlow() {
           foldersError={foldersError}
           onSheet={onSheet}
           onStart={onStart}
+          starting={starting}
           mode={mode}
           onMode={setMode}
           enrich={enrich}
@@ -271,6 +287,8 @@ export function ImportFlow() {
           rowPhase={rowPhase}
           onSkipMany={onSkipMany}
           onImportManyAsGuessed={onImportManyAsGuessed}
+          skippingAll={skippingAll}
+          importingAll={importingAll}
           finishLabel={run.enrich ? FINISH_TO_SYNC : FINISH_TO_LIBRARY}
           onFinish={() => onFinish(run.enrich, run.startedAt)}
         />

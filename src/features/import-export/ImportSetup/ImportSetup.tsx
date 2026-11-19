@@ -2,7 +2,7 @@ import { Button, SheetIcon, TextField } from '@/primitives';
 import { useState } from 'react';
 
 import { folderBridge } from '@/api/folderBridge/folderBridge';
-import type { ImportMode } from '@/types';
+import type { BusyPhase, ImportMode } from '@/types';
 import {
   Actions,
   ErrorLine,
@@ -40,6 +40,11 @@ export interface ImportSetupProps {
   onSheet: (value: string) => void;
   /** _Start import_. */
   onStart: () => void;
+  /**
+   * _Start import_'s phase on the **Loader timing** while a start is sent:
+   * locked from `waiting`, reading _Starting…_ once `shown`.
+   */
+  starting?: BusyPhase;
   /** The **Import mode** chosen. */
   mode: ImportMode;
   onMode: (mode: ImportMode) => void;
@@ -76,6 +81,7 @@ export function ImportSetup({
   foldersError,
   onSheet,
   onStart,
+  starting = 'idle',
   mode,
   onMode,
   enrich,
@@ -139,7 +145,13 @@ export function ImportSetup({
       />
 
       <Actions>
-        <Button label="Start import" disabled={!ready} onClick={onStart} />
+        <Button
+          label="Start import"
+          disabled={!ready}
+          onClick={onStart}
+          busy={starting}
+          busyLabel="Starting…"
+        />
       </Actions>
     </Fields>
   );

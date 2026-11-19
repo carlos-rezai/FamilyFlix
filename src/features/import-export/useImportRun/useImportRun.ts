@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { dismissProblem } from '@/api/dismissProblem/dismissProblem';
+import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import { useDelayedBusyByKey } from '@/hooks/useDelayedBusyByKey/useDelayedBusyByKey';
 import type {
   BusyPhase,
@@ -51,6 +52,11 @@ export interface ImportRunState {
     enrich: boolean,
     mode: ImportMode
   ) => Promise<void>;
+  /**
+   * The start's phase on the **Loader timing**, the whole of `start`: the
+   * post and, after a `409`, the read that follows it.
+   */
+  starting: BusyPhase;
   /** _Cancel import_: discard the run, and let it go from the screen. */
   cancel: () => Promise<void>;
   /**
@@ -66,6 +72,8 @@ export interface ImportRunState {
    * could not be made; the run stays as it was.
    */
   skipMany: (ids: string[]) => Promise<void>;
+  /** _Skip all_'s and _Keep all mine_'s phase on the **Loader timing**. */
+  skippingAll: BusyPhase;
   /**
    * _Import all as guessed_: import every `no-row` id at once under the run's
    * **Import mode**, and hold the route's echo — the whole snapshot, a row
@@ -73,6 +81,8 @@ export interface ImportRunState {
    * could not be made; the run stays as it was.
    */
   importManyAsGuessed: (ids: string[]) => Promise<void>;
+  /** _Import all as guessed_'s phase on the **Loader timing**. */
+  importingAll: BusyPhase;
   /**
    * _Apply choices_ on a `differs` **Problem**: post the choices, and take its
    * row off once the route has answered — on a `404` as on the `204`, as
@@ -100,8 +110,8 @@ export interface ImportRunState {
   /**
    * **Problem** row `id`'s phase on the **Loader timing** while its press
    * (_Import as_, a picked folder, _Take out_, _Apply choices_, _Skip_) is
-   * sent; `idle` for a row with nothing sent. The row settles only once the
-   * hold is out.
+   * sent; `waiting` for a row a running bulk press covers; `idle` for a row
+   * with nothing sent. The row settles only once the hold is out.
    */
   rowPhase: (id: string) => BusyPhase;
 }
@@ -154,19 +164,24 @@ export function useImportRun(): ImportRunState {
     };
   }, []);
 
+  const starts = useDelayedBusy();
+  const timeStart = starts.run;
   const start = useCallback(
     async (sheetPath: string, enrich: boolean, mode: ImportMode) => {
       generation.current += 1;
-      try {
-        setRun(await startImport(sheetPath, enrich, mode));
-      } catch (error) {
-        if (!(error instanceof ImportBusyError)) {
-          throw error;
+      const held = await timeStart(async () => {
+        try {
+          return await startImport(sheetPath, enrich, mode);
+        } catch (error) {
+          if (!(error instanceof ImportBusyError)) {
+            throw error;
+          }
+          return fetchCurrentImport();
         }
-        setRun(await fetchCurrentImport());
-      }
+      });
+      setRun(held);
     },
-    []
+    [timeStart]
   );
 
   const cancel = useCallback(async () => {
@@ -189,7 +204,33 @@ export function useImportRun(): ImportRunState {
 
   const rows = useDelayedBusyByKey();
   const timeRow = rows.run;
-  const rowPhase = rows.phaseOf;
+  const rowsPhaseOf = rows.phaseOf;
+  const skipsAll = useDelayedBusy();
+  const timeSkipAll = skipsAll.run;
+  const importsAll = useDelayedBusy();
+  const timeImportAll = importsAll.run;
+  /** The ids a running bulk press covers; empty while none runs. */
+  const [covered, setCovered] = useState<ReadonlySet<string>>(() => new Set());
+  const rowPhase = useCallback(
+    (id: string): BusyPhase => {
+      const own = rowsPhaseOf(id);
+      return own === 'idle' && covered.has(id) ? 'waiting' : own;
+    },
+    [rowsPhaseOf, covered]
+  );
+
+  /** A bulk press over `ids`, every row it covers locked until it settles. */
+  const coverWhile = useCallback(
+    async (ids: string[], send: () => Promise<ImportRun>) => {
+      setCovered(new Set(ids));
+      try {
+        setRun(await send());
+      } finally {
+        setCovered(new Set());
+      }
+    },
+    []
+  );
 
   const skip = useCallback(
     async (id: string) => {
@@ -199,13 +240,17 @@ export function useImportRun(): ImportRunState {
     [timeRow, takeOff]
   );
 
-  const skipMany = useCallback(async (ids: string[]) => {
-    setRun(await dismissProblems(ids));
-  }, []);
+  const skipMany = useCallback(
+    (ids: string[]) =>
+      coverWhile(ids, () => timeSkipAll(() => dismissProblems(ids))),
+    [coverWhile, timeSkipAll]
+  );
 
-  const importManyAsGuessed = useCallback(async (ids: string[]) => {
-    setRun(await importManyGuessed(ids));
-  }, []);
+  const importManyAsGuessed = useCallback(
+    (ids: string[]) =>
+      coverWhile(ids, () => timeImportAll(() => importManyGuessed(ids))),
+    [coverWhile, timeImportAll]
+  );
 
   const apply = useCallback(
     async (id: string, choices: SheetChoices) => {
@@ -296,10 +341,13 @@ export function useImportRun(): ImportRunState {
     run,
     attaching,
     start,
+    starting: starts.phase,
     cancel,
     skip,
     skipMany,
+    skippingAll: skipsAll.phase,
     importManyAsGuessed,
+    importingAll: importsAll.phase,
     apply,
     pick,
     importAsGuessed,
