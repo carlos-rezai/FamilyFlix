@@ -112,10 +112,6 @@ export function ImportFlow() {
   }, []);
 
   const onStart = useCallback(async () => {
-    // A start already sent sends nothing more.
-    if (starting !== 'idle') {
-      return;
-    }
     setSheetError(null);
     setFoldersError(null);
     try {
@@ -130,7 +126,7 @@ export function ImportFlow() {
         );
       }
     }
-  }, [start, starting, sheet, enrich, mode]);
+  }, [start, sheet, enrich, mode]);
 
   const onCancel = useCallback(() => {
     void cancel().catch(() => {
@@ -158,100 +154,72 @@ export function ImportFlow() {
 
   const onSkip = useCallback(
     (id: string) => {
-      // A row already waiting on a press takes no second one.
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       void skip(id).catch(() => {
         // A skip that did not land leaves the row where it is, and the button
         // is still there to press again.
       });
     },
-    [skip, rowPhase]
+    [skip]
   );
 
   const onSkipMany = useCallback(
     (ids: string[]) => {
-      // A bulk press already sent sends nothing more, as a locked row does.
-      if (skippingAll !== 'idle' || importingAll !== 'idle') {
-        return;
-      }
       void skipMany(ids).catch(() => {
         // A bulk dismiss that did not land leaves every row where it is, and
         // the button is still there to press again.
       });
     },
-    [skipMany, skippingAll, importingAll]
+    [skipMany]
   );
 
   const onImportManyAsGuessed = useCallback(
     (ids: string[]) => {
-      // A bulk press already sent sends nothing more, as a locked row does.
-      if (skippingAll !== 'idle' || importingAll !== 'idle') {
-        return;
-      }
       void importManyAsGuessed(ids).catch(() => {
         // A bulk import that did not land leaves every row where it is, and
         // the button is still there to press again.
       });
     },
-    [importManyAsGuessed, skippingAll, importingAll]
+    [importManyAsGuessed]
   );
 
   const onApply = useCallback(
     (id: string, choices: SheetChoices) => {
-      // A row already waiting on a press takes no second one.
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       void apply(id, choices).catch(() => {
         // An apply that did not land leaves the row where it is, its choices
         // still there to apply again.
       });
     },
-    [apply, rowPhase]
+    [apply]
   );
 
   const onPick = useCallback(
     (id: string, folder: string) => {
-      // A row already waiting on a press takes no second one.
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       void pick(id, folder).catch(() => {
         // A pick that did not land leaves the row where it is, its folders
         // still there to press again.
       });
     },
-    [pick, rowPhase]
+    [pick]
   );
 
   const onImportAs = useCallback(
     (id: string) => {
-      // A row already waiting on a press takes no second one.
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       void importAsGuessed(id).catch(() => {
         // An import that did not land leaves the row where it is, to press
         // again or settle another way.
       });
     },
-    [importAsGuessed, rowPhase]
+    [importAsGuessed]
   );
 
   const onTakeOut = useCallback(
     (id: string) => {
-      // A row already waiting on a press takes no second one.
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       void takeOut(id).catch(() => {
         // A take-out that did not land leaves the row where it is, to press
         // again or skip.
       });
     },
-    [takeOut, rowPhase]
+    [takeOut]
   );
 
   return (
