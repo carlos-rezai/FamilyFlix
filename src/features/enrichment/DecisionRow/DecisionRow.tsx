@@ -49,7 +49,7 @@ export interface DecisionRowProps {
    * The row's phase on the **Loader timing**, handed by the review: from
    * `waiting` it is locked, once `shown` its loader stands in the dot's slot.
    */
-  busy?: BusyPhase;
+  busy: BusyPhase;
   onSkip: () => void;
   onPick: (tmdbId: number) => void;
   onSearch: (query: string) => void;
@@ -70,7 +70,7 @@ export interface DecisionRowProps {
  */
 export function DecisionRow({
   decision,
-  busy = 'idle',
+  busy,
   onSkip,
   onPick,
   onSearch,

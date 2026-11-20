@@ -79,6 +79,7 @@ function renderRow(props: Partial<DecisionRowProps> = {}) {
     <ThemeProvider theme={theme}>
       <DecisionRow
         decision={props.decision ?? AMBIGUOUS}
+        busy="idle"
         onSkip={props.onSkip ?? handlers.onSkip}
         onPick={props.onPick ?? handlers.onPick}
         onSearch={props.onSearch ?? handlers.onSearch}

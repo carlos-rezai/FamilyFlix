@@ -37,6 +37,7 @@ function renderRow(props: Partial<ProblemRowProps> = {}) {
       <ThemeProvider theme={theme}>
         <ProblemRow
           problem={props.problem ?? problem()}
+          busy="idle"
           onSkip={props.onSkip ?? (() => undefined)}
           onApply={props.onApply ?? (() => undefined)}
           onPick={props.onPick ?? (() => undefined)}

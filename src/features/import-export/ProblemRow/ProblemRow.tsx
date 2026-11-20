@@ -29,7 +29,7 @@ export interface ProblemRowProps {
    * The row's phase on the **Loader timing**, handed by the review: from
    * `waiting` it is locked, once `shown` its loader stands in the dot's slot.
    */
-  busy?: BusyPhase;
+  busy: BusyPhase;
   /** _Skip_ was pressed: the row reports it, and the **Run hook** removes it. */
   onSkip: () => void;
   /** _Apply choices_ on a `differs` row: the side kept for each field. */
@@ -115,7 +115,7 @@ const sheetChoices = (
  */
 export function ProblemRow({
   problem,
-  busy = 'idle',
+  busy,
   onSkip,
   onApply,
   onPick,

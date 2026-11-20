@@ -32,7 +32,12 @@ const folder = (
 function renderRow(row: LibraryFolderView = folder(), onRemove = vi.fn()) {
   render(
     <ThemeProvider theme={theme}>
-      <FolderRow folder={row} onBringBack={vi.fn()} onRemove={onRemove} />
+      <FolderRow
+        folder={row}
+        busy="idle"
+        onBringBack={vi.fn()}
+        onRemove={onRemove}
+      />
     </ThemeProvider>
   );
   return onRemove;

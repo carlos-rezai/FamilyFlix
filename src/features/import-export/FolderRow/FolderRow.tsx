@@ -20,7 +20,7 @@ export interface FolderRowProps {
    * The row's phase on the **Loader timing**, handed by the page: from
    * `waiting` it is locked, once `shown` its loader stands in the line's slot.
    */
-  busy?: BusyPhase;
+  busy: BusyPhase;
   /**
    * What to do when _Bring back_ is pressed on the left-out line.
    */
@@ -51,7 +51,7 @@ const PRESS_LABELS: Record<Press, string> = {
  */
 export function FolderRow({
   folder,
-  busy = 'idle',
+  busy,
   onBringBack,
   onRemove,
 }: FolderRowProps) {

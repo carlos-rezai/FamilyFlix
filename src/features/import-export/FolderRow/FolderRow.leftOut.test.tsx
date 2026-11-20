@@ -25,7 +25,12 @@ const folder = (leftOut: number): LibraryFolderView => ({
 function renderRow(row: LibraryFolderView, onBringBack = vi.fn()) {
   render(
     <ThemeProvider theme={theme}>
-      <FolderRow folder={row} onBringBack={onBringBack} onRemove={vi.fn()} />
+      <FolderRow
+        folder={row}
+        busy="idle"
+        onBringBack={onBringBack}
+        onRemove={vi.fn()}
+      />
     </ThemeProvider>
   );
   return onBringBack;
@@ -53,6 +58,7 @@ describe('FolderRow: the left-out line', () => {
       <ThemeProvider theme={theme}>
         <FolderRow
           folder={folder(2)}
+          busy="idle"
           onBringBack={vi.fn()}
           onRemove={vi.fn()}
         />
@@ -64,6 +70,7 @@ describe('FolderRow: the left-out line', () => {
       <ThemeProvider theme={theme}>
         <FolderRow
           folder={folder(0)}
+          busy="idle"
           onBringBack={vi.fn()}
           onRemove={vi.fn()}
         />
