@@ -201,3 +201,92 @@ describe('useDelayedBusyByKey', () => {
     expect(result.current.phaseOf('a')).toBe('idle');
   });
 });
+
+/**
+ * 69, Silent waits, refactor (issue #662): a bulk press covers its rows.
+ *
+ * `cover(keys, work)` holds every covered key at `waiting` while `work` runs,
+ * untimed: the bulk press's own **Busy button** carries the loader. A key's
+ * own run wins over its cover, and every key is released once `work`
+ * settles, its result or its error passed through.
+ */
+describe('useDelayedBusyByKey: cover', () => {
+  it('holds every covered key at waiting, untimed, and no other', async () => {
+    const { result } = renderBusy();
+    const work = deferred<string>();
+
+    act(() => {
+      void result.current.cover(['a', 'b'], () => work.promise);
+    });
+
+    expect(result.current.phaseOf('a')).toBe('waiting');
+    expect(result.current.phaseOf('b')).toBe('waiting');
+    expect(result.current.phaseOf('c')).toBe('idle');
+
+    await advanceClock(1000);
+    expect(result.current.phaseOf('a')).toBe('waiting');
+    expect(result.current.phaseOf('b')).toBe('waiting');
+
+    await act(async () => {
+      work.resolve('done');
+    });
+  });
+
+  it('answers a covered key’s own run by its own phase', async () => {
+    const { result } = renderBusy();
+    const bulk = deferred<string>();
+    const own = deferred<string>();
+
+    act(() => {
+      void result.current.cover(['a', 'b'], () => bulk.promise);
+      void result.current.run('a', () => own.promise);
+    });
+    await advanceClock(300);
+
+    expect(result.current.phaseOf('a')).toBe('shown');
+    expect(result.current.phaseOf('b')).toBe('waiting');
+
+    await act(async () => {
+      own.resolve('own');
+      bulk.resolve('bulk');
+    });
+    await advanceClock(500);
+  });
+
+  it('releases every key once work resolves, passing its result through', async () => {
+    const { result } = renderBusy();
+    const work = deferred<string>();
+
+    let running!: ReturnType<typeof watch<string>>;
+    act(() => {
+      running = watch(result.current.cover(['a', 'b'], () => work.promise));
+    });
+    await act(async () => {
+      work.resolve('skipped');
+    });
+
+    expect(running.settled).toBe(true);
+    expect(running.value).toBe('skipped');
+    expect(result.current.phaseOf('a')).toBe('idle');
+    expect(result.current.phaseOf('b')).toBe('idle');
+  });
+
+  it('releases every key once work rejects, passing its error through', async () => {
+    const { result } = renderBusy();
+    const work = deferred<string>();
+    const refusal = new Error('refused');
+
+    let running!: ReturnType<typeof watch<string>>;
+    act(() => {
+      running = watch(result.current.cover(['a', 'b'], () => work.promise));
+    });
+    await act(async () => {
+      work.reject(refusal);
+    });
+
+    expect(running.settled).toBe(true);
+    expect(running.error).toBe(refusal);
+    expect(result.current.phaseOf('a')).toBe('idle');
+    expect(result.current.phaseOf('b')).toBe('idle');
+  });
+});
