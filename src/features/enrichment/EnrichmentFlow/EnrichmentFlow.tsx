@@ -161,14 +161,11 @@ export function EnrichmentFlow() {
 
   const onSkip = useCallback(
     (id: string) => {
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       dismiss(id).catch(() => {
         // A refused Skip leaves the row where it is, to press again.
       });
     },
-    [dismiss, rowPhase]
+    [dismiss]
   );
 
   const onSkipMany = useCallback(
@@ -187,11 +184,6 @@ export function EnrichmentFlow() {
 
   const onPick = useCallback(
     (id: string, tmdbId: number) => {
-      // A locked row sends nothing more; `inert` is the browser's lock, this
-      // is the same rule where `inert` is not honoured.
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       pick(id, tmdbId)
         .then(() => {
           notify({ variant: 'success', message: 'Match saved.' });
@@ -200,14 +192,11 @@ export function EnrichmentFlow() {
           // A refused pick leaves the row where it is, to pick again.
         });
     },
-    [pick, rowPhase, notify]
+    [pick, notify]
   );
 
   const onApply = useCallback(
     (id: string, choices: ConflictChoices) => {
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       apply(id, choices)
         .then(() => {
           notify({ variant: 'success', message: 'Details updated.' });
@@ -216,33 +205,26 @@ export function EnrichmentFlow() {
           // A refused apply leaves the row where it is, to apply again.
         });
     },
-    [apply, rowPhase, notify]
+    [apply, notify]
   );
 
   const onSearch = useCallback(
     (id: string, query: string) => {
-      if (rowPhase(id) !== 'idle') {
-        return;
-      }
       notify({ variant: 'info', message: 'Searching TMDB…' });
       search(id, query).catch(() => {
         // A refused search leaves the row as it was, to search again.
       });
     },
-    [search, rowPhase, notify]
+    [search, notify]
   );
 
   const onChooseSeasonPoster = useCallback(
     (season: number, path: string) => {
-      // A locked season sends nothing more, as a locked row does.
-      if (seasonPhase(season) !== 'idle') {
-        return;
-      }
       chooseSeasonPoster(season, path).catch(() => {
         // A refused choice leaves the held poster drawn, to choose again.
       });
     },
-    [chooseSeasonPoster, seasonPhase]
+    [chooseSeasonPoster]
   );
 
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
