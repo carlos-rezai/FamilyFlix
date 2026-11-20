@@ -2,7 +2,7 @@ import { useState } from 'react';
 
 import { Button, FolderIcon, TextField } from '@/primitives';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
-import type { BusyPhase, LibraryFolderView } from '@/types';
+import type { LibraryFolderView } from '@/types';
 import { FolderRow } from '../FolderRow/FolderRow';
 import type { LibraryFoldersState } from '../useLibraryFolders/useLibraryFolders';
 import {
@@ -14,14 +14,9 @@ import {
   Rows,
 } from './FolderListEditor.styles';
 
-export type FolderListEditorProps = Omit<
-  LibraryFoldersState,
-  'folders' | 'rowPhase'
-> & {
+export type FolderListEditorProps = Omit<LibraryFoldersState, 'folders'> & {
   /** The listed folders, landed — the caller draws nothing while `null`. */
   folders: LibraryFolderView[];
-  /** A row's phase on the **Loader timing**, by folder id; `idle` if absent. */
-  rowPhase?: (id: string) => BusyPhase;
 };
 
 /**
@@ -76,7 +71,7 @@ export function FolderListEditor({
             <div key={folder.id}>
               <FolderRow
                 folder={folder}
-                busy={rowPhase?.(folder.id) ?? 'idle'}
+                busy={rowPhase(folder.id)}
                 onBringBack={() => void bringBack(folder.id)}
                 onRemove={() => void remove(folder.id)}
               />
