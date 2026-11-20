@@ -119,3 +119,29 @@ describe('SeasonChoices: one season shown', () => {
     expect(screen.getAllByRole('status')).toHaveLength(1);
   });
 });
+
+describe('SeasonChoices: a locked season refuses a press', () => {
+  it.each<BusyPhase>(['waiting', 'shown'])(
+    'reports no choice for a %s season, and marks none picked',
+    (busy) => {
+      const onChoose = vi.fn();
+      render(
+        <ThemeProvider theme={theme}>
+          <SeasonChoices
+            seasons={[SEASON_ONE, SEASON_TWO]}
+            onChoose={onChoose}
+            seasonPhase={(season) => (season === 2 ? busy : 'idle')}
+          />
+        </ThemeProvider>
+      );
+      const choice = screen.getByRole('button', {
+        name: 'Series poster 2 for S02',
+      });
+
+      fireEvent.click(choice);
+
+      expect(onChoose).not.toHaveBeenCalled();
+      expect(choice.getAttribute('aria-pressed')).toBe('false');
+    }
+  );
+});

@@ -147,6 +147,20 @@ describe('MovieForm: Add show folder while the folder reads', () => {
     expect(locked(addShowFolder())).toBe(true);
   });
 
+  it('reports no second press while the folder reads', async () => {
+    await renderSeries();
+    await pressAndPick();
+    const opened = bridge.pickOnes();
+
+    fireEvent.click(addShowFolder());
+    await advanceClock(0);
+    await advanceClock(300);
+    fireEvent.click(addShowFolder());
+    await advanceClock(0);
+
+    expect(bridge.pickOnes()).toBe(opened);
+  });
+
   it('puts the control back with its refusal sentence on a refused read', async () => {
     await renderSeries();
     await pressAndPick();

@@ -231,7 +231,9 @@ export function SeriesFormFiles({
           <ShowFolderRows $busy={readingShowFolder}>
             <AddShowFolder
               type="button"
-              onClick={onAddShowFolder}
+              onClick={
+                readingShowFolder === 'idle' ? onAddShowFolder : undefined
+              }
               $busy={readingShowFolder}
             >
               {readingShowFolder === 'shown' ? (

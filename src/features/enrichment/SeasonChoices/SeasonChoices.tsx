@@ -110,6 +110,7 @@ export function SeasonChoices({
                       aria-pressed={chosen}
                       $picked={chosen}
                       onClick={() => {
+                        if (busy !== 'idle') return;
                         setPicked((held) => ({
                           ...held,
                           [season]: choice.path,
