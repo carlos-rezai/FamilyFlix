@@ -77,9 +77,7 @@ export function LibraryFolders() {
                 disabled={
                   held || !folders.some((folder) => folder.scannedAt === null)
                 }
-                onClick={() => {
-                  if (!held) void scan(enrich, mode, 'new');
-                }}
+                onClick={() => void scan(enrich, mode, 'new')}
               />
               <Button
                 label="Scan all folders"
@@ -88,9 +86,7 @@ export function LibraryFolders() {
                 busyLabel="Scanning…"
                 busy={busyFor('all')}
                 disabled={held || folders.length === 0}
-                onClick={() => {
-                  if (!held) void scan(enrich, mode, 'all');
-                }}
+                onClick={() => void scan(enrich, mode, 'all')}
               />
             </ScanActions>
           </ScanStack>
