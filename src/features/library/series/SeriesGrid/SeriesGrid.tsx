@@ -20,7 +20,7 @@ import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { withFavoriteInList } from '../../withFavorite/withFavorite';
 import { episodeContinueView } from '../episodeContinueView/episodeContinueView';
 import { seriesCardView } from '../seriesCardView/seriesCardView';
-import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
+import { useCardPreferences } from '@/App/useCardPreferences/useCardPreferences';
 import { LibraryGridHeading } from '../../LibraryGridHeading/LibraryGridHeading';
 
 /** `N series · M episodes` — the series word invariant, episodes pluralised. */
@@ -75,13 +75,13 @@ export function SeriesGrid() {
 
   const toggleFavorite = useOptimisticSave(applyFavorite, saveSeriesFavorite);
 
-  // Mapped per render under the TMDB ratings preference, so a flip in
+  // Mapped per render under the Card preferences, so a flip in
   // Settings redraws the loaded cards without reading the tab again.
-  const tmdbRatings = useTmdbRatings();
+  const preferences = useCardPreferences();
   const cards = useMemo(
     () =>
-      data?.series.map((series) => seriesCardView(series, tmdbRatings)) ?? [],
-    [data, tmdbRatings]
+      data?.series.map((series) => seriesCardView(series, preferences)) ?? [],
+    [data, preferences]
   );
   const favoriteCards = useMemo(
     () => shelvedFavorites(cards).slice(0, FAVORITES_LIMIT),

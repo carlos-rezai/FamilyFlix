@@ -13,6 +13,7 @@ import {
 } from '@/App/useDisplayPreference/useDisplayPreference';
 import { saveUltrawideMargins } from '@/App/saveUltrawideMargins/saveUltrawideMargins';
 import { saveTmdbRatings } from '@/App/saveTmdbRatings/saveTmdbRatings';
+import { saveQualityTags } from '@/App/saveQualityTags/saveQualityTags';
 import { saveStartTab } from '@/App/saveStartTab/saveStartTab';
 import { saveMovieRowView } from '@/App/saveMovieRowView/saveMovieRowView';
 import { saveSeriesRowView } from '@/App/saveSeriesRowView/saveSeriesRowView';
@@ -61,7 +62,7 @@ function useHeldValue<T>(save: (next: T) => Promise<T>): HeldValue<T> {
 
 /**
  * The household's display preferences (**Ultrawide margins**, _Fill in
- * ratings from TMDB_, the **Start tab** and each tab's **Row view**), held
+ * ratings from TMDB_, _Show video quality_, the **Start tab** and each tab's **Row view**), held
  * app-wide so a change on the Settings page reaches the **Content frame** and
  * every star at once, and a choice on the **Row view switch** redraws the
  * browse home in **All** or **By genre**: `SnackbarProvider`'s shape. It reads
@@ -79,11 +80,13 @@ export function DisplayPreferenceProvider({
 }) {
   const margins = useHeldValue<boolean>(saveUltrawideMargins);
   const ratings = useHeldValue<boolean>(saveTmdbRatings);
+  const qualityTags = useHeldValue<boolean>(saveQualityTags);
   const startTab = useHeldValue<LibraryTab>(saveStartTab);
   const movieRowView = useHeldValue<RowView>(saveMovieRowView);
   const seriesRowView = useHeldValue<RowView>(saveSeriesRowView);
   const { land: landMargins } = margins;
   const { land: landRatings } = ratings;
+  const { land: landQualityTags } = qualityTags;
   const { land: landStartTab } = startTab;
   const { land: landMovieRowView } = movieRowView;
   const { land: landSeriesRowView } = seriesRowView;
@@ -96,6 +99,7 @@ export function DisplayPreferenceProvider({
         if (wanted) {
           landMargins(landed.ultrawideMargins);
           landRatings(landed.tmdbRatings);
+          landQualityTags(landed.qualityTags);
           landStartTab(landed.startTab);
           landMovieRowView(landed.movieRowView);
           landSeriesRowView(landed.seriesRowView);
@@ -117,6 +121,7 @@ export function DisplayPreferenceProvider({
   }, [
     landMargins,
     landRatings,
+    landQualityTags,
     landStartTab,
     landMovieRowView,
     landSeriesRowView,
@@ -128,6 +133,8 @@ export function DisplayPreferenceProvider({
       setUltrawideMargins: margins.set,
       tmdbRatings: ratings.value,
       setTmdbRatings: ratings.set,
+      qualityTags: qualityTags.value,
+      setQualityTags: qualityTags.set,
       startTab: startTab.value,
       setStartTab: startTab.set,
       movieRowView: movieRowView.value,
@@ -140,6 +147,8 @@ export function DisplayPreferenceProvider({
       margins.set,
       ratings.value,
       ratings.set,
+      qualityTags.value,
+      qualityTags.set,
       startTab.value,
       startTab.set,
       movieRowView.value,

@@ -39,20 +39,20 @@ function makeSeries(overrides: Partial<Series> = {}): Series {
 
 describe('seriesCardView', () => {
   it('carries the id and title through', () => {
-    const card = seriesCardView(
-      makeSeries({ id: 's7', title: 'Lighthouse' }),
-      false
-    );
+    const card = seriesCardView(makeSeries({ id: 's7', title: 'Lighthouse' }), {
+      tmdbRatings: false,
+      qualityTags: true,
+    });
 
     expect(card.id).toBe('s7');
     expect(card.title).toBe('Lighthouse');
   });
 
   it('falls back to Gradient art off the series id when there is no poster', () => {
-    const card = seriesCardView(
-      makeSeries({ id: 's9', posterPath: null }),
-      false
-    );
+    const card = seriesCardView(makeSeries({ id: 's9', posterPath: null }), {
+      tmdbRatings: false,
+      qualityTags: true,
+    });
 
     expect(card.posterUrl).toBeNull();
     const { g1, g2 } = gradientFromId('s9');
@@ -63,37 +63,57 @@ describe('seriesCardView', () => {
   it('points a held poster at the image route', () => {
     const card = seriesCardView(
       makeSeries({ posterPath: 'harbor-vine-2021/poster.jpg' }),
-      false
+      { tmdbRatings: false, qualityTags: true }
     );
 
     expect(card.posterUrl).toBe('/api/images/harbor-vine-2021/poster.jpg');
   });
 
   it('is watched when every episode is watched, and not otherwise', () => {
-    expect(seriesCardView(makeSeries({ watched: true }), false).watched).toBe(
-      true
-    );
-    expect(seriesCardView(makeSeries({ watched: false }), false).watched).toBe(
-      false
-    );
+    expect(
+      seriesCardView(makeSeries({ watched: true }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).watched
+    ).toBe(true);
+    expect(
+      seriesCardView(makeSeries({ watched: false }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).watched
+    ).toBe(false);
   });
 
   it('draws no progress — a series has no resume position of its own', () => {
-    expect(seriesCardView(makeSeries({ watched: false }), false).progress).toBe(
-      0
-    );
+    expect(
+      seriesCardView(makeSeries({ watched: false }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).progress
+    ).toBe(0);
   });
 
   it('scales the rating to a percent, and keeps an unrated series unrated', () => {
-    expect(seriesCardView(makeSeries({ rating: 8 }), false).rating).toBe(80);
     expect(
-      seriesCardView(makeSeries({ rating: null }), false).rating
+      seriesCardView(makeSeries({ rating: 8 }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).rating
+    ).toBe(80);
+    expect(
+      seriesCardView(makeSeries({ rating: null }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).rating
     ).toBeNull();
   });
 
   it('carries the favorite flag as favorite', () => {
     expect(
-      seriesCardView(makeSeries({ isFavorite: true }), false).favorite
+      seriesCardView(makeSeries({ isFavorite: true }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).favorite
     ).toBe(true);
   });
 });
@@ -104,44 +124,50 @@ describe('seriesCardView', () => {
  */
 describe('seriesCardView — the Shown rating under the TMDB ratings preference', () => {
   it('gives the household Rating and its source over a score, preference on', () => {
-    const vm = seriesCardView(makeSeries({ rating: 5, tmdbScore: 9 }), true);
+    const vm = seriesCardView(makeSeries({ rating: 5, tmdbScore: 9 }), {
+      tmdbRatings: true,
+      qualityTags: true,
+    });
 
     expect(vm.rating).toBe(50);
     expect(vm.ratingSource).toBe('household');
   });
 
   it('gives the household Rating and its source with the preference off', () => {
-    const vm = seriesCardView(makeSeries({ rating: 5, tmdbScore: 9 }), false);
+    const vm = seriesCardView(makeSeries({ rating: 5, tmdbScore: 9 }), {
+      tmdbRatings: false,
+      qualityTags: true,
+    });
 
     expect(vm.rating).toBe(50);
     expect(vm.ratingSource).toBe('household');
   });
 
   it('gives the TMDB rating for an unrated series with a score, preference on', () => {
-    const vm = seriesCardView(
-      makeSeries({ rating: null, tmdbScore: 8.5 }),
-      true
-    );
+    const vm = seriesCardView(makeSeries({ rating: null, tmdbScore: 8.5 }), {
+      tmdbRatings: true,
+      qualityTags: true,
+    });
 
     expect(vm.rating).toBe(90);
     expect(vm.ratingSource).toBe('tmdb');
   });
 
   it('leaves an unrated series unrated with the preference off', () => {
-    const vm = seriesCardView(
-      makeSeries({ rating: null, tmdbScore: 8.5 }),
-      false
-    );
+    const vm = seriesCardView(makeSeries({ rating: null, tmdbScore: 8.5 }), {
+      tmdbRatings: false,
+      qualityTags: true,
+    });
 
     expect(vm.rating).toBeNull();
     expect(vm.ratingSource).toBeNull();
   });
 
   it('leaves an unrated series with no score unrated, preference on', () => {
-    const vm = seriesCardView(
-      makeSeries({ rating: null, tmdbScore: null }),
-      true
-    );
+    const vm = seriesCardView(makeSeries({ rating: null, tmdbScore: null }), {
+      tmdbRatings: true,
+      qualityTags: true,
+    });
 
     expect(vm.rating).toBeNull();
     expect(vm.ratingSource).toBeNull();
@@ -156,13 +182,22 @@ describe('seriesCardView — the Shown rating under the TMDB ratings preference'
 describe('seriesCardView — the Series quality', () => {
   it('carries the Series quality as the card’s quality, and none when unmeasured', () => {
     expect(
-      seriesCardView(makeSeries({ videoQuality: '1080p' }), false).quality
+      seriesCardView(makeSeries({ videoQuality: '1080p' }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).quality
     ).toBe('1080p');
     expect(
-      seriesCardView(makeSeries({ videoQuality: 'SD' }), true).quality
+      seriesCardView(makeSeries({ videoQuality: 'SD' }), {
+        tmdbRatings: true,
+        qualityTags: true,
+      }).quality
     ).toBe('SD');
     expect(
-      seriesCardView(makeSeries({ videoQuality: null }), false).quality
+      seriesCardView(makeSeries({ videoQuality: null }), {
+        tmdbRatings: false,
+        qualityTags: true,
+      }).quality
     ).toBeNull();
   });
 });

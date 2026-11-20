@@ -33,7 +33,7 @@ function withPreference(
   const value = makeDisplayPreferenceApi({
     tmdbRatings,
     qualityTags,
-  } as Partial<DisplayPreferenceApi>);
+  });
   return function Wrapper({ children }: { children: ReactNode }) {
     return (
       <DisplayPreferenceContext.Provider value={value}>

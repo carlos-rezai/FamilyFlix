@@ -7,7 +7,10 @@ import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 describe('toGenreRow — HomeRow → GenreRowModel mapper', () => {
   it('passes the genre through untouched', () => {
     expect(
-      toGenreRow({ genre: 'Action', count: 3, movies: [] }, true).genre
+      toGenreRow(
+        { genre: 'Action', count: 3, movies: [] },
+        { tmdbRatings: true, qualityTags: true }
+      ).genre
     ).toBe('Action');
   });
 
@@ -18,7 +21,7 @@ describe('toGenreRow — HomeRow → GenreRowModel mapper', () => {
         count: 214,
         movies: [makeMovie({ id: 'a1' }), makeMovie({ id: 'a2' })],
       },
-      true
+      { tmdbRatings: true, qualityTags: true }
     );
 
     expect(row.count).toBe(214);
@@ -31,22 +34,39 @@ describe('toGenreRow — HomeRow → GenreRowModel mapper', () => {
       makeMovie({ id: 'a2', title: 'Ironclad' }),
     ];
 
-    const row = toGenreRow({ genre: 'Action', count: 2, movies }, true);
+    const row = toGenreRow(
+      { genre: 'Action', count: 2, movies },
+      { tmdbRatings: true, qualityTags: true }
+    );
 
-    expect(row.movies).toEqual(movies.map((movie) => view(movie, true)));
+    expect(row.movies).toEqual(
+      movies.map((movie) =>
+        view(movie, { tmdbRatings: true, qualityTags: true })
+      )
+    );
   });
 
   it('hands the preference on to the card view mapper', () => {
     const movies = [makeMovie({ id: 'a1', rating: null, tmdbScore: 7.4 })];
 
-    const row = toGenreRow({ genre: 'Action', count: 1, movies }, false);
+    const row = toGenreRow(
+      { genre: 'Action', count: 1, movies },
+      { tmdbRatings: false, qualityTags: true }
+    );
 
-    expect(row.movies).toEqual(movies.map((movie) => view(movie, false)));
+    expect(row.movies).toEqual(
+      movies.map((movie) =>
+        view(movie, { tmdbRatings: false, qualityTags: true })
+      )
+    );
   });
 
   it('maps an empty row to an empty row', () => {
     expect(
-      toGenreRow({ genre: 'Action', count: 0, movies: [] }, true).movies
+      toGenreRow(
+        { genre: 'Action', count: 0, movies: [] },
+        { tmdbRatings: true, qualityTags: true }
+      ).movies
     ).toEqual([]);
   });
 });

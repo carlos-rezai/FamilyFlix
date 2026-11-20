@@ -30,7 +30,7 @@ import { useBrowseLoad } from '../../useBrowseLoad/useBrowseLoad';
 import { useOptimisticSave } from '../../useOptimisticSave/useOptimisticSave';
 import { view } from '../../view/view';
 import { withFavoriteInList } from '../../withFavorite/withFavorite';
-import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
+import { useCardPreferences } from '@/App/useCardPreferences/useCardPreferences';
 
 /**
  * What the screen holds before a load has succeeded. One frozen value rather
@@ -202,13 +202,13 @@ export function GenreTitlesProvider({
 
   // The held records drawn per render under the preference, so a flip in
   // Settings redraws the grid without reading the genre again.
-  const tmdbRatings = useTmdbRatings();
+  const preferences = useCardPreferences();
   const titles = useMemo<PosterCardMovie[]>(
     () => [
-      ...heldMovies.map((movie) => view(movie, tmdbRatings)),
-      ...heldSeries.map((series) => seriesCardView(series, tmdbRatings)),
+      ...heldMovies.map((movie) => view(movie, preferences)),
+      ...heldSeries.map((series) => seriesCardView(series, preferences)),
     ],
-    [heldMovies, heldSeries, tmdbRatings]
+    [heldMovies, heldSeries, preferences]
   );
 
   /** Applies a favorite value to the loaded grid, leaving the total alone. */

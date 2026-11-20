@@ -9,6 +9,17 @@ import type { DeleteFacts } from './libraryTitles';
 import type { VideoQuality } from './quality';
 
 /**
+ * The **Card preferences** a Poster card is mapped under: _Fill in ratings
+ * from TMDB_ decides the **Shown rating**, _Show video quality_ whether the
+ * card carries its **Quality tag**. Each is `true` only once the settings read
+ * has landed on.
+ */
+export interface CardPreferences {
+  tmdbRatings: boolean;
+  qualityTags: boolean;
+}
+
+/**
  * The view model a `PosterCard` renders from — a `Movie` flattened to exactly
  * what the tile shows, built by the `view()` mapper (`features/library/view.ts`).
  * `rating` and `progress` are 0–100 percents (not stored units), `posterUrl` is

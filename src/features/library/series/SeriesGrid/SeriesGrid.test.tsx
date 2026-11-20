@@ -163,7 +163,17 @@ describe('SeriesGrid — All series', () => {
       continueWatching: [],
     });
 
-    renderHome();
+    render(
+      <MemoryRouter initialEntries={['/?tab=series']}>
+        <ThemeProvider theme={theme}>
+          <DisplayPreferenceContext.Provider
+            value={makeDisplayPreferenceApi({ qualityTags: true })}
+          >
+            <SeriesGrid />
+          </DisplayPreferenceContext.Provider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
 
     const tagged = await screen.findByRole('button', { name: 'Harbor & Vine' });
     const bare = screen.getByRole('button', { name: 'Lighthouse Keepers' });
@@ -833,7 +843,7 @@ describe('SeriesGrid: Show video quality on the cards', () => {
     const value = makeDisplayPreferenceApi({
       tmdbRatings: true,
       qualityTags,
-    } as Partial<ReturnType<typeof makeDisplayPreferenceApi>>);
+    });
     return (
       <MemoryRouter initialEntries={['/?tab=series']}>
         <ThemeProvider theme={theme}>

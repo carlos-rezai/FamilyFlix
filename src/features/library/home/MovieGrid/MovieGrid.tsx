@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { LoadMessage } from '@/components';
 import { moviePath } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
-import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
+import { useCardPreferences } from '@/App/useCardPreferences/useCardPreferences';
 import { fetchMovieGrid } from '../../api/api';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
 import { RetryableFailure } from '../../RetryableFailure/RetryableFailure';
@@ -62,10 +62,10 @@ export function MovieGrid() {
 
   const toggleFavorite = useOptimisticSave(applyFavorite, saveFavorite);
 
-  const tmdbRatings = useTmdbRatings();
+  const preferences = useCardPreferences();
   const cards = useMemo(
-    () => data?.movies.map((movie) => view(movie, tmdbRatings)) ?? [],
-    [data, tmdbRatings]
+    () => data?.movies.map((movie) => view(movie, preferences)) ?? [],
+    [data, preferences]
   );
   const favoriteCards = useMemo(
     () => shelvedFavorites(cards).slice(0, FAVORITES_LIMIT),

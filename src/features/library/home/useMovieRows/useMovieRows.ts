@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import type {
+  CardPreferences,
   ContinueCardMovie,
   GenreRowModel,
   HomePayload,
@@ -15,7 +16,7 @@ import { view } from '../../view/view';
 import { useRowsLoad } from '../../useRowsLoad/useRowsLoad';
 import { useSettledLibraryQuery } from '../../useSettledLibraryQuery/useSettledLibraryQuery';
 import { withFavorite, withShelved } from '../../withFavorite/withFavorite';
-import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
+import { useCardPreferences } from '@/App/useCardPreferences/useCardPreferences';
 
 /** The home's sections as the screen renders them. */
 interface HomeSections {
@@ -38,17 +39,19 @@ const NO_PAYLOAD: HomePayload = {
 };
 
 /**
- * The held payload drawn as its sections, under _Fill in ratings from
- * TMDB_. The shelf holds poster cards, so its movies take the same narrowing a
+ * The held payload drawn as its sections, under the **Card preferences**. The shelf holds poster cards, so its movies take the same narrowing a
  * genre row's do — `view`, not a mapper of its own.
  */
-function toSections(payload: HomePayload, tmdbRatings: boolean): HomeSections {
+function toSections(
+  payload: HomePayload,
+  preferences: CardPreferences
+): HomeSections {
   return {
-    rows: payload.rows.map((row) => toGenreRow(row, tmdbRatings)),
+    rows: payload.rows.map((row) => toGenreRow(row, preferences)),
     continueWatching: payload.continueWatching.map(continueView),
-    favorites: payload.favorites.map((movie) => view(movie, tmdbRatings)),
+    favorites: payload.favorites.map((movie) => view(movie, preferences)),
     other:
-      payload.other === null ? null : toGenreRow(payload.other, tmdbRatings),
+      payload.other === null ? null : toGenreRow(payload.other, preferences),
   };
 }
 
@@ -142,10 +145,10 @@ export function useMovieRows(): UseMovieRowsResult {
 
   // The held records drawn per render under the preference, so a flip in
   // Settings redraws what is loaded without reading the home again.
-  const tmdbRatings = useTmdbRatings();
+  const preferences = useCardPreferences();
   const { rows, continueWatching, favorites, other } = useMemo(
-    () => toSections(held, tmdbRatings),
-    [held, tmdbRatings]
+    () => toSections(held, preferences),
+    [held, preferences]
   );
 
   return {

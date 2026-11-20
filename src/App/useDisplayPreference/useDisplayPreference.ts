@@ -22,6 +22,13 @@ export interface DisplayPreferenceApi {
   /** Turn it on or off, on `setUltrawideMargins`' bargain. Never rejects. */
   setTmdbRatings: (on: boolean) => Promise<void>;
   /**
+   * The household's _Show video quality_: `null` until the same read lands,
+   * which every caller reads as off, the stored value after.
+   */
+  qualityTags: boolean | null;
+  /** Turn it on or off, on `setUltrawideMargins`' bargain. Never rejects. */
+  setQualityTags: (on: boolean) => Promise<void>;
+  /**
    * The household's **Start tab**: `null` until the same read lands, the
    * stored tab after.
    */
@@ -53,7 +60,7 @@ export const DisplayPreferenceContext =
 
 /**
  * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings,
- * startTab, setStartTab, movieRowView, setMovieRowView, seriesRowView,
+ * qualityTags, setQualityTags, startTab, setStartTab, movieRowView, setMovieRowView, seriesRowView,
  * setSeriesRowView }` off the app-level `DisplayPreferenceProvider`. The
  * provider is mounted in `App`, so a consumer outside one is a wiring mistake,
  * and a silent `null` would hide it: it throws, naming itself.

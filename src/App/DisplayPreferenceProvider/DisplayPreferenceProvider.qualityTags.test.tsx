@@ -58,7 +58,7 @@ const settingsWith = (qualityTags: boolean): Settings =>
   makeSettings({
     tmdbRatings: !qualityTags,
     qualityTags,
-  } as Partial<Settings>);
+  });
 
 /** A request that answers only when the test says so. */
 function held() {

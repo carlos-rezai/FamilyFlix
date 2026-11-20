@@ -2262,6 +2262,19 @@ export function createApiRouter(
     res.json({ value });
   });
 
+  // _Show video quality_: the `tmdb-ratings` route's twin, the same
+  // Single-signal write and the same refusal of anything but a boolean.
+  router.post('/settings/quality-tags', (req: Request, res: Response) => {
+    const { value } = (req.body ?? {}) as { value?: unknown };
+    if (typeof value !== 'boolean') {
+      res.status(400).json({ error: 'Body must be { value: boolean }' });
+      return;
+    }
+
+    storage.setQualityTags(value);
+    res.json({ value });
+  });
+
   // The **Start tab**: the `tmdb-ratings` route's sibling, the same
   // Single-signal write. A valid body is exactly one of the **Library tabs**,
   // so a different case, an unknown name and a non-string are refused rather

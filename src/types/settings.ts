@@ -48,6 +48,9 @@ export const DEFAULT_ULTRAWIDE_MARGINS = false;
 /** _Fill in ratings from TMDB_ until the household turns it off: on. */
 export const DEFAULT_TMDB_RATINGS = true;
 
+/** _Show video quality_ until the household turns it off: on. */
+export const DEFAULT_QUALITY_TAGS = true;
+
 /** The **Start tab** until the household chooses another: Movies. */
 export const DEFAULT_START_TAB: LibraryTab = 'movies';
 
@@ -72,6 +75,8 @@ export interface Settings {
   ultrawideMargins: boolean;
   /** Whether an unrated title draws its TMDB score as its stars. */
   tmdbRatings: boolean;
+  /** Whether each Poster card draws its **Quality tag** (_Show video quality_). */
+  qualityTags: boolean;
   /** Which **Library tab** the app opens on. */
   startTab: LibraryTab;
   /** The Movies tab's **Row view**. */

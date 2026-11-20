@@ -1,4 +1,4 @@
-import type { PosterCardMovie, Series } from '@/types';
+import type { CardPreferences, PosterCardMovie, Series } from '@/types';
 import {
   gradientFromId,
   imageUrl,
@@ -11,11 +11,12 @@ import {
  * — `view`'s precedent for a movie. Gradient art off the series id when there
  * is no poster, the watched badge when every episode is watched, and never a
  * progress bar: a series has no resume position of its own. Its rating is the
- * **Shown rating** under `tmdbRatings`, `view`'s rule.
+ * **Shown rating** under `tmdbRatings`, and its `quality` the **Series
+ * quality** while `qualityTags` is on: `view`'s rules.
  */
 export function seriesCardView(
   series: Series,
-  tmdbRatings: boolean
+  { tmdbRatings, qualityTags }: CardPreferences
 ): PosterCardMovie {
   const { g1, g2 } = gradientFromId(series.id);
   const shown = shownRating(series.rating, series.tmdbScore, tmdbRatings);
@@ -30,6 +31,6 @@ export function seriesCardView(
     watched: series.watched,
     progress: 0,
     favorite: series.isFavorite,
-    quality: series.videoQuality,
+    quality: qualityTags ? series.videoQuality : null,
   };
 }

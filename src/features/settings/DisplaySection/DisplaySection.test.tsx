@@ -498,7 +498,7 @@ const QUALITY_LINE =
 
 /** A household whose _Show video quality_ reads `on`. */
 const withQualityTags = (on: boolean): Settings =>
-  makeSettings({ qualityTags: on } as Partial<Settings>);
+  makeSettings({ qualityTags: on });
 
 /**
  * Wraps the shared stub so the quality-tags route keeps what it is sent (and

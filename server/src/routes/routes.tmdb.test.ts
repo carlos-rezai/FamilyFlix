@@ -277,6 +277,7 @@ describe('GET /api/settings — not widened', () => {
       'audioLanguage',
       'ultrawideMargins',
       'tmdbRatings',
+      'qualityTags',
       'startTab',
       'movieRowView',
       'seriesRowView',

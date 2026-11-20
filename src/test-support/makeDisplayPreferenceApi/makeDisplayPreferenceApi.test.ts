@@ -14,6 +14,8 @@ const API_KEYS: Array<keyof DisplayPreferenceApi> = [
   'setUltrawideMargins',
   'tmdbRatings',
   'setTmdbRatings',
+  'qualityTags',
+  'setQualityTags',
   'startTab',
   'setStartTab',
   'movieRowView',
@@ -34,6 +36,7 @@ describe('makeDisplayPreferenceApi: the blank state', () => {
 
     expect(api.ultrawideMargins).toBeNull();
     expect(api.tmdbRatings).toBeNull();
+    expect(api.qualityTags).toBeNull();
     expect(api.startTab).toBeNull();
     expect(api.movieRowView).toBeNull();
     expect(api.seriesRowView).toBeNull();
@@ -44,6 +47,7 @@ describe('makeDisplayPreferenceApi: the blank state', () => {
 
     await expect(api.setUltrawideMargins(true)).resolves.toBeUndefined();
     await expect(api.setTmdbRatings(true)).resolves.toBeUndefined();
+    await expect(api.setQualityTags(true)).resolves.toBeUndefined();
     await expect(api.setStartTab('series')).resolves.toBeUndefined();
     await expect(api.setMovieRowView('all')).resolves.toBeUndefined();
     await expect(api.setSeriesRowView('genre')).resolves.toBeUndefined();

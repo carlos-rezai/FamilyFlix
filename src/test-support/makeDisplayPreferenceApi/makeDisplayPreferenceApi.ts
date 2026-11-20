@@ -20,6 +20,8 @@ export function makeDisplayPreferenceApi(
     setUltrawideMargins: () => Promise.resolve(),
     tmdbRatings: null,
     setTmdbRatings: () => Promise.resolve(),
+    qualityTags: null,
+    setQualityTags: () => Promise.resolve(),
     startTab: null,
     setStartTab: () => Promise.resolve(),
     movieRowView: null,

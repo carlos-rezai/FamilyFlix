@@ -5,6 +5,7 @@ import {
   DEFAULT_SERIES_ROW_VIEW,
   DEFAULT_START_TAB,
   DEFAULT_SUBTITLE_LANGUAGE,
+  DEFAULT_QUALITY_TAGS,
   DEFAULT_TMDB_RATINGS,
   DEFAULT_ULTRAWIDE_MARGINS,
   LIBRARY_TABS,
@@ -22,6 +23,8 @@ const AUDIO_LANGUAGE_KEY = 'audio-language';
 const ULTRAWIDE_MARGINS_KEY = 'ultrawide-margins';
 /** Whether an unrated title draws its TMDB score — `'1'` / `'0'`. */
 const TMDB_RATINGS_KEY = 'tmdb-ratings';
+/** Whether each Poster card draws its Quality tag: `'1'` / `'0'`. */
+const QUALITY_TAGS_KEY = 'quality-tags';
 /** The **Start tab**, stored as the tab's own name. */
 const START_TAB_KEY = 'start-tab';
 /** The Movies tab's **Row view**, stored as the view's own name. */
@@ -44,6 +47,7 @@ export interface SettingsRepository {
   setAudioLanguage(language: string): void;
   setUltrawideMargins(on: boolean): void;
   setTmdbRatings(on: boolean): void;
+  setQualityTags(on: boolean): void;
   setStartTab(tab: LibraryTab): void;
   setMovieRowView(view: RowView): void;
   setSeriesRowView(view: RowView): void;
@@ -103,6 +107,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
         DEFAULT_ULTRAWIDE_MARGINS
       ),
       tmdbRatings: flagOf(TMDB_RATINGS_KEY, DEFAULT_TMDB_RATINGS),
+      qualityTags: flagOf(QUALITY_TAGS_KEY, DEFAULT_QUALITY_TAGS),
       startTab: choiceOf(START_TAB_KEY, LIBRARY_TABS, DEFAULT_START_TAB),
       movieRowView: choiceOf(
         MOVIE_ROW_VIEW_KEY,
@@ -123,6 +128,10 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
 
   function setTmdbRatings(on: boolean): void {
     setFlag(TMDB_RATINGS_KEY, on);
+  }
+
+  function setQualityTags(on: boolean): void {
+    setFlag(QUALITY_TAGS_KEY, on);
   }
 
   function setStartTab(tab: LibraryTab): void {
@@ -167,6 +176,7 @@ export function createSettings(db: SqliteDatabase): SettingsRepository {
     setAudioLanguage,
     setUltrawideMargins,
     setTmdbRatings,
+    setQualityTags,
     setStartTab,
     setMovieRowView,
     setSeriesRowView,

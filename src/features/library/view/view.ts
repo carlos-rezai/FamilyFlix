@@ -1,4 +1,4 @@
-import type { Movie, PosterCardMovie } from '@/types';
+import type { CardPreferences, Movie, PosterCardMovie } from '@/types';
 import {
   gradientFromId,
   imageUrl,
@@ -21,8 +21,13 @@ import {
  *
  * The rating is the **Shown rating** under `tmdbRatings` — the household
  * Rating, else TMDB's while the preference is on — with its `ratingSource`.
+ * `quality` is the movie's `videoQuality` while `qualityTags` is on, `null`
+ * while it is off.
  */
-export function view(movie: Movie, tmdbRatings: boolean): PosterCardMovie {
+export function view(
+  movie: Movie,
+  { tmdbRatings, qualityTags }: CardPreferences
+): PosterCardMovie {
   const { g1, g2 } = gradientFromId(movie.id);
   const shown = shownRating(movie.rating, movie.tmdbScore, tmdbRatings);
   return {
@@ -39,6 +44,6 @@ export function view(movie: Movie, tmdbRatings: boolean): PosterCardMovie {
       movie.runtimeMinutes
     ),
     favorite: movie.isFavorite,
-    quality: movie.videoQuality,
+    quality: qualityTags ? movie.videoQuality : null,
   };
 }

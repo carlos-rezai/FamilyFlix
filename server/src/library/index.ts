@@ -339,6 +339,11 @@ export interface LibraryStorage {
    */
   setTmdbRatings(on: boolean): void;
   /**
+   * Store _Show video quality_: an upsert; `settings()` reads it back with
+   * the default, on, applied.
+   */
+  setQualityTags(on: boolean): void;
+  /**
    * Store the **Start tab**: an upsert; `settings()` reads it back with the
    * default, Movies, applied to an absent or unknown value.
    */
@@ -644,6 +649,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     setAudioLanguage: settingsRepository.setAudioLanguage,
     setUltrawideMargins: settingsRepository.setUltrawideMargins,
     setTmdbRatings: settingsRepository.setTmdbRatings,
+    setQualityTags: settingsRepository.setQualityTags,
     setStartTab: settingsRepository.setStartTab,
     setMovieRowView: settingsRepository.setMovieRowView,
     setSeriesRowView: settingsRepository.setSeriesRowView,

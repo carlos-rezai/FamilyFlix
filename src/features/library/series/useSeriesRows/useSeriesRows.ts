@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 
 import type {
+  CardPreferences,
   ContinueCardMovie,
   GenreRowModel,
   LibraryQuery,
@@ -9,7 +10,7 @@ import type {
   SeriesRowsPayload,
 } from '@/types';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
-import { useTmdbRatings } from '@/App/useTmdbRatings/useTmdbRatings';
+import { useCardPreferences } from '@/App/useCardPreferences/useCardPreferences';
 import { fetchSeriesRows } from '../../api/api';
 import { useRowsLoad } from '../../useRowsLoad/useRowsLoad';
 import {
@@ -29,11 +30,11 @@ const NO_PAYLOAD: SeriesRowsPayload = {
 };
 
 /** A series row as the `GenreRow` an unchanged genre row draws. */
-function toRow(row: SeriesRow, tmdbRatings: boolean): GenreRowModel {
+function toRow(row: SeriesRow, preferences: CardPreferences): GenreRowModel {
   return {
     genre: row.genre,
     count: row.count,
-    movies: row.series.map((series) => seriesCardView(series, tmdbRatings)),
+    movies: row.series.map((series) => seriesCardView(series, preferences)),
   };
 }
 
@@ -107,17 +108,17 @@ export function useSeriesRows(): UseSeriesRowsResult {
   );
   const held = data ?? NO_PAYLOAD;
 
-  const tmdbRatings = useTmdbRatings();
+  const preferences = useCardPreferences();
   const sections = useMemo(
     () => ({
-      rows: held.rows.map((row) => toRow(row, tmdbRatings)),
+      rows: held.rows.map((row) => toRow(row, preferences)),
       continueWatching: held.continueWatching.map(episodeContinueView),
       favorites: held.favorites.map((series) =>
-        seriesCardView(series, tmdbRatings)
+        seriesCardView(series, preferences)
       ),
-      other: held.other === null ? null : toRow(held.other, tmdbRatings),
+      other: held.other === null ? null : toRow(held.other, preferences),
     }),
-    [held, tmdbRatings]
+    [held, preferences]
   );
 
   return { status, query, ...sections, retry, toggleFavorite };

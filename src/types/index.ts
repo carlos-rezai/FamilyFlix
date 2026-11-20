@@ -43,6 +43,7 @@ export {
   DEFAULT_AUDIO_LANGUAGE,
   DEFAULT_ULTRAWIDE_MARGINS,
   DEFAULT_TMDB_RATINGS,
+  DEFAULT_QUALITY_TAGS,
   DEFAULT_START_TAB,
   DEFAULT_MOVIE_ROW_VIEW,
   DEFAULT_SERIES_ROW_VIEW,
@@ -161,6 +162,7 @@ export type {
   TitleReference,
 } from './enrichment';
 export type {
+  CardPreferences,
   PosterCardMovie,
   RatingSource,
   ContinueCardMovie,
