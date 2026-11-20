@@ -79,6 +79,9 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
             props.onImportManyAsGuessed ?? (() => undefined)
           }
           finishLabel={props.finishLabel ?? FINISH}
+          rowPhase={() => 'idle'}
+          skippingAll="idle"
+          importingAll="idle"
           onFinish={props.onFinish ?? (() => undefined)}
         />
       </ThemeProvider>
@@ -104,6 +107,9 @@ function renderReview(props: Partial<ImportReviewProps> = {}) {
                 props.onImportManyAsGuessed ?? (() => undefined)
               }
               finishLabel={props.finishLabel ?? FINISH}
+              rowPhase={() => 'idle'}
+              skippingAll="idle"
+              importingAll="idle"
               onFinish={props.onFinish ?? (() => undefined)}
             />
           </ThemeProvider>
@@ -874,6 +880,9 @@ describe('ImportReview — the Kind filter', () => {
             onSkipMany={() => undefined}
             onImportManyAsGuessed={() => undefined}
             finishLabel={FINISH}
+            rowPhase={() => 'idle'}
+            skippingAll="idle"
+            importingAll="idle"
             onFinish={() => undefined}
           />
           <LocationProbe />
@@ -1250,7 +1259,7 @@ describe('ImportReview — one bulk press at a time', () => {
   ];
 
   function renderBulk(
-    phases: Pick<ImportReviewProps, 'skippingAll' | 'importingAll'>
+    phases: Partial<Pick<ImportReviewProps, 'skippingAll' | 'importingAll'>>
   ) {
     const onSkipMany = vi.fn();
     const onImportManyAsGuessed = vi.fn();
@@ -1267,8 +1276,8 @@ describe('ImportReview — one bulk press at a time', () => {
             rowPhase={() => 'idle'}
             onSkipMany={onSkipMany}
             onImportManyAsGuessed={onImportManyAsGuessed}
-            skippingAll={phases.skippingAll}
-            importingAll={phases.importingAll}
+            skippingAll={phases.skippingAll ?? 'idle'}
+            importingAll={phases.importingAll ?? 'idle'}
             finishLabel={FINISH}
             onFinish={vi.fn()}
           />

@@ -58,6 +58,9 @@ function renderReview(props: Partial<EnrichmentReviewProps> = {}) {
       <EnrichmentReview
         run={REVIEWED}
         finishLabel="Done"
+        skippingAll="idle"
+        rowPhase={() => 'idle'}
+        seasonPhase={() => 'idle'}
         {...handlers}
         {...props}
       />
@@ -248,6 +251,9 @@ describe('EnrichmentReview — the Kind filter', () => {
           <EnrichmentReview
             run={r}
             finishLabel="Done"
+            skippingAll="idle"
+            rowPhase={() => 'idle'}
+            seasonPhase={() => 'idle'}
             onFinish={() => undefined}
             onAgain={() => undefined}
             onSkip={() => undefined}
@@ -436,6 +442,9 @@ describe('EnrichmentReview — Skip all beside a chosen kind', () => {
         <EnrichmentReview
           run={r}
           finishLabel="Done"
+          skippingAll="idle"
+          rowPhase={() => 'idle'}
+          seasonPhase={() => 'idle'}
           onFinish={() => undefined}
           onAgain={() => undefined}
           onSkip={() => undefined}

@@ -48,7 +48,11 @@ function renderChoices(seasons: SeasonChoice[] = [SEASON_ONE, SEASON_TWO]) {
   const onChoose = vi.fn<(season: number, path: string) => void>();
   render(
     <ThemeProvider theme={theme}>
-      <SeasonChoices seasons={seasons} onChoose={onChoose} />
+      <SeasonChoices
+        seasons={seasons}
+        onChoose={onChoose}
+        seasonPhase={() => 'idle'}
+      />
     </ThemeProvider>
   );
   return onChoose;

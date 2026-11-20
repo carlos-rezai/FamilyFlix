@@ -59,7 +59,7 @@ export interface ImportReviewProps {
   /** _Take out of library_ was pressed on the `missing` **Problem** with this id. */
   onTakeOut: (id: string) => void;
   /** Each **Problem** row's phase on the **Loader timing**, by its id. */
-  rowPhase?: (id: string) => BusyPhase;
+  rowPhase: (id: string) => BusyPhase;
   /**
    * A bulk **Dismiss** was pressed — _Skip all_ on a **Review group** or
    * beside a chosen kind, or _Keep all mine_ beside `differs` — with every id
@@ -71,10 +71,10 @@ export interface ImportReviewProps {
    * `no-row` id in the run's order.
    */
   onImportManyAsGuessed: (ids: string[]) => void;
-  /** _Skip all_'s and _Keep all mine_'s phase on the **Loader timing**; `idle` when left out. */
-  skippingAll?: BusyPhase;
-  /** _Import all as guessed_'s phase on the **Loader timing**; `idle` when left out. */
-  importingAll?: BusyPhase;
+  /** _Skip all_'s and _Keep all mine_'s phase on the **Loader timing**. */
+  skippingAll: BusyPhase;
+  /** _Import all as guessed_'s phase on the **Loader timing**. */
+  importingAll: BusyPhase;
   /** Finish's words: where it goes, which the flow knows and this step does not. */
   finishLabel: string;
   onFinish: () => void;
@@ -128,8 +128,8 @@ export function ImportReview({
   rowPhase,
   onSkipMany,
   onImportManyAsGuessed,
-  skippingAll = 'idle',
-  importingAll = 'idle',
+  skippingAll,
+  importingAll,
   finishLabel,
   onFinish,
 }: ImportReviewProps) {
@@ -177,7 +177,7 @@ export function ImportReview({
     <ProblemRow
       key={problem.id}
       problem={problem}
-      busy={rowPhase?.(problem.id) ?? 'idle'}
+      busy={rowPhase(problem.id)}
       onSkip={() => onSkip(problem.id)}
       onApply={(choices) => onApply(problem.id, choices)}
       onPick={(folder) => onPick(problem.id, folder)}

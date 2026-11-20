@@ -44,17 +44,17 @@ export interface EnrichmentReviewProps {
    * of that kind, in the run's order.
    */
   onSkipMany: (ids: string[]) => void;
-  /** _Skip all_'s phase on the **Loader timing**; `idle` when left out. */
-  skippingAll?: BusyPhase;
+  /** _Skip all_'s phase on the **Loader timing**. */
+  skippingAll: BusyPhase;
   onPick: (id: string, tmdbId: number) => void;
-  /** Each Decision row's phase on the **Loader timing**; `idle` when left out. */
-  rowPhase?: (id: string) => BusyPhase;
+  /** Each Decision row's phase on the **Loader timing**, by its id. */
+  rowPhase: (id: string) => BusyPhase;
   onSearch: (id: string, query: string) => void;
   onApply: (id: string, choices: ConflictChoices) => void;
   /** A **Season choice** taken in the Seasons section. */
   onChooseSeasonPoster: (season: number, path: string) => void;
-  /** Each season's phase on the **Loader timing**; `idle` when left out. */
-  seasonPhase?: (season: number) => BusyPhase;
+  /** Each season's phase on the **Loader timing**. */
+  seasonPhase: (season: number) => BusyPhase;
 }
 
 /**
@@ -78,7 +78,7 @@ export function EnrichmentReview({
   onAgain,
   onSkip,
   onSkipMany,
-  skippingAll = 'idle',
+  skippingAll,
   onPick,
   rowPhase,
   onSearch,
@@ -157,7 +157,7 @@ export function EnrichmentReview({
             <DecisionRow
               key={`${decision.id}:${decision.kind}:${decision.query}`}
               decision={decision}
-              busy={rowPhase?.(decision.id) ?? 'idle'}
+              busy={rowPhase(decision.id)}
               onSkip={() => onSkip(decision.id)}
               onPick={(tmdbId) => onPick(decision.id, tmdbId)}
               onSearch={(query) => onSearch(decision.id, query)}

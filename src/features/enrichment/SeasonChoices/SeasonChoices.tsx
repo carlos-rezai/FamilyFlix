@@ -25,8 +25,8 @@ export interface SeasonChoicesProps {
   seasons: readonly SeasonChoice[];
   /** A choice pressed: its season, and the TMDB path it names. */
   onChoose: (season: number, path: string) => void;
-  /** Each season's phase on the **Loader timing**; `idle` when left out. */
-  seasonPhase?: (season: number) => BusyPhase;
+  /** Each season's phase on the **Loader timing**. */
+  seasonPhase: (season: number) => BusyPhase;
 }
 
 const HEADING_ID = 'enrichment-seasons-heading';
@@ -64,7 +64,7 @@ export function SeasonChoices({
             heldUrl !== null && failed.has(heldUrl) ? null : heldUrl;
           const label = formatEpisodeTag({ season });
           const { g1, g2 } = gradientFromId(label);
-          const busy = seasonPhase?.(season) ?? 'idle';
+          const busy = seasonPhase(season);
           return (
             <SeasonCard key={season} $busy={busy}>
               <Picker role="group" aria-label={`Posters for ${label}`}>

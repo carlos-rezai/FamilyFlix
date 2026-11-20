@@ -54,6 +54,9 @@ function renderReview(run: ImportRun) {
           onSkipMany={() => undefined}
           onImportManyAsGuessed={() => undefined}
           finishLabel="Finish and go to library"
+          rowPhase={() => 'idle'}
+          skippingAll="idle"
+          importingAll="idle"
           onFinish={() => undefined}
         />
       </ThemeProvider>
