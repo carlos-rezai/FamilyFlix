@@ -145,8 +145,8 @@ export function ImportReview({
   // One bulk press at a time: while one runs, a press on another reports
   // nothing. Only the pressed one is a **Busy button**; the rest refuse.
   const bulkBusy = skippingAll !== 'idle' || importingAll !== 'idle';
-  // Which _Skip all_ was pressed, `kind` or a group's title, so only it reads
-  // _Skipping…_: one loader for one wait.
+  // Which _Skip all_ was pressed, `KIND_SKIP` or a group's title, so only it
+  // reads _Skipping…_: one loader for one wait.
   const [skipFrom, setSkipFrom] = useState<string | null>(null);
   const skipBusy = (from: string): BusyPhase =>
     skipFrom === from ? skippingAll : 'idle';

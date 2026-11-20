@@ -27,8 +27,10 @@ export interface DelayedBusyByKey {
  * on its own clock: a row's press, timed apart from every other row's.
  * `onLoaderTiming` times each run; a key that is not running is `idle`, a
  * key done under 300ms is never shown, and a shown key holds 500ms from the
- * moment it was shown, whatever the other keys do. Shared because three run
- * hooks use it: `useEnrichmentRun`, `useImportRun`, `useLibraryFolders`.
+ * moment it was shown, whatever the other keys do. `cover` locks keys
+ * without timing them: a bulk press's rows, its button carrying the loader.
+ * Shared because each hook that owns a row's request uses it:
+ * `useEnrichmentRun`, `useImportRun`, `useLibraryFolders`.
  */
 export function useDelayedBusyByKey(): DelayedBusyByKey {
   const [phases, setPhases] = useState<ReadonlyMap<string, BusyPhase>>(

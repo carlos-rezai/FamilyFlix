@@ -41,8 +41,9 @@ const HEADING_ID = 'enrichment-seasons-heading';
  * `onChoose(season, path)`; which choice was pressed is the section's own.
  *
  * Each season's card is a **Busy row**: from `waiting` it is `inert` and
- * `aria-busy`; once `shown` it dims, and an 18px inline **Logo loader**
- * reading _Saving poster…_ stands in its held-poster caption.
+ * `aria-busy`, and refuses a press, as a **Busy button** does; once `shown`
+ * it dims, and an 18px inline **Logo loader** reading _Saving poster…_
+ * stands in its held-poster caption.
  */
 export function SeasonChoices({
   seasons,

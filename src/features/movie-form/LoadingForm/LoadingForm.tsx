@@ -16,7 +16,10 @@ import {
   SkeletonSlot,
 } from './LoadingForm.styles';
 
-/** The two-field rows above the Description: title and year, credit and cast. */
+/**
+ * The two-field rows above the Description: title and year, credit and
+ * cast.
+ */
 const FIELD_ROWS = 2;
 
 /** The File slots the card holds while the record reads. */

@@ -92,8 +92,7 @@ export interface EnrichmentRunState {
   cancel: () => void;
   /**
    * Search TMDB for Decision `id` and draw the answer in its place once the
-   * row's hold is out. Rejects
-   * when the route refuses.
+   * row's hold is out. Rejects when the route refuses.
    */
   search: (id: string, query: string) => Promise<void>;
   /**

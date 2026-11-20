@@ -12,7 +12,10 @@ import {
 
 /** Everything both forms share — the whole of what the control looks like. */
 interface ButtonFace {
-  /** The button's visible text, and its accessible name unless `ariaLabel` is given. */
+  /**
+   * The button's visible text, and its accessible name unless `ariaLabel`
+   * is given.
+   */
   label: string;
   /**
    * The accessible name, for a control whose visible label is shorter than

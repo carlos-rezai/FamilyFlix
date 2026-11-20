@@ -46,8 +46,9 @@ const PRESS_LABELS: Record<Press, string> = {
  * videos** draws a second line, _N videos left out_ with _Bring back_.
  *
  * A **Busy row**: from `waiting` its root is `inert` and `aria-busy`, every
- * control keeping its own face; once `shown` it dims, and an 18px inline
- * **Logo loader** naming its press stands in the _N titles_ line's slot.
+ * control keeping its own face, and it refuses a press, as a **Busy button**
+ * does; once `shown` it dims, and an 18px inline **Logo loader** naming its
+ * press stands in the _N titles_ line's slot.
  */
 export function FolderRow({
   folder,
