@@ -4,13 +4,22 @@ import type { BusyPhase } from '@/types';
 import { onLoaderTiming } from '../useDelayedBusy/useDelayedBusy';
 
 export interface DelayedBusyByKey {
-  /** The phase of the work running under `key`; `idle` when none is. */
+  /**
+   * The phase of the work running under `key`; else `waiting` while a
+   * `cover` holds it; else `idle`.
+   */
   phaseOf: (key: string) => BusyPhase;
   /**
    * Run `work` under `key` on the **Loader timing**, passing its result or
    * its error through after the hold.
    */
   run: <T>(key: string, work: () => Promise<T>) => Promise<T>;
+  /**
+   * Hold every key in `keys` at `waiting` while `work` runs, untimed, passing
+   * its result or its error through: a bulk press's rows, locked while its
+   * own **Busy button** carries the loader (log 69 Q10).
+   */
+  cover: <T>(keys: readonly string[], work: () => Promise<T>) => Promise<T>;
 }
 
 /**
@@ -26,9 +35,12 @@ export function useDelayedBusyByKey(): DelayedBusyByKey {
     () => new Map()
   );
 
+  const [covered, setCovered] = useState<ReadonlySet<string>>(() => new Set());
+
   const phaseOf = useCallback(
-    (key: string): BusyPhase => phases.get(key) ?? 'idle',
-    [phases]
+    (key: string): BusyPhase =>
+      phases.get(key) ?? (covered.has(key) ? 'waiting' : 'idle'),
+    [phases, covered]
   );
 
   const run = useCallback(
@@ -47,5 +59,17 @@ export function useDelayedBusyByKey(): DelayedBusyByKey {
     []
   );
 
-  return { phaseOf, run };
+  const cover = useCallback(
+    async <T>(keys: readonly string[], work: () => Promise<T>): Promise<T> => {
+      setCovered(new Set(keys));
+      try {
+        return await work();
+      } finally {
+        setCovered(new Set());
+      }
+    },
+    []
+  );
+
+  return { phaseOf, run, cover };
 }
