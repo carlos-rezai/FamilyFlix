@@ -140,7 +140,7 @@ describe('the Sheet columns and Row types', () => {
     expect([...ROW_TYPES]).toEqual(['Movie', 'Series', 'Season', 'Episode']);
   });
 
-  it('spells the twenty-two Sheet columns once, in order', () => {
+  it('spells the twenty-three Sheet columns once, in order', () => {
     expect([...SHEET_COLUMNS]).toEqual([
       'Type',
       'Folder',
@@ -150,6 +150,7 @@ describe('the Sheet columns and Row types', () => {
       'Year',
       'Air date',
       'Runtime',
+      'Quality',
       'Genres',
       'Director',
       'Cast',
@@ -242,6 +243,7 @@ describe('exportRows: a Movie row', () => {
       Year: '1995',
       'Air date': '',
       Runtime: '170',
+      Quality: '',
       Genres: 'Crime, Thriller',
       Director: 'Michael Mann',
       Cast: 'Al Pacino, Robert De Niro',
@@ -296,6 +298,7 @@ describe('exportRows: a Series row', () => {
       Year: '2022–',
       'Air date': '',
       Runtime: '',
+      Quality: '',
       Genres: 'Drama',
       Director: 'Dan Erickson',
       Cast: 'Adam Scott, Britt Lower',
@@ -349,6 +352,7 @@ describe('exportRows: an Episode row', () => {
       Year: '',
       'Air date': '2022-01-12',
       Runtime: '52',
+      Quality: '',
       Genres: '',
       Director: '',
       Cast: '',
