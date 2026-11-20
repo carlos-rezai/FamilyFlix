@@ -1152,7 +1152,10 @@ export function createApiRouter(
 
     const episodes: NewEpisode[] = read.episodes.map((episode, index) => {
       const { video, tracks } = copied[index];
-      const { runtimeMinutes } = derivedVideoFacts(playback, video);
+      const { runtimeMinutes, videoQuality } = derivedVideoFacts(
+        playback,
+        video
+      );
       const subtitles: NewSubtitle[] = [
         ...tracks,
         ...episode.subtitles.map((path, track) => ({
@@ -1166,6 +1169,7 @@ export function createApiRouter(
         ...video,
         ...(episode.title === undefined ? {} : { title: episode.title }),
         ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
+        ...(videoQuality === null ? {} : { videoQuality }),
         ...(subtitles.length === 0 ? {} : { subtitles }),
         ...(episode.still === undefined
           ? {}
@@ -1356,11 +1360,11 @@ export function createApiRouter(
             ? { tmdbId: null }
             : {}),
           episodes: read.episodes.map((episode) => {
-            const runtimeMinutes = episode.freshVideo
+            const facts = episode.freshVideo
               ? derivedVideoFacts(playback, {
                   videoPath: episode.video,
                   videoFolderId: null,
-                }).runtimeMinutes
+                })
               : undefined;
             return {
               ...(episode.id === undefined ? {} : { id: episode.id }),
@@ -1368,7 +1372,7 @@ export function createApiRouter(
               number: episode.number,
               title: episode.title ?? null,
               videoPath: episode.video,
-              ...(runtimeMinutes === undefined ? {} : { runtimeMinutes }),
+              ...(facts === undefined ? {} : facts),
               subtitles: [...episode.heldTracks, ...episode.pickedTracks],
               // A kept still leaves the column as it is; a held episode
               // sending none has had its still taken away.

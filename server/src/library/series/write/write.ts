@@ -7,6 +7,7 @@ import type {
   NewSeries,
   NewSubtitle,
   Series,
+  VideoQuality,
 } from '@/types';
 import { parentFolder } from '../../parentFolder/parentFolder';
 import type { StillSource } from '../enrich/enrich';
@@ -70,6 +71,8 @@ export interface EpisodeEdit {
   videoPath: string;
   /** Set only when the video was replaced; an omitted key keeps the column. */
   runtimeMinutes?: number | null;
+  /** Set only when the video was replaced; an omitted key keeps the column. */
+  videoQuality?: VideoQuality | null;
   subtitles?: NewSubtitle[];
   /**
    * Its **Still**: a Stored path to set, `null` to take it away; an omitted
@@ -147,12 +150,12 @@ export function createSeriesWrite(
   const insertEpisode = db.prepare(`
     INSERT INTO episodes (
       id, series_id, season_number, episode_number, title, air_date,
-      runtime_minutes, watched, video_path, source_file, video_folder_id,
-      still_path, still_source, created_at, updated_at
+      runtime_minutes, video_quality, watched, video_path, source_file,
+      video_folder_id, still_path, still_source, created_at, updated_at
     ) VALUES (
       @id, @series_id, @season_number, @episode_number, @title, @air_date,
-      @runtime_minutes, @watched, @video_path, @source_file, @video_folder_id,
-      @still_path, @still_source, @created_at, @updated_at
+      @runtime_minutes, @video_quality, @watched, @video_path, @source_file,
+      @video_folder_id, @still_path, @still_source, @created_at, @updated_at
     )
   `);
   const fillSeriesFolder = db.prepare(
@@ -210,6 +213,7 @@ export function createSeriesWrite(
         title: input.title ?? null,
         air_date: input.airDate ?? null,
         runtime_minutes: input.runtimeMinutes ?? null,
+        video_quality: input.videoQuality ?? null,
         watched: input.watched ? 1 : 0,
         video_path: input.videoPath,
         source_file: input.sourceFile ?? null,
@@ -340,6 +344,9 @@ export function createSeriesWrite(
   `);
   const setEpisodeRuntime = db.prepare(
     'UPDATE episodes SET runtime_minutes = ? WHERE id = ?'
+  );
+  const setEpisodeQuality = db.prepare(
+    'UPDATE episodes SET video_quality = ? WHERE id = ?'
   );
   const setEpisodeStill = db.prepare(`
     UPDATE episodes SET
@@ -481,6 +488,9 @@ export function createSeriesWrite(
         if (episode.runtimeMinutes !== undefined) {
           setEpisodeRuntime.run(episode.runtimeMinutes, was.id);
         }
+        if (episode.videoQuality !== undefined) {
+          setEpisodeQuality.run(episode.videoQuality, was.id);
+        }
         if (episode.stillPath !== undefined) {
           setEpisodeStill.run({
             id: was.id,
@@ -510,6 +520,9 @@ export function createSeriesWrite(
             ...(episode.runtimeMinutes == null
               ? {}
               : { runtimeMinutes: episode.runtimeMinutes }),
+            ...(episode.videoQuality == null
+              ? {}
+              : { videoQuality: episode.videoQuality }),
             ...(episode.subtitles === undefined
               ? {}
               : { subtitles: episode.subtitles }),

@@ -1883,6 +1883,7 @@ describe('App — the season page', () => {
         title: null,
         airDate: null,
         runtimeMinutes: null,
+        videoQuality: null,
         watched: false,
         resumePositionSeconds: 0,
         status: 'unwatched' as const,

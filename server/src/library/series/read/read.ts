@@ -7,6 +7,7 @@ import type {
   SeasonSummary,
   SeriesDetail,
   Subtitle,
+  VideoQuality,
 } from '@/types';
 import { nextEpisodeOf } from '../nextEpisodeOf/nextEpisodeOf';
 import { deriveStatus, type GenreRow, type SubtitleRow } from '../../read/read';
@@ -38,6 +39,7 @@ export interface EpisodeRow {
   title: string | null;
   air_date: string | null;
   runtime_minutes: number | null;
+  video_quality: VideoQuality | null;
   watched: number;
   resume_position_seconds: number;
   last_watched_at: string | null;
@@ -93,6 +95,7 @@ const mapRowToEpisode = (row: EpisodeRow, subtitles: Subtitle[]): Episode => {
     title: row.title,
     airDate: row.air_date,
     runtimeMinutes: row.runtime_minutes,
+    videoQuality: row.video_quality,
     watched,
     resumePositionSeconds: row.resume_position_seconds,
     status: deriveStatus(watched, row.resume_position_seconds),

@@ -7,6 +7,7 @@
  */
 import type { Genre, Subtitle, WatchStatus } from './movie';
 import type { DeleteFacts } from './libraryTitles';
+import type { VideoQuality } from './quality';
 import type { NewSubtitle } from './write';
 
 /** The fully-assembled series model returned by repository reads. */
@@ -46,6 +47,8 @@ export interface Episode extends StoredVideo {
   /** An ISO date, or `null`. */
   airDate: string | null;
   runtimeMinutes: number | null;
+  /** Its **Video quality**, measured from its picture; `null` until measured. */
+  videoQuality: VideoQuality | null;
   watched: boolean;
   resumePositionSeconds: number;
   /** Derived from `watched` + `resumePositionSeconds`; never stored. */
@@ -171,6 +174,8 @@ export interface NewEpisode {
   title?: string;
   airDate?: string;
   runtimeMinutes?: number;
+  /** Its **Video quality**, measured from the video; none by default. */
+  videoQuality?: VideoQuality;
   /** Whether it has been watched, at zero; not by default. */
   watched?: boolean;
   /** Its subtitle tracks, in order, already stored under the Series folder. */

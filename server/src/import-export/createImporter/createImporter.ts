@@ -1853,10 +1853,8 @@ export function createImporter({
             entry.season === episode.season && entry.episode === episode.episode
         );
         // The probe's runtime wins; the sheet's stands in when it answers none.
-        const runtime =
-          derivedVideoFacts(playback, video).runtimeMinutes ??
-          sheetEpisode?.runtime ??
-          null;
+        const facts = derivedVideoFacts(playback, video);
+        const runtime = facts.runtimeMinutes ?? sheetEpisode?.runtime ?? null;
         const title =
           sheetEpisode !== undefined && sheetEpisode.title !== ''
             ? sheetEpisode.title
@@ -1897,6 +1895,9 @@ export function createImporter({
           ...(title === null ? {} : { title }),
           ...(airDate === null ? {} : { airDate }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+          ...(facts.videoQuality === null
+            ? {}
+            : { videoQuality: facts.videoQuality }),
           ...(sheetEpisode?.watched === true ? { watched: true } : {}),
           ...(subtitles.length === 0 ? {} : { subtitles }),
           ...(stillPath === undefined ? {} : { stillPath }),
@@ -3776,7 +3777,8 @@ export function createImporter({
               language: track.language,
             });
           }
-          const runtime = derivedVideoFacts(playback, video).runtimeMinutes;
+          const facts = derivedVideoFacts(playback, video);
+          const runtime = facts.runtimeMinutes;
           const found = sourceFile(episode.video);
           episodes.push({
             season: episode.season,
@@ -3784,6 +3786,9 @@ export function createImporter({
             ...video,
             ...(episode.title === undefined ? {} : { title: episode.title }),
             ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+            ...(facts.videoQuality === null
+              ? {}
+              : { videoQuality: facts.videoQuality }),
             ...(subtitles.length === 0 ? {} : { subtitles }),
             ...(found === undefined ? {} : { sourceFile: found }),
           });

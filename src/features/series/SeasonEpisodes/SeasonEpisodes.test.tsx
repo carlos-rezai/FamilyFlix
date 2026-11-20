@@ -110,6 +110,7 @@ function makeEpisode(
     title: null,
     airDate: null,
     runtimeMinutes: 44,
+    videoQuality: null,
     watched: status === 'watched',
     resumePositionSeconds: status === 'in-progress' ? 660 : 0,
     status,

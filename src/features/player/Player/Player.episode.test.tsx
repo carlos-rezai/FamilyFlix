@@ -86,6 +86,7 @@ function makeEpisode(overrides: Partial<Episode> = {}): Episode {
     title: 'The Auction',
     airDate: null,
     runtimeMinutes: 44,
+    videoQuality: null,
     watched: false,
     resumePositionSeconds: 0,
     status: 'unwatched',

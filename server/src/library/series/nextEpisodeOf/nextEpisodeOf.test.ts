@@ -27,6 +27,7 @@ function episode(
     title: null,
     airDate: null,
     runtimeMinutes: null,
+    videoQuality: null,
     watched: state === 'watched',
     resumePositionSeconds: state === 'in-progress' ? 600 : 0,
     status: state,

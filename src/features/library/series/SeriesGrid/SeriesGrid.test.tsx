@@ -367,6 +367,7 @@ function makeEntry(
       title: 'Low Tide',
       airDate: null,
       runtimeMinutes: 45,
+      videoQuality: null,
       watched: false,
       resumePositionSeconds: 720,
       status: 'in-progress',

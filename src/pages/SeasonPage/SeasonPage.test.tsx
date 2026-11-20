@@ -58,6 +58,7 @@ const DETAIL: SeriesDetail = {
           title: 'Pilot',
           airDate: null,
           runtimeMinutes: null,
+          videoQuality: null,
           watched: false,
           resumePositionSeconds: 0,
           status: 'unwatched',
