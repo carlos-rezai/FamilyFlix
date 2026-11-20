@@ -7,6 +7,8 @@
 //   1. cancel the **Current run** — the importer's `cancel()` rolls back the
 //      Movie folder in flight, so its promise is awaited;
 //   2. cancel the **Current enrichment run**;
+//   2b. stop the **Quality sweep** (issue #668), awaited, so no quality is
+//      written after the database closes;
 //   3. `closeAllConnections()`, **before** `close()`, so a playing film's
 //      streaming response cannot hold the exit past the shell's 5 s;
 //   4. flush the **Library sheet writer** (issue #540), awaited, while the
@@ -95,6 +97,11 @@ function worldOver(server: Server, log: string[]): ShutdownWorld {
         log.push('cancel enrichment');
       }),
     },
+    qualitySweep: {
+      stop: vi.fn(async () => {
+        log.push('stop quality sweep');
+      }),
+    },
     librarySheet: {
       flush: vi.fn(async () => {
         log.push('flush library sheet');
@@ -120,6 +127,7 @@ describe('orderedShutdown', () => {
     expect(log).toEqual([
       'cancel import',
       'cancel enrichment',
+      'stop quality sweep',
       'closeAllConnections',
       'close',
       'flush library sheet',
@@ -152,6 +160,36 @@ describe('orderedShutdown', () => {
     await done;
 
     expect(log.indexOf('import rolled back')).toBeLessThan(
+      log.indexOf('close database')
+    );
+    expect(world.exit).toHaveBeenCalledWith(0);
+  });
+
+  it('waits for the Quality sweep’s stop before closing the database', async () => {
+    const log: string[] = [];
+    const server = await listening();
+    const world = worldOver(server, log);
+    let swept!: () => void;
+    world.qualitySweep.stop = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          swept = () => {
+            log.push('quality sweep stopped');
+            resolve();
+          };
+        })
+    );
+
+    const done = orderedShutdown(world);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(world.qualitySweep.stop).toHaveBeenCalledTimes(1);
+    expect(world.closeDatabase).not.toHaveBeenCalled();
+    expect(world.exit).not.toHaveBeenCalled();
+
+    swept();
+    await done;
+
+    expect(log.indexOf('quality sweep stopped')).toBeLessThan(
       log.indexOf('close database')
     );
     expect(world.exit).toHaveBeenCalledWith(0);
