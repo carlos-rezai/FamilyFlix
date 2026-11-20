@@ -147,6 +147,31 @@ describe('SeriesGrid — All series', () => {
     expect(within(open).queryByRole('img', { name: 'Watched' })).toBeNull();
   });
 
+  // 70 — Video quality, Phase 3 (issue #667): the Series quality's tag.
+  it('draws the Quality tag on a series whose Series quality is set, and none beside it', async () => {
+    serve({
+      series: [
+        makeSeries({ id: 's1', title: 'Harbor & Vine', videoQuality: '1080p' }),
+        makeSeries({
+          id: 's2',
+          title: 'Lighthouse Keepers',
+          videoQuality: null,
+        }),
+      ],
+      episodeCount: 5,
+      continueWatching: [],
+    });
+
+    renderHome();
+
+    const tagged = await screen.findByRole('button', { name: 'Harbor & Vine' });
+    const bare = screen.getByRole('button', { name: 'Lighthouse Keepers' });
+    expect(within(tagged).getByText('1080p')).toBeDefined();
+    for (const rung of ['4K', '1080p', '720p', '480p', 'SD']) {
+      expect(within(bare).queryByText(rung)).toBeNull();
+    }
+  });
+
   it('reads the count line as N series · M episodes', async () => {
     serve({
       series: [

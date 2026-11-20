@@ -9,6 +9,7 @@ import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { openDatabase, type SqliteDatabase } from '..';
+import { VIDEO_QUALITIES, type VideoQuality } from '@/types';
 import { createSeriesReader } from '../../library/series/read/read';
 import { createSeriesBrowse } from '../../library/series/browse/browse';
 import { createSeriesWrite } from '../../library/series/write/write';
@@ -126,5 +127,67 @@ describe('seedSeries', () => {
       'Imported Show'
     );
     expect(home().series).toHaveLength(SEED_SERIES.length + 1);
+  });
+});
+
+/**
+ * 70 — Video quality, Phase 3 (issue #667): the seed gives its mock episodes
+ * qualities, mixed in one show and tied in another, so the dev library shows
+ * a Series quality read by majority and one read by the better rung.
+ */
+describe('seedSeries — the Series quality', () => {
+  let db: SqliteDatabase;
+  let mediaPath: string;
+
+  beforeEach(() => {
+    db = openDatabase(':memory:');
+    mediaPath = mkdtempSync(join(tmpdir(), 'series-seed-'));
+  });
+
+  afterEach(() => {
+    db.close();
+    rmSync(mediaPath, { recursive: true, force: true });
+  });
+
+  /** Each seeded show's Series quality, and how many episodes sit on each rung. */
+  function seededShows() {
+    seedSeries(db, mediaPath);
+    const reader = createSeriesReader(db);
+    return createSeriesBrowse(db, reader, () => false)
+      .getSeriesHome()
+      .series.map((series) => {
+        const counts = new Map<VideoQuality, number>();
+        for (const { videoQuality } of reader.listEpisodes(series.id)) {
+          if (videoQuality !== null) {
+            counts.set(videoQuality, (counts.get(videoQuality) ?? 0) + 1);
+          }
+        }
+        const most = Math.max(0, ...counts.values());
+        const leaders = VIDEO_QUALITIES.filter(
+          (rung) => counts.get(rung) === most
+        );
+        return { quality: series.videoQuality, counts, leaders };
+      });
+  }
+
+  it('writes a show of mixed qualities that reads its majority rung', () => {
+    const mixed = seededShows().filter(
+      ({ counts, leaders }) => counts.size > 1 && leaders.length === 1
+    );
+
+    expect(mixed.length).toBeGreaterThan(0);
+    for (const { quality, leaders } of mixed) {
+      expect(quality).toBe(leaders[0]);
+    }
+  });
+
+  it('writes a show tied between rungs that reads the better one', () => {
+    const tied = seededShows().filter(({ leaders }) => leaders.length > 1);
+
+    expect(tied.length).toBeGreaterThan(0);
+    for (const { quality, leaders } of tied) {
+      // VIDEO_QUALITIES is best first, so the first leader is the better rung.
+      expect(quality).toBe(leaders[0]);
+    }
   });
 });

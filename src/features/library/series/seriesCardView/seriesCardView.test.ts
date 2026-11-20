@@ -146,3 +146,22 @@ describe('seriesCardView — the Shown rating under the TMDB ratings preference'
     expect(vm.ratingSource).toBeNull();
   });
 });
+
+/**
+ * 70 — Video quality, Phase 3 (issue #667): a series card carries its
+ * **Series quality** as the card's `quality`, so the Poster card draws its
+ * **Quality tag**; a series with none measured draws no tag.
+ */
+describe('seriesCardView — the Series quality', () => {
+  it('carries the Series quality as the card’s quality, and none when unmeasured', () => {
+    expect(
+      seriesCardView(makeSeries({ videoQuality: '1080p' }), false).quality
+    ).toBe('1080p');
+    expect(
+      seriesCardView(makeSeries({ videoQuality: 'SD' }), true).quality
+    ).toBe('SD');
+    expect(
+      seriesCardView(makeSeries({ videoQuality: null }), false).quality
+    ).toBeNull();
+  });
+});
