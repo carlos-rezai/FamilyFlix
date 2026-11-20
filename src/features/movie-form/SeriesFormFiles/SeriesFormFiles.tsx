@@ -105,7 +105,7 @@ export interface SeriesFormFilesProps {
    * _＋ Add show folder_ is locked, once `shown` the 18px inline mark reading
    * _Reading folder…_ stands in its label's place.
    */
-  readingShowFolder?: BusyPhase;
+  readingShowFolder: BusyPhase;
   /** The picked **Show folder**, absolute — `null` draws no Show folder row. */
   showFolder: string | null;
   /** Reports that the Show folder row's ✕ was pressed. */
@@ -160,7 +160,7 @@ export function SeriesFormFiles({
   refusals,
   onAddEpisodeFiles,
   onAddShowFolder,
-  readingShowFolder = 'idle',
+  readingShowFolder,
   showFolder,
   onRemoveShowFolder,
   straySubtitles,

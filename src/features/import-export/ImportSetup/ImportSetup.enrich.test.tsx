@@ -55,6 +55,7 @@ function renderSetup(props: Partial<ImportSetupProps> = {}) {
     <MemoryRouter>
       <ThemeProvider theme={theme}>
         <ImportSetup
+          starting="idle"
           sheet=""
           sheetError={null}
           foldersError={null}

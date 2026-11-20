@@ -37,6 +37,7 @@ function renderSetup(libraryFolders: string[]) {
   render(
     <ThemeProvider theme={theme}>
       <EnrichmentSetup
+        starting="idle"
         scope="missing"
         summary={{ ...READY, libraryFolders }}
         title={null}

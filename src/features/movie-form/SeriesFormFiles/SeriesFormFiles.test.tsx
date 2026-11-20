@@ -34,6 +34,7 @@ function renderFiles(poster: MovieFormFile | null = null) {
   render(
     <ThemeProvider theme={theme}>
       <SeriesFormFiles
+        readingShowFolder="idle"
         poster={poster}
         onPickPoster={onPickPoster}
         onRemovePoster={onRemovePoster}
@@ -131,6 +132,7 @@ describe('SeriesFormFiles — the Season posters list', () => {
     render(
       <ThemeProvider theme={theme}>
         <SeriesFormFiles
+          readingShowFolder="idle"
           poster={null}
           onPickPoster={vi.fn()}
           onRemovePoster={vi.fn()}
@@ -245,6 +247,7 @@ describe('SeriesFormFiles — the add buttons’ labels', () => {
     render(
       <ThemeProvider theme={theme}>
         <SeriesFormFiles
+          readingShowFolder="idle"
           poster={null}
           onPickPoster={vi.fn()}
           onRemovePoster={vi.fn()}

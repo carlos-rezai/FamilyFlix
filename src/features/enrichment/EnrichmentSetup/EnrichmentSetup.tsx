@@ -70,7 +70,7 @@ export interface EnrichmentSetupProps {
    * Start's phase on the **Loader timing** while a start is sent: locked from
    * `waiting`, reading _Starting…_ or _Fetching…_ once `shown`.
    */
-  starting?: BusyPhase;
+  starting: BusyPhase;
   /**
    * The **let-go line** under Start while a **Waiting run** has Decisions —
    * `null` draws none.
@@ -102,7 +102,7 @@ export function EnrichmentSetup({
   onChooseScope,
   onToggleField,
   onStart,
-  starting = 'idle',
+  starting,
   letGo,
   onRetry,
   onOpenKeySettings,

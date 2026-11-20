@@ -44,7 +44,7 @@ export interface ImportSetupProps {
    * _Start import_'s phase on the **Loader timing** while a start is sent:
    * locked from `waiting`, reading _Starting…_ once `shown`.
    */
-  starting?: BusyPhase;
+  starting: BusyPhase;
   /** The **Import mode** chosen. */
   mode: ImportMode;
   onMode: (mode: ImportMode) => void;
@@ -81,7 +81,7 @@ export function ImportSetup({
   foldersError,
   onSheet,
   onStart,
-  starting = 'idle',
+  starting,
   mode,
   onMode,
   enrich,

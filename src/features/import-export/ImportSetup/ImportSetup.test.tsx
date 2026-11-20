@@ -140,6 +140,7 @@ function renderSetup(props: Partial<ImportSetupProps> = {}) {
             path="/import"
             element={
               <ImportSetup
+                starting="idle"
                 sheet=""
                 sheetError={null}
                 foldersError={null}

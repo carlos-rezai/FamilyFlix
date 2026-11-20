@@ -44,6 +44,7 @@ function renderSetup(props: Partial<EnrichmentSetupProps> = {}) {
   render(
     <ThemeProvider theme={theme}>
       <EnrichmentSetup
+        starting="idle"
         scope="missing"
         summary={READY}
         title={null}
