@@ -33,26 +33,6 @@ const SHOW = 'E:\\Shows\\Harbor and Vine';
 const READING = 'Reading folder…';
 const UNREADABLE = 'That folder can’t be read.';
 
-const READ = {
-  path: SHOW,
-  title: 'Harbor and Vine',
-  year: null,
-  libraryFolderId: null,
-  heldSeriesId: null,
-  episodes: [
-    {
-      season: 1,
-      number: 1,
-      title: 'Pilot',
-      relativePath: 'Season 1/Pilot.mkv',
-      video: `${SHOW}\\Season 1\\Pilot.mkv`,
-      subtitles: [],
-    },
-  ],
-  unplaced: [],
-  straySubtitles: 0,
-};
-
 /** A `400` carrying the route's one sentence. */
 const refusedResponse = (error: string): Response =>
   ({
