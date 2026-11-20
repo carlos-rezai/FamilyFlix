@@ -1,7 +1,8 @@
 import styled from 'styled-components';
 
 import type { BusyPhase } from '@/types';
-import { busyRow } from '@/styles/busyRow';
+import { busyRow, busyRowLock } from '@/styles/busyRow';
+import { ListRows } from '../filesCard.styles';
 
 /**
  * The series' Files card draws on the form's Files card furniture
@@ -16,7 +17,6 @@ export {
   ListRows as EpisodeRows,
   ListSection as ShowFolderSection,
   ListLabel as ShowFolderLabel,
-  ListRows as ShowFolderRows,
 } from '../filesCard.styles';
 
 /** The _Season posters_ list: its caption over one File field per season. */
@@ -72,3 +72,11 @@ export const AddShowFolder = styled.button<{ $busy: BusyPhase }>`
 
   ${busyRow}
 `;
+
+/**
+ * The _＋ Add show folder_ row: the list's rows, locked as a **Busy row**
+ * while the folder reads; its button carries the shown face.
+ */
+export const ShowFolderRows = styled(ListRows).attrs<{ $busy: BusyPhase }>(
+  busyRowLock
+)``;

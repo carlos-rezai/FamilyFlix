@@ -76,7 +76,6 @@ export function DecisionRow({
 }: DecisionRowProps) {
   const [searching, setSearching] = useState(false);
   const [press, setPress] = useState<Press | null>(null);
-  const locked = busy !== 'idle';
   const skip = () => {
     setPress('skip');
     onSkip();
@@ -87,11 +86,7 @@ export function DecisionRow({
   };
 
   return (
-    <Card
-      $busy={busy}
-      inert={locked || undefined}
-      aria-busy={locked || undefined}
-    >
+    <Card $busy={busy}>
       <Head>
         {busy === 'shown' && press !== null ? (
           <LogoLoader size={18} inline label={PRESS_LABELS[press]} />

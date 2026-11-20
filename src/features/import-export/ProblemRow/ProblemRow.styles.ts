@@ -1,6 +1,6 @@
 import styled from 'styled-components';
 
-import { busyRow } from '@/styles/busyRow';
+import { busyRow, busyRowLock } from '@/styles/busyRow';
 import type { BusyPhase, ProblemKind } from '@/types';
 
 /**
@@ -34,7 +34,7 @@ export const DOT_TONE: Record<ProblemKind, DotTone> = {
 };
 
 /** The row on the surface: its head, then a face when its kind has one. */
-export const Card = styled.div<{ $busy: BusyPhase }>`
+export const Card = styled.div.attrs<{ $busy: BusyPhase }>(busyRowLock)`
   ${busyRow}
   padding: 16px;
   background: ${({ theme }) => theme.colors.surface};

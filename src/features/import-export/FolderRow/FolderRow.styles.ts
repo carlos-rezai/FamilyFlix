@@ -1,10 +1,10 @@
 import styled from 'styled-components';
 
 import type { BusyPhase } from '@/types';
-import { busyRow } from '@/styles/busyRow';
+import { busyRow, busyRowLock } from '@/styles/busyRow';
 
 /** The row: tile, text block and ✕ in a line — `CodecRow`'s shape. */
-export const Row = styled.div<{ $busy: BusyPhase }>`
+export const Row = styled.div.attrs<{ $busy: BusyPhase }>(busyRowLock)`
   ${busyRow}
   display: flex;
   align-items: center;

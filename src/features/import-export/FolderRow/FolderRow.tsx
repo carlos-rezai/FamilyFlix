@@ -56,13 +56,8 @@ export function FolderRow({
   onRemove,
 }: FolderRowProps) {
   const [press, setPress] = useState<Press | null>(null);
-  const locked = busy !== 'idle';
   return (
-    <Row
-      $busy={busy}
-      inert={locked || undefined}
-      aria-busy={locked || undefined}
-    >
+    <Row $busy={busy}>
       <Tile>
         <FolderIcon size={20} />
       </Tile>

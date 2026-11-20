@@ -64,14 +64,8 @@ export function SeasonChoices({
           const label = formatEpisodeTag({ season });
           const { g1, g2 } = gradientFromId(label);
           const busy = seasonPhase?.(season) ?? 'idle';
-          const locked = busy !== 'idle';
           return (
-            <SeasonCard
-              key={season}
-              $busy={busy}
-              inert={locked || undefined}
-              aria-busy={locked || undefined}
-            >
+            <SeasonCard key={season} $busy={busy}>
               <Picker role="group" aria-label={`Posters for ${label}`}>
                 <Held>
                   <HeldTile>

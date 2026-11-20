@@ -227,10 +227,7 @@ export function SeriesFormFiles({
           <ShowFolderLabel>
             {showFolder === null ? SHOW_FOLDER_LABEL : ''}
           </ShowFolderLabel>
-          <ShowFolderRows
-            inert={readingShowFolder !== 'idle' || undefined}
-            aria-busy={readingShowFolder !== 'idle' || undefined}
-          >
+          <ShowFolderRows $busy={readingShowFolder}>
             <AddShowFolder
               type="button"
               onClick={onAddShowFolder}

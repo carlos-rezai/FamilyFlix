@@ -123,7 +123,6 @@ export function ProblemRow({
   onTakeOut,
 }: ProblemRowProps) {
   const [press, setPress] = useState<Press | null>(null);
-  const locked = busy !== 'idle';
   const pressed =
     <A extends unknown[]>(which: Press, report: (...args: A) => void) =>
     (...args: A) => {
@@ -134,11 +133,7 @@ export function ProblemRow({
   const differs = problem.kind === 'differs';
   const resolvable = !NO_RESOLVE.has(problem.kind);
   return (
-    <Card
-      $busy={busy}
-      inert={locked || undefined}
-      aria-busy={locked || undefined}
-    >
+    <Card $busy={busy}>
       <Head>
         {busy === 'shown' && press !== null ? (
           <LogoLoader size={18} inline label={PRESS_LABELS[press]} />
