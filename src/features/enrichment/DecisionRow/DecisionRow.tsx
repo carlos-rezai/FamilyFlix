@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { FieldDiff, type FieldDiffSide } from '@/components';
+import { useBusyRow } from '@/hooks/useBusyRow/useBusyRow';
 import { Button, LogoLoader } from '@/primitives';
 import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
 import type {
@@ -76,25 +77,15 @@ export function DecisionRow({
   onApply,
 }: DecisionRowProps) {
   const [searching, setSearching] = useState(false);
-  const [press, setPress] = useState<Press | null>(null);
-  const skip = () => {
-    setPress('skip');
-    onSkip();
-  };
-  const search = (query: string) => {
-    setPress('search');
-    onSearch(query);
-  };
+  const { pressed, label: pressLabel } = useBusyRow(busy, PRESS_LABELS);
+  const skip = pressed('skip', onSkip);
+  const search = pressed('search', onSearch);
 
   return (
     <Card $busy={busy}>
       <Head>
-        {busy === 'shown' && press !== null ? (
-          <LogoLoader
-            size={BUSY_ROW_LOADER_SIZE}
-            inline
-            label={PRESS_LABELS[press]}
-          />
+        {pressLabel !== null ? (
+          <LogoLoader size={BUSY_ROW_LOADER_SIZE} inline label={pressLabel} />
         ) : (
           <Dot $kind={decision.kind} />
         )}
@@ -111,10 +102,7 @@ export function DecisionRow({
       {decision.kind === 'ambiguous' && !searching ? (
         <CandidatePicker
           candidates={decision.candidates}
-          onPick={(tmdbId) => {
-            setPress('pick');
-            onPick(tmdbId);
-          }}
+          onPick={pressed('pick', onPick)}
           onSearchByTitle={() => setSearching(true)}
         />
       ) : null}
@@ -136,10 +124,7 @@ export function DecisionRow({
             theirs: tmdb,
           }))}
           theirsLabel="TMDB"
-          onApply={(choices) => {
-            setPress('apply');
-            onApply(tmdbChoices(choices));
-          }}
+          onApply={pressed('apply', (choices) => onApply(tmdbChoices(choices)))}
           onKeepAll={skip}
         />
       ) : null}

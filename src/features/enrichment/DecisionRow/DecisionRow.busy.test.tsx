@@ -204,3 +204,56 @@ describe('DecisionRow: the loader under reduced motion', () => {
     expect(new Set(properties)).toEqual(new Set(['opacity']));
   });
 });
+
+describe('DecisionRow: refuses a press while locked', () => {
+  const CONFLICT: Decision = {
+    id: 'd2',
+    kind: 'conflict',
+    title: 'The Lantern Keeper',
+    reason: 'TMDB has different values for fields you already filled in.',
+    path: null,
+    query: 'The Lantern Keeper',
+    fields: [{ field: 'year', label: 'Year', mine: '2019', tmdb: '2018' }],
+  };
+  const MISSING: Decision = {
+    id: 'd3',
+    kind: 'missing',
+    title: 'Sundial',
+    reason: 'Nothing on TMDB matched this title.',
+    path: null,
+    query: 'Sundial',
+  };
+  type Report = 'onSkip' | 'onPick' | 'onSearch' | 'onApply';
+  const PRESSES: { press: RegExp; decision: Decision; report: Report }[] = [
+    { press: /82% match/, decision: AMBIGUOUS, report: 'onPick' },
+    { press: /^Search$/, decision: MISSING, report: 'onSearch' },
+    { press: /^Apply choices$/, decision: CONFLICT, report: 'onApply' },
+    { press: /^Skip$/, decision: AMBIGUOUS, report: 'onSkip' },
+    { press: /^Keep all mine$/, decision: CONFLICT, report: 'onSkip' },
+  ];
+
+  it.each(
+    (['waiting', 'shown'] as const).flatMap((busy) =>
+      PRESSES.map((press) => ({ busy, ...press }))
+    )
+  )(
+    'reports nothing for $press while $busy',
+    ({ busy, press, decision, report }) => {
+      const reports = {
+        onSkip: vi.fn(),
+        onPick: vi.fn(),
+        onSearch: vi.fn(),
+        onApply: vi.fn(),
+      };
+      render(
+        <ThemeProvider theme={theme}>
+          <DecisionRow decision={decision} busy={busy} {...reports} />
+        </ThemeProvider>
+      );
+
+      fireEvent.click(screen.getByRole('button', { name: press }));
+
+      expect(reports[report]).not.toHaveBeenCalled();
+    }
+  );
+});
