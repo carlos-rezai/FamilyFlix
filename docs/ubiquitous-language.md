@@ -1172,6 +1172,23 @@ a face the loading-states handoff already draws. No prototype is amended.
 | **Form skeleton** (new)     | The **Skeleton** of the **Movie form**, `LoadingForm`, drawn at once while a job naming a record (an edit, a series edit, a **Resolve**) reads it: **Skeleton** blocks in the form's own frame for its heading, fields and Files card, and no save, so nothing is added twice or typed over; announced once as _Loading movie_ or _Loading series_.                                                                                       | blank form, loading form, form spinner |
 | **Loader timing** (updated) | Since log 69 stated once as `onLoaderTiming` beside `useDelayedBusy`, which it and its keyed sibling `useDelayedBusyByKey` both call.                                                                                                                                                                                                                                                                                                     |                                        |
 
+## Video quality
+
+Design log 70: step 52, initiative `video-quality`. Every movie and episode
+carries the rung of the **Quality ladder** its video's frame is on, measured
+by ffprobe with its runtime, and every **Poster card** can show it.
+
+| Term                     | Definition                                                                                                                                                                                                                      | Aliases to avoid                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| **Video quality** (new)  | The rung of the **Quality ladder** a movie's or an episode's video is on, read from its frame by **Nominal height**; `videoQuality`, `video_quality`, `NULL` for a file nothing could probe.                                    | resolution, definition, res, format   |
+| **Quality ladder** (new) | The five rungs, best first: `4K`, `1080p`, `720p`, `480p`, `SD`; `VIDEO_QUALITIES`, the one statement of their order.                                                                                                           | quality levels, tiers                 |
+| **Nominal height** (new) | The larger of a frame's height and its width × 9/16, so a widescreen `1920x800` is 1080; its rung is the first whose floor (1620, 900, 600, 420) it reaches, `SD` below.                                                        | real height, vertical resolution      |
+| **Series quality** (new) | The **Video quality** most of a series' measured episodes are on, a tie going to the better rung; derived on every read, never stored, `NULL` when no episode is measured.                                                      | best episode, show resolution         |
+| **Quality tag** (new)    | A title's **Video quality** drawn as a `prim.MetaTag` at the end of its **Poster card**'s Star row, while _Show video quality_ is on.                                                                                           | badge, quality badge, chip, label     |
+| **Video facts** (new)    | What `derivedVideoFacts` reads from one probe of a video for its row: its runtime in minutes and its **Video quality**; it never throws.                                                                                        | derived runtime (retired), media info |
+| **Quality sweep** (new)  | The server's background pass after it starts, on every start: each held movie and episode with no **Video quality** whose video is there, probed one at a time, its quality alone written; stopped by the **Ordered shutdown**. | backfill, rescan, migration           |
+| **Quality filter** (new) | The browse header's _Quality_ pill: a minimum rung (`?quality=`, `minQuality`), keeping titles at or above it, drawn only while _Show video quality_ is on; a title with no quality is kept only by _All qualities_.            | resolution filter, HD filter          |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1376,6 +1393,8 @@ a face the loading-states handoff already draws. No prototype is amended.
 - A sheet row has exactly one **Folder path** and one **Folder key**, its last segment; a path cell fills a place from the **Title folder** first and the **Sheet root** second, and the folder's own read wins over both (log 67).
 - A row has at most one **Row phase** past `idle` at a time, and a review draws at most one loader per wait: a bulk press's **Busy button**, or each pressed row's **Busy row**, never both (log 69).
 - A **Form skeleton** stands for one read of one job's record; once it answers, the form is drawn whole, or the add if the record is gone (log 69).
+- A **Movie** and an **Episode** each have at most one **Video quality**; a **Series** has none of its own, only its derived **Series quality** (new, log 70).
+- Every write of a video's runtime writes its **Video quality** from the same one probe; the **Quality sweep** writes the Video quality alone, and only where there is none (new, log 70).
 
 ## Example dialogue
 
@@ -2177,6 +2196,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "The button is the **Busy button**, _Skipping…_; every row it covers takes the **Row phase** `waiting`, locked but drawing nothing, so there is one loader for the one wait."
 > **Dev:** "Opening _Edit details_ on a big series?"
 > **Domain expert:** "The **Form skeleton**, at once: a read is no action, so no **Loader timing**. The form appears whole when the record lands."
+
+> **Dev:** "Mum's DVD rip of _Amelie_ is `720x576`. What does its poster say?"
+> **Domain expert:** "Its **Nominal height** is 576, so its **Quality tag** reads _480p_. A `1920x800` film reads _1080p_: the width counts, not just the height."
+> **Dev:** "And the films imported before step 52?"
+> **Domain expert:** "The **Quality sweep** measures them after the next start, one at a time. A file nothing could probe keeps no tag and is asked again on the start after."
+> **Dev:** "A show whose first season is DVD and the rest 1080p?"
+> **Domain expert:** "Its **Series quality** is the rung most episodes are on, _1080p_. The **Quality filter** at _1080p+_ keeps it; at _4K_ it goes."
 
 ## Flagged ambiguities
 
@@ -3181,3 +3207,11 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 - **"Form skeleton" is not a loader (new):** it is a **Skeleton**, a read's
   face, drawn at once; never time it with **Loader timing**, and never draw
   the **Logo loader** in the form for its read.
+- **"Video quality" is not "resolution" (new):** the stored fact is a
+  rung of the **Quality ladder**, never a pixel size; nothing stores a
+  width or a height. Say "frame size" for ffprobe's pixels and "Video
+  quality" for the rung.
+- **"Quality sweep" is not a backfill (new):** step 52 first planned a
+  one-time backfill; log 70 runs the sweep on every start over titles with
+  no quality, so a title measured once is never asked again and one never
+  measured is asked each time.

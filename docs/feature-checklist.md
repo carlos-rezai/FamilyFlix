@@ -838,18 +838,25 @@ button**s step 36 gave the forms and dialogs. Grilled in design log 69:
       is the Product Rule, not a gap.
 
 Step 52 came out of wanting to see at a glance how good a file is before
-pressing play. Not yet grilled:
+pressing play. Grilled in design log 70:
 
-52. ⬜ **Video quality**: each poster carries a small tag reading _4K_,
-    _1080p_, _720p_, _480p_ or _SD_, read by **ffprobe** from the video
-    stream's frame size (width as well as height, so a widescreen
-    `1920x800` film is still _1080p_) and stored when a title is imported,
-    with a one-time backfill for the library already held. A file nothing
-    could probe carries no tag rather than a guess.
-    - **Settings**: a toggle to show the tags, on by default.
-    - **Filter**: while the toggle is on, the overview pages filter by
-      quality as they do by genre and rating.
-    - **Library sheet**: a new quality column, written by an Export and
-      read back by an Import.
-    - **Open**: what a series poster shows when its episodes differ, and
-      where the toggle and the tag sit in the prototype.
+52. ⬜ **Video quality**: each **Poster card** carries a **Quality tag**
+    reading _4K_, _1080p_, _720p_, _480p_ or _SD_ at the end of its Star
+    row, read by **ffprobe** from the video stream's frame size by its
+    **Nominal height** (the larger of its height and its width × 9/16, so a
+    widescreen `1920x800` film is still _1080p_). It is stored wherever a
+    runtime is derived, from the same one probe, and the **Quality sweep**
+    measures every held title with none once the server starts, on every
+    start, so a title nothing could probe yet is asked again. A file
+    nothing could probe carries no tag rather than a guess.
+    - **Series**: a series poster shows its **Series quality**, the rung
+      most of its episodes are on, a tie going to the better.
+    - **Settings**: _Show video quality_ in Display, on by default.
+    - **Filter**: while it is on, a _Quality_ pill after _Rating_ keeps
+      titles at or above a rung (_4K_, _1080p+_, _720p+_, _480p+_), on both
+      tabs and the Genre page.
+    - **Library sheet**: a _Quality_ column after _Runtime_, written by
+      every Sheet writer and read back by an import; the probe wins, the
+      sheet stands in when it answers none.
+    - **Prototype**: `docs/handoff/handoff-video-quality/`, a new atom
+      `prim.MetaTag`.
