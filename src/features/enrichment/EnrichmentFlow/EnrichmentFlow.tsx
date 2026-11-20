@@ -170,16 +170,12 @@ export function EnrichmentFlow() {
 
   const onSkipMany = useCallback(
     (ids: string[]) => {
-      // A Skip all already sent sends nothing more, as a locked row does.
-      if (skippingAll !== 'idle') {
-        return;
-      }
       skipMany(ids).catch(() => {
         // A Skip all that did not land leaves every row where it is, and the
         // button is still there to press again.
       });
     },
-    [skipMany, skippingAll]
+    [skipMany]
   );
 
   const onPick = useCallback(
@@ -230,8 +226,7 @@ export function EnrichmentFlow() {
   const openSettings = useCallback(() => navigate('/settings'), [navigate]);
 
   const onStart = useCallback(() => {
-    // A start already sent sends nothing more.
-    if (summary === null || starting !== 'idle') {
+    if (summary === null) {
       return;
     }
     if (!summary.keySet) {
@@ -261,17 +256,7 @@ export function EnrichmentFlow() {
         notify({ variant: 'warning', message: 'A sync is already running.' });
       }
     });
-  }, [
-    summary,
-    starting,
-    openSettings,
-    notify,
-    start,
-    scope,
-    single,
-    since,
-    fields,
-  ]);
+  }, [summary, openSettings, notify, start, scope, single, since, fields]);
 
   const startOnArrival = single !== null && query.start === true;
   const decided = useRef(false);
