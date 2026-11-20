@@ -43,6 +43,7 @@ function row(folder: string, title: string, year: number | null): SheetRow {
     tmdbId: null,
     watched: false,
     favorite: false,
+    videoQuality: null,
     video: null,
     subtitles: [],
     poster: null,

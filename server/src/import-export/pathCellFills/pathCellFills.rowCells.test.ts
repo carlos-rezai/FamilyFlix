@@ -39,6 +39,7 @@ const row = (cells: Partial<SheetRow>): SheetRow => ({
   tmdbScore: null,
   tmdbId: null,
   favorite: false,
+  videoQuality: null,
   video: null,
   subtitles: [],
   poster: null,

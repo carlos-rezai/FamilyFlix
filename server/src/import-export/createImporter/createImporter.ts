@@ -884,6 +884,7 @@ const guessedRow = (name: string): SheetRow => {
     tmdbScore: null,
     tmdbId: null,
     favorite: false,
+    videoQuality: null,
     video: null,
     subtitles: [],
     poster: null,
@@ -1438,6 +1439,7 @@ export function createImporter({
       // The probe's runtime wins; the sheet's stands in when it answers none.
       const facts = derivedVideoFacts(playback, video);
       const runtime = facts.runtimeMinutes ?? row.runtime;
+      const videoQuality = facts.videoQuality ?? row.videoQuality;
       const genres = knownGenres(row.genres, genreNames, current);
 
       const movie: NewMovie = {
@@ -1449,9 +1451,7 @@ export function createImporter({
         ...(row.tmdbId === null ? {} : { tmdbId: row.tmdbId }),
         ...(row.tmdbScore === null ? {} : { tmdbScore: row.tmdbScore }),
         ...(runtime === null ? {} : { runtimeMinutes: runtime }),
-        ...(facts.videoQuality === null
-          ? {}
-          : { videoQuality: facts.videoQuality }),
+        ...(videoQuality === null ? {} : { videoQuality }),
         ...(row.director === null ? {} : { director: row.director }),
         ...(row.synopsis === null ? {} : { synopsis: row.synopsis }),
         ...(row.rating === null ? {} : { rating: row.rating }),
@@ -1855,6 +1855,8 @@ export function createImporter({
         // The probe's runtime wins; the sheet's stands in when it answers none.
         const facts = derivedVideoFacts(playback, video);
         const runtime = facts.runtimeMinutes ?? sheetEpisode?.runtime ?? null;
+        const videoQuality =
+          facts.videoQuality ?? sheetEpisode?.videoQuality ?? null;
         const title =
           sheetEpisode !== undefined && sheetEpisode.title !== ''
             ? sheetEpisode.title
@@ -1895,9 +1897,7 @@ export function createImporter({
           ...(title === null ? {} : { title }),
           ...(airDate === null ? {} : { airDate }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
-          ...(facts.videoQuality === null
-            ? {}
-            : { videoQuality: facts.videoQuality }),
+          ...(videoQuality === null ? {} : { videoQuality }),
           ...(sheetEpisode?.watched === true ? { watched: true } : {}),
           ...(subtitles.length === 0 ? {} : { subtitles }),
           ...(stillPath === undefined ? {} : { stillPath }),

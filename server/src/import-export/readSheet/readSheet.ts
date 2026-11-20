@@ -5,8 +5,10 @@ import { Readable } from 'node:stream';
 import {
   ROW_TYPES,
   SHEET_PATH_SEPARATOR,
+  VIDEO_QUALITIES,
   type RowType,
   type SheetColumn,
+  type VideoQuality,
 } from '@/types';
 import { yearSpan } from '../../library/series/yearSpan/yearSpan';
 import {
@@ -69,6 +71,8 @@ export interface SheetRow {
   tmdbScore: number | null;
   tmdbId: number | null;
   favorite: boolean;
+  /** Its rung of the **Quality ladder**, spelled as the ladder spells it. */
+  videoQuality: VideoQuality | null;
   /**
    * The path cells, as the sheet spells them: relative, forward slashes,
    * several tracks split on `|`. The matcher resolves them.
@@ -134,6 +138,7 @@ type Column =
   | 'tmdbScore'
   | 'tmdbId'
   | 'favorite'
+  | 'videoQuality'
   | 'video'
   | 'subtitles'
   | 'poster'
@@ -175,6 +180,7 @@ const SYNONYMS: Record<Column, string[]> = {
   tmdbScore: ['tmdb rating'],
   tmdbId: ['tmdb id'],
   favorite: ['favorite'],
+  videoQuality: ['quality', 'resolution'],
   video: ['video'],
   subtitles: ['subtitles'],
   poster: ['poster'],
@@ -423,6 +429,14 @@ function cellWhole(text: string): number | null {
 function cellType(text: string): RowType | null {
   const folded = text.toLowerCase();
   return ROW_TYPES.find((type) => type.toLowerCase() === folded) ?? null;
+}
+
+/** A quality cell's rung of the **Quality ladder**, case folded, or `null`. */
+function cellQuality(text: string): VideoQuality | null {
+  const folded = text.toLowerCase();
+  return (
+    VIDEO_QUALITIES.find((quality) => quality.toLowerCase() === folded) ?? null
+  );
 }
 
 /** A date cell as `YYYY-MM-DD`, or `null` for anything not shaped as one. */
@@ -675,6 +689,12 @@ export async function readSheet(
         'Favorite',
         FAVORITE,
         NOT_FAVORITE,
+        report
+      ),
+      videoQuality: parsedCell(
+        read(row, 'videoQuality'),
+        'Quality',
+        cellQuality,
         report
       ),
       video: cellOptional(read(row, 'video')),

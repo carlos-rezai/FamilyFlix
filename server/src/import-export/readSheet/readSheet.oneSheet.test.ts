@@ -156,6 +156,7 @@ const BLANK = {
   tmdbId: null,
   watched: false,
   favorite: false,
+  videoQuality: null,
   video: null,
   subtitles: [],
   poster: null,
