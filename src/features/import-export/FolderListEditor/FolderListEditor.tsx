@@ -72,28 +72,19 @@ export function FolderListEditor({
         <Empty>No folders yet.</Empty>
       ) : (
         <Rows>
-          {folders.map((folder) => {
-            const busy = rowPhase?.(folder.id) ?? 'idle';
-            // The row is `inert` while busy; this holds where `inert` is not.
-            const idle = busy === 'idle';
-            return (
-              <div key={folder.id}>
-                <FolderRow
-                  folder={folder}
-                  busy={busy}
-                  onBringBack={() => {
-                    if (idle) void bringBack(folder.id);
-                  }}
-                  onRemove={() => {
-                    if (idle) void remove(folder.id);
-                  }}
-                />
-                {removeRefusal?.id === folder.id ? (
-                  <Refusal>{removeRefusal.sentence}</Refusal>
-                ) : null}
-              </div>
-            );
-          })}
+          {folders.map((folder) => (
+            <div key={folder.id}>
+              <FolderRow
+                folder={folder}
+                busy={rowPhase?.(folder.id) ?? 'idle'}
+                onBringBack={() => void bringBack(folder.id)}
+                onRemove={() => void remove(folder.id)}
+              />
+              {removeRefusal?.id === folder.id ? (
+                <Refusal>{removeRefusal.sentence}</Refusal>
+              ) : null}
+            </div>
+          ))}
         </Rows>
       )}
       <Divider />

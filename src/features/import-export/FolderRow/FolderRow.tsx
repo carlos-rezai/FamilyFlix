@@ -1,5 +1,4 @@
-import { useState } from 'react';
-
+import { useBusyRow } from '@/hooks/useBusyRow/useBusyRow';
 import { FolderIcon, LogoLoader, RemoveButton } from '@/primitives';
 import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
 import type { BusyPhase, LibraryFolderView } from '@/types';
@@ -56,7 +55,7 @@ export function FolderRow({
   onBringBack,
   onRemove,
 }: FolderRowProps) {
-  const [press, setPress] = useState<Press | null>(null);
+  const { pressed, label } = useBusyRow(busy, PRESS_LABELS);
   return (
     <Row $busy={busy}>
       <Tile>
@@ -64,12 +63,8 @@ export function FolderRow({
       </Tile>
       <Text>
         <Path>{folder.path}</Path>
-        {busy === 'shown' && press !== null ? (
-          <LogoLoader
-            size={BUSY_ROW_LOADER_SIZE}
-            inline
-            label={PRESS_LABELS[press]}
-          />
+        {label !== null ? (
+          <LogoLoader size={BUSY_ROW_LOADER_SIZE} inline label={label} />
         ) : (
           <Line $unreachable={!folder.reachable}>{folderLine(folder)}</Line>
         )}
@@ -78,10 +73,7 @@ export function FolderRow({
             <span>{`${folder.leftOut} ${folder.leftOut === 1 ? 'video' : 'videos'} left out`}</span>
             <BringBack
               type="button"
-              onClick={() => {
-                setPress('bringBack');
-                onBringBack();
-              }}
+              onClick={pressed('bringBack', onBringBack)}
             >
               Bring back
             </BringBack>
@@ -90,10 +82,7 @@ export function FolderRow({
       </Text>
       <RemoveButton
         removes={folder.path}
-        onClick={() => {
-          setPress('remove');
-          onRemove();
-        }}
+        onClick={pressed('remove', onRemove)}
       />
     </Row>
   );

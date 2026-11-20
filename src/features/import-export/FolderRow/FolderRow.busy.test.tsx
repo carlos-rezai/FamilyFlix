@@ -103,3 +103,29 @@ describe.each(PRESSES)(
     });
   }
 );
+
+describe('FolderRow: refuses a press while locked', () => {
+  it.each(
+    (['waiting', 'shown'] as const).flatMap((busy) =>
+      PRESSES.map((press) => ({ busy, ...press }))
+    )
+  )('reports nothing for $press while $busy', ({ busy, button }) => {
+    const onBringBack = vi.fn();
+    const onRemove = vi.fn();
+    render(
+      <ThemeProvider theme={theme}>
+        <FolderRow
+          folder={MOVIES}
+          busy={busy}
+          onBringBack={onBringBack}
+          onRemove={onRemove}
+        />
+      </ThemeProvider>
+    );
+
+    fireEvent.click(button());
+
+    expect(onBringBack).not.toHaveBeenCalled();
+    expect(onRemove).not.toHaveBeenCalled();
+  });
+});
