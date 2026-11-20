@@ -80,7 +80,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Show folder title: a pick reads its Folder key      | ✅ Done    |
 | Missing videos: a held title whose file is gone     | ✅ Done    |
 | Export paths: a nested Export imports back whole    | ✅ Done    |
-| Silent waits: every press shows it is working       | ⬜ Planned |
+| Silent waits: every press shows it is working       | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -783,17 +783,22 @@ second press on the poster sent a second pick. An audit of every screen
 the same gap wherever a press waits on the server outside the **Busy
 button**s step 36 gave the forms and dialogs. Grilled in design log 69:
 
-51. 🔜 **Silent waits**: every press that waits on the server shows it is
+51. ✅ **Silent waits**: every press that waits on the server shows it is
     working, under **Loader timing**, and can't be pressed twice. Each spot
     takes the loader its neighbours already use: a **Busy button** where
     the press is a button, a **Busy row** (locked, dimmed, an 18px **Logo
     loader** in its status slot) where it is a card or a row, a **Skeleton**
     where a screen waits on a read. Built in issues 653 to 661; the walk
-    ran in the dev app in the browser with each write held open.
+    ran in the dev app in the browser with each write held open. The
+    refactor (issue 662) stated the Busy row once and closed the step.
     - **One timing**: `onLoaderTiming` states the Loader timing once (nothing
       for 300ms, then at least 500ms shown, the outcome after the hold);
       `useDelayedBusy` and the keyed `useDelayedBusyByKey` both call it. The
-      run hooks time each request themselves and answer `rowPhase(id)`.
+      run hooks time each request themselves and answer `rowPhase(id)`,
+      the keyed hook's `phaseOf`; a bulk press locks the rows it acts on
+      with its `cover`. A Busy row's lock is `busyRowLock` beside its shown
+      face, and `useBusyRow` remembers its press and refuses a second one
+      while locked, as a Busy button does, so no flow guards a press.
     - **Sync review**: a candidate pick, _Search_, _Apply choices_, _Skip_
       and _Keep all mine_ lock their Decision row at once and, past 300ms,
       read _Saving match…_, _Searching TMDB…_, _Updating details…_ or

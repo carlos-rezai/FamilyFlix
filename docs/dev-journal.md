@@ -11,6 +11,94 @@ Newest entry first.
 
 ---
 
+## 2026-11-20: Silent waits, the refactor (issue 662)
+
+Twenty-eight commits against `docs/refactor-plans/69-silent-waits-refactor.md`,
+one per plan commit. This is the initiative's closing round: step 51 is ✅
+and issue 652 is done. **12722 tests pass across 872 files** (one skipped),
+against 12673 across 871 at `6544f21d`: the round added `useBusyRow`'s
+suite (8 tests), `cover` in `useDelayedBusyByKey` (4), a locked row refusing
+each press in the Decision, Problem and Folder rows, the Season choice and
+_＋ Add show folder_ (29), and the Import review's bulk cross-lock (8).
+`tsc -b --force` is clean. `eslint src server electron` reports 1 error and
+137 warnings: the build's one added warning is gone, and the error (an empty
+arrow in `EnrichmentReview.test`, issue 362) is older than the initiative.
+
+### What each group changed
+
+- **Group 1, the Busy row stated once** (`2eb72ae1` to `dd2d4326`). The
+  shared `styles/busyRow.ts` holds `busyRowLock`, an `attrs` function that
+  turns `$busy` into `inert` and `aria-busy`, and `BUSY_ROW_LOADER_SIZE`;
+  the five roots take `.attrs(busyRowLock)` and draw the loader at the named
+  size. `hooks/useBusyRow` answers `pressed(which, report)` and `label`:
+  the Decision, Problem and Folder rows record and refuse through it, and
+  each `Press` table stays the row's own. The Season choice returns early
+  from a press past `idle`; _＋ Add show folder_ gets `onClick` only at
+  `idle`, as `Button` does.
+- **Group 2, presses refused where they are drawn** (`62515d62` to
+  `23447212`). `EnrichmentFlow`, `ImportFlow`, `FolderListEditor` and
+  `LibraryFolders` call their hooks bare: sixteen guards and their comments
+  gone. `ImportReview` reads `bulkBusy` and refuses any bulk press while
+  one runs, the one cross-lock the flow used to hold.
+- **Group 3, covered rows on the keyed timing** (`2962769f` to
+  `f15cdc2d`). `useDelayedBusyByKey` answers `cover(keys, work)`: covered
+  keys read `waiting` untimed, a key's own run wins, every key is released
+  in a `finally`. Both run hooks set the run inside the cover, so the rows
+  unlock in the render that redraws them; `rowPhase` is `phaseOf`, and the
+  `covered` state, the wrappers and `coverWhile` are gone.
+- **Group 4, hook results destructured** (`21a8b1da`, `546a89c0`).
+  `{ phase: starting, run: runStart }` and its siblings; no `time*` name
+  is left.
+- **Group 5, required props** (`172c137f` to `3276d9af`). Each row's
+  `busy`, the reviews' phases, the setups' `starting` and the files card's
+  `readingShowFolder` are required, and `FolderListEditorProps` takes
+  `rowPhase` from `LibraryFoldersState` as it is. The suites that left
+  them out pass `idle`.
+- **Group 6, comments and the lint warning** (`41b577b0`, `94dba0b1`). The
+  build's long docblock lines rewrapped, `search`'s docblock whole,
+  `useDelayedBusyByKey` naming its callers as the hooks that own a row's
+  request and documenting `cover`, `skipFrom`'s comment naming
+  `KIND_SKIP`, each Busy row's docblock saying it refuses a press; the
+  unused `READ` gone.
+- **Group 7, the documents** (`8685916c` and this entry). The glossary's
+  **Busy row** refuses a press and names `useBusyRow`, its **Row phase**
+  names `cover`; the README's `hooks/` line names both; step 51 and its
+  row are ✅.
+
+### Where this round left the plan
+
+- **The rows destructure `label` as `pressLabel`** in the Decision and
+  Problem rows, whose diff rows already bind a `label`.
+- **The _`idle` when left out_ tails went in commit 22**, with the defaults
+  they described, so no docblock was false in between; commit 25 had
+  nothing left of them.
+- **`FolderListEditor` kept `rowPhase?.() ?? 'idle'` until commit 23**,
+  where the prop became the hook's own; commit 7 dropped only its guards.
+- **`bulkBusy` also refuses a second _Skip all_ while one runs**, not only
+  the cross-presses the plan listed: the pressed one is a Busy button, and
+  every other bulk button refuses on the same flag.
+- **`ShowFolderRows` is its own styled `ListRows`** with the lock, no
+  longer a re-export, since only it takes `$busy`.
+- **The touched suites ran after each commit and the full suite at each
+  group's end**, as the plan says, green each time with no flake.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: renaming `onLoaderTiming`, the walk's
+fetch wrapper as a `test-support/` script, a molecule for the row loader, a
+failure face for a refused row press, drawing the other bulk buttons
+disabled, the Show folder read's `held` outcome, `useFolderScan.scan`
+without `useCallback`, `useMovieForm`'s `answered`, and the long comment
+lines older than the initiative (two in `ImportReview`'s props). No wire,
+schema, route, copy, prototype state or drawn pixel changed.
+
+### Follow-ups
+
+- None new. The walk's fetch wrapper stays the build's follow-up, built
+  when a second walk needs it.
+
+---
+
 ## 2026-11-19: Silent waits, the build (issues 653 to 661)
 
 Eight slices run by `issue-loop`, each a RED and a GREEN commit (653 to
