@@ -74,9 +74,9 @@ describe('createImporter — the Import phase under Link', () => {
       media: createMedia(media),
       playback: {
         ...real,
-        duration: (file) => {
+        measure: (file) => {
           turnAtEachTitle.push(turns);
-          return real.duration(file);
+          return real.measure(file);
         },
       },
       librarySheet: idleLibrarySheet(),

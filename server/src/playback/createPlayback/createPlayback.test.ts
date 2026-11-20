@@ -69,6 +69,7 @@ import { createPlayback } from './createPlayback';
 const MATROSKA: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'ac3', language: null, title: null, isDefault: false },
   ],
@@ -79,6 +80,7 @@ const MATROSKA: MediaProbe = {
 const NATIVE: MediaProbe = {
   container: 'mp4',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'aac', language: null, title: null, isDefault: false },
   ],
@@ -280,62 +282,6 @@ describe('createPlayback — the read, and a length that is not there', () => {
         () => null
       ).read(file).path
     ).toBe('transcode');
-  });
-});
-
-describe('createPlayback — the duration, derived best-effort', () => {
-  it('answers the seconds the probe reported', () => {
-    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
-
-    expect(
-      createPlayback(
-        media,
-        fixedSlot(fakeComponent(MATROSKA)),
-        () => null
-      ).duration(file)
-    ).toBe(4102.5);
-  });
-
-  it('reads the container’s own header when there is no component to probe', () => {
-    // The machine with no FFmpeg on it, reading the one format it can parse
-    // unaided — which is what lets a family who have not run the installer yet
-    // still get a runtime for most of the folder.
-    const { media, file } = mediaWith(
-      'Northwind (2018)/northwind.mp4',
-      mp4Of(600, 4_099_500)
-    );
-
-    expect(
-      createPlayback(media, fixedSlot(null), () => null).duration(file)
-    ).toBe(6832.5);
-  });
-
-  it('falls back to the header when the probe answered no duration', () => {
-    // The whole reason this is a method of its own rather than `read`'s
-    // `durationSeconds`: a probe that came back saying nothing about the length
-    // has not exhausted the ways of asking, and `read` would have collapsed the
-    // film to `cannot-play` with a nought on it.
-    const { media, file } = mediaWith(
-      'Northwind (2018)/northwind.mp4',
-      mp4Of(600, 4_099_500)
-    );
-    const component = fakeComponent({ ...NATIVE, durationSeconds: 0 });
-
-    expect(
-      createPlayback(media, fixedSlot(component), () => null).duration(file)
-    ).toBe(6832.5);
-  });
-
-  it('answers null, never nought, when neither can say', () => {
-    // Nought is a length. Null is the absence of one, and the runtime column
-    // this feeds draws a dash from it — which is the difference between the
-    // catalogue not knowing how long a film is and it claiming the film is
-    // instantaneous.
-    const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
-
-    expect(
-      createPlayback(media, fixedSlot(null), () => null).duration(file)
-    ).toBeNull();
   });
 });
 
@@ -601,18 +547,18 @@ describe('createPlayback — deciding over the slot at the time of the call', ()
   });
 
   it('derives the runtime over whatever the slot holds now', () => {
-    // The form's save and the importer both ask `duration`, and a film
+    // The form's save and the importer both ask `measure`, and a film
     // imported after the upload must get the length the new component can
     // read off it.
     const { media, file } = mediaWith('Northwind (2018)/northwind.mkv');
     const slot = changingSlot();
     const playback = createPlayback(media, slot.slot, () => null);
 
-    expect(playback.duration(file)).toBeNull();
+    expect(playback.measure(file).durationSeconds).toBeNull();
 
     slot.put(fakeComponent(MATROSKA));
 
-    expect(playback.duration(file)).toBe(4102.5);
+    expect(playback.measure(file).durationSeconds).toBe(4102.5);
   });
 
   it('falls back to cannot-play when the slot loses its component', () => {

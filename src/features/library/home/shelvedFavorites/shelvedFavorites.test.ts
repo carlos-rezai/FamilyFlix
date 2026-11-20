@@ -15,6 +15,7 @@ function makeCard(overrides: Partial<PosterCardMovie> = {}): PosterCardMovie {
     watched: false,
     progress: 0,
     favorite: false,
+    quality: null,
     ...overrides,
   };
 }

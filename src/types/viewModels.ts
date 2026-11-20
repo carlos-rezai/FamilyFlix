@@ -6,6 +6,7 @@
  */
 
 import type { DeleteFacts } from './libraryTitles';
+import type { VideoQuality } from './quality';
 
 /**
  * The view model a `PosterCard` renders from — a `Movie` flattened to exactly
@@ -29,6 +30,8 @@ export interface PosterCardMovie {
   watched: boolean;
   progress: number;
   favorite: boolean;
+  /** The title's **Video quality**, drawn as a tag at the Star row's end; `null` draws none. */
+  quality: VideoQuality | null;
 }
 
 /** Whose rating a **Shown rating** is: the family's own, or TMDB's. */

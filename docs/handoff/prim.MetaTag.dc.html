@@ -1,0 +1,31 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <script src="./support.js"></script>
+  </head>
+  <body>
+    <x-dc>
+      <helmet>
+        <link rel="stylesheet" href="tokens.css" />
+      </helmet>
+      <span style="{{ rootStyle }}">{{ label }}</span>
+    </x-dc>
+    <script
+      type="text/x-dc"
+      data-dc-script
+      data-props='{"$preview":{"width":80,"height":40},"label":{"editor":"text","default":"1080p","tsType":"string"}}'
+    >
+      class Component extends DCLogic {
+        renderVals(){
+          // A word in a hairline box: never a control, never focusable.
+          return {
+            label:this.props.label??'1080p',
+            rootStyle:{fontFamily:'var(--font-sans)',fontSize:'11px',fontWeight:600,letterSpacing:'.04em',lineHeight:1,padding:'2px 6px',border:'1px solid var(--color-border)',borderRadius:'4px',color:'var(--color-text-dim)',background:'none',whiteSpace:'nowrap'},
+          };
+        }
+      }
+    </script>
+  </body>
+</html>

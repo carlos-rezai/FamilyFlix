@@ -1,5 +1,11 @@
 import type { SqliteDatabase } from '../../db';
-import type { Genre, Movie, Subtitle, WatchStatus } from '@/types';
+import type {
+  Genre,
+  Movie,
+  Subtitle,
+  VideoQuality,
+  WatchStatus,
+} from '@/types';
 
 // --- raw row shapes (SELECT results) -------------------------------------------
 
@@ -9,6 +15,7 @@ export interface MovieRow {
   title: string;
   year: number | null;
   runtime_minutes: number | null;
+  video_quality: VideoQuality | null;
   synopsis: string | null;
   director: string | null;
   cast: string | null;
@@ -74,6 +81,7 @@ export function mapRowToMovie(
     title: row.title,
     year: row.year,
     runtimeMinutes: row.runtime_minutes,
+    videoQuality: row.video_quality,
     synopsis: row.synopsis,
     director: row.director,
     cast: row.cast ? (JSON.parse(row.cast) as string[]) : [],

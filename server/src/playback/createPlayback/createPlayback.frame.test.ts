@@ -13,7 +13,7 @@
 // `missing` or `unreachable` video, `no-duration`, `timed-out` at the **Frame
 // budget** (20 s), `aborted`, and `failed` for a grab that ran and gave
 // nothing (an empty stdout, a spawn or stdout error) — killing the process
-// wherever one runs. It never rejects (`derivedRuntime`'s rule).
+// wherever one runs. It never rejects (`derivedVideoFacts`'s rule).
 //
 // The last block runs real ffmpeg — the Default component, else one on PATH —
 // over a multi-frame video it makes itself, and skips on a machine with none.
@@ -58,6 +58,7 @@ interface ScriptedComponent extends PlaybackComponent {
 const MATROSKA: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'ac3', language: null, title: null, isDefault: false },
   ],

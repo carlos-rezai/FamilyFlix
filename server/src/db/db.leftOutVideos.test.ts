@@ -38,6 +38,9 @@ function atVersion14(dbPath: string): void {
     db.prepare('DROP TABLE IF EXISTS left_out_videos').run();
     // Migration 16's column too, so the wind-back reads as a version-14 one.
     db.prepare('ALTER TABLE library_folders DROP COLUMN scanned_at').run();
+    // And migration 17's.
+    db.prepare('ALTER TABLE movies DROP COLUMN video_quality').run();
+    db.prepare('ALTER TABLE episodes DROP COLUMN video_quality').run();
     db.pragma('user_version = 14');
   } finally {
     db.close();

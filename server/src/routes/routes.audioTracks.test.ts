@@ -55,6 +55,7 @@ afterEach(async () => {
 const TWO_TRACK_MKV: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'aac', language: 'fre', title: null, isDefault: true },
     { codec: 'aac', language: 'eng', title: null, isDefault: false },
@@ -66,6 +67,7 @@ const TWO_TRACK_MKV: MediaProbe = {
 const TWO_TRACK_MP4: MediaProbe = {
   container: 'mp4',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'aac', language: 'eng', title: null, isDefault: true },
     { codec: 'ac3', language: 'fre', title: null, isDefault: false },

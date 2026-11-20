@@ -21,6 +21,7 @@ const movie: PosterCardMovie = {
   watched: false,
   progress: 0,
   favorite: false,
+  quality: null,
 };
 
 function renderCard(

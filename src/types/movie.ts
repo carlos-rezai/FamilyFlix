@@ -6,6 +6,7 @@
  */
 
 import type { DeleteFacts } from './libraryTitles';
+import type { VideoQuality } from './quality';
 import type { StoredVideo } from './series';
 
 /** Three-way watch state, derived from `watched` + `resumePositionSeconds`. */
@@ -32,6 +33,8 @@ export interface Movie extends StoredVideo {
   title: string;
   year: number | null;
   runtimeMinutes: number | null;
+  /** Its **Video quality**, measured from its picture; `null` until measured. */
+  videoQuality: VideoQuality | null;
   synopsis: string | null;
   director: string | null;
   cast: string[];

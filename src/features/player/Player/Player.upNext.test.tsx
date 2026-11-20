@@ -115,6 +115,7 @@ const FILM: Movie = {
   title: 'The Long Summer',
   year: 1998,
   runtimeMinutes: 44,
+  videoQuality: null,
   synopsis: null,
   director: null,
   cast: [],

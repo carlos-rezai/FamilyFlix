@@ -65,7 +65,7 @@ import type {
   RemoveRefusal,
 } from '../playback/componentSlot/componentSlot';
 import type { Playback } from '../playback/createPlayback/createPlayback';
-import { derivedRuntime } from '../playback/derivedRuntime/derivedRuntime';
+import { derivedVideoFacts } from '../playback/derivedVideoFacts/derivedVideoFacts';
 import { exportBody } from './exportBody/exportBody';
 import { isRatingValue, MAX_RATING } from './isRatingValue/isRatingValue';
 import {
@@ -1152,7 +1152,7 @@ export function createApiRouter(
 
     const episodes: NewEpisode[] = read.episodes.map((episode, index) => {
       const { video, tracks } = copied[index];
-      const runtimeMinutes = derivedRuntime(playback, video);
+      const { runtimeMinutes } = derivedVideoFacts(playback, video);
       const subtitles: NewSubtitle[] = [
         ...tracks,
         ...episode.subtitles.map((path, track) => ({
@@ -1357,10 +1357,10 @@ export function createApiRouter(
             : {}),
           episodes: read.episodes.map((episode) => {
             const runtimeMinutes = episode.freshVideo
-              ? derivedRuntime(playback, {
+              ? derivedVideoFacts(playback, {
                   videoPath: episode.video,
                   videoFolderId: null,
-                })
+                }).runtimeMinutes
               : undefined;
             return {
               ...(episode.id === undefined ? {} : { id: episode.id }),
@@ -1721,7 +1721,7 @@ export function createApiRouter(
       res.status(500).json({ error: 'Could not add the movie' });
       return;
     }
-    const runtimeMinutes = derivedRuntime(playback, video);
+    const { runtimeMinutes, videoQuality } = derivedVideoFacts(playback, video);
 
     try {
       const movie = storage.addMovie({
@@ -1734,6 +1734,7 @@ export function createApiRouter(
         ...(uploads.poster === undefined ? {} : { posterPath: uploads.poster }),
         ...(year === undefined ? {} : { year }),
         ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
+        ...(videoQuality === null ? {} : { videoQuality }),
         ...(director === undefined ? {} : { director }),
         ...(synopsis === undefined ? {} : { synopsis }),
         ...(rating === undefined ? {} : { rating }),
@@ -1938,7 +1939,7 @@ export function createApiRouter(
                 // A fresh video is a Stored path, so a linked one replaced
                 // stops being linked.
                 videoFolderId: null,
-                runtimeMinutes: derivedRuntime(playback, {
+                ...derivedVideoFacts(playback, {
                   videoPath,
                   videoFolderId: null,
                 }),

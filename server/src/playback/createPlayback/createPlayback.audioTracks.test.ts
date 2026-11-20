@@ -37,6 +37,7 @@ function audio(
 const TWO_TRACK_MP4: MediaProbe = {
   container: 'mp4',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [audio('aac', 'eng', true), audio('ac3', 'fre')],
   durationSeconds: 7320,
 };
@@ -45,6 +46,7 @@ const TWO_TRACK_MP4: MediaProbe = {
 const TWO_TRACK_MKV: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [audio('aac', 'fre', true), audio('aac', 'eng')],
   durationSeconds: 7320,
 };

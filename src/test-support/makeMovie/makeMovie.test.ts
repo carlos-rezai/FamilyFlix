@@ -14,6 +14,7 @@ const MOVIE_KEYS: Array<keyof Movie> = [
   'title',
   'year',
   'runtimeMinutes',
+  'videoQuality',
   'synopsis',
   'director',
   'cast',

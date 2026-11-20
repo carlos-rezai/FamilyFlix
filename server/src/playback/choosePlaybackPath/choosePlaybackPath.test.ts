@@ -47,6 +47,7 @@ function probeOf(partial: Partial<MediaProbe> = {}): MediaProbe {
   return {
     container: 'mp4',
     videoCodec: 'h264',
+    frameSize: { width: 1920, height: 1080 },
     audioStreams: [
       { codec: 'aac', language: null, title: null, isDefault: false },
     ],

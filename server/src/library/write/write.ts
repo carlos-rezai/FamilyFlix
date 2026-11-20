@@ -25,6 +25,7 @@ const PATCH_SCALARS: ReadonlyArray<{
   { key: 'tmdbId', column: 'tmdb_id' },
   { key: 'year', column: 'year' },
   { key: 'runtimeMinutes', column: 'runtime_minutes' },
+  { key: 'videoQuality', column: 'video_quality' },
   { key: 'synopsis', column: 'synopsis' },
   { key: 'director', column: 'director' },
   { key: 'cast', column: 'cast', toDb: (v) => (v ? JSON.stringify(v) : null) },
@@ -56,13 +57,13 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       id, tmdb_id, tmdb_score, title, year, runtime_minutes, synopsis,
       director, cast, rating, is_favorite, watched, resume_position_seconds,
       video_path, poster_path, backdrop_path, created_at, updated_at,
-      last_watched_at, media_folder, video_folder_id
+      last_watched_at, media_folder, video_folder_id, video_quality
     ) VALUES (
       @id, @tmdb_id, @tmdb_score, @title, @year, @runtime_minutes, @synopsis,
       @director, @cast, @rating, @is_favorite, @watched,
       @resume_position_seconds, @video_path, @poster_path, @backdrop_path,
       @created_at, @updated_at, @last_watched_at, @media_folder,
-      @video_folder_id
+      @video_folder_id, @video_quality
     )
   `);
   const selectGenreIdByName = db.prepare(
@@ -112,6 +113,7 @@ export function createWrite(db: SqliteDatabase, reader: MovieReader): Write {
       title: input.title,
       year: input.year ?? null,
       runtime_minutes: input.runtimeMinutes ?? null,
+      video_quality: input.videoQuality ?? null,
       synopsis: input.synopsis ?? null,
       director: input.director ?? null,
       cast: input.cast ? JSON.stringify(input.cast) : null,

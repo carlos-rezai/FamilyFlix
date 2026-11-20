@@ -26,6 +26,7 @@ export function makePosterCardMovie(
     watched: false,
     progress: 0,
     favorite: false,
+    quality: null,
     ...overrides,
   };
 }

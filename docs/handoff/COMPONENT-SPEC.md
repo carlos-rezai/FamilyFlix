@@ -215,6 +215,13 @@ progress), the player scrubber base, and the Import scan/import phases.
 Target: `primitives/StatusBadge/` · props: `kind` (`'watched'`), `size` (30). Round
 check badge. In-progress state is shown by `ProgressBar`, not a badge.
 
+### MetaTag: `prim.MetaTag.dc.html`
+
+Target: `primitives/MetaTag/` · props: `label` (string). A word in a hairline box: sans
+11px, weight 600, `.04em` spacing, line-height 1, `2px 6px` padding, a 1px `border`-token
+hairline, a 4px radius, `textDim`, no fill. Never a control, never focusable. Draws a
+title's **Video quality** on the Poster card.
+
 ### Toggle — `prim.Toggle.dc.html`
 
 Target: `primitives/Toggle/` · a switch atom. Props: `checked` (boolean),
@@ -352,18 +359,20 @@ tree-shaking and autocomplete.
 
 ### PosterCard — `mol.PosterCard.dc.html` ✅ wired (3 call sites)
 
-Target: `components/PosterCard/` · composes StarRating + StatusBadge + ProgressBar + a
-favorite toggle. The library's primary tile.
+Target: `components/PosterCard/` · composes StarRating + StatusBadge + ProgressBar +
+MetaTag + a favorite toggle. The library's primary tile.
 | Prop | Type | Notes |
 | --- | --- | --- |
-| `movie` | `{ title, g1, g2, rating, watched, progress, favorite, posterUrl }` | `g1/g2` = poster gradient stops; `posterUrl` (or `null`) a layer over them — none draws the **Default poster** |
+| `movie` | `{ title, g1, g2, rating, watched, progress, favorite, posterUrl, quality }` | `g1/g2` = poster gradient stops; `posterUrl` (or `null`) a layer over them — none draws the **Default poster**; `quality` (or `null`) the **Video quality** |
 | `onOpen` | () => void | navigate to detail |
 | `onToggleFav` | () => void | stops propagation internally |
 
 States: hover (lift −4px + deeper shadow + accent-line border, §2a), press (settles to −1px),
 focus-visible (offset outline on the card root), watched (badge), in-progress (bottom bar),
 favorite (filled heart; the heart button has its own scale hover/press), no poster (the
-**Default poster** with the title overlay; a poster url draws neither).
+**Default poster** with the title overlay; a poster url draws neither). The Star row is a
+flex row (`space-between`, centred): the stars left, a `MetaTag` with the `quality` right,
+none when it is `null`. The art and the accessible name are unchanged.
 
 ### Default poster
 

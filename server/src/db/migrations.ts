@@ -423,4 +423,15 @@ export const migrations: readonly Migration[] = [
       `);
     },
   },
+  {
+    // A video's **Video quality**: its rung of the Quality ladder, measured
+    // from its picture, `NULL` until measured. Nothing is backfilled.
+    version: 17,
+    up(db) {
+      db.exec(`
+        ALTER TABLE movies ADD COLUMN video_quality TEXT;
+        ALTER TABLE episodes ADD COLUMN video_quality TEXT;
+      `);
+    },
+  },
 ];

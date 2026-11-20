@@ -43,10 +43,10 @@ const EXPECTED_GENRES = [
   'Crime',
 ];
 
-// The version a fresh database migrates to: migration 16, a folder's
-// `scanned_at` (issue #493). Every "at the latest version" assertion reads
+// The version a fresh database migrates to: migration 17, a video's
+// `video_quality` (issue #664). Every "at the latest version" assertion reads
 // it, so the next migration moves one number rather than ten.
-const LATEST_VERSION = 16;
+const LATEST_VERSION = 17;
 
 // What migration #5 adds, by table: the three columns a Sync writes on a movie
 // and a series, and the episode's still. Additive, nullable, nothing seeded.
@@ -298,11 +298,29 @@ function dropMigration15(db: TestDb): void {
  * it exists, so every wind-back reads the same before #16 is written as after.
  */
 function dropMigration16(db: TestDb): void {
+  // Every wind-back to before #16 is also one to before #17.
+  dropMigration17(db);
   if (
     tableNames(db).includes('library_folders') &&
     columnNames(db, 'library_folders').includes('scanned_at')
   ) {
     db.prepare('ALTER TABLE library_folders DROP COLUMN scanned_at').run();
+  }
+}
+
+/**
+ * What migration #17 added, dropped: `video_quality` on movies and episodes,
+ * only where it exists, so every wind-back reads the same before #17 is
+ * written as after.
+ */
+function dropMigration17(db: TestDb): void {
+  for (const table of ['movies', 'episodes']) {
+    if (
+      tableNames(db).includes(table) &&
+      columnNames(db, table).includes('video_quality')
+    ) {
+      db.prepare(`ALTER TABLE ${table} DROP COLUMN video_quality`).run();
+    }
   }
 }
 
@@ -430,6 +448,8 @@ function windBackToV4(path: string): void {
  * reads the same before #6 is written as after.
  */
 function dropMigration6(db: TestDb): void {
+  // Every wind-back to before #6 is also one to before #17.
+  dropMigration17(db);
   for (const table of ['movies', 'series']) {
     if (
       tableNames(db).includes(table) &&
@@ -466,6 +486,7 @@ function v4Columns(db: TestDb, table: keyof typeof MIGRATION_5_COLUMNS) {
     'media_folder',
     'video_folder_id',
     'still_source',
+    'video_quality',
   ];
   return columnNames(db, table).filter((column) => !added.includes(column));
 }

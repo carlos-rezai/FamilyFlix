@@ -61,6 +61,9 @@ function atVersion15(dbPath: string): void {
     if (columnsOf(db).some((column) => column.name === 'scanned_at')) {
       db.prepare('ALTER TABLE library_folders DROP COLUMN scanned_at').run();
     }
+    // Migration 17's columns too, so the wind-back reads as a version-15 one.
+    db.prepare('ALTER TABLE movies DROP COLUMN video_quality').run();
+    db.prepare('ALTER TABLE episodes DROP COLUMN video_quality').run();
     db.pragma('user_version = 15');
   } finally {
     db.close();
@@ -76,10 +79,10 @@ function scannedAt(db: SqliteDatabase): Record<string, string | null> {
 }
 
 describe('db: migration 16, a folder’s scanned_at', () => {
-  it('lands a fresh database at version 16 with a nullable TEXT scanned_at', () => {
+  it('lands a fresh database at version 17 with a nullable TEXT scanned_at', () => {
     const db = track(openDatabase(':memory:'));
 
-    expect(Number(db.pragma('user_version', { simple: true }))).toBe(16);
+    expect(Number(db.pragma('user_version', { simple: true }))).toBe(17);
     expect(columnsOf(db)).toContainEqual(
       expect.objectContaining({ name: 'scanned_at', type: 'TEXT', notnull: 0 })
     );
@@ -91,7 +94,7 @@ describe('db: migration 16, a folder’s scanned_at', () => {
 
     const db = track(openDatabase(dbPath));
 
-    expect(Number(db.pragma('user_version', { simple: true }))).toBe(16);
+    expect(Number(db.pragma('user_version', { simple: true }))).toBe(17);
     expect(scannedAt(db)).toEqual({
       films: FILMS_ADDED,
       shows: SHOWS_ADDED,

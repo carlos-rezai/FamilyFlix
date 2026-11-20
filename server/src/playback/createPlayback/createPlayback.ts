@@ -6,6 +6,7 @@ import type {
   PlaybackCapabilities,
   PlaybackRead,
   StoredVideo,
+  VideoQuality,
 } from '@/types';
 
 import { capabilities } from '../capabilities/capabilities';
@@ -31,6 +32,7 @@ import { linkedVideoPath } from '../linkedVideoPath/linkedVideoPath';
 import { mediaFilePath } from '../mediaFilePath/mediaFilePath';
 import { parseSubtitle } from '../parseSubtitle/parseSubtitle';
 import type { MediaProbe } from '../probe/probe';
+import { qualityOf } from '../qualityOf/qualityOf';
 
 /**
  * The file behind a {@link StoredVideo}, or why there is none: `missing` for a
@@ -108,28 +110,20 @@ export interface Playback {
   read(file: string): PlaybackRead;
 
   /**
-   * How long the film in an already-resolved file runs, in seconds, or `null`
-   * when nothing on this machine can say — the probe's answer when there is a
-   * component to ask, and the container's own `moov`/`mvhd` when there is not.
+   * How long the film in an already-resolved file runs, in seconds, and its
+   * rung of the **Quality ladder**, from one probe: the duration falls back to
+   * the container's own `moov`/`mvhd` when there is no component or the probe
+   * cannot say; the quality has no fallback.
    *
    * It is a method of its own rather than {@link read}'s `durationSeconds`
-   * because the two questions differ on exactly the films this one exists for.
-   * `read` answers a **player**, so a film it cannot decode is `cannot-play`
-   * with a nought on it — but a film this build cannot decode still has a
-   * length, and the **Runtime label** is allowed to know it. For the same
-   * reason a probe that came back saying nothing about the length has not
-   * exhausted the ways of asking here: the header is still there to read.
+   * because a film this build cannot decode is `cannot-play` with a nought on
+   * it, yet it still has a length and a picture size the catalogue may know.
    *
-   * **`null` rather than nought when neither can answer.** Nought is a length,
-   * and every reader of `runtimeMinutes` already draws a dash from `null` —
-   * which is the difference between the catalogue not knowing how long a film
-   * is and it claiming the film is instantaneous.
-   *
-   * A component that throws rather than answers is a component that answered
-   * nothing, and costs the caller only the probe: an FFmpeg that died
-   * mid-answer must not take away the length an MP4 was carrying all along.
+   * **`null` rather than nought when nothing can answer.** A component that
+   * throws rather than answers is a component that answered nothing, and costs
+   * the caller only the probe: the header is still there to read.
    */
-  duration(file: string): number | null;
+  measure(file: string): VideoMeasure;
 
   /**
    * What to do with an already-resolved file's bytes — the same decision
@@ -212,7 +206,7 @@ export interface Playback {
 
   /**
    * One picture out of a row's video, as a JPEG stream: the file through
-   * {@link videoFile}, its length through {@link duration}, and the component
+   * {@link videoFile}, its length through {@link measure}, and the component
    * the slot holds at the call spawned over `frameArgs` at the **Frame
    * point**. The bytes are collected before answering, so a stream handed
    * back is a whole picture.
@@ -220,9 +214,19 @@ export interface Playback {
    * `{ kind: 'none', reason }` in every case with no picture — no component,
    * a `missing` or `unreachable` video, no duration, the **Frame budget**
    * spent, the signal aborted, or a grab that ran and gave nothing — killing
-   * the process wherever one runs. It never rejects (`derivedRuntime`'s rule).
+   * the process wherever one runs. It never rejects (`derivedVideoFacts`'s rule).
    */
   frame(video: StoredVideo, signal: AbortSignal): Promise<FrameOutcome>;
+}
+
+/**
+ * What {@link Playback.measure} learns about a film from one probe: how long
+ * it runs, and its rung of the **Quality ladder**, each `null` when nothing
+ * on this machine can say.
+ */
+export interface VideoMeasure {
+  durationSeconds: number | null;
+  quality: VideoQuality | null;
 }
 
 /** Why a {@link Playback.frame} answered no picture. */
@@ -384,28 +388,31 @@ export function createPlayback(
     probe?.durationSeconds ?? mediaDuration(file) ?? 0;
 
   /**
-   * How long the film in a file runs, or `null`: `component`'s probe, guarded
-   * around the probe alone so a component that died mid-answer still leaves
-   * the header to be read, then the container's own `moov`/`mvhd`.
+   * How long the film in a file runs and its rung, or `null`s: `component`'s
+   * probe, guarded around the probe alone so a component that died mid-answer
+   * still leaves the header to be read, then the container's own `moov`/`mvhd`
+   * for the duration. The quality has no header to fall back on.
    */
-  const durationOf = (
+  const measureOf = (
     file: string,
     component: PlaybackComponent | null
-  ): number | null => {
-    let probed: number | null = null;
+  ): VideoMeasure => {
+    let probed: MediaProbe | null = null;
     try {
-      probed = component?.probe(file)?.durationSeconds ?? null;
+      probed = component?.probe(file) ?? null;
     } catch {
       probed = null;
     }
 
-    if (probed !== null && probed > 0) {
-      return probed;
+    const quality = qualityOf(probed?.frameSize ?? null);
+    const seconds = probed?.durationSeconds ?? null;
+    if (seconds !== null && seconds > 0) {
+      return { durationSeconds: seconds, quality };
     }
 
     // `mediaDuration` already answers `null` for a file that will not say,
     // which is every container but this one and this one truncated.
-    return mediaDuration(file);
+    return { durationSeconds: mediaDuration(file), quality };
   };
 
   /**
@@ -452,7 +459,7 @@ export function createPlayback(
       );
       return { path: decision.path, durationSeconds, audioTracks: tracks };
     },
-    duration: (file) => durationOf(file, slot.current()),
+    measure: (file) => measureOf(file, slot.current()),
     stream: (file, offsetSeconds = 0, audioTrack = 0) => {
       const { component, probe, decision } = decide(
         file,
@@ -509,7 +516,7 @@ export function createPlayback(
         if (found.kind !== 'file') {
           return { kind: 'none', reason: found.kind };
         }
-        const seconds = durationOf(found.file, component);
+        const seconds = measureOf(found.file, component).durationSeconds;
         if (seconds === null || seconds <= 0) {
           return { kind: 'none', reason: 'no-duration' };
         }

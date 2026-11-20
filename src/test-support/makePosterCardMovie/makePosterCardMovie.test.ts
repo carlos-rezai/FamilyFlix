@@ -15,6 +15,7 @@ const POSTER_CARD_KEYS: Array<keyof PosterCardMovie> = [
   'watched',
   'progress',
   'favorite',
+  'quality',
 ];
 
 describe('makePosterCardMovie — the default view model', () => {

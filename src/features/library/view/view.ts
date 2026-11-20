@@ -39,5 +39,6 @@ export function view(movie: Movie, tmdbRatings: boolean): PosterCardMovie {
       movie.runtimeMinutes
     ),
     favorite: movie.isFavorite,
+    quality: movie.videoQuality,
   };
 }

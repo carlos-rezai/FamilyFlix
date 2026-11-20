@@ -30,5 +30,6 @@ export function seriesCardView(
     watched: series.watched,
     progress: 0,
     favorite: series.isFavorite,
+    quality: null,
   };
 }

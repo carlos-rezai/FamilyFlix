@@ -3016,6 +3016,7 @@ const MKV_BYTES = Buffer.from(
 const REMUXABLE: MediaProbe = {
   container: 'matroska',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'aac', language: null, title: null, isDefault: false },
   ],
@@ -3026,6 +3027,7 @@ const REMUXABLE: MediaProbe = {
 const TRANSCODABLE: MediaProbe = {
   container: 'matroska',
   videoCodec: 'hevc',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'ac3', language: null, title: null, isDefault: false },
   ],
@@ -3036,6 +3038,7 @@ const TRANSCODABLE: MediaProbe = {
 const NATIVE: MediaProbe = {
   container: 'mp4',
   videoCodec: 'h264',
+  frameSize: { width: 1920, height: 1080 },
   audioStreams: [
     { codec: 'aac', language: null, title: null, isDefault: false },
   ],

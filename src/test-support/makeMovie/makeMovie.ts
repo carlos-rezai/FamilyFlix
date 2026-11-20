@@ -20,6 +20,7 @@ export function makeMovie(overrides: Partial<Movie> = {}): Movie {
     title: 'Comet Season',
     year: 2018,
     runtimeMinutes: 90,
+    videoQuality: null,
     synopsis: null,
     director: null,
     cast: [],

@@ -102,6 +102,7 @@ describe('probe — the streams', () => {
         { codec: 'aac', language: null, title: null, isDefault: false },
       ],
       durationSeconds: 6832.5,
+      frameSize: null,
     });
   });
 
@@ -146,6 +147,7 @@ describe('probe — the streams', () => {
       videoCodec: null,
       audioStreams: [],
       durationSeconds: 0,
+      frameSize: null,
     });
   });
 

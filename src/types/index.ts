@@ -53,6 +53,9 @@ export {
   ENRICH_SCOPES,
 } from './enrichment';
 
+export { VIDEO_QUALITIES } from './quality';
+export type { VideoQuality } from './quality';
+
 export type { BusyPhase } from './busy';
 export type { WatchStatus, Genre, Subtitle, Movie } from './movie';
 export type {

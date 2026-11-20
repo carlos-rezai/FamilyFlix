@@ -34,7 +34,7 @@ import {
 } from '../../media/walkLibraryFolder/walkLibraryFolder';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
-import { derivedRuntime } from '../../playback/derivedRuntime/derivedRuntime';
+import { derivedVideoFacts } from '../../playback/derivedVideoFacts/derivedVideoFacts';
 import { spellLinkedVideo } from '../../playback/linkedVideoPath/linkedVideoPath';
 import {
   numberShow,
@@ -1436,7 +1436,8 @@ export function createImporter({
       // goes, the row is never written, and nothing half-done is left.
       signal.throwIfAborted();
       // The probe's runtime wins; the sheet's stands in when it answers none.
-      const runtime = derivedRuntime(playback, video) ?? row.runtime;
+      const facts = derivedVideoFacts(playback, video);
+      const runtime = facts.runtimeMinutes ?? row.runtime;
       const genres = knownGenres(row.genres, genreNames, current);
 
       const movie: NewMovie = {
@@ -1448,6 +1449,9 @@ export function createImporter({
         ...(row.tmdbId === null ? {} : { tmdbId: row.tmdbId }),
         ...(row.tmdbScore === null ? {} : { tmdbScore: row.tmdbScore }),
         ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+        ...(facts.videoQuality === null
+          ? {}
+          : { videoQuality: facts.videoQuality }),
         ...(row.director === null ? {} : { director: row.director }),
         ...(row.synopsis === null ? {} : { synopsis: row.synopsis }),
         ...(row.rating === null ? {} : { rating: row.rating }),
@@ -1850,7 +1854,9 @@ export function createImporter({
         );
         // The probe's runtime wins; the sheet's stands in when it answers none.
         const runtime =
-          derivedRuntime(playback, video) ?? sheetEpisode?.runtime ?? null;
+          derivedVideoFacts(playback, video).runtimeMinutes ??
+          sheetEpisode?.runtime ??
+          null;
         const title =
           sheetEpisode !== undefined && sheetEpisode.title !== ''
             ? sheetEpisode.title
@@ -2755,10 +2761,15 @@ export function createImporter({
         };
       }
       signal.throwIfAborted();
-      const runtime = derivedRuntime(playback, video);
+      const facts = derivedVideoFacts(playback, video);
       storage.updateMovie(movie.id, {
         ...video,
-        ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+        ...(facts.runtimeMinutes === null
+          ? {}
+          : { runtimeMinutes: facts.runtimeMinutes }),
+        ...(facts.videoQuality === null
+          ? {}
+          : { videoQuality: facts.videoQuality }),
         ...(reserved === null ? {} : { mediaFolder: basename(reserved) }),
       });
       logUpdated(current, movie, ['video']);
@@ -3635,7 +3646,8 @@ export function createImporter({
             language: track.language,
           });
         }
-        const runtime = derivedRuntime(playback, video);
+        const facts = derivedVideoFacts(playback, video);
+        const runtime = facts.runtimeMinutes;
 
         // The form's fields, not the sheet's: the row only prefilled them.
         // What the sheet alone knows — whether the family has seen it — is
@@ -3647,6 +3659,9 @@ export function createImporter({
           ...(source.row === null ? {} : { watched: source.row.watched }),
           ...(form.year === null ? {} : { year: form.year }),
           ...(runtime === null ? {} : { runtimeMinutes: runtime }),
+          ...(facts.videoQuality === null
+            ? {}
+            : { videoQuality: facts.videoQuality }),
           ...(form.director === null ? {} : { director: form.director }),
           ...(form.synopsis === null ? {} : { synopsis: form.synopsis }),
           ...(form.rating === null ? {} : { rating: form.rating }),
@@ -3761,7 +3776,7 @@ export function createImporter({
               language: track.language,
             });
           }
-          const runtime = derivedRuntime(playback, video);
+          const runtime = derivedVideoFacts(playback, video).runtimeMinutes;
           const found = sourceFile(episode.video);
           episodes.push({
             season: episode.season,

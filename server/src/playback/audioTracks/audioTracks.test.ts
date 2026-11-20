@@ -31,6 +31,7 @@ function probeWith(audioStreams: ProbedAudio[]): MediaProbe {
   return {
     container: 'matroska',
     videoCodec: 'h264',
+    frameSize: { width: 1920, height: 1080 },
     audioStreams,
     durationSeconds: 5391.2,
   };

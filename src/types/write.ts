@@ -3,6 +3,8 @@
  * a `Movie`, as distinct from the assembled record that reads hand back.
  */
 
+import type { VideoQuality } from './quality';
+
 /** A subtitle track as supplied when adding a movie (ids/positions are assigned). */
 export interface NewSubtitle {
   path: string;
@@ -23,6 +25,8 @@ export interface NewMovie {
   tmdbScore?: number;
   year?: number | null;
   runtimeMinutes?: number;
+  /** Its **Video quality**, measured from the video; none by default. */
+  videoQuality?: VideoQuality;
   synopsis?: string;
   director?: string;
   cast?: string[];
@@ -68,6 +72,7 @@ export interface MoviePatch {
   tmdbId?: number | null;
   year?: number | null;
   runtimeMinutes?: number | null;
+  videoQuality?: VideoQuality | null;
   synopsis?: string | null;
   director?: string | null;
   cast?: string[];

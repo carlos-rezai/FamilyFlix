@@ -5,6 +5,7 @@ export { type IconButtonVariant } from './IconButton/IconButton.styles';
 export { Chip, type ChipProps } from './Chip/Chip';
 export { StarRating, type StarRatingProps } from './StarRating/StarRating';
 export { StatusBadge, type StatusBadgeProps } from './StatusBadge/StatusBadge';
+export { MetaTag, type MetaTagProps } from './MetaTag/MetaTag';
 export { ProgressBar, type ProgressBarProps } from './ProgressBar/ProgressBar';
 export { Skeleton, type SkeletonProps } from './Skeleton/Skeleton';
 export { Artwork, type ArtworkProps } from './Artwork/Artwork';

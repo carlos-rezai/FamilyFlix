@@ -4,6 +4,7 @@ import {
   Artwork,
   StarRating,
   StatusBadge,
+  MetaTag,
   ProgressBar,
   HeartIcon,
   HeartOutlineIcon,
@@ -46,7 +47,8 @@ const FAVORITE_SIZE = 34;
 /**
  * The library's primary tile — a 2:3 poster (real art, or the **Default
  * poster** with the title overlaid), a favorite toggle, a watched
- * badge or in-progress bar, and the title + star rating below. Presentational:
+ * badge or in-progress bar, and the title + star rating below, with the
+ * **Video quality** tag at the Star row's end when there is one. Presentational:
  * it renders a `PosterCardMovie` and emits `onOpen` / `onToggleFavorite`.
  *
  * Unlike `ContinueCard`, this one cannot simply become a `<button>`: the
@@ -148,6 +150,7 @@ export function PosterCard({
             showValue
             {...tmdbMarks(movie.ratingSource)}
           />
+          {movie.quality === null ? null : <MetaTag label={movie.quality} />}
         </StarRow>
       </MetaWrap>
     </Root>

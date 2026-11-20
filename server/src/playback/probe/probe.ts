@@ -33,6 +33,14 @@ export interface MediaProbe {
   audioStreams: ProbedAudio[];
   /** How long the film runs, in seconds, or `0` when the file will not say. */
   durationSeconds: number;
+  /** The picture's size, or `null` with no picture stream or no size. */
+  frameSize: FrameSize | null;
+}
+
+/** A picture's width and height, in pixels. */
+export interface FrameSize {
+  width: number;
+  height: number;
 }
 
 /**
@@ -103,11 +111,24 @@ function flagged(stream: Record<string, unknown>, flag: string): boolean {
  * The film's own picture codec: the first video stream that is not an
  * attached cover picture — the stream `-map 0:V:0?` sends.
  */
-function videoCodecOf(streams: unknown[]): string | null {
-  const picture = streamsOf(streams, 'video').find(
+function pictureOf(streams: unknown[]): Record<string, unknown> | undefined {
+  return streamsOf(streams, 'video').find(
     (stream) => !flagged(stream, 'attached_pic')
   );
+}
+
+function videoCodecOf(streams: unknown[]): string | null {
+  const picture = pictureOf(streams);
   return picture === undefined ? null : asString(picture.codec_name);
+}
+
+/** The film's own picture's size, read off the same stream as its codec. */
+function frameSizeOf(streams: unknown[]): FrameSize | null {
+  const picture = pictureOf(streams);
+  const { width, height } = picture ?? {};
+  return typeof width === 'number' && typeof height === 'number'
+    ? { width, height }
+    : null;
 }
 
 /** A tag's value, trimmed, or `null` when absent or blank. */
@@ -214,5 +235,6 @@ export function probe(
     videoCodec: videoCodecOf(streams),
     audioStreams: audioStreamsOf(streams),
     durationSeconds: Number.isFinite(duration) && duration > 0 ? duration : 0,
+    frameSize: frameSizeOf(streams),
   };
 }

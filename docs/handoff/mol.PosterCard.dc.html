@@ -90,6 +90,13 @@
               show-value="{{ true }}"
               hint-size="120px,18px"
             ></dc-import>
+            <sc-if value="{{ hasQuality }}" hint-placeholder-val="{{ true }}"
+              ><dc-import
+                name="prim.MetaTag"
+                label="{{ quality }}"
+                hint-size="44px,17px"
+              ></dc-import
+            ></sc-if>
           </div>
         </div>
       </div>
@@ -97,7 +104,7 @@
     <script
       type="text/x-dc"
       data-dc-script
-      data-props='{"$preview":{"width":210,"height":360},"movie":{"editor":null,"default":{"title":"Comet Season","g1":"#1f2a3a","g2":"#3a6a8a","rating":80,"watched":false,"progress":64,"favorite":false,"posterUrl":null},"tsType":"PosterCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"},"onToggleFav":{"editor":null,"tsType":"() =&gt; void"}}'
+      data-props='{"$preview":{"width":210,"height":360},"movie":{"editor":null,"default":{"title":"Comet Season","g1":"#1f2a3a","g2":"#3a6a8a","rating":80,"watched":false,"progress":64,"favorite":false,"posterUrl":null,"quality":"1080p"},"tsType":"PosterCardMovie"},"onOpen":{"editor":null,"tsType":"() =&gt; void"},"onToggleFav":{"editor":null,"tsType":"() =&gt; void"}}'
     >
       class Component extends DCLogic {
         renderVals(){
@@ -106,6 +113,8 @@
           const watched=m.watched??false;
           const progress=Math.max(0,Math.min(100,m.progress??0));
           const inProgress=!watched && progress>0;
+          // The Video quality tag: at the Star row's end, none when null.
+          const quality=m.quality??null;
           // The Default poster: no posterUrl draws the gradient with the
           // Wordmark centred on both axes, at 11% of the tile's shorter side
           // (11cqmin — about 23px here), 90% opaque, under the title
@@ -118,6 +127,7 @@
             onFav:(e)=>{ if(e&&e.stopPropagation)e.stopPropagation(); this.props.onToggleFav&&this.props.onToggleFav(); },
             title:m.title??'Untitled', rating:m.rating??0,
             favorite:fav, notFavorite:!fav, watched, inProgress, progress, noPoster:!posterUrl,
+            quality:quality??'', hasQuality:quality!==null,
             rootStyle:{width:'100%',cursor:'pointer'},
             posterStyle:{position:'relative',width:'100%',aspectRatio:'2 / 3',borderRadius:'var(--poster-radius)',overflow:'hidden',border:'1px solid var(--color-border-soft)',boxShadow:'0 6px 20px rgba(0,0,0,.35)',transition:'transform var(--dur-base) var(--ease-out), box-shadow var(--dur-base) var(--ease-out), border-color var(--dur-base) var(--ease-out)'},
             posterHover:{transform:'translateY(-4px)',boxShadow:'0 14px 34px rgba(0,0,0,.5)',borderColor:'var(--color-accent-line)'},
@@ -133,7 +143,7 @@
             progressWrap:{position:'absolute',left:0,right:0,bottom:0},
             metaWrap:{marginTop:'10px'},
             titleBelow:{fontFamily:'var(--font-sans)',fontSize:'15px',fontWeight:500,color:'var(--color-text)',lineHeight:1.3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'},
-            starRow:{marginTop:'5px'},
+            starRow:{marginTop:'5px',display:'flex',justifyContent:'space-between',alignItems:'center'},
           };
         }
       }
