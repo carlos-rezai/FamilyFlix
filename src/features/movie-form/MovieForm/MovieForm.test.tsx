@@ -4871,3 +4871,45 @@ describe('MovieForm — no TMDB placeholder on Your rating', () => {
     expect(ratingLabel()).not.toContain('TMDB');
   });
 });
+
+// --- 70 — Video quality, Phase 1 (issue #664): the form offers no quality ------
+//
+// A film's rung of the **Quality ladder** is measured off its video, never
+// typed: the form draws no field for it, on an add or on an edit of a film
+// whose quality is already known.
+
+describe('MovieForm — no quality field', () => {
+  const qualityControls = () =>
+    [
+      ...screen.queryAllByRole('textbox'),
+      ...screen.queryAllByRole('combobox'),
+      ...screen.queryAllByRole('spinbutton'),
+      ...screen.queryAllByRole('radio'),
+      ...screen.queryAllByRole('button'),
+    ].filter((control) =>
+      /quality|resolution/i.test(
+        `${control.getAttribute('aria-label') ?? ''} ${control.textContent ?? ''} ${
+          (control as HTMLInputElement).labels?.[0]?.textContent ?? ''
+        }`
+      )
+    );
+
+  it('draws no quality field on an add', async () => {
+    await renderForm();
+
+    expect(qualityControls()).toHaveLength(0);
+    expect(screen.queryByText(/quality|resolution/i)).toBeNull();
+  });
+
+  it('draws no quality field, and no rung, on an edit of a measured film', async () => {
+    answerMovie = () =>
+      Promise.resolve(okResponse({ ...STORED, videoQuality: '1080p' }));
+
+    await renderEdit();
+
+    expect(titleField().value).toBe('The Lantern Keeper');
+    expect(qualityControls()).toHaveLength(0);
+    expect(screen.queryByText(/quality|resolution/i)).toBeNull();
+    expect(screen.queryByText('1080p')).toBeNull();
+  });
+});
