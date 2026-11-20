@@ -1,8 +1,15 @@
-import { useCallback, useMemo } from 'react';
+import { useCallback, useContext, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import { DEFAULT_MOVIE_SORT, type LibraryQuery, type MovieSort } from '@/types';
+import {
+  DEFAULT_MOVIE_SORT,
+  type LibraryQuery,
+  type MovieSort,
+  type VideoQuality,
+} from '@/types';
 import { parseLibraryQuery } from '@/utils';
+
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 
@@ -17,6 +24,8 @@ export interface UseLibraryQueryResult {
   setGenre: (value: string) => void;
   /** Write the minimum rating; nought ("All ratings") takes `rating` back off. */
   setRating: (value: number) => void;
+  /** Write the minimum quality; none ("All qualities") takes `quality` back off. */
+  setQuality: (value: VideoQuality | undefined) => void;
 }
 
 /**
@@ -37,7 +46,16 @@ export interface UseLibraryQueryResult {
 export function useLibraryQuery(): UseLibraryQueryResult {
   const [searchParams] = useSearchParams();
 
-  const query = useMemo(() => parseLibraryQuery(searchParams), [searchParams]);
+  // `?quality=` reads only while _Show video quality_ is on, and the URL is
+  // never rewritten for it, so turning the toggle back on restores the filter.
+  const qualityTags =
+    useContext(DisplayPreferenceContext)?.qualityTags === true;
+  const query = useMemo(() => {
+    const { minQuality, ...rest } = parseLibraryQuery(searchParams);
+    return qualityTags && minQuality !== undefined
+      ? { ...rest, minQuality }
+      : rest;
+  }, [searchParams, qualityTags]);
 
   const setParam = useQueryParamWriter();
 
@@ -63,5 +81,11 @@ export function useLibraryQuery(): UseLibraryQueryResult {
     [setParam]
   );
 
-  return { query, setSearch, setSort, setGenre, setRating };
+  const setQuality = useCallback(
+    (value: VideoQuality | undefined) =>
+      setParam('quality', value?.toLowerCase() ?? '', ''),
+    [setParam]
+  );
+
+  return { query, setSearch, setSort, setGenre, setRating, setQuality };
 }

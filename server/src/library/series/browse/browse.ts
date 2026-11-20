@@ -1,6 +1,7 @@
 import type { SqliteDatabase } from '../../../db';
 import {
   DEFAULT_MOVIE_SORT,
+  VIDEO_QUALITIES,
   type EpisodeContinueEntry,
   type GenreCount,
   type GenreListPayload,
@@ -14,6 +15,7 @@ import {
 import type { EpisodeRow, SeriesReader, SeriesRow } from '../read/read';
 import { highestRatedSql, shownRatingSql } from '../../browse/browse';
 import { HOME_ROW_LIMIT } from '../../home/home';
+import { qualityRank, seriesQuality } from '../../qualityRank/qualityRank';
 
 /** The Series tab's Continue Watching row holds at most this many entries. */
 const CONTINUE_LIMIT = 15;
@@ -82,6 +84,11 @@ function seriesWhere(
   if (query.minRating !== undefined) {
     where.push(`${shownRatingSql('s', tmdbRatings)} >= ?`);
     params.push(query.minRating);
+  }
+  if (query.minQuality !== undefined) {
+    // Ranked on the **Series quality**, so a stray 4K episode lifts nothing.
+    where.push(`${qualityRank(seriesQuality('s.id'))} <= ?`);
+    params.push(VIDEO_QUALITIES.indexOf(query.minQuality));
   }
   return {
     sql: where.length > 0 ? `WHERE ${where.join(' AND ')}` : '',

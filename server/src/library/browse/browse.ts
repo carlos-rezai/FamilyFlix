@@ -1,6 +1,14 @@
 import type { SqliteDatabase } from '../../db';
-import type { Genre, GenreCount, ListSort, Movie, MovieQuery } from '@/types';
+import {
+  VIDEO_QUALITIES,
+  type Genre,
+  type GenreCount,
+  type ListSort,
+  type Movie,
+  type MovieQuery,
+} from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
+import { qualityRank } from '../qualityRank/qualityRank';
 
 /**
  * "Started but not finished" — the rule the Continue Watching row is defined by,
@@ -116,6 +124,11 @@ function buildListQuery(
   if (query.minRating !== undefined) {
     where.push(`${shownRating} >= ?`);
     whereParams.push(query.minRating);
+  }
+  if (query.minQuality !== undefined) {
+    // An unmeasured film ranks `NULL`, so no rung keeps it.
+    where.push(`${qualityRank('m.video_quality')} <= ?`);
+    whereParams.push(VIDEO_QUALITIES.indexOf(query.minQuality));
   }
   if (query.search !== undefined) {
     // Title OR synopsis OR genre name, so a half-remembered plot fragment or a

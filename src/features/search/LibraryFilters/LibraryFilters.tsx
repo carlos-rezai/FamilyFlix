@@ -1,6 +1,10 @@
+import { useContext } from 'react';
+
 import { FilterDropdown } from '@/components';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 
 import { ALL_GENRES, genreOptions } from '../genreOptions/genreOptions';
+import { qualityLabel, qualityOptions } from '../qualityOptions/qualityOptions';
 import { ratingLabel, ratingOptions } from '../ratingOptions/ratingOptions';
 import { sortLabel, sortOptions } from '../sortOptions/sortOptions';
 import { useGenreList } from '../useGenreList/useGenreList';
@@ -32,9 +36,15 @@ import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
  * No pill's vocabulary lives here. Each one is a pure builder from the domain
  * data and the current selection to `FilterOption[]`, in its own folder with
  * its own test, and this component is what puts the three side by side.
+ *
+ * The Quality pill sits between Rating and Sort, and is drawn only while
+ * _Show video quality_ has landed on: with the toggle off there is nothing on
+ * a card for it to filter by.
  */
 export function LibraryFilters() {
-  const { query, setSort, setGenre, setRating } = useLibraryQuery();
+  const { query, setSort, setGenre, setRating, setQuality } = useLibraryQuery();
+  const qualityTags =
+    useContext(DisplayPreferenceContext)?.qualityTags === true;
   const genres = useGenreList();
 
   return (
@@ -51,6 +61,13 @@ export function LibraryFilters() {
         value={ratingLabel(query.minRating)}
         options={ratingOptions(query.minRating, setRating)}
       />
+      {qualityTags && (
+        <FilterDropdown
+          label="Quality"
+          value={qualityLabel(query.minQuality)}
+          options={qualityOptions(query.minQuality, setQuality)}
+        />
+      )}
       <FilterDropdown
         label="Sort"
         value={sortLabel(query.sort)}

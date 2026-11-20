@@ -42,5 +42,10 @@ export function toLibraryQueryParams(query: LibraryQuery): URLSearchParams {
     params.set('rating', String(query.minRating));
   }
 
+  // "All qualities" is the absence of the filter; a rung is written lowercased.
+  if (query.minQuality !== undefined) {
+    params.set('quality', query.minQuality.toLowerCase());
+  }
+
   return params;
 }

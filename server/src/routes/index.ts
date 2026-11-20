@@ -104,6 +104,7 @@ import {
   LIBRARY_TABS,
   MOVIE_SORTS,
   ROW_VIEWS,
+  VIDEO_QUALITIES,
   type DeleteFacts,
   type EpisodeRead,
   type ExportField,
@@ -128,6 +129,7 @@ import {
   type StorageReport,
   type StoredVideo,
   type Subtitle,
+  type VideoQuality,
 } from '@/types';
 
 /** The two kinds of thing the player plays — each a path segment, `/<kind>s`. */
@@ -511,7 +513,15 @@ function parseMinRating(value: string): number | null {
 }
 
 /**
- * The **Library query** a request carries — `q`, `genre`, `rating`, `sort` —
+ * The rung of the **Quality ladder** a `?quality=` names, spelled lowercased
+ * (`4k`, `1080p`), or `null` for a value off the ladder.
+ */
+function parseMinQuality(value: string): VideoQuality | null {
+  return VIDEO_QUALITIES.find((rung) => rung.toLowerCase() === value) ?? null;
+}
+
+/**
+ * The **Library query** a request carries — `q`, `genre`, `rating`, `quality`, `sort` —
  * read once for every screen that takes it, `/home` and `/series` alike; or
  * `null` once a 400 has been answered for an unknown sort or an off-scale
  * minimum. An empty value is no parameter at all, and a minimum of `0` is no
@@ -547,6 +557,16 @@ function libraryQueryOr400(req: Request, res: Response): LibraryQuery | null {
     if (minimum > 0) {
       query.minRating = minimum;
     }
+  }
+
+  const qualityParam = queryString(req.query.quality);
+  if (qualityParam !== undefined && qualityParam !== '') {
+    const minimum = parseMinQuality(qualityParam);
+    if (minimum === null) {
+      res.status(400).json({ error: `Invalid quality: ${qualityParam}` });
+      return null;
+    }
+    query.minQuality = minimum;
   }
 
   return query;

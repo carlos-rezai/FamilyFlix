@@ -1,4 +1,8 @@
-import { DEFAULT_MOVIE_SORT, type LibraryQuery } from '@/types';
+import {
+  DEFAULT_MOVIE_SORT,
+  VIDEO_QUALITIES,
+  type LibraryQuery,
+} from '@/types';
 import { isMovieSort, parseMinRating } from '@/utils';
 
 /**
@@ -54,6 +58,17 @@ export function parseLibraryQuery(params: URLSearchParams): LibraryQuery {
   const minRating = parseMinRating(params.get('rating'));
   if (minRating !== undefined) {
     query.minRating = minRating;
+  }
+
+  // The `?rating=` rule again: only a rung the Quality pill can write reads as
+  // a minimum, the rung lowercased (`4k`). SD has no row, so `?quality=sd` is
+  // ignored rather than narrowing behind a pill saying "All qualities".
+  const quality = params.get('quality');
+  const minQuality = VIDEO_QUALITIES.find(
+    (rung) => rung !== 'SD' && rung.toLowerCase() === quality
+  );
+  if (minQuality !== undefined) {
+    query.minQuality = minQuality;
   }
 
   return query;
