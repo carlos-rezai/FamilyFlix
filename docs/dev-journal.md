@@ -11,6 +11,127 @@ Newest entry first.
 
 ---
 
+## 2026-11-20: Video quality, the build (issues 664 to 673)
+
+Eight slices run by `issue-loop`, each a RED and a GREEN commit (664, 666
+to 672); 665, whose behaviour 664's build had already made hold, as a RED
+commit of tests that passed on arrival and no GREEN; the rest of 664's
+prototype amendment (`bf0f84d1`); and this walk and documents slice (673),
+which found no gap in the code. **12964 tests pass across 902 files** (one skipped); `tsc -b --force`
+is clean. Step 52 stays 🔜 until the refactor.
+
+### What shipped
+
+- **One film, measured** (664). `probe` reads `frameSize` off the film's
+  own picture stream, `qualityOf` gives it a rung by **Nominal height**,
+  `Playback.measure` answers the duration and the rung from one probe (the
+  duration still falling back to `mvhd`), and `derivedVideoFacts` replaces
+  `derivedRuntime` at every site. Migration 17 adds `video_quality` to
+  `movies` and `episodes`; `prim.MetaTag` is the tag at the Star row's end.
+- **Every other way in** (665). Built by 664, which put
+  `derivedVideoFacts` at the importer's sites too: 665's 14 tests passed
+  on their first run, and the issue was closed against both commits.
+- **Episodes** (666). `Episode.videoQuality`, measured on a series save, a
+  replaced episode video and a bulk import, one probe per file.
+- **The Series quality** (667). `qualityRank` and `seriesQuality` in
+  `library/qualityRank/`, one SQL subquery on every series read, never
+  stored; the seed gives _The Lighthouse Keepers_ mixed rungs and _Copper
+  Street Bakery_ a tie.
+- **The Quality sweep** (668). `unmeasuredVideos` and `recordVideoQuality`
+  in the library; `createQualitySweep` in `playback/`, started in
+  `main.ts` once the server listens and stopped by the **Ordered
+  shutdown** before the database closes.
+- **The toggle** (669). `quality-tags`, on until set;
+  `DisplayPreferenceProvider` holds `qualityTags`; `useCardPreferences`
+  replaces `useTmdbRatings` at the 8 card sites, and `view`,
+  `seriesCardView` and `toGenreRow` take **Card preferences**.
+- **The filter** (670). `?quality=` on `/home`, `/movies`, `/series` and
+  `/series/rows`; `qualityOptions`; the pill in `LibraryFilters`;
+  `useLibraryQuery` and `useSettledLibraryQuery` read past `?quality=`
+  while the toggle is off.
+- **The sheet** (671, 672). `Quality` after `Runtime` in `SHEET_COLUMNS`,
+  filled by `exportRows`; `readSheet` reads it or `Resolution` in any
+  case, and an import takes the sheet's rung where the probe has none.
+
+### The walk
+
+The dev app ran in the browser (Claude in Chrome) against a scratch
+database, media folder and the bundled FFmpeg, never the dev database. The
+dev fixture's videos are placeholders ffprobe cannot open, so copies of
+the fixture and series fixture had real one-second clips swapped in
+(Die Hard `1920x1080`, Amelie `1280x720`, Tidewater `3840x2160` and
+`3840x1600`, Harbor & Vine `1280x720` and `1920x1080`), beside a mixed
+folder: a DVD rip `720x576`, a letterboxed `1920x800`, a 4:3 `1440x1080`,
+a cropped 4K `3840x1600` and a file of random bytes.
+
+- **A linked Folder scan** of the three folders: 480p, 1080p, 1080p, 4K
+  and no tag for the mixed folder, 1080p and 720p for the films, 4K for
+  Tidewater and 1080p for Harbor & Vine (a 720p and 1080p tie, the better
+  rung). Every card drew its rung, read as text and not focusable.
+- **The Movie form**: a copied `1280x544` add read 720p; an edit with a
+  new `640x360` video read SD; an edit keeping it stayed SD.
+- **A series save**: episodes at 1080p, 720p and 720p read 720p (the
+  majority); replacing the third with a 1080p video read 1080p.
+- **The filter**: _1080p+_ kept the three 1080p films and the 4K one and
+  wrote `?quality=1080p`; the Series tab kept it, and _4K_ kept Tidewater
+  alone. The menu read _All qualities_, _4K_, _1080p+_, _720p+_, _480p+_.
+- **The toggle**: off in Settings (between _Fill in ratings from TMDB_ and
+  _Start on_, no snackbar), a `?quality=4k` link drew every series, no tag
+  and no pill, the URL untouched; back on, the same link kept Tidewater.
+- **The sweep**: every stored rung wiped to `NULL`, then the server
+  started with a preload that raised `SIGINT` in-process 150ms after it
+  answered: the Ordered shutdown ran, exit 0, seven films and one episode
+  measured, no `-wal` left and `integrity_check` ok. A second start
+  measured the rest; Broken Reel was asked again and stayed `NULL`. The
+  browse answered 64 requests during it, the slowest in 41ms.
+- **The sheet**: an Export's CSV and each Library folder's
+  `Meta/familyflix-library.csv` carried _Quality_ on Movie and Episode
+  rows, blank on Series and Season rows and for Broken Reel. A fresh
+  library with no Playback component (`component: null`) scanning the same
+  folders read every rung back from those sheets.
+
+### Judgement calls worth knowing
+
+- **The Genre page has no Quality pill.** The PRD puts the filter on the
+  Genre page "wherever the Rating pill is"; `GenreControls` has no Rating
+  pill by design, nor does `page.GenrePage.dc.html`, so 670 read the
+  Genre page as the _By genre_ view. `/genre/:name` ignores `?quality=`
+  as it ignores `?rating=`.
+- **The toggle is read two ways.** 670's hooks and `LibraryFilters` read
+  `DisplayPreferenceContext` directly (`?.qualityTags === true`), because
+  `useCardPreferences.test` pins the files that may call the hook.
+- **Six of the eight card sites are proven by a source scan**, which
+  checks that each calls `useCardPreferences()` and passes the options
+  object; only `SeriesGrid` renders a card with the toggle off.
+- **`main.ts` starts the sweep with no unit test**, as the rest of
+  `main.ts`; the walk is its proof.
+- **The prototype** came in two parts: 664's build amended
+  `mol.PosterCard`, `prim.MetaTag` and `COMPONENT-SPEC.md`; the Quality
+  pill, the Display row and the model followed by hand in `bf0f84d1`. The
+  prototype never drew _Fill in ratings from TMDB_, so its _Show video
+  quality_ row follows _Ultrawide margins_.
+- **Quitting on Windows.** A tool cannot send the standalone server a
+  graceful `SIGINT` on Windows, and the `tsx` CLI relays one to its child
+  as a kill (exit 130). The walk ran `node --import tsx` with a preload
+  calling `process.emit('SIGINT')`, so the server's own handler ran.
+- **The Library sheet waits on an open review.** The walk's scan ended in
+  review with no Problems and was never closed, so no folder's sheet was
+  written until a later favorite touched it. That is the importer's hold
+  on a run's sheets until the run closes, older than this step.
+- **Over budget.** 664 (131k and 157k), 669 (147k and 137k) and 670 (134k
+  and 109k) each ran past the 100k a step; the others stayed under.
+
+### Follow-ups for the refactor
+
+- One read of _Show video quality_ for the cards and the filter, rather
+  than `useCardPreferences` beside a direct context read.
+- `parseLibraryQuery` reads four rungs while the server also takes `sd`;
+  harmless, since no pill writes it, but two vocabularies.
+- The dev fixture's placeholder videos carry no rung, so the dev library
+  draws no tag; one-second clips would make 664's demo hold on it.
+
+---
+
 ## 2026-11-20: Silent waits, the refactor (issue 662)
 
 Twenty-eight commits against `docs/refactor-plans/69-silent-waits-refactor.md`,

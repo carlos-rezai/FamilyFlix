@@ -840,23 +840,41 @@ button**s step 36 gave the forms and dialogs. Grilled in design log 69:
 Step 52 came out of wanting to see at a glance how good a file is before
 pressing play. Grilled in design log 70:
 
-52. ⬜ **Video quality**: each **Poster card** carries a **Quality tag**
+52. 🔜 **Video quality**: each **Poster card** carries a **Quality tag**
     reading _4K_, _1080p_, _720p_, _480p_ or _SD_ at the end of its Star
-    row, read by **ffprobe** from the video stream's frame size by its
+    row, read by **ffprobe** from the picture stream's frame size by its
     **Nominal height** (the larger of its height and its width × 9/16, so a
-    widescreen `1920x800` film is still _1080p_). It is stored wherever a
-    runtime is derived, from the same one probe, and the **Quality sweep**
-    measures every held title with none once the server starts, on every
-    start, so a title nothing could probe yet is asked again. A file
-    nothing could probe carries no tag rather than a guess.
+    widescreen `1920x800` film is still _1080p_). Built in issues 664 to
+    672; the walk (issue 673) ran the dev app in the browser over the dev
+    library and a folder of mixed qualities, with real clips standing in
+    for the fixture's placeholder videos.
+    - **Measured once**: `Playback.measure` answers the duration and the
+      rung from one probe, and `derivedVideoFacts` stores both wherever a
+      runtime was derived: the Movie form's add and an edit with a new
+      video, a series save, a bulk import, a **Found again** video and a
+      **Resolve**. An edit that keeps its video keeps its rung. A file
+      nothing could probe saves with no rung and carries no tag.
+    - **Quality sweep**: once the server listens, on every start, each
+      held movie and episode with no rung and a video that is there is
+      probed one at a time, its rung alone written, the browse answered
+      between files. A row still unmeasured is asked again next start; the
+      **Ordered shutdown** stops the sweep before the database closes.
     - **Series**: a series poster shows its **Series quality**, the rung
-      most of its episodes are on, a tie going to the better.
-    - **Settings**: _Show video quality_ in Display, on by default.
-    - **Filter**: while it is on, a _Quality_ pill after _Rating_ keeps
-      titles at or above a rung (_4K_, _1080p+_, _720p+_, _480p+_), on both
-      tabs and the Genre page.
-    - **Library sheet**: a _Quality_ column after _Runtime_, written by
-      every Sheet writer and read back by an import; the probe wins, the
-      sheet stands in when it answers none.
+      most of its measured episodes are on, a tie going to the better,
+      derived on every read. `npm run db:seed-series` gives one show mixed
+      rungs and another a tie.
+    - **Settings**: _Show video quality_ in Display, after _Fill in ratings
+      from TMDB_, on by default; off, every tag and the Quality pill go.
+    - **Filter**: while it is on, a _Quality_ pill between _Rating_ and
+      _Sort_ keeps titles at or above a rung (_4K_, _1080p+_, _720p+_,
+      _480p+_), on both tabs and both row views, written as `?quality=`.
+      Unmeasured titles are kept only by _All qualities_. With the toggle
+      off a `?quality=` is ignored and left in the URL. The Genre page has
+      no Rating pill and so no Quality pill.
+    - **Library sheet**: a _Quality_ column after _Runtime_, filled on
+      Movie and Episode rows and written by every Sheet writer and an
+      Export. An import reads it (or _Resolution_, in any case; anything
+      off the ladder is an **Unread cell**); the probe wins, and the sheet
+      stands in when it answers none.
     - **Prototype**: `docs/handoff/handoff-video-quality/`, a new atom
-      `prim.MetaTag`.
+      `prim.MetaTag`, the Quality pill and the Display row.

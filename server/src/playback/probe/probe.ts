@@ -24,6 +24,10 @@ export interface ProbedAudio {
  * The video codec is nullable because a stream is allowed to be absent, and
  * `audioStreams` empty for a film with no audio — which has nothing that could
  * fail to decode, not the same as an audio track nothing can read.
+ *
+ * `frameSize` is read off the same picture stream as the codec, an attached
+ * cover passed over, so `qualityOf` can give the film its **Video quality**
+ * from the probe that already reads its duration.
  */
 export interface MediaProbe {
   /** The container, normalized: `mp4`, `webm`, `matroska`, `avi`, … */
