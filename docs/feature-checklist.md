@@ -81,6 +81,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Missing videos: a held title whose file is gone     | ✅ Done    |
 | Export paths: a nested Export imports back whole    | ✅ Done    |
 | Silent waits: every press shows it is working       | ✅ Done    |
+| Video quality: a 4K to SD tag on every poster       | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -835,3 +836,20 @@ button**s step 36 gave the forms and dialogs. Grilled in design log 69:
       optimistic Favorite, Watched, Rating and Settings writes, which need
       no loader. Settings sub-pages drawing nothing until their read lands
       is the Product Rule, not a gap.
+
+Step 52 came out of wanting to see at a glance how good a file is before
+pressing play. Not yet grilled:
+
+52. ⬜ **Video quality**: each poster carries a small tag reading _4K_,
+    _1080p_, _720p_, _480p_ or _SD_, read by **ffprobe** from the video
+    stream's frame size (width as well as height, so a widescreen
+    `1920x800` film is still _1080p_) and stored when a title is imported,
+    with a one-time backfill for the library already held. A file nothing
+    could probe carries no tag rather than a guess.
+    - **Settings**: a toggle to show the tags, on by default.
+    - **Filter**: while the toggle is on, the overview pages filter by
+      quality as they do by genre and rating.
+    - **Library sheet**: a new quality column, written by an Export and
+      read back by an Import.
+    - **Open**: what a series poster shows when its episodes differ, and
+      where the toggle and the tag sit in the prototype.
