@@ -433,6 +433,58 @@
               "
             ></div>
 
+            <!-- Show video quality (design log 70): on by default. Off hides
+                 every poster's quality tag and the Quality pill. In the app it
+                 follows Fill in ratings from TMDB and is not drawn until the
+                 settings read lands; no snackbar. -->
+            <div
+              style="
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                gap: 16px;
+                padding: 12px 0 2px;
+              "
+            >
+              <div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 15px;
+                    font-weight: 500;
+                    color: var(--color-text);
+                  "
+                >
+                  Show video quality
+                </div>
+                <div
+                  style="
+                    font-family: var(--font-sans);
+                    font-size: 13px;
+                    color: var(--color-text-faint);
+                    margin-top: 2px;
+                  "
+                >
+                  Tag each poster with how sharp its video is: 4K, 1080p, 720p,
+                  480p or SD. Turning this off also hides the quality filter.
+                </div>
+              </div>
+              <dc-import
+                name="prim.Toggle"
+                checked="{{ settings.showVideoQuality }}"
+                on-toggle="{{ settings.onToggleShowQuality }}"
+                hint-size="46px,26px"
+              ></dc-import>
+            </div>
+
+            <div
+              style="
+                height: 1px;
+                background: var(--color-border-soft);
+                margin: 6px 0;
+              "
+            ></div>
+
             <!-- Start on: which Library tab FamilyFlix opens on (design log
                  49). Drawn whether or not the library holds a series; a
                  press presses the pill and shows no snackbar. -->

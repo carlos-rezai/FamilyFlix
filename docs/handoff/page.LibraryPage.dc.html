@@ -108,6 +108,26 @@
             menu-width="190"
             hint-size="150px,46px"
           ></dc-import>
+          <!-- The Quality pill (design log 70): between Rating and Sort, no
+               counts. A row keeps titles at or above it; a title with no
+               quality is kept only by All qualities. Not drawn while Show
+               video quality is off; in the app, not before the settings read
+               lands. It writes ?quality= and shows no snackbar. -->
+          <sc-if
+            value="{{ lib.showQuality }}"
+            hint-placeholder-val="{{ true }}"
+          >
+            <dc-import
+              name="mol.FilterDropdown"
+              label="Quality"
+              value="{{ lib.qualityLabel }}"
+              options="{{ lib.qualityOptions }}"
+              open="{{ lib.qualityOpen }}"
+              on-toggle="{{ lib.onToggleQuality }}"
+              menu-width="190"
+              hint-size="190px,46px"
+            ></dc-import>
+          </sc-if>
           <dc-import
             name="mol.FilterDropdown"
             label="Sort"
