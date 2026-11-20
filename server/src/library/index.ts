@@ -27,6 +27,7 @@ import type {
   SeriesRowsPayload,
   SeriesGenrePayload,
   Settings,
+  VideoQuality,
 } from '@/types';
 import { createMovieReader } from './read/read';
 import { createBrowse } from './browse/browse';
@@ -67,12 +68,21 @@ import { createTitles, type StoredLibraryTitles } from './titles/titles';
 import { createHolding, type HeldTitle } from './holding/holding';
 import { createLeftOut, type LeftOutVideo } from './leftOut/leftOut';
 import { createChanges, type ChangeListener } from './changes/changes';
+import {
+  createUnmeasuredVideos,
+  type MeasuredKind,
+  type UnmeasuredVideo,
+} from './unmeasuredVideos/unmeasuredVideos';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
 export type { HeldTitle } from './holding/holding';
 export type { LeftOutVideo } from './leftOut/leftOut';
 export type { ChangeListener } from './changes/changes';
+export type {
+  MeasuredKind,
+  UnmeasuredVideo,
+} from './unmeasuredVideos/unmeasuredVideos';
 export type {
   LinkedVideo,
   StoredLibraryMovie,
@@ -540,6 +550,21 @@ export interface LibraryStorage {
    * calls nothing. Answers the unsubscribe.
    */
   onChange(listener: ChangeListener): () => void;
+  /**
+   * The **Quality sweep**'s read: every held movie and episode with no
+   * **Video quality**, movies first A to Z, then episodes by series A to Z,
+   * season and number, each as its kind, its id and its video.
+   */
+  unmeasuredVideos(): UnmeasuredVideo[];
+  /**
+   * The **Quality sweep**'s write: one row's `video_quality` and nothing
+   * else, its runtime left as it was.
+   */
+  recordVideoQuality(
+    kind: MeasuredKind,
+    id: string,
+    quality: VideoQuality
+  ): void;
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -573,6 +598,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const holding = createHolding(db);
   const leftOut = createLeftOut(db);
   const changes = createChanges(db);
+  const unmeasured = createUnmeasuredVideos(db);
   const { touch, folderOfTitle, onTitle, beforeTitle, onEpisode } = changes;
 
   return {
@@ -674,6 +700,8 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
       resetDatabase(db);
     },
     onChange: changes.onChange,
+    unmeasuredVideos: unmeasured.unmeasuredVideos,
+    recordVideoQuality: unmeasured.recordVideoQuality,
     close() {
       db.close();
     },

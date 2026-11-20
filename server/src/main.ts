@@ -9,6 +9,7 @@ import { createSqliteStorage } from './library';
 import { createMedia } from './media/createMedia/createMedia';
 import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
+import { createQualitySweep } from './playback/createQualitySweep/createQualitySweep';
 import { createApiRouter } from './routes';
 import { loopbackGuard } from './routes/loopbackGuard/loopbackGuard';
 import { mountRenderer } from './routes/rendererRouter/rendererRouter';
@@ -127,11 +128,17 @@ async function start(): Promise<Started> {
   }
   guard.bind(boundPort(server));
 
+  // The **Quality sweep**, on every start once the server listens: it
+  // measures what has no quality yet, in the background.
+  const qualitySweep = createQualitySweep({ storage, playback });
+  void qualitySweep.start();
+
   let stopping: Promise<void> | undefined;
   const shutdown = () => {
     stopping ??= orderedShutdown({
       importer,
       enrichment,
+      qualitySweep,
       librarySheet,
       server,
       closeDatabase: () => storage.close(),
