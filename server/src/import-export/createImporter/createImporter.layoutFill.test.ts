@@ -68,6 +68,7 @@ const dieHardSheet = (poster: string): string =>
       '1988',
       '',
       '',
+      '',
       '"Action, Thriller"',
       'John McTiernan',
       '"Bruce Willis, Alan Rickman"',
@@ -90,10 +91,10 @@ const dieHardSheet = (poster: string): string =>
 const tidewaterSheet = (seasonPoster: string): string =>
   [
     HEADER,
-    `Series,${TIDEWATER},,,Tidewater,2018,,,"Drama, Family",Ines Duarte,"Rui Matos, Clara Bento",A ferry crew keeps an island connected through one hard winter.,7,,,,,,,,,`,
-    `Season,${TIDEWATER},1,,,,,,,,,,,,,,,,,${seasonPoster},,`,
-    `Episode,${TIDEWATER},1,1,Low Water,,2018-10-02,,,,,,,,,Unwatched,,,,,,`,
-    `Episode,${TIDEWATER},1,2,The Crossing,,2018-10-09,,,,,,,,,Unwatched,,,,,,`,
+    `Series,${TIDEWATER},,,Tidewater,2018,,,,"Drama, Family",Ines Duarte,"Rui Matos, Clara Bento",A ferry crew keeps an island connected through one hard winter.,7,,,,,,,,,`,
+    `Season,${TIDEWATER},1,,,,,,,,,,,,,,,,,,${seasonPoster},,`,
+    `Episode,${TIDEWATER},1,1,Low Water,,2018-10-02,,,,,,,,,,Unwatched,,,,,,`,
+    `Episode,${TIDEWATER},1,2,The Crossing,,2018-10-09,,,,,,,,,,Unwatched,,,,,,`,
     '',
   ].join('\n');
 

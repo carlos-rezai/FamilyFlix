@@ -182,6 +182,7 @@ const movieRows =
       Title: movie.title,
       Year: movie.year,
       Runtime: movie.runtimeMinutes,
+      Quality: movie.videoQuality,
       Genres: movie.genres.map((genre) => genre.name).join(CELL_SEPARATOR),
       Director: movie.director,
       Cast: movie.cast.join(CELL_SEPARATOR),
@@ -216,6 +217,7 @@ function episodeRow(
     Title: episode.title,
     'Air date': episode.airDate,
     Runtime: episode.runtimeMinutes,
+    Quality: episode.videoQuality,
     Status: STATUS_CELL[episode.status],
     Video: cells.video(
       {

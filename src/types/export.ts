@@ -28,7 +28,7 @@ export const ROW_TYPES = ['Movie', 'Series', 'Season', 'Episode'] as const;
 export type RowType = (typeof ROW_TYPES)[number];
 
 /**
- * The twenty-two **Sheet columns** of the one sheet, in order: every row type
+ * The twenty-three **Sheet columns** of the one sheet, in order: every row type
  * in one table, a cell blank where its type has no such field (log 58, Q13).
  * Spelled once, for the header row `exportRows` puts first and the pills the
  * dialog lists under _Columns included_.
@@ -42,6 +42,7 @@ export const SHEET_COLUMNS = [
   'Year',
   'Air date',
   'Runtime',
+  'Quality',
   'Genres',
   'Director',
   'Cast',

@@ -75,6 +75,7 @@ const dieHardSheet = (cells: { poster?: string; backdrop?: string }): string =>
       '1988',
       '',
       '',
+      '',
       '"Action, Thriller"',
       'John McTiernan',
       '"Bruce Willis, Alan Rickman"',

@@ -83,6 +83,7 @@ const dieHardSheet = (cells: FilmCells): string =>
       '1988',
       '',
       '',
+      '',
       '"Action, Thriller"',
       'John McTiernan',
       '"Bruce Willis, Alan Rickman"',
@@ -113,10 +114,10 @@ interface ShowCells {
 const tidewaterSheet = (cells: ShowCells): string =>
   [
     HEADER,
-    `Series,${TIDEWATER},,,Tidewater,2018,,,"Drama, Family",Ines Duarte,"Rui Matos, Clara Bento",A ferry crew keeps an island connected through one hard winter.,7,,,,,,,${cells.poster ?? ''},${cells.backdrop ?? ''},`,
-    `Season,${TIDEWATER},1,,,,,,,,,,,,,,,,,${cells.seasonPoster ?? ''},,`,
-    `Episode,${TIDEWATER},1,1,Low Water,,2018-10-02,,,,,,,,,Unwatched,,,,,,${cells.still ?? ''}`,
-    `Episode,${TIDEWATER},1,2,The Crossing,,2018-10-09,,,,,,,,,Unwatched,,,,,,`,
+    `Series,${TIDEWATER},,,Tidewater,2018,,,,"Drama, Family",Ines Duarte,"Rui Matos, Clara Bento",A ferry crew keeps an island connected through one hard winter.,7,,,,,,,${cells.poster ?? ''},${cells.backdrop ?? ''},`,
+    `Season,${TIDEWATER},1,,,,,,,,,,,,,,,,,,${cells.seasonPoster ?? ''},,`,
+    `Episode,${TIDEWATER},1,1,Low Water,,2018-10-02,,,,,,,,,,Unwatched,,,,,,${cells.still ?? ''}`,
+    `Episode,${TIDEWATER},1,2,The Crossing,,2018-10-09,,,,,,,,,,Unwatched,,,,,,`,
     '',
   ].join('\n');
 
