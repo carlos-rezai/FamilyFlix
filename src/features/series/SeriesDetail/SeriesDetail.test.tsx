@@ -119,6 +119,7 @@ function makeSeries(overrides: Partial<Series> = {}): Series {
       { id: 'g2', name: 'Comedy' },
     ],
     watched: false,
+    videoQuality: null,
     createdAt: '2026-09-23T00:00:00.000Z',
     updatedAt: '2026-09-23T00:00:00.000Z',
     ...overrides,

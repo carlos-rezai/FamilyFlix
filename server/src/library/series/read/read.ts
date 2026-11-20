@@ -11,6 +11,7 @@ import type {
 } from '@/types';
 import { nextEpisodeOf } from '../nextEpisodeOf/nextEpisodeOf';
 import { deriveStatus, type GenreRow, type SubtitleRow } from '../../read/read';
+import { seriesQuality } from '../../qualityRank/qualityRank';
 
 export interface SeriesRow {
   id: string;
@@ -63,7 +64,8 @@ interface GenreRowWithSeries extends GenreRow {
 const mapRowToSeries = (
   row: SeriesRow,
   genres: Genre[],
-  watched: boolean
+  watched: boolean,
+  videoQuality: VideoQuality | null
 ): Series => ({
   id: row.id,
   tmdbId: row.tmdb_id,
@@ -81,6 +83,7 @@ const mapRowToSeries = (
   tmdbScore: row.tmdb_score,
   genres,
   watched,
+  videoQuality,
   createdAt: row.created_at,
   updatedAt: row.updated_at,
 });
@@ -179,6 +182,13 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
     GROUP BY series_id
     HAVING MIN(watched) = 1
   `);
+  // The **Series quality**, one subquery per series, derived on every read.
+  const selectSeriesQuality = db.prepare(
+    `SELECT ${seriesQuality('?')} AS quality`
+  );
+  const selectAllSeriesQualities = db.prepare(
+    `SELECT s.id AS id, ${seriesQuality('s.id')} AS quality FROM series s`
+  );
   const selectSeriesWatched = db.prepare(`
     SELECT COUNT(*) > 0 AND MIN(watched) = 1 AS watched
     FROM episodes WHERE series_id = ?
@@ -194,7 +204,9 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
       : mapRowToSeries(
           row,
           selectSeriesGenres.all(id) as GenreRow[],
-          (selectSeriesWatched.get(id) as { watched: number }).watched === 1
+          (selectSeriesWatched.get(id) as { watched: number }).watched === 1,
+          (selectSeriesQuality.get(id) as { quality: VideoQuality | null })
+            .quality
         );
   };
 
@@ -296,11 +308,20 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
       const watched = new Set(
         (selectWatchedSeries.all() as { id: string }[]).map(({ id }) => id)
       );
+      const qualityOf = new Map(
+        (
+          selectAllSeriesQualities.all() as {
+            id: string;
+            quality: VideoQuality | null;
+          }[]
+        ).map(({ id, quality }) => [id, quality])
+      );
       return rows.map((row) =>
         mapRowToSeries(
           row,
           genresBySeries.get(row.id) ?? [],
-          watched.has(row.id)
+          watched.has(row.id),
+          qualityOf.get(row.id) ?? null
         )
       );
     },

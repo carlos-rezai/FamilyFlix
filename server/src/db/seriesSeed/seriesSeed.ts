@@ -3,6 +3,7 @@ import { copyFileSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 import { openDatabase, type SqliteDatabase } from '..';
+import type { VideoQuality } from '@/types';
 import { createSeriesReader } from '../../library/series/read/read';
 import { createSeriesWrite } from '../../library/series/write/write';
 import { createSeriesWatch } from '../../library/series/watch/watch';
@@ -49,6 +50,8 @@ export interface SeedSeason {
   titles: (string | null)[];
   /** Every episode's runtime; omitted for a season whose runtimes are unknown. */
   runtimeMinutes?: number;
+  /** Every episode's **Video quality**; omitted for a season left unmeasured. */
+  videoQuality?: VideoQuality;
   /** The first episode's air date; the rest follow a week apart. */
   firstAired?: string;
   /** How many episodes, from the first, the household has watched. */
@@ -66,6 +69,10 @@ export interface SeedSeries extends NewSeries {
 
 /**
  * The mock library. Chosen so every state the Series screens draw is on one:
+ *
+ * - The **Series quality** both ways: _The Lighthouse Keepers_ mixed, three
+ *   1080p seasons over one 4K, reading its majority 1080p; _Copper Street
+ *   Bakery_ tied, a 720p season and a 1080p one, reading the better 1080p.
  *
  * - **Continue Watching** holds four, stamped apart so their order is fixed —
  *   one of them on a show's very last episode, so Up next has nothing to name.
@@ -103,6 +110,7 @@ export const SEED_SERIES: SeedSeries[] = [
           'Relief',
         ],
         runtimeMinutes: 52,
+        videoQuality: '1080p',
         firstAired: '2019-10-06',
         watched: 6,
       },
@@ -116,6 +124,7 @@ export const SEED_SERIES: SeedSeries[] = [
           'Lamp Room',
         ],
         runtimeMinutes: 51,
+        videoQuality: '1080p',
         firstAired: '2020-10-04',
         watched: 6,
       },
@@ -129,6 +138,7 @@ export const SEED_SERIES: SeedSeries[] = [
           'The Last Watch',
         ],
         runtimeMinutes: 54,
+        videoQuality: '1080p',
         firstAired: '2021-10-03',
         watched: 3,
         resume: {
@@ -147,6 +157,7 @@ export const SEED_SERIES: SeedSeries[] = [
           'Light',
         ],
         runtimeMinutes: 55,
+        videoQuality: '4K',
         firstAired: '2023-01-08',
       },
     ],
@@ -176,6 +187,7 @@ export const SEED_SERIES: SeedSeries[] = [
           'Closing Time',
         ],
         runtimeMinutes: 24,
+        videoQuality: '720p',
         firstAired: '2021-03-12',
         watched: 2,
         resume: {
@@ -196,6 +208,7 @@ export const SEED_SERIES: SeedSeries[] = [
           'Anniversary',
         ],
         runtimeMinutes: 23,
+        videoQuality: '1080p',
         firstAired: '2022-03-11',
       },
     ],
@@ -445,6 +458,7 @@ export function seedSeries(
           title: title ?? undefined,
           airDate: season.firstAired && airDateAfter(season.firstAired, at),
           runtimeMinutes: season.runtimeMinutes,
+          videoQuality: season.videoQuality,
         });
         episodes += 1;
 

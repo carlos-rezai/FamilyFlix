@@ -31,6 +31,11 @@ export interface Series {
   /** TMDB's score to one decimal — beside the household's rating, never over it. */
   tmdbScore: number | null;
   genres: Genre[];
+  /**
+   * Its **Series quality**: the rung most of its measured episodes are on, a
+   * tie going to the better rung; `null` with none measured. Derived, never stored.
+   */
+  videoQuality: VideoQuality | null;
   /** True only when every episode is watched; derived, never stored. */
   watched: boolean;
   createdAt: string;
