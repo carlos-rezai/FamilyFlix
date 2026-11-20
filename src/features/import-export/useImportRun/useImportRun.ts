@@ -172,12 +172,11 @@ export function useImportRun(): ImportRunState {
     };
   }, []);
 
-  const starts = useDelayedBusy();
-  const timeStart = starts.run;
+  const { phase: starting, run: runStart } = useDelayedBusy();
   const start = useCallback(
     async (sheetPath: string, enrich: boolean, mode: ImportMode) => {
       generation.current += 1;
-      const held = await timeStart(async () => {
+      const held = await runStart(async () => {
         try {
           return await startImport(sheetPath, enrich, mode);
         } catch (error) {
@@ -189,7 +188,7 @@ export function useImportRun(): ImportRunState {
       });
       setRun(held);
     },
-    [timeStart]
+    [runStart]
   );
 
   const cancel = useCallback(async () => {
@@ -210,45 +209,40 @@ export function useImportRun(): ImportRunState {
     );
   }, []);
 
-  const rows = useDelayedBusyByKey();
-  const timeRow = rows.run;
-  const rowPhase = rows.phaseOf;
-  const cover = rows.cover;
-  const skipsAll = useDelayedBusy();
-  const timeSkipAll = skipsAll.run;
-  const importsAll = useDelayedBusy();
-  const timeImportAll = importsAll.run;
+  const { phaseOf: rowPhase, run: runRow, cover } = useDelayedBusyByKey();
+  const { phase: skippingAll, run: runSkipAll } = useDelayedBusy();
+  const { phase: importingAll, run: runImportAll } = useDelayedBusy();
 
   const skip = useCallback(
     async (id: string) => {
-      await timeRow(id, () => dismissProblem(id));
+      await runRow(id, () => dismissProblem(id));
       takeOff(id);
     },
-    [timeRow, takeOff]
+    [runRow, takeOff]
   );
 
   const skipMany = useCallback(
     (ids: string[]) =>
       cover(ids, async () =>
-        setRun(await timeSkipAll(() => dismissProblems(ids)))
+        setRun(await runSkipAll(() => dismissProblems(ids)))
       ),
-    [cover, timeSkipAll]
+    [cover, runSkipAll]
   );
 
   const importManyAsGuessed = useCallback(
     (ids: string[]) =>
       cover(ids, async () =>
-        setRun(await timeImportAll(() => importManyGuessed(ids)))
+        setRun(await runImportAll(() => importManyGuessed(ids)))
       ),
-    [cover, timeImportAll]
+    [cover, runImportAll]
   );
 
   const apply = useCallback(
     async (id: string, choices: SheetChoices) => {
-      await timeRow(id, () => applySheetChoices(id, choices));
+      await runRow(id, () => applySheetChoices(id, choices));
       takeOff(id);
     },
-    [timeRow, takeOff]
+    [runRow, takeOff]
   );
 
   /**
@@ -278,25 +272,25 @@ export function useImportRun(): ImportRunState {
 
   const pick = useCallback(
     async (id: string, folder: string) => {
-      settle(id, await timeRow(id, () => pickCandidateFolder(id, folder)));
+      settle(id, await runRow(id, () => pickCandidateFolder(id, folder)));
     },
-    [timeRow, settle]
+    [runRow, settle]
   );
 
   const importAsGuessed = useCallback(
     async (id: string) => {
-      settle(id, await timeRow(id, () => importGuessed(id)));
+      settle(id, await runRow(id, () => importGuessed(id)));
     },
-    [timeRow, settle]
+    [runRow, settle]
   );
 
   const takeOut = useCallback(
     async (id: string) => {
-      if ((await timeRow(id, () => takeOutMissing(id))) !== null) {
+      if ((await runRow(id, () => takeOutMissing(id))) !== null) {
         takeOff(id);
       }
     },
-    [timeRow, takeOff]
+    [runRow, takeOff]
   );
 
   const live = isLive(run);
@@ -332,13 +326,13 @@ export function useImportRun(): ImportRunState {
     run,
     attaching,
     start,
-    starting: starts.phase,
+    starting,
     cancel,
     skip,
     skipMany,
-    skippingAll: skipsAll.phase,
+    skippingAll,
     importManyAsGuessed,
-    importingAll: importsAll.phase,
+    importingAll,
     apply,
     pick,
     importAsGuessed,
