@@ -1225,3 +1225,112 @@ describe('ImportReview — Import all as guessed', () => {
     expect(pill('All 3').getAttribute('aria-pressed')).toBe('true');
   });
 });
+
+/**
+ * 69, Silent waits, refactor (issue #662): the bulk cross-lock.
+ *
+ * The step draws all three bulk buttons, so it owns the rule between them:
+ * while one bulk press runs, a press on another reports nothing. Only the
+ * pressed one is a **Busy button**; the others keep their face and refuse.
+ */
+describe('ImportReview — one bulk press at a time', () => {
+  const problem = (
+    id: string,
+    kind: ImportProblem['kind'],
+    title = `Title ${id}`
+  ): ImportProblem => ({ id, kind, title, reason: `Reason ${id}.` });
+
+  /** Two `no-row` rows, one in a group, and two `differs` rows. */
+  const BULK: ImportProblem[] = [
+    problem('f1', 'no-folder', 'The Night Ferry'),
+    problem('f2', 'no-row', 'The Night Ferry'),
+    problem('l1', 'no-row', 'Ironwood (2018)'),
+    problem('d1', 'differs', 'Amélie'),
+    problem('d2', 'differs', 'Coco'),
+  ];
+
+  function renderBulk(
+    phases: Pick<ImportReviewProps, 'skippingAll' | 'importingAll'>
+  ) {
+    const onSkipMany = vi.fn();
+    const onImportManyAsGuessed = vi.fn();
+    render(
+      <MemoryRouter>
+        <ThemeProvider theme={theme}>
+          <ImportReview
+            run={inReview(BULK)}
+            onSkip={vi.fn()}
+            onApply={vi.fn()}
+            onPick={vi.fn()}
+            onImportAs={vi.fn()}
+            onTakeOut={vi.fn()}
+            rowPhase={() => 'idle'}
+            onSkipMany={onSkipMany}
+            onImportManyAsGuessed={onImportManyAsGuessed}
+            skippingAll={phases.skippingAll}
+            importingAll={phases.importingAll}
+            finishLabel={FINISH}
+            onFinish={vi.fn()}
+          />
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+    return { onSkipMany, onImportManyAsGuessed };
+  }
+
+  const filter = () =>
+    screen.getByRole('group', { name: 'Problem kinds' }) as HTMLElement;
+  const choose = (name: string) =>
+    fireEvent.click(within(filter()).getByRole('button', { name }));
+  const besideFilter = () =>
+    filter().parentElement?.parentElement as HTMLElement;
+  const bulk = (name: string) =>
+    within(besideFilter()).getByRole('button', { name });
+
+  describe.each(['waiting', 'shown'] as const)(
+    'while Import all as guessed is %s',
+    (busy) => {
+      it('reports nothing for the Kind filter’s Skip all', () => {
+        const { onSkipMany } = renderBulk({ importingAll: busy });
+        choose('Not in sheet 2');
+
+        fireEvent.click(bulk('Skip all'));
+
+        expect(onSkipMany).not.toHaveBeenCalled();
+      });
+
+      it('reports nothing for Keep all mine', () => {
+        const { onSkipMany } = renderBulk({ importingAll: busy });
+        choose('Differs 2');
+
+        fireEvent.click(bulk('Keep all mine'));
+
+        expect(onSkipMany).not.toHaveBeenCalled();
+      });
+
+      it('reports nothing for a group’s Skip all', () => {
+        const { onSkipMany } = renderBulk({ importingAll: busy });
+
+        fireEvent.click(
+          screen.getByRole('button', { name: 'Skip all for The Night Ferry' })
+        );
+
+        expect(onSkipMany).not.toHaveBeenCalled();
+      });
+    }
+  );
+
+  describe.each(['waiting', 'shown'] as const)(
+    'while a Skip all is %s',
+    (busy) => {
+      it('reports nothing for Import all as guessed', () => {
+        const { onImportManyAsGuessed } = renderBulk({ skippingAll: busy });
+        choose('Not in sheet 2');
+
+        fireEvent.click(bulk('Import all as guessed'));
+
+        expect(onImportManyAsGuessed).not.toHaveBeenCalled();
+      });
+    }
+  );
+});
