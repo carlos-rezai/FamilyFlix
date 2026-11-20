@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { LogoLoader } from '@/primitives';
+import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
 import type { BusyPhase, SeasonChoice } from '@/types';
 import { formatEpisodeTag, gradientFromId } from '@/utils';
 import {
@@ -83,7 +84,11 @@ export function SeasonChoices({
                     <Numeral>{label}</Numeral>
                   </HeldTile>
                   {busy === 'shown' ? (
-                    <LogoLoader size={18} inline label="Saving poster…" />
+                    <LogoLoader
+                      size={BUSY_ROW_LOADER_SIZE}
+                      inline
+                      label="Saving poster…"
+                    />
                   ) : (
                     <HeldCaption>
                       {posterUrl === null ? 'No poster yet' : 'Current poster'}

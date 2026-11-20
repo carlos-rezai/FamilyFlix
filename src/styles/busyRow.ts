@@ -14,6 +14,9 @@ export const busyRow = ({ $busy }: { $busy: BusyPhase }) =>
     cursor: progress;
   `;
 
+/** A **Busy row**'s **Logo loader**: 18px, the handoff's _Inside a row_. */
+export const BUSY_ROW_LOADER_SIZE = 18;
+
 /**
  * A **Busy row**'s lock, for a row root's `.attrs`: from `waiting` the root
  * is `inert` and `aria-busy`, every control keeping its own face; at `idle`

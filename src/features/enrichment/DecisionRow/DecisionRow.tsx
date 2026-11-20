@@ -2,6 +2,7 @@ import { useState } from 'react';
 
 import { FieldDiff, type FieldDiffSide } from '@/components';
 import { Button, LogoLoader } from '@/primitives';
+import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
 import type {
   BusyPhase,
   ConflictChoices,
@@ -89,7 +90,11 @@ export function DecisionRow({
     <Card $busy={busy}>
       <Head>
         {busy === 'shown' && press !== null ? (
-          <LogoLoader size={18} inline label={PRESS_LABELS[press]} />
+          <LogoLoader
+            size={BUSY_ROW_LOADER_SIZE}
+            inline
+            label={PRESS_LABELS[press]}
+          />
         ) : (
           <Dot $kind={decision.kind} />
         )}

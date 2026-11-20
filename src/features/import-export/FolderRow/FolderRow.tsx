@@ -1,6 +1,7 @@
 import { useState } from 'react';
 
 import { FolderIcon, LogoLoader, RemoveButton } from '@/primitives';
+import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
 import type { BusyPhase, LibraryFolderView } from '@/types';
 import { folderLine } from '../folderLine/folderLine';
 import {
@@ -64,7 +65,11 @@ export function FolderRow({
       <Text>
         <Path>{folder.path}</Path>
         {busy === 'shown' && press !== null ? (
-          <LogoLoader size={18} inline label={PRESS_LABELS[press]} />
+          <LogoLoader
+            size={BUSY_ROW_LOADER_SIZE}
+            inline
+            label={PRESS_LABELS[press]}
+          />
         ) : (
           <Line $unreachable={!folder.reachable}>{folderLine(folder)}</Line>
         )}

@@ -1,5 +1,6 @@
 import { EpisodeFileRow, FileField, SubtitleRow } from '@/components';
 import { FileIcon, FilePicker, ImageIcon, LogoLoader } from '@/primitives';
+import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
 import {
   LANGUAGE_POOL,
   type BusyPhase,
@@ -234,7 +235,11 @@ export function SeriesFormFiles({
               $busy={readingShowFolder}
             >
               {readingShowFolder === 'shown' ? (
-                <LogoLoader size={18} inline label={SHOW_FOLDER_READING} />
+                <LogoLoader
+                  size={BUSY_ROW_LOADER_SIZE}
+                  inline
+                  label={SHOW_FOLDER_READING}
+                />
               ) : (
                 <>＋ {SHOW_FOLDER_ADD}</>
               )}
