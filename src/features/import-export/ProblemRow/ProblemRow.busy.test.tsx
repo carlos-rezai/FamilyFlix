@@ -89,12 +89,16 @@ function tree(problem: ImportProblem, busy: BusyPhase) {
   );
 }
 
+type Report = 'onSkip' | 'onApply' | 'onPick' | 'onImportAs' | 'onTakeOut';
+
 interface Press {
   press: string;
   problem: ImportProblem;
   /** The control pressed, found on the row. */
   button: () => HTMLElement;
   label: string;
+  /** The callback the press reports through. */
+  report: Report;
 }
 
 const PRESSES: Press[] = [
@@ -104,36 +108,42 @@ const PRESSES: Press[] = [
     button: () =>
       screen.getByRole('button', { name: 'Import as “Ironwood (2018)”' }),
     label: 'Importing…',
+    report: 'onImportAs',
   },
   {
     press: 'a picked Candidate folder',
     problem: AMBIGUOUS,
     button: () => screen.getByRole('button', { name: /^Die Hard \(1988\)/ }),
     label: 'Importing…',
+    report: 'onPick',
   },
   {
     press: 'Take out of library',
     problem: MISSING,
     button: () => screen.getByRole('button', { name: 'Take out of library' }),
     label: 'Taking out…',
+    report: 'onTakeOut',
   },
   {
     press: 'Apply choices',
     problem: DIFFERS,
     button: () => screen.getByRole('button', { name: 'Apply choices' }),
     label: 'Updating details…',
+    report: 'onApply',
   },
   {
     press: 'Keep all mine',
     problem: DIFFERS,
     button: () => screen.getByRole('button', { name: 'Keep all mine' }),
     label: 'Skipping…',
+    report: 'onSkip',
   },
   {
     press: 'Skip',
     problem: NO_FOLDER,
     button: () => screen.getByRole('button', { name: 'Skip' }),
     label: 'Skipping…',
+    report: 'onSkip',
   },
 ];
 
@@ -194,3 +204,33 @@ describe.each(PRESSES)(
     });
   }
 );
+
+describe('ProblemRow: refuses a press while locked', () => {
+  it.each(
+    (['waiting', 'shown'] as const).flatMap((busy) =>
+      PRESSES.map((press) => ({ busy, ...press }))
+    )
+  )(
+    'reports nothing for $press while $busy',
+    ({ busy, problem, button, report }) => {
+      const reports = {
+        onSkip: vi.fn(),
+        onApply: vi.fn(),
+        onPick: vi.fn(),
+        onImportAs: vi.fn(),
+        onTakeOut: vi.fn(),
+      };
+      render(
+        <MemoryRouter>
+          <ThemeProvider theme={theme}>
+            <ProblemRow problem={problem} busy={busy} {...reports} />
+          </ThemeProvider>
+        </MemoryRouter>
+      );
+
+      fireEvent.click(button());
+
+      expect(reports[report]).not.toHaveBeenCalled();
+    }
+  );
+});

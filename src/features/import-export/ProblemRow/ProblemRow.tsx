@@ -1,6 +1,5 @@
-import { useState } from 'react';
-
 import { FieldDiff, type FieldDiffSide } from '@/components';
+import { useBusyRow } from '@/hooks/useBusyRow/useBusyRow';
 import { Button, LogoLoader } from '@/primitives';
 import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
 import type {
@@ -123,25 +122,15 @@ export function ProblemRow({
   onImportAs,
   onTakeOut,
 }: ProblemRowProps) {
-  const [press, setPress] = useState<Press | null>(null);
-  const pressed =
-    <A extends unknown[]>(which: Press, report: (...args: A) => void) =>
-    (...args: A) => {
-      setPress(which);
-      report(...args);
-    };
+  const { pressed, label: pressLabel } = useBusyRow(busy, PRESS_LABELS);
   const skip = pressed('skip', onSkip);
   const differs = problem.kind === 'differs';
   const resolvable = !NO_RESOLVE.has(problem.kind);
   return (
     <Card $busy={busy}>
       <Head>
-        {busy === 'shown' && press !== null ? (
-          <LogoLoader
-            size={BUSY_ROW_LOADER_SIZE}
-            inline
-            label={PRESS_LABELS[press]}
-          />
+        {pressLabel !== null ? (
+          <LogoLoader size={BUSY_ROW_LOADER_SIZE} inline label={pressLabel} />
         ) : (
           <Dot $tone={DOT_TONE[problem.kind]} />
         )}
@@ -178,10 +167,9 @@ export function ProblemRow({
             })
           )}
           theirsLabel="Spreadsheet"
-          onApply={(choices) => {
-            setPress('apply');
-            onApply(sheetChoices(choices));
-          }}
+          onApply={pressed('apply', (choices) =>
+            onApply(sheetChoices(choices))
+          )}
           onKeepAll={skip}
         />
       ) : null}
