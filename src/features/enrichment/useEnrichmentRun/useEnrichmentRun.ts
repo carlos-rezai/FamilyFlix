@@ -232,18 +232,10 @@ export function useEnrichmentRun(
 
   const rows = useDelayedBusyByKey();
   const timeRow = rows.run;
-  const rowsPhaseOf = rows.phaseOf;
+  const rowPhase = rows.phaseOf;
+  const cover = rows.cover;
   const bulk = useDelayedBusy();
   const timeBulk = bulk.run;
-  /** The ids a running _Skip all_ covers; empty while none runs. */
-  const [covered, setCovered] = useState<ReadonlySet<string>>(() => new Set());
-  const rowPhase = useCallback(
-    (id: string): BusyPhase => {
-      const own = rowsPhaseOf(id);
-      return own === 'idle' && covered.has(id) ? 'waiting' : own;
-    },
-    [rowsPhaseOf, covered]
-  );
   const seasons = useDelayedBusyByKey();
   const timeSeason = seasons.run;
   const seasonsPhaseOf = seasons.phaseOf;
@@ -294,15 +286,11 @@ export function useEnrichmentRun(
   );
 
   const skipMany = useCallback(
-    async (ids: string[]) => {
-      setCovered(new Set(ids));
-      try {
-        setRun(await timeBulk(() => dismissDecisions(ids)));
-      } finally {
-        setCovered(new Set());
-      }
-    },
-    [timeBulk]
+    (ids: string[]) =>
+      cover(ids, async () =>
+        setRun(await timeBulk(() => dismissDecisions(ids)))
+      ),
+    [cover, timeBulk]
   );
 
   const chooseSeasonPoster = useCallback(
