@@ -142,15 +142,22 @@ export function ImportReview({
   );
   const [open, setOpen] = useState<ReadonlySet<string>>(() => new Set());
   const [logOpen, setLogOpen] = useState(false);
+  // One bulk press at a time: while one runs, a press on another reports
+  // nothing. Only the pressed one is a **Busy button**; the rest refuse.
+  const bulkBusy = skippingAll !== 'idle' || importingAll !== 'idle';
   // Which _Skip all_ was pressed, `kind` or a group's title, so only it reads
-  // _Skipping…_: one loader for one wait. A press while a bulk runs sends
-  // nothing, so it moves nothing either.
+  // _Skipping…_: one loader for one wait.
   const [skipFrom, setSkipFrom] = useState<string | null>(null);
   const skipBusy = (from: string): BusyPhase =>
     skipFrom === from ? skippingAll : 'idle';
   const skipManyFrom = (from: string, ids: string[]) => {
-    if (skippingAll === 'idle' && importingAll === 'idle') setSkipFrom(from);
+    if (bulkBusy) return;
+    setSkipFrom(from);
     onSkipMany(ids);
+  };
+  const importManyAsGuessed = (ids: string[]) => {
+    if (bulkBusy) return;
+    onImportManyAsGuessed(ids);
   };
   const toggle = (title: string) =>
     setOpen((was) => {
@@ -249,7 +256,7 @@ export function ImportReview({
                         label="Import all as guessed"
                         variant="secondary"
                         size="sm"
-                        onClick={() => onImportManyAsGuessed(kindIds)}
+                        onClick={() => importManyAsGuessed(kindIds)}
                         busy={importingAll}
                         busyLabel="Importing…"
                       />
