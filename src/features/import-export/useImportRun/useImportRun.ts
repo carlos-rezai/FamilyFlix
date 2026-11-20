@@ -212,33 +212,12 @@ export function useImportRun(): ImportRunState {
 
   const rows = useDelayedBusyByKey();
   const timeRow = rows.run;
-  const rowsPhaseOf = rows.phaseOf;
+  const rowPhase = rows.phaseOf;
+  const cover = rows.cover;
   const skipsAll = useDelayedBusy();
   const timeSkipAll = skipsAll.run;
   const importsAll = useDelayedBusy();
   const timeImportAll = importsAll.run;
-  /** The ids a running bulk press covers; empty while none runs. */
-  const [covered, setCovered] = useState<ReadonlySet<string>>(() => new Set());
-  const rowPhase = useCallback(
-    (id: string): BusyPhase => {
-      const own = rowsPhaseOf(id);
-      return own === 'idle' && covered.has(id) ? 'waiting' : own;
-    },
-    [rowsPhaseOf, covered]
-  );
-
-  /** A bulk press over `ids`, every row it covers locked until it settles. */
-  const coverWhile = useCallback(
-    async (ids: string[], send: () => Promise<ImportRun>) => {
-      setCovered(new Set(ids));
-      try {
-        setRun(await send());
-      } finally {
-        setCovered(new Set());
-      }
-    },
-    []
-  );
 
   const skip = useCallback(
     async (id: string) => {
@@ -250,14 +229,18 @@ export function useImportRun(): ImportRunState {
 
   const skipMany = useCallback(
     (ids: string[]) =>
-      coverWhile(ids, () => timeSkipAll(() => dismissProblems(ids))),
-    [coverWhile, timeSkipAll]
+      cover(ids, async () =>
+        setRun(await timeSkipAll(() => dismissProblems(ids)))
+      ),
+    [cover, timeSkipAll]
   );
 
   const importManyAsGuessed = useCallback(
     (ids: string[]) =>
-      coverWhile(ids, () => timeImportAll(() => importManyGuessed(ids))),
-    [coverWhile, timeImportAll]
+      cover(ids, async () =>
+        setRun(await timeImportAll(() => importManyGuessed(ids)))
+      ),
+    [cover, timeImportAll]
   );
 
   const apply = useCallback(
