@@ -481,3 +481,167 @@ describe('DisplaySection: Start on, the Pill tabs', () => {
     expect(await pressed('Movies')).toBe('true');
   });
 });
+
+/**
+ * 70, Video quality, Phase 4 (issue #669).
+ *
+ * _Show video quality_, the row after _Fill in ratings from TMDB_ and before
+ * _Start on_, on the same `Row` furniture: its title, its line, and a
+ * `Toggle` named for the title, reading and writing `qualityTags` through
+ * `useDisplayPreference`. Not drawn until the read lands (**Blank until it
+ * lands**); no snackbar on either outcome of a save.
+ */
+const QUALITY_ROUTE = '/api/settings/quality-tags';
+const QUALITY_TITLE = 'Show video quality';
+const QUALITY_LINE =
+  'Tag each poster with how sharp its video is: 4K, 1080p, 720p, 480p or SD. Turning this off also hides the quality filter.';
+
+/** A household whose _Show video quality_ reads `on`. */
+const withQualityTags = (on: boolean): Settings =>
+  makeSettings({ qualityTags: on } as Partial<Settings>);
+
+/**
+ * Wraps the shared stub so the quality-tags route keeps what it is sent (and
+ * the next read answers it), or refuses.
+ */
+function answerQualityTags(outcome: 'keep' | 'refuse') {
+  const base = fetchMock.getMockImplementation();
+  fetchMock.mockImplementation((input, init) => {
+    const url = String(input);
+    if (url === QUALITY_ROUTE && init?.method === 'POST') {
+      if (outcome === 'refuse') {
+        return Promise.resolve(serverErrorResponse());
+      }
+      const { value } = JSON.parse(String(init.body)) as { value: boolean };
+      if (settingsRead !== 'held') {
+        settingsRead = { ...settingsRead, qualityTags: value } as Settings;
+      }
+      return Promise.resolve(okResponse({ value }));
+    }
+    return base
+      ? base(input, init)
+      : Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+/** The posts issued to the quality-tags route so far. */
+function postedQualityValues(): unknown[] {
+  return fetchMock.mock.calls
+    .filter(
+      ([input, init]) =>
+        String(input) === QUALITY_ROUTE && init?.method === 'POST'
+    )
+    .map(
+      ([, init]) => (JSON.parse(String(init?.body)) as { value: unknown }).value
+    );
+}
+
+const qualityToggle = () =>
+  screen.findByRole('switch', { name: QUALITY_TITLE });
+
+describe('DisplaySection: Show video quality, the copy', () => {
+  it('draws the row’s title and line, verbatim, after Fill in ratings from TMDB and before Start on', () => {
+    settingsRead = withQualityTags(true);
+    renderSection();
+
+    const tmdb = screen.getByText(TMDB_TITLE);
+    const title = screen.getByText(QUALITY_TITLE);
+    const line = screen.getByText(QUALITY_LINE);
+    const start = screen.getByText(START_TITLE);
+
+    expect(comesBefore(tmdb, title)).toBe(true);
+    expect(comesBefore(title, line)).toBe(true);
+    expect(comesBefore(line, start)).toBe(true);
+  });
+
+  it('draws the title on the same row furniture as the other rows', () => {
+    settingsRead = withQualityTags(true);
+    renderSection();
+
+    const tmdb = screen.getByText(TMDB_TITLE);
+    const title = screen.getByText(QUALITY_TITLE);
+
+    expect(title.tagName).toBe(tmdb.tagName);
+    expect(title.className).toBe(tmdb.className);
+  });
+});
+
+describe('DisplaySection: Show video quality, the Toggle', () => {
+  it('is not drawn until the read lands', () => {
+    settingsRead = 'held';
+    renderSection();
+
+    expect(screen.getByText(QUALITY_TITLE)).toBeDefined();
+    expect(screen.queryByRole('switch', { name: QUALITY_TITLE })).toBeNull();
+  });
+
+  it.each([true, false])('reflects the stored value, %s', async (on) => {
+    settingsRead = withQualityTags(on);
+    renderSection();
+
+    expect((await qualityToggle()).getAttribute('aria-checked')).toBe(
+      String(on)
+    );
+  });
+
+  it('writes false through the provider when pressed from on, and reflects it', async () => {
+    settingsRead = withQualityTags(true);
+    answerQualityTags('keep');
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.click(await qualityToggle());
+
+    expect((await qualityToggle()).getAttribute('aria-checked')).toBe('false');
+    await waitFor(() => expect(postedQualityValues()).toEqual([false]));
+    expect(postedTmdbValues()).toEqual([]);
+    expect(postedValues()).toEqual([]);
+  });
+
+  it('writes true when pressed from off', async () => {
+    settingsRead = withQualityTags(false);
+    answerQualityTags('keep');
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.click(await qualityToggle());
+
+    expect((await qualityToggle()).getAttribute('aria-checked')).toBe('true');
+    await waitFor(() => expect(postedQualityValues()).toEqual([true]));
+  });
+
+  it('survives a reload: the next mount reads back what was written', async () => {
+    settingsRead = withQualityTags(true);
+    answerQualityTags('keep');
+    const user = userEvent.setup();
+    const first = renderSection();
+    await user.click(await qualityToggle());
+    await waitFor(() => expect(postedQualityValues()).toEqual([false]));
+    first.unmount();
+
+    renderSection();
+
+    expect((await qualityToggle()).getAttribute('aria-checked')).toBe('false');
+  });
+
+  it.each(['keep', 'refuse'] as const)(
+    'shows no snackbar when the save is answered %s',
+    async (outcome) => {
+      settingsRead = withQualityTags(true);
+      answerQualityTags(outcome);
+      const user = userEvent.setup();
+      renderSection();
+
+      await user.click(await qualityToggle());
+      await waitFor(() => expect(postedQualityValues()).toEqual([false]));
+      await waitFor(async () =>
+        expect((await qualityToggle()).getAttribute('aria-checked')).toBe(
+          outcome === 'keep' ? 'false' : 'true'
+        )
+      );
+
+      expect(screen.queryByRole('status')).toBeNull();
+      expect(screen.queryByRole('alert')).toBeNull();
+    }
+  );
+});

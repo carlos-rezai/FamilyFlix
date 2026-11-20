@@ -821,3 +821,49 @@ describe('SeriesGrid — TMDB ratings on the cards', () => {
     expect(fetchMock.mock.calls.length).toBe(reads);
   });
 });
+
+/**
+ * 70, Video quality, Phase 4 (issue #669): the cards are mapped under the
+ * **Card preferences** read by `useCardPreferences`, so a series' Quality tag
+ * is drawn while _Show video quality_ is on and gone while it is off, or
+ * before the read lands.
+ */
+describe('SeriesGrid: Show video quality on the cards', () => {
+  function tree(qualityTags: boolean | null) {
+    const value = makeDisplayPreferenceApi({
+      tmdbRatings: true,
+      qualityTags,
+    } as Partial<ReturnType<typeof makeDisplayPreferenceApi>>);
+    return (
+      <MemoryRouter initialEntries={['/?tab=series']}>
+        <ThemeProvider theme={theme}>
+          <DisplayPreferenceContext.Provider value={value}>
+            <SeriesGrid />
+          </DisplayPreferenceContext.Provider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+  }
+
+  it('draws the tag while on, and none while off or before the read lands', async () => {
+    serve({
+      series: [
+        makeSeries({ id: 's1', title: 'Harbor & Vine', videoQuality: '1080p' }),
+      ],
+      episodeCount: 5,
+      continueWatching: [],
+    });
+
+    const on = render(tree(true));
+    const tagged = await screen.findByRole('button', { name: 'Harbor & Vine' });
+    expect(within(tagged).getByText('1080p')).toBeDefined();
+    on.unmount();
+
+    for (const qualityTags of [false, null]) {
+      const rendered = render(tree(qualityTags));
+      const card = await screen.findByRole('button', { name: 'Harbor & Vine' });
+      expect(within(card).queryByText('1080p')).toBeNull();
+      rendered.unmount();
+    }
+  });
+});
