@@ -5,7 +5,7 @@ import type { BusyPhase } from '@/types';
 /**
  * A **Busy row**'s root at every phase: a containing block, so its **Busy
  * overlay** can cover it once `shown`. Its lock is `busyRowLock`, from
- * `waiting`; this adds no dim, no cursor and no motion of its own.
+ * `waiting`; this adds no cursor and no motion of its own.
  */
 export const busyRow = css`
   position: relative;

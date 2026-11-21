@@ -881,7 +881,7 @@ pressing play. Grilled in design log 70:
     - **Prototype**: `docs/handoff/handoff-video-quality/`, a new atom
       `prim.MetaTag`, the Quality pill and the Display row.
 
-53. ⬜ **Busy overlay**: a **Busy row**'s shown face moves from its status
+53. 🔜 **Busy overlay**: a **Busy row**'s shown face moves from its status
     slot to an overlay, so nothing in the row shifts while it waits. Today
     the 18px **Logo loader** and its label stand in the kind dot of a
     **Decision row** or **Problem row** and push the title and the
@@ -894,6 +894,11 @@ pressing play. Grilled in design log 70:
     **Folder row** too, since not every press has a poster to blur.
     Grilled in design log 71, which widens it to every action loader: a
     loader never moves what is around it.
+    Three faces, one rule: the **Busy row**, the **Busy button** and the
+    **Dialog loader**. Built in issues 676 to 682; the walk (issue 683)
+    held each write open in the dev app and measured every row's box, every
+    grown button's width and every dialog card's box before, at and after
+    **Shown**: none moved.
     - **Busy row**: a `BusyOverlay` molecule, `bg` at .55 under a 4px
       blur, the 18px mark and its _-ing_ label centred; the row's root a
       containing block at every phase. Amends the handoff's row 5 and log

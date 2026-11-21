@@ -131,7 +131,7 @@ SettingsPage (Update/Check), ImportFlow (Start/Cancel/Finish), ExportModal (Expo
 | `icon` | `'none' \| 'play'` | none | optional leading glyph |
 | `fullWidth` | boolean | false | stretch to container |
 | `disabled` | boolean | false | muted fill, no hover/click |
-| `busy` | `'idle' \| 'waiting' \| 'shown'` | idle | the **Busy phase** (log 53); button form only, never on the link. `waiting`: disabled, `aria-busy`, the idle label, the variant's face kept (not the muted disabled fill), `cursor: progress`. `shown`: `busyLabel` in a span with `aria-live="polite"` and the shine. The idle width is held as `min-width` while busy. `onClick` never fires while busy |
+| `busy` | `'idle' \| 'waiting' \| 'shown'` | idle | the **Busy phase** (log 53); button form only, never on the link. `waiting`: disabled, `aria-busy`, the idle label, the variant's face kept (not the muted disabled fill), `cursor: progress`. `shown`: `busyLabel` in a span with `aria-live="polite"` and the shine. With a `busyLabel`, both labels are laid out in one grid cell at every phase, the one not drawn `visibility: hidden` and `aria-hidden`, so the button is always as wide as its wider label (log 71). `onClick` never fires while busy |
 | `busyLabel` | string | `label` | the _-ing_ form: _Saving…_, _Adding…_, _Clearing…_, _Deleting…_, _Erasing…_, _Testing…_, _Exporting…_ |
 | `onClick` | () => void | — | |
 
@@ -142,7 +142,7 @@ shadow** — see §2a. Primary hover/press come from `--color-accent-hover` / `-
 **Busy** (log 53, from `handoff-loading-states/`): the button never draws the FF mark. The
 shine is a moving `mask-image` over the label in the button's own ink, so one rule serves
 every variant; the handoff's `background-clip: text` gradient in one fixed ink is not used
-(wrong on the bordered `danger`). Under reduced motion it fades, with its own keyframes that
+(wrong on the bordered `danger`). Nothing is measured: an idle button whose busy label is the wider (_Add_, _Skip all_) is a few pixels wider than the prototype draws it, and no press grows it. Under reduced motion it fades, with its own keyframes that
 `GlobalStyle`'s `*` rule does not collapse. Shown only under **Loader timing**
 (`useDelayedBusy`: nothing for 300ms, then held 500ms). No _Saved ✓_ face. The callers:
 the Movie form's save (_Add to library → Adding…_, _Save changes → Saving…_), the Clear
@@ -431,23 +431,25 @@ and the ✕ is not drawn. Only the Delete dialogs and the Reset dialog set it, f
 confirm press (in `waiting` too, with _Cancel_ disabled) until the action settles. The
 Clear and Export dialogs stay live while they work.
 
-### DialogLoader: from `handoff-loading-states/` (log 53)
+`loader` (string, absent; log 71): the **Dialog loader**'s label. Given, the card is
+`aria-busy` and takes focus (its focused button is now hidden), its idle face, header and ✕
+included, stays laid out but `visibility: hidden` and out of the accessible tree, and
+`DialogLoader` is drawn over it, so the card keeps its size. The card is never remounted as
+`loader` comes and goes. Absent, `Modal` is as before. The four dialogs set it once
+**Shown**, beside `locked`.
 
-Target: `components/DialogLoader/` · the **Dialog loader**: `{ label: string }`, a 64px
-`LogoLoader` with its label, `aria-busy`, drawn inside a **Bare** `Modal` that is `locked`.
-Once **Shown**, the three Delete dialogs (through `DeleteTitleBody`) render it as
-_Deleting “Coco”_ and the Reset dialog as _Erasing everything_. No step detail (the handoff's
+### DialogLoader: from `handoff-loading-states/` (log 53, amended by log 71)
+
+Target: `components/DialogLoader/` · the **Dialog loader**: `{ label: string }`, the layer a
+`Modal` given a `loader` draws over its hidden idle face: `inset: 0`, the 64px `LogoLoader`
+and its label centred on `surface2`, with no `Modal` of its own. Once **Shown**, the three
+Delete dialogs (through `DeleteTitleBody`) set it as _Deleting “Coco”_ and the Reset dialog as
+_Erasing everything_, on their own card, which keeps its size. No step detail (the handoff's
 _Removing files from disk_ is not drawn: a Delete is one request and keeps every original)
-and no determinate mode. No Cancel and no Close: a failed Delete returns the dialog to its
-idle face with _Couldn’t delete “Coco”. Try again._ above the buttons, in the Reset dialog's
-refusal style; a refused Reset keeps its own refusal sentence. A Delete or Reset that lands
-ends as it did before (its snackbar, leaving or reload), after the hold.
-
-Amended by log 71: the Dialog loader is drawn inside the dialog's own card, not on a second
-`Modal`. `Modal` takes `loader?: string`; given, the card is `aria-busy`, takes focus, and
-keeps its header and body laid out but `visibility: hidden`, so it keeps its size and is never
-remounted, with `DialogLoader` over it as an `inset: 0` layer, the 64px loader centred on
-`surface2`. A failure shows the idle face again in the same card.
+and no determinate mode. No Cancel and no Close: a failed Delete shows the idle face again in
+the same card with _Couldn’t delete “Coco”. Try again._ above the buttons, in the Reset
+dialog's refusal style; a refused Reset keeps its own refusal sentence. A Delete or Reset that
+lands ends as it did before (its snackbar, leaving or reload), after the hold.
 
 ### BusyOverlay: from `handoff-loading-states/` (log 71)
 
@@ -457,7 +459,7 @@ Target: `components/BusyOverlay/` · the **Busy overlay**: `{ label: string }`, 
 `rgba(20, 17, 13, 0.55)` under `backdrop-filter: blur(4px)`, `cursor: progress`, fading in on
 `ffFade` 0.18s, the 18px `inline` `LogoLoader` and its label centred on it. The row under it
 is laid out as at `idle`, its status slot (dot, line or caption) kept, so nothing moves. The
-Decision row, the review's Problem row, the Folder row and the Season choice draw it.
+Decision row, the review's Problem row, the Folder row and the Season choice draw it. Exported from the `components` barrel; it adds no control and takes no focus, and sits inside the row's `inert` root, so its `status` is out of the accessible tree while the root says `aria-busy`.
 
 ### Fab — `mol.Fab.dc.html`
 
