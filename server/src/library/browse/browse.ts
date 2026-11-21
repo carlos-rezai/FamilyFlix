@@ -8,7 +8,7 @@ import {
   type MovieQuery,
 } from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
-import { qualityRank } from '../qualityRank/qualityRank';
+import { qualityRankSql } from '../qualityRankSql/qualityRankSql';
 
 /**
  * "Started but not finished" — the rule the Continue Watching row is defined by,
@@ -127,7 +127,7 @@ function buildListQuery(
   }
   if (query.minQuality !== undefined) {
     // An unmeasured film ranks `NULL`, so no rung keeps it.
-    where.push(`${qualityRank('m.video_quality')} <= ?`);
+    where.push(`${qualityRankSql('m.video_quality')} <= ?`);
     whereParams.push(VIDEO_QUALITIES.indexOf(query.minQuality));
   }
   if (query.search !== undefined) {

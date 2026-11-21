@@ -15,7 +15,8 @@ import {
 import type { EpisodeRow, SeriesReader, SeriesRow } from '../read/read';
 import { highestRatedSql, shownRatingSql } from '../../browse/browse';
 import { HOME_ROW_LIMIT } from '../../home/home';
-import { qualityRank, seriesQuality } from '../../qualityRank/qualityRank';
+import { seriesQuality } from '../../qualityRank/qualityRank';
+import { qualityRankSql } from '../../qualityRankSql/qualityRankSql';
 
 /** The Series tab's Continue Watching row holds at most this many entries. */
 const CONTINUE_LIMIT = 15;
@@ -87,7 +88,7 @@ function seriesWhere(
   }
   if (query.minQuality !== undefined) {
     // Ranked on the **Series quality**, so a stray 4K episode lifts nothing.
-    where.push(`${qualityRank(seriesQuality('s.id'))} <= ?`);
+    where.push(`${qualityRankSql(seriesQuality('s.id'))} <= ?`);
     params.push(VIDEO_QUALITIES.indexOf(query.minQuality));
   }
   return {
