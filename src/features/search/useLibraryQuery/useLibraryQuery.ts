@@ -7,7 +7,7 @@ import {
   type MovieSort,
   type VideoQuality,
 } from '@/types';
-import { parseLibraryQuery } from '@/utils';
+import { honouredLibraryQuery, parseLibraryQuery } from '@/utils';
 
 import { useQualityTags } from '@/App/useQualityTags/useQualityTags';
 
@@ -46,15 +46,11 @@ export interface UseLibraryQueryResult {
 export function useLibraryQuery(): UseLibraryQueryResult {
   const [searchParams] = useSearchParams();
 
-  // `?quality=` reads only while _Show video quality_ is on, and the URL is
-  // never rewritten for it, so turning the toggle back on restores the filter.
   const qualityTags = useQualityTags();
-  const query = useMemo(() => {
-    const { minQuality, ...rest } = parseLibraryQuery(searchParams);
-    return qualityTags && minQuality !== undefined
-      ? { ...rest, minQuality }
-      : rest;
-  }, [searchParams, qualityTags]);
+  const query = useMemo(
+    () => honouredLibraryQuery(parseLibraryQuery(searchParams), qualityTags),
+    [searchParams, qualityTags]
+  );
 
   const setParam = useQueryParamWriter();
 
