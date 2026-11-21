@@ -1,7 +1,6 @@
 import { useState } from 'react';
 
-import { LogoLoader } from '@/primitives';
-import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
+import { BusyOverlay } from '@/components';
 import type { BusyPhase, SeasonChoice } from '@/types';
 import { formatEpisodeTag, gradientFromId } from '@/utils';
 import {
@@ -42,8 +41,8 @@ const HEADING_ID = 'enrichment-seasons-heading';
  *
  * Each season's card is a **Busy row**: from `waiting` it is `inert` and
  * `aria-busy`, and refuses a press, as a **Busy button** does; once `shown`
- * it dims, and an 18px inline **Logo loader** reading _Saving poster…_
- * stands in its held-poster caption.
+ * it draws its **Busy overlay** last in the card, reading _Saving poster…_
+ * over it, the held-poster caption kept under it.
  */
 export function SeasonChoices({
   seasons,
@@ -84,17 +83,9 @@ export function SeasonChoices({
                     />
                     <Numeral>{label}</Numeral>
                   </HeldTile>
-                  {busy === 'shown' ? (
-                    <LogoLoader
-                      size={BUSY_ROW_LOADER_SIZE}
-                      inline
-                      label="Saving poster…"
-                    />
-                  ) : (
-                    <HeldCaption>
-                      {posterUrl === null ? 'No poster yet' : 'Current poster'}
-                    </HeldCaption>
-                  )}
+                  <HeldCaption>
+                    {posterUrl === null ? 'No poster yet' : 'Current poster'}
+                  </HeldCaption>
                 </Held>
                 <Rule aria-hidden="true" />
                 {choices.map((choice, i) => {
@@ -127,6 +118,7 @@ export function SeasonChoices({
                   );
                 })}
               </Picker>
+              {busy === 'shown' ? <BusyOverlay label="Saving poster…" /> : null}
             </SeasonCard>
           );
         })}
