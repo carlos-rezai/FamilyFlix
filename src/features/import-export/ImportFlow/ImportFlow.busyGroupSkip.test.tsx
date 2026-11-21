@@ -13,6 +13,7 @@ import {
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
+import { visibleLabel } from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 69, Silent waits, the walk (issue #661): _Skip all_ on a **Review group**.
@@ -28,6 +29,10 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
  * _Skipping…_.
  *
  * The review is read on real timers; the clock is faked from the press on.
+ *
+ * A label reads only as drawn: the button lays out both its labels in one
+ * cell and hides the one not drawn, so a label counts only outside
+ * `aria-hidden` (issue #678).
  */
 
 const noFolder = (id: string, title: string): ImportProblem => ({
@@ -150,12 +155,13 @@ describe('ImportFlow: Skip all on a Review group as a Busy button', () => {
     await pressedOnGroup();
 
     await advanceClock(299);
-    expect(groupSkip().textContent).toBe('Skip all');
+    expect(visibleLabel(groupSkip())).toBe('Skip all');
     await advanceClock(1);
-    expect(groupSkip().textContent).toBe('Skipping…');
+    expect(visibleLabel(groupSkip())).toBe('Skipping…');
     expect(
-      within(besideFilter()).getByRole('button', { name: 'Skip all' })
-        .textContent
+      visibleLabel(
+        within(besideFilter()).getByRole('button', { name: 'Skip all' })
+      )
     ).toBe('Skip all');
 
     await respond(okResponse(ECHO));
@@ -206,9 +212,9 @@ describe('ImportFlow: Keep all mine beside differs as a Busy button', () => {
     expect(sent()).toHaveLength(1);
     expect(button.getAttribute('aria-busy')).toBe('true');
     await advanceClock(299);
-    expect(button.textContent).toBe('Keep all mine');
+    expect(visibleLabel(button)).toBe('Keep all mine');
     await advanceClock(1);
-    expect(button.textContent).toBe('Skipping…');
+    expect(visibleLabel(button)).toBe('Skipping…');
 
     await respond(okResponse(reviewOf([PROBLEMS[1]], 2)));
     await advanceClock(500);

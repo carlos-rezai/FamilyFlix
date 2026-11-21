@@ -20,6 +20,10 @@ import {
 } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import {
+  shownText,
+  visibleLabel,
+} from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 3 (issue #485): the Clear dialog's busy button.
@@ -31,6 +35,10 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  * the scrim still dismiss it while it works.
  *
  * The list is read on real timers; the clock is faked from the press on.
+ *
+ * A label reads only as drawn: the button lays out both its labels in one
+ * cell and hides the one not drawn, so a label counts only outside
+ * `aria-hidden` (issue #678).
  */
 
 const LIBRARY: LibraryTitles = {
@@ -106,14 +114,14 @@ describe('ManageLibrary: Clear on the Loader timing', () => {
 
     expect(confirm().disabled).toBe(true);
     expect(confirm().getAttribute('aria-busy')).toBe('true');
-    expect(confirm().textContent).toBe('Clear details');
+    expect(visibleLabel(confirm())).toBe('Clear details');
 
     await advanceClock(299);
-    expect(confirm().textContent).toBe('Clear details');
-    expect(screen.queryByText('Clearing…')).toBeNull();
+    expect(visibleLabel(confirm())).toBe('Clear details');
+    expect(shownText('Clearing…')).toEqual([]);
 
     await advanceClock(1);
-    expect(confirm().textContent).toBe('Clearing…');
+    expect(visibleLabel(confirm())).toBe('Clearing…');
     expect(confirm().querySelector('[aria-live="polite"]')?.textContent).toBe(
       'Clearing…'
     );
@@ -126,12 +134,12 @@ describe('ManageLibrary: Clear on the Loader timing', () => {
     pressClear();
 
     await advanceClock(100);
-    expect(confirm().textContent).toBe('Clear details');
+    expect(visibleLabel(confirm())).toBe('Clear details');
     await respond(okResponse(CLEARED_COCO));
     await advanceClock(0);
 
     expect(clearDialog()).toBeNull();
-    expect(screen.queryByText('Clearing…')).toBeNull();
+    expect(shownText('Clearing…')).toEqual([]);
     expect(screen.getByText(NOTICE)).toBeDefined();
   });
 
@@ -145,7 +153,7 @@ describe('ManageLibrary: Clear on the Loader timing', () => {
 
     await advanceClock(399);
     expect(clearDialog()).not.toBeNull();
-    expect(confirm().textContent).toBe('Clearing…');
+    expect(visibleLabel(confirm())).toBe('Clearing…');
     expect(screen.queryByText(NOTICE)).toBeNull();
 
     await advanceClock(1);
@@ -179,7 +187,7 @@ describe('ManageLibrary: Clear on the Loader timing', () => {
     pressClear();
     await advanceClock(300);
     expect(confirm().getAttribute('aria-busy')).toBe('true');
-    expect(confirm().textContent).toBe('Clearing…');
+    expect(visibleLabel(confirm())).toBe('Clearing…');
 
     dismiss();
 

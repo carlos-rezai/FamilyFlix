@@ -19,6 +19,10 @@ import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
+import {
+  shownText,
+  visibleLabel,
+} from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 69, Silent waits, Phase 4 (issue #658): the two scan presses as busy
@@ -30,6 +34,10 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
  * run on a `409`, comes only once the 500ms hold is out.
  *
  * The list is read on real timers; the clock is faked from the press on.
+ *
+ * A label reads only as drawn: the button lays out both its labels in one
+ * cell and hides the one not drawn, so a label counts only outside
+ * `aria-hidden` (issue #678).
  */
 
 const NEW_FOLDER: LibraryFolderView = {
@@ -93,19 +101,19 @@ describe.each(BUTTONS)(
       fireEvent.click(theButton);
 
       expect(theButton.getAttribute('aria-busy')).toBe('true');
-      expect(theButton.textContent).toBe(pressed);
+      expect(visibleLabel(theButton)).toBe(pressed);
       expect((theOther as HTMLButtonElement).disabled).toBe(true);
       expect(theOther.hasAttribute('aria-busy')).toBe(false);
 
       await advanceClock(299);
-      expect(screen.queryByText('Scanning…')).toBeNull();
+      expect(shownText('Scanning…')).toEqual([]);
 
       await advanceClock(1);
-      expect(theButton.textContent).toBe('Scanning…');
+      expect(visibleLabel(theButton)).toBe('Scanning…');
       expect(button()).toBe(theButton);
-      expect(theOther.textContent).not.toContain('Scanning…');
+      expect(visibleLabel(theOther)).not.toContain('Scanning…');
       expect((theOther as HTMLButtonElement).disabled).toBe(true);
-      expect(screen.getAllByText('Scanning…')).toHaveLength(1);
+      expect(shownText('Scanning…')).toHaveLength(1);
     });
   }
 );
@@ -124,7 +132,7 @@ describe('LibraryFolders: the scan leaves only once the hold is out', () => {
 
     await advanceClock(399);
     expect(pathname()).toBe('/settings/folders');
-    expect(scanAll().textContent).toBe('Scanning…');
+    expect(visibleLabel(scanAll())).toBe('Scanning…');
 
     await advanceClock(1);
     expect(pathname()).toBe('/import');

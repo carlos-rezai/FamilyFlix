@@ -11,6 +11,10 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import {
+  shownText,
+  visibleLabel,
+} from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 3 (issue #485): the Export dialog's busy button.
@@ -23,6 +27,10 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  * works.
  *
  * The summary lands on real timers; the clock is faked from the press on.
+ *
+ * A label reads only as drawn: the button lays out both its labels in one
+ * cell and hides the one not drawn, so a label counts only outside
+ * `aria-hidden` (issue #678).
  */
 
 const NAME = 'familyflix-collection_08-10-2026';
@@ -96,14 +104,14 @@ describe('ExportModal: Export on the Loader timing', () => {
 
     expect(exportButton().disabled).toBe(true);
     expect(exportButton().getAttribute('aria-busy')).toBe('true');
-    expect(exportButton().textContent).toBe('Export as CSV');
+    expect(visibleLabel(exportButton())).toBe('Export as CSV');
 
     await advanceClock(299);
-    expect(exportButton().textContent).toBe('Export as CSV');
-    expect(screen.queryByText('Exporting…')).toBeNull();
+    expect(visibleLabel(exportButton())).toBe('Export as CSV');
+    expect(shownText('Exporting…')).toEqual([]);
 
     await advanceClock(1);
-    expect(exportButton().textContent).toBe('Exporting…');
+    expect(visibleLabel(exportButton())).toBe('Exporting…');
     expect(
       exportButton().querySelector('[aria-live="polite"]')?.textContent
     ).toBe('Exporting…');
@@ -117,12 +125,12 @@ describe('ExportModal: Export on the Loader timing', () => {
     pressExport();
 
     await advanceClock(100);
-    expect(exportButton().textContent).toBe('Export as CSV');
+    expect(visibleLabel(exportButton())).toBe('Export as CSV');
     await respond(createdResponse(WRITTEN));
     await advanceClock(0);
 
     expect(readyDialog()).not.toBeNull();
-    expect(screen.queryByText('Exporting…')).toBeNull();
+    expect(shownText('Exporting…')).toEqual([]);
   });
 
   it('draws Export ready only once the 500ms hold is out', async () => {
@@ -136,7 +144,7 @@ describe('ExportModal: Export on the Loader timing', () => {
     await advanceClock(399);
     expect(idleDialog()).not.toBeNull();
     expect(readyDialog()).toBeNull();
-    expect(exportButton().textContent).toBe('Exporting…');
+    expect(visibleLabel(exportButton())).toBe('Exporting…');
 
     await advanceClock(1);
     expect(readyDialog()).not.toBeNull();
@@ -151,11 +159,11 @@ describe('ExportModal: Export on the Loader timing', () => {
 
     await advanceClock(399);
     expect(screen.queryByText(REFUSAL)).toBeNull();
-    expect(exportButton().textContent).toBe('Exporting…');
+    expect(visibleLabel(exportButton())).toBe('Exporting…');
 
     await advanceClock(1);
     expect(screen.getByText(REFUSAL)).toBeDefined();
-    expect(exportButton().textContent).toBe('Export as CSV');
+    expect(visibleLabel(exportButton())).toBe('Export as CSV');
   });
 
   it.each<[string, () => void]>([
@@ -174,7 +182,7 @@ describe('ExportModal: Export on the Loader timing', () => {
     pressExport();
     await advanceClock(300);
     expect(exportButton().getAttribute('aria-busy')).toBe('true');
-    expect(exportButton().textContent).toBe('Exporting…');
+    expect(visibleLabel(exportButton())).toBe('Exporting…');
 
     dismiss();
 

@@ -14,6 +14,10 @@ import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBrid
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
+import {
+  shownText,
+  visibleLabel,
+} from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 4 (issue #486): Library folders' _Add_ as a busy
@@ -27,6 +31,10 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
  *
  * Drawn under the Desktop shell, so _Browse…_ is there. The list is read on
  * real timers; the clock is faked from the press on.
+ *
+ * A label reads only as drawn: the button lays out both its labels in one
+ * cell and hides the one not drawn, so a label counts only outside
+ * `aria-hidden` (issue #678).
  */
 
 const KIDS: LibraryFolder = makeLibraryFolder({
@@ -97,14 +105,14 @@ describe('LibraryFolders: Add on the Loader timing', () => {
 
     expect(addButton().disabled).toBe(true);
     expect(addButton().getAttribute('aria-busy')).toBe('true');
-    expect(addButton().textContent).toBe('Add');
+    expect(visibleLabel(addButton())).toBe('Add');
 
     await advanceClock(299);
-    expect(addButton().textContent).toBe('Add');
-    expect(screen.queryByText('Adding…')).toBeNull();
+    expect(visibleLabel(addButton())).toBe('Add');
+    expect(shownText('Adding…')).toEqual([]);
 
     await advanceClock(1);
-    expect(addButton().textContent).toBe('Adding…');
+    expect(visibleLabel(addButton())).toBe('Adding…');
     expect(addButton().querySelector('[aria-live="polite"]')?.textContent).toBe(
       'Adding…'
     );
@@ -121,7 +129,7 @@ describe('LibraryFolders: Add on the Loader timing', () => {
     await answer(createdResponse(KIDS));
     await advanceClock(0);
 
-    expect(screen.queryByText('Adding…')).toBeNull();
+    expect(shownText('Adding…')).toEqual([]);
     expect(screen.getByText(KIDS.path)).toBeDefined();
   });
 
@@ -134,7 +142,7 @@ describe('LibraryFolders: Add on the Loader timing', () => {
     await answer(createdResponse(KIDS));
 
     await advanceClock(399);
-    expect(addButton().textContent).toBe('Adding…');
+    expect(visibleLabel(addButton())).toBe('Adding…');
     expect(screen.queryByText(KIDS.path)).toBeNull();
     expect(screen.getByText('No folders yet.')).toBeDefined();
 
@@ -151,12 +159,12 @@ describe('LibraryFolders: Add on the Loader timing', () => {
     await answer(refusedResponse(409, INSIDE));
 
     await advanceClock(399);
-    expect(addButton().textContent).toBe('Adding…');
+    expect(visibleLabel(addButton())).toBe('Adding…');
     expect(screen.queryByText(INSIDE)).toBeNull();
 
     await advanceClock(1);
     expect(screen.getByText(INSIDE)).toBeDefined();
-    expect(addButton().textContent).toBe('Add');
+    expect(visibleLabel(addButton())).toBe('Add');
   });
 
   it('disables Browse… from the press, and makes it live again once the add settles', async () => {

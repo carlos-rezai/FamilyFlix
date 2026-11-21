@@ -10,6 +10,7 @@ import {
   makeLibraryMovie,
   makeLibrarySeries,
 } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
+import { visibleLabel } from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 47 — Manage library, Phase 3: "Clear details" (issue #409).
@@ -175,7 +176,7 @@ describe('ClearDialog — the buttons', () => {
   it('draws Clear details before Cancel, after the lists', () => {
     renderDialog();
 
-    expect(confirm().textContent).toBe('Clear details');
+    expect(visibleLabel(confirm())).toBe('Clear details');
     expect(comesBefore(confirm(), cancel())).toBe(true);
     expect(comesBefore(listUnder('What stays'), confirm())).toBe(true);
   });
@@ -193,7 +194,7 @@ describe('ClearDialog — the buttons', () => {
     const onConfirm = vi.fn();
     renderDialog({ clearing: 'waiting', onConfirm });
 
-    expect(confirm().textContent).toBe('Clear details');
+    expect(visibleLabel(confirm())).toBe('Clear details');
     expect((confirm() as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(confirm());
     expect(onConfirm).not.toHaveBeenCalled();
@@ -203,7 +204,7 @@ describe('ClearDialog — the buttons', () => {
     const onConfirm = vi.fn();
     renderDialog({ clearing: 'shown', onConfirm });
 
-    expect(confirm().textContent).toBe('Clearing…');
+    expect(visibleLabel(confirm())).toBe('Clearing…');
     expect((confirm() as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(confirm());
     expect(onConfirm).not.toHaveBeenCalled();

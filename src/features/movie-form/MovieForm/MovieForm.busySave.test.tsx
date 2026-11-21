@@ -31,6 +31,10 @@ import {
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import {
+  shownText,
+  visibleLabel,
+} from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 2 (issue #484): a save that waits.
@@ -47,6 +51,10 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  *
  * The form is filled on real timers (a pick goes through `user-event`), and
  * the clock is faked from the press on.
+ *
+ * A label reads only as drawn: the button lays out both its labels in one
+ * cell and hides the one not drawn, so a label counts only outside
+ * `aria-hidden` (issue #678).
  */
 
 const POOL: Genre[] = ['Action', 'Comedy', 'Drama'].map((name, index) => ({
@@ -298,14 +306,14 @@ describe.each(JOBS)(
       // Locked at once, but nothing drawn: the idle label, busy and disabled.
       expect(saveButton().disabled).toBe(true);
       expect(saveButton().getAttribute('aria-busy')).toBe('true');
-      expect(saveButton().textContent).toBe(idleLabel);
+      expect(visibleLabel(saveButton())).toBe(idleLabel);
 
       await advanceClock(299);
-      expect(saveButton().textContent).toBe(idleLabel);
-      expect(screen.queryByText(busyLabel)).toBeNull();
+      expect(visibleLabel(saveButton())).toBe(idleLabel);
+      expect(shownText(busyLabel)).toEqual([]);
 
       await advanceClock(1);
-      expect(saveButton().textContent).toBe(busyLabel);
+      expect(visibleLabel(saveButton())).toBe(busyLabel);
       expect(
         saveButton().querySelector('[aria-live="polite"]')?.textContent
       ).toBe(busyLabel);
@@ -319,12 +327,12 @@ describe.each(JOBS)(
       pressSave();
 
       await advanceClock(100);
-      expect(saveButton().textContent).toBe(idleLabel);
+      expect(visibleLabel(saveButton())).toBe(idleLabel);
       await respond(answer());
       await advanceClock(0);
 
       expect(pathname()).toBe(landing);
-      expect(screen.queryByText(busyLabel)).toBeNull();
+      expect(shownText(busyLabel)).toEqual([]);
     });
 
     it('leaves only once the 500ms hold is out', async () => {
@@ -337,7 +345,7 @@ describe.each(JOBS)(
 
       await advanceClock(399);
       expect(pathname()).toBe(at);
-      expect(saveButton().textContent).toBe(busyLabel);
+      expect(visibleLabel(saveButton())).toBe(busyLabel);
 
       await advanceClock(1);
       expect(pathname()).toBe(landing);

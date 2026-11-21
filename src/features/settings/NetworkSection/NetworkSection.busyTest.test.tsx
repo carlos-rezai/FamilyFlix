@@ -17,6 +17,10 @@ import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import {
+  shownText,
+  visibleLabel,
+} from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 4 (issue #486): _Test connection_ as a busy
@@ -28,6 +32,10 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  * only after the 500ms hold, because it follows `run`'s promise.
  *
  * The key read lands on real timers; the clock is faked from the press on.
+ *
+ * A label reads only as drawn: the button lays out both its labels in one
+ * cell and hides the one not drawn, so a label counts only outside
+ * `aria-hidden` (issue #678).
  */
 
 const KEY_ROUTE = '/api/tmdb/key';
@@ -91,14 +99,14 @@ describe('NetworkSection: Test connection on the Loader timing', () => {
 
     expect(testButton().disabled).toBe(true);
     expect(testButton().getAttribute('aria-busy')).toBe('true');
-    expect(testButton().textContent).toBe('Test connection');
+    expect(visibleLabel(testButton())).toBe('Test connection');
 
     await advanceClock(299);
-    expect(testButton().textContent).toBe('Test connection');
-    expect(screen.queryByText('Testing…')).toBeNull();
+    expect(visibleLabel(testButton())).toBe('Test connection');
+    expect(shownText('Testing…')).toEqual([]);
 
     await advanceClock(1);
-    expect(testButton().textContent).toBe('Testing…');
+    expect(visibleLabel(testButton())).toBe('Testing…');
     expect(
       testButton().querySelector('[aria-live="polite"]')?.textContent
     ).toBe('Testing…');
@@ -115,8 +123,8 @@ describe('NetworkSection: Test connection on the Loader timing', () => {
     await accept();
     await advanceClock(0);
 
-    expect(screen.queryByText('Testing…')).toBeNull();
-    expect(testButton().textContent).toBe('Test again');
+    expect(shownText('Testing…')).toEqual([]);
+    expect(visibleLabel(testButton())).toBe('Test again');
     expect(notice()).not.toBeNull();
   });
 
@@ -129,12 +137,12 @@ describe('NetworkSection: Test connection on the Loader timing', () => {
     await accept();
 
     await advanceClock(399);
-    expect(testButton().textContent).toBe('Testing…');
+    expect(visibleLabel(testButton())).toBe('Testing…');
     expect(notice()).toBeNull();
     expect(screen.getByText('Not set up')).toBeDefined();
 
     await advanceClock(1);
-    expect(testButton().textContent).toBe('Test again');
+    expect(visibleLabel(testButton())).toBe('Test again');
     expect(testButton().disabled).toBe(false);
     expect(notice()).not.toBeNull();
     expect(screen.getByText('Connected')).toBeDefined();
