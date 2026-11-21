@@ -919,7 +919,7 @@
               { t: 'Show it where the action happened', d: 'A save shows in its own button. A delete shows in its own dialog. Only app start-up covers the whole screen.' },
               { t: 'Say what’s happening, and count when you can', d: 'Name the current step, like “Removing files from disk”. If the server reports a total, use the filling mark. Import and enrichment already have live logs, so don’t add a second indicator there.' },
               { t: 'Destructive work can’t be cancelled halfway', d: 'Once a delete starts, it finishes. Hide Cancel, block Escape and clicks on the backdrop, and close the dialog only when the delete is done or has failed. If it fails, keep the dialog open and show the error inside it.' },
-              { t: 'Lock the control, not the layout', d: 'Disable the button that started the action. Nothing around a loader moves: a button is as wide as its wider label, a dialog keeps its size, and a row draws its loader over itself. Inputs around it stay readable.' },
+              { t: 'Lock the control, not the layout', d: 'Disable the button that started the action. A loader never moves what is around it: a button is as wide as its wider label, a dialog keeps its size, and a row draws its loader over itself, never in its flow. Inputs around it stay readable.' },
               { t: 'Page content uses skeletons', d: 'Loading a page or detail view keeps the existing skeletons (LoadingDetail, LoadingSeries). The mark is for actions the user started.' },
               { t: 'Accessible and calm', d: 'The loader uses role="status" and aria-live="polite", with a spoken label like “Saving folder”. The busy area gets aria-busy="true". With reduced motion on, the Fs only fade.' }
             ]
