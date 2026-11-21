@@ -11,6 +11,83 @@ Newest entry first.
 
 ---
 
+## 2026-11-21: Video quality, the refactor (issue 674)
+
+Nineteen commits against `docs/refactor-plans/70-video-quality-refactor.md`,
+one per plan commit. This is the initiative's closing round: step 52 is ✅
+and issue 663 is done. **12978 tests pass across 905 files** (one skipped),
+against 12964 across 902 at `ba1c800b`: the round added the sweep's two
+never-throws pins, `useQualityTags`' suite (2 tests), `honouredLibraryQuery`'s
+(3) and `parseMinQuality`'s (7). `tsc -b --force` is clean. `eslint src
+server electron` reports 1 error and 138 warnings, none in a file this round
+touched; the error (issue 362) is older than the initiative.
+
+### What each group changed
+
+- **Group 1, one way to measure** (`1505380b` to `e88f4aa7`). The sweep's
+  suite pins that a `measure` or a `recordVideoQuality` that throws costs
+  that row alone; both passed on arrival. `derivedVideoFacts` takes
+  `Pick<Playback, 'videoFile' | 'measure'>`, and the sweep measures each
+  row through it, its `try` narrowed to the write.
+- **Group 2, the importer's facts destructured** (`5751ecaa`). Found
+  again's `updateMovie`, the Resolve movie add and the Resolve series'
+  episodes take `{ runtimeMinutes, videoQuality }` and spread each, as the
+  routes' adds do; the two sheet-fallback sites keep `facts`.
+- **Group 3, the ladder's SQL named as its siblings** (`6df71bef`,
+  `fc5da93b`). `qualityRankSql` in `library/qualityRankSql/`,
+  `seriesQualitySql` in `library/series/seriesQualitySql/`; the old
+  `library/qualityRank/` folder is gone.
+- **Group 4, the toggle read once** (`1536f41e` to `05fa0ac7`).
+  `useQualityTags` in `src/App/`, `useTmdbRatings`' twin;
+  `useCardPreferences` composes the two, and `LibraryFilters`,
+  `useLibraryQuery` and `useSettledLibraryQuery` call it.
+- **Group 5, the filter's gate stated once** (`d38eeea3` to `dfc57337`).
+  `honouredLibraryQuery(query, qualityTags)` in `src/utils/`; both query
+  hooks pass the parsed query through it, their two destructurings and
+  comments gone.
+- **Group 6, the pill's cutoffs on the rating's rule** (`af2af955` to
+  `93272d4d`). `parseMinQuality` and `QUALITY_CUTOFFS` in `src/utils/`,
+  beside `parseMinRating` and `RATING_CUTOFFS`; `parseLibraryQuery` and
+  `qualityOptions` read them and `PILL_RUNGS` is gone. The routes'
+  `parseMinQuality` keeps the whole ladder, docblocked as the general API.
+- **Group 7, comments and the documents** (`315ccd62`, `4819d620` and this
+  entry). The build's long comment lines rewrapped, `DisplaySection`'s
+  docblock whole, `SeriesGrid`'s comment refilled; the glossary's **Card
+  preferences**, **Quality filter** and **Quality sweep** name the new
+  units; the README's `playback/` and `App/` lines are current; step 52 and
+  its row are ✅.
+
+### Where this round left the plan
+
+- **Commit 17 rewrapped every comment line the build added past 80
+  columns**, not only the plan's list: six more at 81 (the series seed,
+  `unmeasuredVideos`, `PosterCard`'s docblock, `Movie.videoQuality`,
+  `Episode.videoQuality`, `Settings.qualityTags`), and the one commit 16's
+  `qualityOptions` docblock had just added.
+- **`parseLibraryQuery`'s docblock was refilled** in commit 16, where it
+  came to name `parseMinQuality`.
+- **`honouredLibraryQuery` returns the query itself** when nothing is to be
+  dropped, a copy without `minQuality` otherwise; the settled hook's memo
+  keys on the canonical string either way.
+- **The touched suites ran after each commit and the full suite at each
+  group's end**, as the plan says, green each time with no flake.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: real clips in the dev fixture, the
+three Display rows, `save*` writers and flag routes, the four names for a
+movie or an episode, the case of a rung (URL against sheet cell), `frame`
+computing a rung it does not use, `PosterCardMovie.quality`, and the long
+comment lines older than the initiative. No wire, schema, route, copy,
+prototype state or drawn pixel changed.
+
+### Follow-ups
+
+- None new. Real clips in the dev fixture stay the build's follow-up, a
+  grill if the dev library should show tags.
+
+---
+
 ## 2026-11-20: Video quality, the build (issues 664 to 673)
 
 Eight slices run by `issue-loop`, each a RED and a GREEN commit (664, 666

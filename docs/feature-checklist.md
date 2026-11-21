@@ -81,7 +81,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Missing videos: a held title whose file is gone     | ✅ Done    |
 | Export paths: a nested Export imports back whole    | ✅ Done    |
 | Silent waits: every press shows it is working       | ✅ Done    |
-| Video quality: a 4K to SD tag on every poster       | ⬜ Planned |
+| Video quality: a 4K to SD tag on every poster       | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -840,14 +840,15 @@ button**s step 36 gave the forms and dialogs. Grilled in design log 69:
 Step 52 came out of wanting to see at a glance how good a file is before
 pressing play. Grilled in design log 70:
 
-52. 🔜 **Video quality**: each **Poster card** carries a **Quality tag**
+52. ✅ **Video quality**: each **Poster card** carries a **Quality tag**
     reading _4K_, _1080p_, _720p_, _480p_ or _SD_ at the end of its Star
     row, read by **ffprobe** from the picture stream's frame size by its
     **Nominal height** (the larger of its height and its width × 9/16, so a
     widescreen `1920x800` film is still _1080p_). Built in issues 664 to
     672; the walk (issue 673) ran the dev app in the browser over the dev
     library and a folder of mixed qualities, with real clips standing in
-    for the fixture's placeholder videos.
+    for the fixture's placeholder videos. The refactor (issue 674) measured
+    the sweep by the saves' rule and closed the step.
     - **Measured once**: `Playback.measure` answers the duration and the
       rung from one probe, and `derivedVideoFacts` stores both wherever a
       runtime was derived: the Movie form's add and an edit with a new
