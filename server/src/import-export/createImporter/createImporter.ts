@@ -2762,15 +2762,14 @@ export function createImporter({
         };
       }
       signal.throwIfAborted();
-      const facts = derivedVideoFacts(playback, video);
+      const { runtimeMinutes, videoQuality } = derivedVideoFacts(
+        playback,
+        video
+      );
       storage.updateMovie(movie.id, {
         ...video,
-        ...(facts.runtimeMinutes === null
-          ? {}
-          : { runtimeMinutes: facts.runtimeMinutes }),
-        ...(facts.videoQuality === null
-          ? {}
-          : { videoQuality: facts.videoQuality }),
+        ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
+        ...(videoQuality === null ? {} : { videoQuality }),
         ...(reserved === null ? {} : { mediaFolder: basename(reserved) }),
       });
       logUpdated(current, movie, ['video']);
@@ -3647,8 +3646,10 @@ export function createImporter({
             language: track.language,
           });
         }
-        const facts = derivedVideoFacts(playback, video);
-        const runtime = facts.runtimeMinutes;
+        const { runtimeMinutes, videoQuality } = derivedVideoFacts(
+          playback,
+          video
+        );
 
         // The form's fields, not the sheet's: the row only prefilled them.
         // What the sheet alone knows — whether the family has seen it — is
@@ -3659,10 +3660,8 @@ export function createImporter({
           mediaFolder: basename(folder),
           ...(source.row === null ? {} : { watched: source.row.watched }),
           ...(form.year === null ? {} : { year: form.year }),
-          ...(runtime === null ? {} : { runtimeMinutes: runtime }),
-          ...(facts.videoQuality === null
-            ? {}
-            : { videoQuality: facts.videoQuality }),
+          ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
+          ...(videoQuality === null ? {} : { videoQuality }),
           ...(form.director === null ? {} : { director: form.director }),
           ...(form.synopsis === null ? {} : { synopsis: form.synopsis }),
           ...(form.rating === null ? {} : { rating: form.rating }),
@@ -3777,18 +3776,18 @@ export function createImporter({
               language: track.language,
             });
           }
-          const facts = derivedVideoFacts(playback, video);
-          const runtime = facts.runtimeMinutes;
+          const { runtimeMinutes, videoQuality } = derivedVideoFacts(
+            playback,
+            video
+          );
           const found = sourceFile(episode.video);
           episodes.push({
             season: episode.season,
             number: episode.number,
             ...video,
             ...(episode.title === undefined ? {} : { title: episode.title }),
-            ...(runtime === null ? {} : { runtimeMinutes: runtime }),
-            ...(facts.videoQuality === null
-              ? {}
-              : { videoQuality: facts.videoQuality }),
+            ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
+            ...(videoQuality === null ? {} : { videoQuality }),
             ...(subtitles.length === 0 ? {} : { subtitles }),
             ...(found === undefined ? {} : { sourceFile: found }),
           });
