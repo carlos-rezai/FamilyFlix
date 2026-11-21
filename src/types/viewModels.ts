@@ -41,7 +41,10 @@ export interface PosterCardMovie {
   watched: boolean;
   progress: number;
   favorite: boolean;
-  /** The title's **Video quality**, drawn as a tag at the Star row's end; `null` draws none. */
+  /**
+   * The title's **Video quality**, drawn as a tag at the Star row's end;
+   * `null` draws none.
+   */
   quality: VideoQuality | null;
 }
 

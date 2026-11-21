@@ -39,8 +39,9 @@ const NO_PAYLOAD: HomePayload = {
 };
 
 /**
- * The held payload drawn as its sections, under the **Card preferences**. The shelf holds poster cards, so its movies take the same narrowing a
- * genre row's do — `view`, not a mapper of its own.
+ * The held payload drawn as its sections, under the **Card preferences**.
+ * The shelf holds poster cards, so its movies take the same narrowing a genre
+ * row's do — `view`, not a mapper of its own.
  */
 function toSections(
   payload: HomePayload,

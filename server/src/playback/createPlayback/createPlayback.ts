@@ -214,7 +214,8 @@ export interface Playback {
    * `{ kind: 'none', reason }` in every case with no picture — no component,
    * a `missing` or `unreachable` video, no duration, the **Frame budget**
    * spent, the signal aborted, or a grab that ran and gave nothing — killing
-   * the process wherever one runs. It never rejects (`derivedVideoFacts`'s rule).
+   * the process wherever one runs. It never rejects (`derivedVideoFacts`'s
+   * rule).
    */
   frame(video: StoredVideo, signal: AbortSignal): Promise<FrameOutcome>;
 }

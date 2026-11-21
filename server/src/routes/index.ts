@@ -523,11 +523,11 @@ function parseMinQuality(value: string): VideoQuality | null {
 }
 
 /**
- * The **Library query** a request carries — `q`, `genre`, `rating`, `quality`, `sort` —
- * read once for every screen that takes it, `/home` and `/series` alike; or
- * `null` once a 400 has been answered for an unknown sort or an off-scale
- * minimum. An empty value is no parameter at all, and a minimum of `0` is no
- * minimum.
+ * The **Library query** a request carries — `q`, `genre`, `rating`,
+ * `quality`, `sort` — read once for every screen that takes it, `/home` and
+ * `/series` alike; or `null` once a 400 has been answered for an unknown sort
+ * or an off-scale minimum. An empty value is no parameter at all, and a
+ * minimum of `0` is no minimum.
  */
 function libraryQueryOr400(req: Request, res: Response): LibraryQuery | null {
   const sortParam = queryString(req.query.sort);

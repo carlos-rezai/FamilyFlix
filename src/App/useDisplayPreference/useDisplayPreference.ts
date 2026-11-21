@@ -60,10 +60,11 @@ export const DisplayPreferenceContext =
 
 /**
  * `{ ultrawideMargins, setUltrawideMargins, tmdbRatings, setTmdbRatings,
- * qualityTags, setQualityTags, startTab, setStartTab, movieRowView, setMovieRowView, seriesRowView,
- * setSeriesRowView }` off the app-level `DisplayPreferenceProvider`. The
- * provider is mounted in `App`, so a consumer outside one is a wiring mistake,
- * and a silent `null` would hide it: it throws, naming itself.
+ * qualityTags, setQualityTags, startTab, setStartTab, movieRowView,
+ * setMovieRowView, seriesRowView, setSeriesRowView }` off the app-level
+ * `DisplayPreferenceProvider`. The provider is mounted in `App`, so a consumer
+ * outside one is a wiring mistake, and a silent `null` would hide it: it
+ * throws, naming itself.
  */
 export function useDisplayPreference(): DisplayPreferenceApi {
   const value = useContext(DisplayPreferenceContext);

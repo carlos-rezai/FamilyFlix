@@ -75,8 +75,8 @@ export function SeriesGrid() {
 
   const toggleFavorite = useOptimisticSave(applyFavorite, saveSeriesFavorite);
 
-  // Mapped per render under the Card preferences, so a flip in
-  // Settings redraws the loaded cards without reading the tab again.
+  // Mapped per render under the Card preferences, so a flip in Settings
+  // redraws the loaded cards without reading the tab again.
   const preferences = useCardPreferences();
   const cards = useMemo(
     () =>

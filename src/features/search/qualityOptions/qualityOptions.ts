@@ -23,8 +23,9 @@ export function qualityLabel(selected: VideoQuality | undefined): string {
 
 /**
  * The Quality filter as the dropdown's rows, `ratingOptions`' shape:
- * "All qualities", reporting no minimum, then every cut-off in `QUALITY_CUTOFFS`, best first. No row
- * carries a count. Exactly one row always reads as chosen.
+ * "All qualities", reporting no minimum, then every cut-off in
+ * `QUALITY_CUTOFFS`, best first. No row carries a count. Exactly one row
+ * always reads as chosen.
  *
  * Pure: it builds a fresh list every time and holds nothing between calls.
  */

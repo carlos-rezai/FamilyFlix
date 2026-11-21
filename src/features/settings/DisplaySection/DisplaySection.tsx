@@ -7,11 +7,10 @@ import { Card, GroupHeading, Row, RowDesc, RowTitle } from '../section.styles';
 
 /**
  * The Settings hub's Display **Settings group**: the `Display` **Group
- * heading** over one **Section card** holding four rows: _Ultrawide
- * margins_, _Fill in ratings from TMDB_, _Show video quality_ (each a title,
- * its line and the `Toggle` on the right) and _Start on_, whose **Pill tabs**
- * choose the
- * **Start tab** with no snackbar; all reading and writing through
+ * heading** over one **Section card** holding four rows: _Ultrawide margins_,
+ * _Fill in ratings from TMDB_, _Show video quality_ (each a title, its line
+ * and the `Toggle` on the right) and _Start on_, whose **Pill tabs** choose
+ * the **Start tab** with no snackbar; all reading and writing through
  * `useDisplayPreference`, so the **Content frame** follows a press at once.
  * Each control is not drawn while its value is `null`: **Blank until it
  * lands**.

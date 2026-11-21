@@ -116,7 +116,7 @@ export const TitleBelow = styled.div`
   white-space: nowrap;
 `;
 
-/** The stars on the left, the **Video quality** tag (when there is one) on the right. */
+/** The stars on the left; the **Video quality** tag, if any, on the right. */
 export const StarRow = styled.div`
   margin-top: 5px;
   display: flex;

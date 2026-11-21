@@ -75,7 +75,7 @@ export interface Settings {
   ultrawideMargins: boolean;
   /** Whether an unrated title draws its TMDB score as its stars. */
   tmdbRatings: boolean;
-  /** Whether each Poster card draws its **Quality tag** (_Show video quality_). */
+  /** Whether a Poster card draws its **Quality tag** (_Show video quality_). */
   qualityTags: boolean;
   /** Which **Library tab** the app opens on. */
   startTab: LibraryTab;

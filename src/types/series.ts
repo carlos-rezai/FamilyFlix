@@ -33,7 +33,8 @@ export interface Series {
   genres: Genre[];
   /**
    * Its **Series quality**: the rung most of its measured episodes are on, a
-   * tie going to the better rung; `null` with none measured. Derived, never stored.
+   * tie going to the better rung; `null` with none measured. Derived, never
+   * stored.
    */
   videoQuality: VideoQuality | null;
   /** True only when every episode is watched; derived, never stored. */
@@ -52,7 +53,7 @@ export interface Episode extends StoredVideo {
   /** An ISO date, or `null`. */
   airDate: string | null;
   runtimeMinutes: number | null;
-  /** Its **Video quality**, measured from its picture; `null` until measured. */
+  /** Its **Video quality**, read off its picture; `null` until measured. */
   videoQuality: VideoQuality | null;
   watched: boolean;
   resumePositionSeconds: number;

@@ -50,7 +50,7 @@ export interface SeedSeason {
   titles: (string | null)[];
   /** Every episode's runtime; omitted for a season whose runtimes are unknown. */
   runtimeMinutes?: number;
-  /** Every episode's **Video quality**; omitted for a season left unmeasured. */
+  /** Every episode's **Video quality**; omitted for an unmeasured season. */
   videoQuality?: VideoQuality;
   /** The first episode's air date; the rest follow a week apart. */
   firstAired?: string;

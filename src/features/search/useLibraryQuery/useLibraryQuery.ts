@@ -24,7 +24,7 @@ export interface UseLibraryQueryResult {
   setGenre: (value: string) => void;
   /** Write the minimum rating; nought ("All ratings") takes `rating` back off. */
   setRating: (value: number) => void;
-  /** Write the minimum quality; none ("All qualities") takes `quality` back off. */
+  /** Write the minimum quality; none ("All qualities") takes `quality` off. */
   setQuality: (value: VideoQuality | undefined) => void;
 }
 

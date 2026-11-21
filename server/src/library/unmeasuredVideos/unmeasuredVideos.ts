@@ -11,7 +11,7 @@ export interface UnmeasuredVideo extends StoredVideo {
   id: string;
 }
 
-/** The **Quality sweep**'s slice: what it reads and the one column it writes. */
+/** The **Quality sweep**'s slice: what it reads and its one written column. */
 export interface UnmeasuredVideosRepository {
   unmeasuredVideos(): UnmeasuredVideo[];
   recordVideoQuality(
