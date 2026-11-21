@@ -99,14 +99,17 @@ describe('SeasonChoices: one season shown', () => {
     expect(Number(loader.querySelector('svg')?.getAttribute('width'))).toBe(18);
   });
 
-  it('dims that season’s card to .75 under a progress cursor', () => {
+  it('no longer dims that season’s card, a containing block for its overlay', () => {
     chosenTwo('shown');
 
     const card = busyCardOf(pickerFor('S02'));
     expect(card).not.toBeNull();
     const drawn = resolvedStyle(card as HTMLElement);
-    expect(drawn.opacity).toBe('.75');
-    expect(drawn.cursor).toBe('progress');
+    // 71, issue #677: `busyRow` drops the dim and the cursor; the root
+    // is `position: relative` so the overlay can cover it.
+    expect(drawn.opacity).not.toBe('.75');
+    expect(drawn.cursor).not.toBe('progress');
+    expect(drawn.position).toBe('relative');
   });
 
   it('leaves every other season as it was', () => {

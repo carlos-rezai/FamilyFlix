@@ -12,10 +12,13 @@ import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
  *
  * The review hands the row its `busy` phase; which press it was is the row's
  * own. From `waiting` the row's root is `inert` and `aria-busy`, every
- * control inside keeping its own face (none greyed, none relabelled). Once
- * `shown` the row dims to .75 under a progress cursor, and an 18px `inline`
- * **Logo loader** reading _Saving match…_ stands in the kind dot's slot, its
- * beat fading rather than moving under reduced motion.
+ * control inside keeping its own face (none greyed, none relabelled).
+ *
+ * 71, Busy overlay, Phase 2 (issue #677): once `shown` the row draws its
+ * **Busy overlay** last in its root, reading _Saving match…_ over the row; the
+ * kind dot keeps its slot, nothing is dimmed, and the root is a containing
+ * block at every phase. The overlay's beat fades rather than moves under
+ * reduced motion.
  */
 
 const AMBIGUOUS: Decision = {
@@ -108,6 +111,28 @@ describe('DecisionRow: waiting', () => {
   });
 });
 
+describe('DecisionRow: the root is a containing block at every phase', () => {
+  it.each(['idle', 'waiting', 'shown'] as const)(
+    'is position: relative and undimmed at %s, its overlay only once shown',
+    (busy) => {
+      const { container } = pickedRow(busy);
+      const drawn = resolvedStyle(rootOf(container));
+
+      expect(drawn.position).toBe('relative');
+      expect(drawn.opacity).not.toBe('.75');
+      expect(drawn.cursor).not.toBe('progress');
+
+      // No overlay before shown, and the lock only from waiting.
+      if (busy !== 'shown') {
+        expect(screen.queryByRole('status')).toBeNull();
+        expect(screen.queryByText('Saving match…')).toBeNull();
+      }
+      expect(rootOf(container).hasAttribute('inert')).toBe(busy !== 'idle');
+      expect(rootOf(container).hasAttribute('aria-busy')).toBe(busy !== 'idle');
+    }
+  );
+});
+
 describe('DecisionRow: shown', () => {
   it('stays inert and aria-busy once shown', () => {
     const { container } = pickedRow('shown');
@@ -116,26 +141,31 @@ describe('DecisionRow: shown', () => {
     expect(rootOf(container).getAttribute('aria-busy')).toBe('true');
   });
 
-  it('draws the 18px inline mark reading Saving match… in the kind dot’s slot', () => {
+  it('keeps the kind dot in its slot alongside Saving match…', () => {
     pickedRow('shown');
 
     const loader = screen.getByRole('status', { name: 'Saving match…' });
     expect(loader.textContent).toContain('Saving match…');
 
-    // The dot's slot: right before the block the title and reason sit in.
-    expect(reason().parentElement?.previousElementSibling).toBe(loader);
-
-    const mark = loader.querySelector('svg');
-    expect(Number(mark?.getAttribute('width'))).toBe(18);
-    expect(resolvedStyle(loader)['flex-direction']).toBe('row');
+    // The dot's slot, right before the title and reason, is still the dot.
+    const slot = reason().parentElement?.previousElementSibling;
+    expect(slot).not.toBeNull();
+    expect(slot).not.toBe(loader);
+    expect(slot?.contains(loader)).toBe(false);
+    expect(slot?.getAttribute('role')).not.toBe('status');
+    expect(slot?.textContent).toBe('');
   });
 
-  it('dims the row to .75 under a progress cursor', () => {
+  it('draws the overlay last in its root, over the row', () => {
     const { container } = pickedRow('shown');
-    const drawn = resolvedStyle(rootOf(container));
+    const root = rootOf(container);
+    const loader = screen.getByRole('status', { name: 'Saving match…' });
 
-    expect(drawn.opacity).toBe('.75');
-    expect(drawn.cursor).toBe('progress');
+    const overlay = root.lastElementChild as HTMLElement;
+    expect(overlay.contains(loader)).toBe(true);
+    expect(overlay.contains(reason())).toBe(false);
+    expect(resolvedStyle(overlay).position).toBe('absolute');
+    expect(Number(loader.querySelector('svg')?.getAttribute('width'))).toBe(18);
   });
 });
 
@@ -176,7 +206,7 @@ describe('DecisionRow: the loader under reduced motion', () => {
     );
   }
 
-  it('fades the row’s mark rather than moving it', () => {
+  it('fades the overlay’s mark rather than moving it', () => {
     pickedRow('shown');
     const loader = screen.getByRole('status', { name: 'Saving match…' });
     const fs = Array.from(loader.querySelectorAll('path'));
