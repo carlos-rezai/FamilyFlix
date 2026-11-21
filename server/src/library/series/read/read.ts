@@ -11,7 +11,7 @@ import type {
 } from '@/types';
 import { nextEpisodeOf } from '../nextEpisodeOf/nextEpisodeOf';
 import { deriveStatus, type GenreRow, type SubtitleRow } from '../../read/read';
-import { seriesQuality } from '../../qualityRank/qualityRank';
+import { seriesQualitySql } from '../seriesQualitySql/seriesQualitySql';
 
 export interface SeriesRow {
   id: string;
@@ -184,10 +184,10 @@ export function createSeriesReader(db: SqliteDatabase): SeriesReader {
   `);
   // The **Series quality**, one subquery per series, derived on every read.
   const selectSeriesQuality = db.prepare(
-    `SELECT ${seriesQuality('?')} AS quality`
+    `SELECT ${seriesQualitySql('?')} AS quality`
   );
   const selectAllSeriesQualities = db.prepare(
-    `SELECT s.id AS id, ${seriesQuality('s.id')} AS quality FROM series s`
+    `SELECT s.id AS id, ${seriesQualitySql('s.id')} AS quality FROM series s`
   );
   const selectSeriesWatched = db.prepare(`
     SELECT COUNT(*) > 0 AND MIN(watched) = 1 AS watched
