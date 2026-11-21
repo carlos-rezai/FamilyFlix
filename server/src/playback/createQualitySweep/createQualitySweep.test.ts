@@ -14,6 +14,8 @@
 // - a row still `NULL` is asked again on the next start; a measured one never;
 // - it yields to the event loop between files, so a request is served while
 //   it runs.
+// - it never throws: a measure or a write that throws costs that row alone
+//   (issue #674).
 //
 // The storage is real (in memory), the videos are real files in a sandboxed
 // managed directory, and the `Playback` is the real one over a fake
@@ -96,6 +98,7 @@ function fakeComponent(): FakeComponent {
 interface World {
   storage: LibraryStorage;
   component: FakeComponent;
+  playback: ReturnType<typeof createPlayback>;
   media: string;
   sweep: () => ReturnType<typeof createQualitySweep>;
   /** Write a video file under the managed directory. */
@@ -117,6 +120,7 @@ function world(): World {
   return {
     storage,
     component,
+    playback,
     media,
     sweep: () => createQualitySweep({ storage, playback }),
     file: (videoPath) => {
@@ -259,6 +263,64 @@ describe('createQualitySweep', () => {
     expect(storage.getMovie(unreachable.id)?.videoQuality).toBeNull();
     expect(storage.listEpisodes(series.id)[0].videoQuality).toBeNull();
     expect(storage.getMovie(after.id)?.videoQuality).toBe('480p');
+  });
+
+  it('passes over a row whose measure throws, and measures the next', async () => {
+    const { storage, playback, file } = world();
+    const first = storage.addMovie(
+      newMovie({ title: 'Amelie', videoPath: file('Amelie/amelie.mp4') })
+    );
+    const next = storage.addMovie(
+      newMovie({ title: 'Zulu', videoPath: file('Zulu/zulu.mp4') })
+    );
+    let measured = 0;
+    const sweep = createQualitySweep({
+      storage,
+      playback: {
+        videoFile: (video) => playback.videoFile(video),
+        measure: (found) => {
+          measured += 1;
+          if (measured === 1) {
+            throw new Error('the probe fell over');
+          }
+          return playback.measure(found);
+        },
+      },
+    });
+
+    await expect(sweep.start()).resolves.toBeUndefined();
+
+    expect(storage.getMovie(first.id)?.videoQuality).toBeNull();
+    expect(storage.getMovie(next.id)?.videoQuality).toBe('480p');
+  });
+
+  it('passes over a row whose write throws, and writes the next', async () => {
+    const { storage, playback, file } = world();
+    const first = storage.addMovie(
+      newMovie({ title: 'Amelie', videoPath: file('Amelie/amelie.mp4') })
+    );
+    const next = storage.addMovie(
+      newMovie({ title: 'Zulu', videoPath: file('Zulu/zulu.mp4') })
+    );
+    let written = 0;
+    const sweep = createQualitySweep({
+      storage: {
+        unmeasuredVideos: () => storage.unmeasuredVideos(),
+        recordVideoQuality: (kind, id, quality) => {
+          written += 1;
+          if (written === 1) {
+            throw new Error('the database is busy');
+          }
+          storage.recordVideoQuality(kind, id, quality);
+        },
+      },
+      playback,
+    });
+
+    await expect(sweep.start()).resolves.toBeUndefined();
+
+    expect(storage.getMovie(first.id)?.videoQuality).toBeNull();
+    expect(storage.getMovie(next.id)?.videoQuality).toBe('480p');
   });
 
   it('asks a row still unmeasured again on the next start, and a measured row never', async () => {
