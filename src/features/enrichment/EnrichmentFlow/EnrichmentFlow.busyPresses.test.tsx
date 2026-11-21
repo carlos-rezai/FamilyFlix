@@ -397,13 +397,21 @@ describe('EnrichmentFlow: a Season choice held open', () => {
   it('reads Saving poster… in that season past 300ms', async () => {
     await choseSeasonTwo();
 
+    // 71, issue #681: the loader is the card's **Busy overlay**, drawn last
+    // in the card, over its picker; the caption stays under it.
+    const cardOf = (label: string) =>
+      pickerFor(label).parentElement as HTMLElement;
     await advanceClock(299);
-    expect(within(pickerFor('S02')).queryByRole('status')).toBeNull();
+    expect(
+      within(cardOf('S02')).queryByRole('status', { hidden: true })
+    ).toBeNull();
 
     await advanceClock(1);
-    expect(
-      within(pickerFor('S02')).getByRole('status', { name: 'Saving poster…' })
-    ).toBeDefined();
-    expect(within(pickerFor('S01')).queryByRole('status')).toBeNull();
+    const loader = within(cardOf('S02')).getByRole('status', {
+      name: 'Saving poster…',
+    });
+    expect(cardOf('S02').lastElementChild?.contains(loader)).toBe(true);
+    expect(within(pickerFor('S02')).queryByRole('status')).toBeNull();
+    expect(within(cardOf('S01')).queryByRole('status')).toBeNull();
   });
 });

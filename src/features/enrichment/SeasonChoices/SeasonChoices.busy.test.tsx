@@ -13,8 +13,10 @@ import { SeasonChoices } from './SeasonChoices';
  *
  * The review hands the section `seasonPhase(season)`, the run hook's. From
  * `waiting` that season's card is `inert` and `aria-busy`, every other
- * season's card as it was; once `shown` it dims, and an 18px `inline`
- * **Logo loader** reading _Saving poster…_ stands in its held-poster caption.
+ * season's card as it was. Once `shown` it draws its **Busy overlay** last in
+ * the card (71, issue #681), the 18px `inline` **Logo loader** reading
+ * _Saving poster…_ centred over the card, the held-poster caption kept in its
+ * 112px slot under it: the loader never takes the caption's place.
  */
 
 const tmdb = (path: string) => `https://image.tmdb.org/t/p/w342${path}`;
@@ -64,6 +66,9 @@ function chosenTwo(busy: BusyPhase) {
 const pickerFor = (label: string) =>
   screen.getByRole('group', { name: `Posters for ${label}` });
 
+/** A season's card: the picker's parent, the **Busy row**'s root. */
+const cardOf = (label: string) => pickerFor(label).parentElement as HTMLElement;
+
 const busyCardOf = (element: HTMLElement) =>
   element.closest<HTMLElement>('[aria-busy="true"]');
 
@@ -84,19 +89,73 @@ describe('SeasonChoices: one season waiting', () => {
     expect(screen.queryByRole('status')).toBeNull();
     expect(within(pickerFor('S02')).getByText('No poster yet')).toBeTruthy();
   });
+
+  it.each<BusyPhase>(['idle', 'waiting'])('draws no overlay at %s', (busy) => {
+    chosenTwo(busy);
+    const card = cardOf('S02');
+
+    expect(screen.queryByRole('status', { hidden: true })).toBeNull();
+    expect(screen.queryByText('Saving poster…')).toBeNull();
+    expect(
+      resolvedStyle(card.lastElementChild as HTMLElement).position
+    ).not.toBe('absolute');
+  });
 });
 
 describe('SeasonChoices: one season shown', () => {
-  it('reads Saving poster… in that season’s held-poster caption', () => {
+  it('stays inert and aria-busy once shown', () => {
     chosenTwo('shown');
-    const two = pickerFor('S02');
 
-    const loader = within(two).getByRole('status', { name: 'Saving poster…' });
+    const card = busyCardOf(pickerFor('S02'));
+    expect(card).not.toBeNull();
+    expect(card?.hasAttribute('inert')).toBe(true);
+  });
+
+  it('keeps the held-poster caption alongside Saving poster…', () => {
+    chosenTwo('shown');
+    const card = cardOf('S02');
+
+    const loader = within(card).getByRole('status', { name: 'Saving poster…' });
     expect(loader.textContent).toContain('Saving poster…');
-    expect(within(two).queryByText('No poster yet')).toBeNull();
-    // The caption's slot: right after the held tile, `S02` on it.
-    expect(loader.previousElementSibling?.textContent).toContain('S02');
+    expect(within(card).getByText('No poster yet')).toBeTruthy();
+    expect(within(card).getByText('Saving poster…')).toBeTruthy();
+  });
+
+  it('draws no slot loader: the held tile and its caption hold no status', () => {
+    chosenTwo('shown');
+    const tile = within(pickerFor('S02')).getByText('S02');
+    const held = tile.parentElement?.parentElement as HTMLElement;
+
+    expect(within(held).queryByRole('status', { hidden: true })).toBeNull();
+    // The caption's slot, right after the held tile, is still the caption.
+    const slot = tile.parentElement?.nextElementSibling;
+    expect(slot?.textContent).toBe('No poster yet');
+    expect(slot?.getAttribute('role')).not.toBe('status');
+    expect(within(pickerFor('S02')).queryByRole('status')).toBeNull();
+  });
+
+  it('draws the overlay last in the card, over it', () => {
+    chosenTwo('shown');
+    const card = cardOf('S02');
+    const loader = within(card).getByRole('status', { name: 'Saving poster…' });
+
+    const overlay = card.lastElementChild as HTMLElement;
+    expect(overlay.contains(loader)).toBe(true);
+    expect(overlay.contains(pickerFor('S02'))).toBe(false);
+    expect(resolvedStyle(overlay).position).toBe('absolute');
     expect(Number(loader.querySelector('svg')?.getAttribute('width'))).toBe(18);
+  });
+
+  it('lays out its held poster and caption once shown as at idle', () => {
+    const idle = render(tree('idle'));
+    const held = () =>
+      within(pickerFor('S02')).getByText('S02').parentElement?.parentElement
+        ?.innerHTML;
+    const before = held();
+    idle.unmount();
+
+    chosenTwo('shown');
+    expect(held()).toBe(before);
   });
 
   it('no longer dims that season’s card, a containing block for its overlay', () => {
