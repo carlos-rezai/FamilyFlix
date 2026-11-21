@@ -124,9 +124,10 @@ describe('DeleteMovieDialog: locked from the confirm press', () => {
     await advanceClock(500);
   });
 
-  it('becomes the dialog loader reading Deleting “Northwind” at 300ms, still locked', async () => {
+  it('draws the dialog loader in its own card at 300ms, the confirmation hidden, still locked', async () => {
     const onClose = vi.fn();
     renderDialog({ onClose });
+    const card = liveDialog();
     pressDelete();
 
     await advanceClock(299);
@@ -136,10 +137,14 @@ describe('DeleteMovieDialog: locked from the confirm press', () => {
     await advanceClock(1);
     const status = loader();
     expect(status).not.toBeNull();
-    expect(status?.closest('[aria-busy="true"]')).not.toBeNull();
-    expect(dialog()).toBeNull();
+    // One dialog on screen, the same card: no second dialog pops in.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.getByRole('dialog')).toBe(card);
+    expect(card.contains(status)).toBe(true);
+    expect(card.getAttribute('aria-busy')).toBe('true');
+    // The confirmation stays laid out, out of the accessible tree.
+    expect(within(card).getByText('This can’t be undone.')).toBeDefined();
+    expect(within(card).queryByRole('button')).toBeNull();
 
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: 'Escape',
@@ -188,9 +193,10 @@ describe('DeleteMovieDialog: a delete that lands', () => {
 });
 
 describe('DeleteMovieDialog: a failed delete', () => {
-  it('returns, after the hold, to the live idle face with the failure line, staying put', async () => {
+  it('returns, after the hold, to the live idle face with the failure line in the same card, staying put', async () => {
     const onClose = vi.fn();
     renderDialog({ onClose });
+    const card = liveDialog();
     pressDelete();
     await advanceClock(300);
 
@@ -207,6 +213,9 @@ describe('DeleteMovieDialog: a failed delete', () => {
     expect(confirm().textContent).toBe('Delete movie');
     expect(cancel().disabled).toBe(false);
     expect(url()).toBe('/movie/m1');
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog')).toBe(card);
+    expect(card.getAttribute('aria-busy')).not.toBe('true');
 
     fireEvent.click(
       within(liveDialog()).getByRole('button', { name: 'Close' })

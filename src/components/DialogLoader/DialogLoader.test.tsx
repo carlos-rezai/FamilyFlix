@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { ThemeProvider } from 'styled-components';
 
 import { DialogLoader } from '@/components';
 import { theme } from '@/styles/theme';
 
 /**
- * 53, Loading states, Phase 5 (issue #487): the **Dialog loader**.
+ * 53, Loading states, Phase 5 (issue #487), amended by 71, Busy overlay,
+ * Phase 6 (issue #679): the **Dialog loader**.
  *
- * `{ label }`: a 64px `LogoLoader` with its label, `aria-busy`, drawn inside a
- * **Bare** `Modal` that is locked. What a Delete or Reset dialog becomes once
- * its action is **Shown**: no heading, no ✕ and no Cancel.
+ * `{ label }`: the layer a `Modal` given a `loader` draws over its hidden idle
+ * face, `inset: 0`, the 64px `LogoLoader` and its label centred on
+ * `surface2`. It has no `Modal` of its own: the card it sits in is the
+ * dialog's own.
  */
 
 function renderLoader(label = 'Erasing everything') {
@@ -21,31 +23,28 @@ function renderLoader(label = 'Erasing everything') {
   );
 }
 
-const card = () => screen.getByRole('dialog');
-
 describe('DialogLoader', () => {
-  it('draws its label as a busy status, inside a modal dialog', () => {
+  it('draws its label as a status', () => {
     renderLoader();
 
-    const status = within(card()).getByRole('status', {
-      name: 'Erasing everything',
-    });
-    expect(card().getAttribute('aria-modal')).toBe('true');
-    expect(status.closest('[aria-busy="true"]')).not.toBeNull();
-    expect(card().textContent).toContain('Erasing everything');
+    expect(
+      screen.getByRole('status', { name: 'Erasing everything' })
+    ).toBeDefined();
+    expect(document.body.textContent).toContain('Erasing everything');
   });
 
   it('draws the loader at 64px', () => {
     renderLoader();
 
-    const mark = within(card()).getByRole('status').querySelector('svg');
+    const mark = screen.getByRole('status').querySelector('svg');
     expect(Number(mark?.getAttribute('width'))).toBe(64);
   });
 
-  it('is bare: no heading and no ✕', () => {
+  it('draws no dialog of its own', () => {
     renderLoader();
 
-    expect(within(card()).queryByRole('heading')).toBeNull();
-    expect(within(card()).queryByRole('button')).toBeNull();
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('heading')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
