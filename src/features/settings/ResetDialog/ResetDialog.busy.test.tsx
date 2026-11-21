@@ -11,6 +11,7 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import { visibleLabel } from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 5 (issue #487): the Reset dialog on the
@@ -22,6 +23,10 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  * everything_. A reset that lands reloads onto `/` as it always has, only after
  * the 500ms hold; a refused one returns to the live idle face with its own
  * refusal sentence.
+ *
+ * 71, Busy overlay, Phase 7 (issue #682): the loader is drawn over the
+ * dialog's own card, the confirmation laid out and hidden under it; the
+ * refusal returns in that same card.
  *
  * The clock is faked from the press on.
  */
@@ -90,9 +95,10 @@ describe('ResetDialog: locked from the confirm press', () => {
     await advanceClock(500);
   });
 
-  it('becomes the dialog loader reading Erasing everything at 300ms, still locked', async () => {
+  it('draws the dialog loader in its own card at 300ms, the confirmation hidden, still locked', async () => {
     const onClose = vi.fn();
     renderDialog(onClose);
+    const card = liveDialog();
     pressErase();
 
     await advanceClock(299);
@@ -102,12 +108,15 @@ describe('ResetDialog: locked from the confirm press', () => {
     await advanceClock(1);
     const status = loader();
     expect(status).not.toBeNull();
-    expect(status?.closest('[aria-busy="true"]')).not.toBeNull();
-    expect(screen.getByRole('dialog').contains(status)).toBe(true);
-    // The idle face is gone: one card on screen, the loader's.
-    expect(dialog()).toBeNull();
+    // One dialog on screen, the same card: no second dialog pops in.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.getByRole('dialog')).toBe(card);
+    expect(card.contains(status)).toBe(true);
+    expect(card.getAttribute('aria-busy')).toBe('true');
+    // The confirmation stays laid out, out of the accessible tree.
+    expect(within(card).getByText('What goes')).toBeDefined();
+    expect(within(card).queryByRole('button')).toBeNull();
+    expect(visibleLabel(card)).not.toMatch(/What goes|What stays/);
 
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: 'Escape',
@@ -147,6 +156,7 @@ describe('ResetDialog: a refused reset', () => {
   it('returns, after the hold, to the live idle face with its refusal sentence', async () => {
     const onClose = vi.fn();
     renderDialog(onClose);
+    const card = liveDialog();
     pressErase();
     await advanceClock(300);
 
@@ -164,6 +174,9 @@ describe('ResetDialog: a refused reset', () => {
     expect(erase().textContent).toBe('Erase everything');
     expect(cancel().disabled).toBe(false);
     expect(location.assigned()).toEqual([]);
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog')).toBe(card);
+    expect(card.getAttribute('aria-busy')).not.toBe('true');
 
     // Live again: every way out asks to close.
     fireEvent.click(

@@ -11,6 +11,7 @@ import {
   makeLibraryMovie,
   makeLibrarySeries,
 } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
+import { visibleLabel } from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 47 — Manage library, Phase 4: "delete a copied title" (issue #410).
@@ -226,13 +227,46 @@ describe('DeleteTitleDialog — the buttons', () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it('becomes the dialog loader reading Deleting “Coco” once shown', () => {
+  it('draws the dialog loader reading Deleting “Coco” in its own card once shown, the confirmation hidden', () => {
     renderDialog({ deleting: 'shown' });
 
+    // One dialog on screen, still the confirmation's card (issue #682).
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    const card = dialog();
+    const status = screen.getByRole('status', { name: 'Deleting “Coco”' });
+    expect(card.contains(status)).toBe(true);
+    expect(card.getAttribute('aria-busy')).toBe('true');
+    // The confirmation stays laid out, out of the accessible tree.
     expect(
-      screen.getByRole('status', { name: 'Deleting “Coco”' })
+      within(card).getByText('C:\\FamilyFlix\\media\\coco-2017')
     ).toBeDefined();
-    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(within(card).queryByRole('button')).toBeNull();
+    expect(visibleLabel(card)).not.toMatch(/What goes|coco-2017/);
+  });
+
+  it('keeps its card from shown back to its idle face with the failure line', () => {
+    const { rerender } = renderDialog({ deleting: 'shown' });
+    const card = dialog();
+
+    rerender(
+      <ThemeProvider theme={theme}>
+        <DeleteTitleDialog
+          title={COCO}
+          deleting="idle"
+          failed
+          onConfirm={() => undefined}
+          onClose={() => undefined}
+        />
+      </ThemeProvider>
+    );
+
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(dialog()).toBe(card);
+    expect(card.getAttribute('aria-busy')).not.toBe('true');
+    expect(
+      within(card).getByText('Couldn’t delete “Coco”. Try again.')
+    ).toBeDefined();
+    expect(within(card).getByRole('button', { name: 'Cancel' })).toBeDefined();
   });
 
   it('draws the failure line above the buttons once a delete failed', () => {

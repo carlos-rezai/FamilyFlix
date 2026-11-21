@@ -21,6 +21,7 @@ import {
 import { makeLibraryMovie } from '@/test-support/makeLibraryTitle/makeLibraryTitle';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import { visibleLabel } from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 6 (issue #488): Manage library's **Delete
@@ -32,6 +33,10 @@ import { heldFetch } from '@/test-support/heldFetch/heldFetch';
  * that lands closes it, the row off the list, with the notice, only after
  * the 500ms hold; a failed one returns the live idle face with _Couldn’t
  * delete “Coco”. Try again._, cleared by the next confirm.
+ *
+ * 71, Busy overlay, Phase 7 (issue #682): the loader is drawn over the
+ * dialog's own card, the confirmation laid out and hidden under it; the
+ * failure returns in that same card.
  *
  * The list is read on real timers; the clock is faked from the press on.
  */
@@ -137,8 +142,9 @@ describe('ManageLibrary: the Delete dialog, locked from the confirm press', () =
     await advanceClock(500);
   });
 
-  it('becomes the dialog loader reading Deleting “Coco” at 300ms, still locked', async () => {
+  it('draws the dialog loader in its own card at 300ms, the confirmation hidden, still locked', async () => {
     await openDeleteOn();
+    const card = liveDialog();
     pressDelete();
 
     await advanceClock(299);
@@ -148,10 +154,14 @@ describe('ManageLibrary: the Delete dialog, locked from the confirm press', () =
     await advanceClock(1);
     const status = loader();
     expect(status).not.toBeNull();
-    expect(status?.closest('[aria-busy="true"]')).not.toBeNull();
-    expect(dialog()).toBeNull();
+    // One dialog on screen, the same card: no second dialog pops in.
     expect(screen.getAllByRole('dialog')).toHaveLength(1);
-    expect(screen.queryByRole('button', { name: 'Cancel' })).toBeNull();
+    expect(screen.getByRole('dialog')).toBe(card);
+    expect(card.contains(status)).toBe(true);
+    expect(card.getAttribute('aria-busy')).toBe('true');
+    // The confirmation stays laid out, out of the accessible tree.
+    expect(within(card).getByText('What goes')).toBeDefined();
+    expect(within(card).queryByRole('button')).toBeNull();
 
     fireEvent.keyDown(document.activeElement ?? document.body, {
       key: 'Escape',
@@ -173,9 +183,11 @@ describe('ManageLibrary: the Delete dialog, locked from the confirm press', () =
 
     const card = screen.getByRole('dialog');
     expect(loader(title)).not.toBeNull();
-    expect(
-      within(card).queryByText(/file|folder|recycle|original|keep/i)
-    ).toBeNull();
+    // The confirmation stays laid out under the loader, aria-hidden, so
+    // only the text the card shows counts (issue #682).
+    expect(visibleLabel(card)).not.toMatch(
+      /file|folder|recycle|original|keep/i
+    );
 
     await respond(noContentResponse());
     await advanceClock(500);
@@ -203,8 +215,9 @@ describe('ManageLibrary: a delete that lands', () => {
 });
 
 describe('ManageLibrary: a failed delete', () => {
-  it('returns, after the hold, to the live idle face with the failure line, the row kept', async () => {
+  it('returns, after the hold, to the live idle face with the failure line in the same card, the row kept', async () => {
     await openDeleteOn();
+    const card = liveDialog();
     pressDelete();
     await advanceClock(300);
 
@@ -221,6 +234,9 @@ describe('ManageLibrary: a failed delete', () => {
     expect(confirm().textContent).toBe('Delete movie');
     expect(cancel().disabled).toBe(false);
     expect(screen.queryByText(NOTICE)).toBeNull();
+    expect(screen.getAllByRole('dialog')).toHaveLength(1);
+    expect(screen.getByRole('dialog')).toBe(card);
+    expect(card.getAttribute('aria-busy')).not.toBe('true');
 
     // Live again: the ✕ is back, and Cancel closes it over the kept row.
     expect(
