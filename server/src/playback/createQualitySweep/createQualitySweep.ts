@@ -1,5 +1,6 @@
 import type { LibraryStorage } from '../../library';
 import type { Playback } from '../createPlayback/createPlayback';
+import { derivedVideoFacts } from '../derivedVideoFacts/derivedVideoFacts';
 
 /** What the **Quality sweep** reads and writes through, and measures with. */
 export interface QualitySweepDeps {
@@ -25,10 +26,11 @@ function yieldToEventLoop(): Promise<void> {
  * quality**, movies first A to Z, then episodes, measured one file at a time
  * and written through `recordVideoQuality`, that one column alone.
  *
- * A row with no file, or whose video is `missing` or `unreachable`, is passed
- * over; a row the probe could not read stays `NULL`, so the next start asks
- * it again. Between two files it yields to the event loop, so a request
- * waits behind at most one probe.
+ * Each row is measured by `derivedVideoFacts`, the saves' rule: a row with no
+ * file, or whose video is `missing` or `unreachable`, is passed over; a row
+ * the probe could not read stays `NULL`, so the next start asks it again.
+ * Between two files it yields to the event loop, so a request waits behind
+ * at most one probe.
  *
  * It never throws: a failure on one row costs that row its quality and
  * nothing else.
@@ -46,23 +48,17 @@ export function createQualitySweep({
       if (stopped) {
         return;
       }
-      if (video.videoPath === '') {
+      const { videoQuality } = derivedVideoFacts(playback, video);
+      if (stopped) {
+        return;
+      }
+      if (videoQuality === null) {
         continue;
       }
       try {
-        const found = playback.videoFile(video);
-        if (found.kind !== 'file') {
-          continue;
-        }
-        const { quality } = playback.measure(found.file);
-        if (stopped) {
-          return;
-        }
-        if (quality !== null) {
-          storage.recordVideoQuality(video.kind, video.id, quality);
-        }
+        storage.recordVideoQuality(video.kind, video.id, videoQuality);
       } catch {
-        // One unreadable row is passed over, never the whole run.
+        // One unwritable row is passed over, never the whole run.
       }
     }
   };
