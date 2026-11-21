@@ -39,6 +39,7 @@ export {
 } from './parseMinRating/parseMinRating';
 export { parseLibraryQuery } from './parseLibraryQuery/parseLibraryQuery';
 export { toLibraryQueryParams } from './toLibraryQueryParams/toLibraryQueryParams';
+export { honouredLibraryQuery } from './honouredLibraryQuery/honouredLibraryQuery';
 export { parseGenreQuery } from './parseGenreQuery/parseGenreQuery';
 export { toGenreQueryParams } from './toGenreQueryParams/toGenreQueryParams';
 export { moviePath } from './moviePath/moviePath';
