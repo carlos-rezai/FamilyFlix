@@ -169,6 +169,21 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       one film's `Images\` and empty another's, then Sync both. The empty
       `Images\` now holds a `poster` and a `backdrop`; the first keeps its
       `heat-poster.png` and gains no `poster`.
+- [ ] Silent waits, in the shell: Settings → Add a series, _Add show
+      folder_ on a show of many episodes inside a Library folder: while the
+      folder is read the button is locked, and a read past 300ms shows the
+      mark with _Reading folder…_. On Library folders, _Scan all folders_
+      reads _Scanning…_ with _Scan new folders_ disabled, and a folder's ✕
+      reads _Removing…_ before the row leaves.
+- [ ] Video quality: the three smoke films' posters each read **720p** at
+      the end of their Star row, and the fixture's placeholder films carry no
+      tag. The _Quality_ pill on _720p+_ keeps the smoke films and drops the
+      placeholders; _1080p+_ shows none of them. Settings → Display → _Show
+      video quality_ off: every tag and the pill go. Back on, put a copy of
+      `smoke.mp4` in a folder of its own in the sandbox Library folder,
+      _Scan all folders_ and rate it: its row of
+      `<sandbox>\Meta\familyflix-library.csv` reads `720p` in the _Quality_
+      cell after _Runtime_.
 
 ## 6. The slot over the default
 
@@ -274,6 +289,9 @@ Deck's round-trip is in step 12.
       app quits, and it relaunches by itself.
 - [ ] The relaunch congratulates once, and the About card reads the new
       version.
+- [ ] From v0.17.0 on, the **Quality sweep**: the previous version's films
+      had no rung, and within a minute of the relaunch their posters carry a
+      Quality tag, the library browsable all the while.
 - [ ] The quit path: install the previous version again, let the offer
       arrive, then quit without pressing **Update now**. The next launch is on
       the new version.
@@ -319,6 +337,8 @@ round-trip at the end.
 - [ ] Settings → Add a movie with `smoke-hevc.mkv`: it transcodes and
       plays. Note how smoothly it plays:
       **\*\*\*\***\_\_\_**\*\*\*\*** (VAAPI is wired later only if this stutters).
+- [ ] The three smoke films' posters each read **720p**: the bundled
+      ffprobe measures on Linux too.
 - [ ] Settings → Storage → _Open folder_: the file manager opens
       `~/.config/FamilyFlix/media`.
 - [ ] Settings → Playback → Codecs: the Component row's pill reads
