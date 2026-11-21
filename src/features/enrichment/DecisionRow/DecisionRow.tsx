@@ -1,9 +1,8 @@
 import { useState } from 'react';
 
-import { FieldDiff, type FieldDiffSide } from '@/components';
+import { BusyOverlay, FieldDiff, type FieldDiffSide } from '@/components';
 import { useBusyRow } from '@/hooks/useBusyRow/useBusyRow';
-import { Button, LogoLoader } from '@/primitives';
-import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
+import { Button } from '@/primitives';
 import type {
   BusyPhase,
   ConflictChoices,
@@ -47,7 +46,7 @@ export interface DecisionRowProps {
   decision: Decision;
   /**
    * The row's phase on the **Loader timing**, handed by the review: from
-   * `waiting` it is locked, once `shown` its loader stands in the dot's slot.
+   * `waiting` it is locked, once `shown` it draws its **Busy overlay**.
    */
   busy: BusyPhase;
   onSkip: () => void;
@@ -66,8 +65,8 @@ export interface DecisionRowProps {
  *
  * A **Busy row**: from `waiting` its root is `inert` and `aria-busy`, every
  * control keeping its own face, and it refuses a press, as a **Busy button**
- * does; once `shown` it dims, and an 18px inline **Logo loader** naming its
- * press stands in the kind dot's slot.
+ * does; once `shown` it draws its **Busy overlay** last in its root, naming
+ * its press over the row, the kind dot keeping its slot.
  */
 export function DecisionRow({
   decision,
@@ -85,11 +84,7 @@ export function DecisionRow({
   return (
     <Card $busy={busy}>
       <Head>
-        {pressLabel !== null ? (
-          <LogoLoader size={BUSY_ROW_LOADER_SIZE} inline label={pressLabel} />
-        ) : (
-          <Dot $kind={decision.kind} />
-        )}
+        <Dot $kind={decision.kind} />
         <Text>
           <Title>{decision.title}</Title>
           <Reason>{decision.reason}</Reason>
@@ -129,6 +124,8 @@ export function DecisionRow({
           onKeepAll={skip}
         />
       ) : null}
+
+      {pressLabel !== null ? <BusyOverlay label={pressLabel} /> : null}
     </Card>
   );
 }

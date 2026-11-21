@@ -11,7 +11,7 @@ import { theme } from '@/styles/theme';
  * a **Busy row**.
  *
  * Which press it was is the row's own; the phase is the review's. Once
- * `shown`, the 18px loader in the kind dot's slot reads that press's own
+ * `shown`, the 18px loader on the row's **Busy overlay** reads that press's own
  * label: _Updating details…_ for _Apply choices_, _Skipping…_ for _Skip_ and
  * _Keep all mine_, _Searching TMDB…_ for _Search_. While `waiting` it reads
  * nothing.
@@ -96,14 +96,18 @@ describe.each(PRESSES)(
       expect(screen.queryByText(label)).toBeNull();
     });
 
-    it(`reads ${label} once shown, in the kind dot's slot`, () => {
-      pressed('shown');
+    it(`reads ${label} once shown, on the overlay over the row`, () => {
+      const { container } = pressed('shown');
 
       const loader = screen.getByRole('status', { name: label });
       expect(loader.textContent).toContain(label);
+      // 71, issue #677: the loader sits on the **Busy overlay**, drawn last in
+      // the row's root; the kind dot keeps its slot.
+      const root = container.firstElementChild as HTMLElement;
+      expect(root.lastElementChild?.contains(loader)).toBe(true);
       expect(
         screen.getByText(decision.reason).parentElement?.previousElementSibling
-      ).toBe(loader);
+      ).not.toBe(loader);
     });
   }
 );
