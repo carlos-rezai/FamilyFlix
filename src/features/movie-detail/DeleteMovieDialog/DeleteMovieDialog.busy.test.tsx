@@ -13,6 +13,7 @@ import {
 } from '@/test-support/fakeResponse/fakeResponse';
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
+import { visibleLabel } from '@/test-support/visibleLabel/visibleLabel';
 
 /**
  * 53, Loading states, Phase 6 (issue #488): the movie page's **Delete
@@ -165,11 +166,11 @@ describe('DeleteMovieDialog: locked from the confirm press', () => {
     await advanceClock(300);
 
     expect(loader()).not.toBeNull();
-    expect(
-      within(screen.getByRole('dialog')).queryByText(
-        /file|folder|recycle|original|keep/i
-      )
-    ).toBeNull();
+    // The confirmation stays laid out under the loader, aria-hidden, so
+    // only the text the card shows counts (issue #679).
+    expect(visibleLabel(screen.getByRole('dialog'))).not.toMatch(
+      /file|folder|recycle|original|keep/i
+    );
 
     await respond(noContentResponse());
     await advanceClock(500);
