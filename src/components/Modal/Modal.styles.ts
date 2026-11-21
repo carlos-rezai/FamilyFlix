@@ -32,6 +32,7 @@ export const Card = styled.div`
   border-radius: ${({ theme }) => theme.radius.lg};
   box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
   overflow: hidden;
+  position: relative;
   animation: ffPop 0.2s ease;
 `;
 
@@ -115,4 +116,12 @@ export const Body = styled.div`
   display: flex;
   flex-direction: column;
   gap: 20px;
+`;
+
+/**
+ * The idle face: everything the card draws without a loader. Under one it
+ * stays laid out, so the card keeps its size, but is not seen.
+ */
+export const Face = styled.div<{ $hidden: boolean }>`
+  visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
 `;

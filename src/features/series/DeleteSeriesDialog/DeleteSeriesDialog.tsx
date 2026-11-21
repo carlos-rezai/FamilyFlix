@@ -1,4 +1,4 @@
-import { DialogLoader, Modal } from '@/components';
+import { Modal } from '@/components';
 import { DeleteTitleBody } from '@/features/manage-library/DeleteTitleBody/DeleteTitleBody';
 import { deleteView } from '@/features/manage-library/libraryTitleView/libraryTitleView';
 import type { DeleteFacts, DeleteSubject } from '@/types';
@@ -36,7 +36,19 @@ export function DeleteSeriesDialog({
   const subject: DeleteSubject = { kind: 'series', title, ...deleteFacts };
 
   if (open && deleting === 'shown') {
-    return <DialogLoader label={deleteView(subject).loader} />;
+    // Stopgap until issue #682 moves this dialog onto its own card's loader.
+    return (
+      <Modal
+        open
+        bare
+        locked
+        loader={deleteView(subject).loader}
+        title={deleteView(subject).loader}
+        onClose={onClose}
+      >
+        {null}
+      </Modal>
+    );
   }
 
   return (

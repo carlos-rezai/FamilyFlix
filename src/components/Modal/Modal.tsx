@@ -18,7 +18,9 @@ import {
   Subtitle,
   CloseButton,
   Body,
+  Face,
 } from './Modal.styles';
+import { DialogLoader } from '../DialogLoader/DialogLoader';
 
 export interface ModalProps {
   /** Whether the dialog is on screen. Closed, it renders nothing at all. */
@@ -49,6 +51,14 @@ export interface ModalProps {
    * action settles, and every way out is back.
    */
   locked?: boolean;
+  /**
+   * The **Dialog loader**'s label. Given, the card is `aria-busy`, its idle
+   * face (header and ✕ included) stays laid out but hidden, out of the
+   * accessible tree and off the Tab ring, the loader is drawn over it, and
+   * the card takes focus. The card itself is never remounted across the
+   * change, so it keeps its own size and pops in once.
+   */
+  loader?: string;
   /** The card's body, below the header — or, `bare`, the whole card. */
   children: ReactNode;
 }
@@ -61,8 +71,14 @@ export interface ModalProps {
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
+/**
+ * The ring's stops, less any inside a hidden face: a plain focusable query
+ * still matches the buttons a loader has hidden.
+ */
 const focusablesIn = (card: HTMLElement) =>
-  Array.from(card.querySelectorAll<HTMLElement>(FOCUSABLE));
+  Array.from(card.querySelectorAll<HTMLElement>(FOCUSABLE)).filter(
+    (element) => element.closest('[aria-hidden="true"]') === null
+  );
 
 /**
  * The scrimmed, centred card every dialog in the app is drawn on — the Delete
@@ -93,6 +109,7 @@ export function Modal({
   onClose,
   bare = false,
   locked = false,
+  loader,
   children,
 }: ModalProps) {
   const titleId = useId();
@@ -116,6 +133,15 @@ export function Modal({
       }
     };
   }, [open]);
+
+  // A loader hides the button that had focus; focus goes to the card, where
+  // the ring finds nothing to move to.
+  const busy = loader !== undefined;
+  useEffect(() => {
+    if (open && busy) {
+      cardRef.current?.focus();
+    }
+  }, [open, busy]);
 
   // The keys, listened for only while open: Escape is the second way out, and
   // Tab at either end of the card's focusables wraps rather than leaving.
@@ -187,36 +213,44 @@ export function Modal({
         aria-label={bare ? title : undefined}
         aria-labelledby={bare ? undefined : titleId}
         tabIndex={-1}
+        aria-busy={busy ? 'true' : undefined}
       >
-        {bare ? (
-          children
-        ) : (
-          <>
-            <Header>
-              <HeaderRow>
-                {icon === undefined ? null : (
-                  <IconTile aria-hidden="true">{icon}</IconTile>
-                )}
-                <Heading>
-                  <Title id={titleId}>{title}</Title>
-                  {subtitle === undefined ? null : (
-                    <Subtitle>{subtitle}</Subtitle>
+        <Face
+          $hidden={busy}
+          aria-hidden={busy ? 'true' : undefined}
+          inert={busy}
+        >
+          {bare ? (
+            children
+          ) : (
+            <>
+              <Header>
+                <HeaderRow>
+                  {icon === undefined ? null : (
+                    <IconTile aria-hidden="true">{icon}</IconTile>
                   )}
-                </Heading>
-                {locked ? null : (
-                  <CloseButton
-                    type="button"
-                    aria-label="Close"
-                    onClick={onClose}
-                  >
-                    ✕
-                  </CloseButton>
-                )}
-              </HeaderRow>
-            </Header>
-            <Body>{children}</Body>
-          </>
-        )}
+                  <Heading>
+                    <Title id={titleId}>{title}</Title>
+                    {subtitle === undefined ? null : (
+                      <Subtitle>{subtitle}</Subtitle>
+                    )}
+                  </Heading>
+                  {locked ? null : (
+                    <CloseButton
+                      type="button"
+                      aria-label="Close"
+                      onClick={onClose}
+                    >
+                      ✕
+                    </CloseButton>
+                  )}
+                </HeaderRow>
+              </Header>
+              <Body>{children}</Body>
+            </>
+          )}
+        </Face>
+        {loader === undefined ? null : <DialogLoader label={loader} />}
       </Card>
     </Scrim>,
     document.body

@@ -1,4 +1,4 @@
-import { DialogLoader, Modal } from '@/components';
+import { Modal } from '@/components';
 import { BinIcon } from '@/primitives';
 import type { BusyPhase, LibraryTitle } from '@/types';
 
@@ -41,7 +41,19 @@ export function DeleteTitleDialog({
   const view = deleteView(title);
 
   if (deleting === 'shown') {
-    return <DialogLoader label={view.loader} />;
+    // Stopgap until issue #682 moves this dialog onto its own card's loader.
+    return (
+      <Modal
+        open
+        bare
+        locked
+        loader={view.loader}
+        title={view.loader}
+        onClose={onClose}
+      >
+        {null}
+      </Modal>
+    );
   }
 
   return (

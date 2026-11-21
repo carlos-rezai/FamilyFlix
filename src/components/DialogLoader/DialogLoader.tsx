@@ -1,27 +1,22 @@
 import { LogoLoader } from '@/primitives';
 
-import { Modal } from '../Modal/Modal';
-import { Body } from './DialogLoader.styles';
+import { Layer } from './DialogLoader.styles';
 
 export interface DialogLoaderProps {
   /** What the work is, drawn under the loader: _Erasing everything_. */
   label: string;
 }
 
-/** Nothing to ask for: a locked modal has no way out. */
-const stay = () => undefined;
-
 /**
- * The **Dialog loader**: a 64px `LogoLoader` with its label, `aria-busy`,
- * drawn inside a **Bare** `Modal` that is locked. What a Delete or Reset
- * dialog becomes once its action is **Shown**: no heading, no ✕, no Cancel.
+ * The **Dialog loader**: a 64px `LogoLoader` with its label, the layer a
+ * `Modal` given a `loader` draws over its hidden idle face. It has no `Modal`
+ * of its own: the card it sits in is the dialog's own, so no second dialog
+ * pops in once a Delete or Reset is **Shown**.
  */
 export function DialogLoader({ label }: DialogLoaderProps) {
   return (
-    <Modal open bare locked title={label} onClose={stay}>
-      <Body aria-busy="true">
-        <LogoLoader size={64} label={label} />
-      </Body>
-    </Modal>
+    <Layer>
+      <LogoLoader size={64} label={label} />
+    </Layer>
   );
 }

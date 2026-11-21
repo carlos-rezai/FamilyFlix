@@ -1,4 +1,4 @@
-import { DialogLoader, Modal } from '@/components';
+import { Modal } from '@/components';
 import { BangTriangleIcon, Button } from '@/primitives';
 
 import { useFactoryReset } from '../useFactoryReset/useFactoryReset';
@@ -45,7 +45,19 @@ export function ResetDialog({ open, onClose }: ResetDialogProps) {
   const busy = resetting !== 'idle';
 
   if (open && resetting === 'shown') {
-    return <DialogLoader label="Erasing everything" />;
+    // Stopgap until issue #682 moves this dialog onto its own card's loader.
+    return (
+      <Modal
+        open
+        bare
+        locked
+        loader={'Erasing everything'}
+        title={'Erasing everything'}
+        onClose={onClose}
+      >
+        {null}
+      </Modal>
+    );
   }
 
   return (

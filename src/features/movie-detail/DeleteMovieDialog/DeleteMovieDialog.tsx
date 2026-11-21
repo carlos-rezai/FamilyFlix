@@ -1,4 +1,4 @@
-import { DialogLoader, Modal } from '@/components';
+import { Modal } from '@/components';
 import { DeleteTitleBody } from '@/features/manage-library/DeleteTitleBody/DeleteTitleBody';
 import { deleteView } from '@/features/manage-library/libraryTitleView/libraryTitleView';
 import type { DeleteFacts, DeleteSubject } from '@/types';
@@ -22,9 +22,10 @@ export interface DeleteMovieDialogProps {
  * over _This can’t be undone._, then the Manage library dialog's body,
  * `DeleteTitleBody`: **What goes / What stays** by the film's Delete facts,
  * and the hook's confirm. From the confirm press the dialog is **Locked**
- * and _Cancel_ disabled until the delete settles; once **Shown** it becomes
- * the **Dialog loader** reading _Deleting “<title>”_. A failure returns it
- * to its live idle face with the failure line, nothing changed.
+ * and _Cancel_ disabled until the delete settles; once **Shown** its own card
+ * draws the **Dialog loader** reading _Deleting “<title>”_ over the hidden
+ * confirmation. A failure gives the live idle face back in the same card,
+ * with the failure line, nothing changed.
  */
 export function DeleteMovieDialog({
   movieId,
@@ -37,14 +38,11 @@ export function DeleteMovieDialog({
 
   const subject: DeleteSubject = { kind: 'movie', title, ...deleteFacts };
 
-  if (open && deleting === 'shown') {
-    return <DialogLoader label={deleteView(subject).loader} />;
-  }
-
   return (
     <Modal
       open={open}
       locked={deleting !== 'idle'}
+      loader={deleting === 'shown' ? deleteView(subject).loader : undefined}
       title={`Delete “${title}”?`}
       subtitle="This can’t be undone."
       icon="🗑"
