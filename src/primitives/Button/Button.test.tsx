@@ -1,5 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { cleanup, render, screen, fireEvent } from '@testing-library/react';
+import {
+  cleanup,
+  render,
+  screen,
+  fireEvent,
+  within,
+} from '@testing-library/react';
 import type { ReactElement } from 'react';
 import styled, { ThemeProvider } from 'styled-components';
 import { MemoryRouter } from 'react-router-dom';
@@ -388,7 +394,6 @@ describe('Button: busy', () => {
     const button = screen.getByRole('button', { name: 'Add to library' });
     expect((button as HTMLButtonElement).disabled).toBe(true);
     expect(button.getAttribute('aria-busy')).toBe('true');
-    expect(button.textContent).not.toContain('Adding…');
   });
 
   it('draws its busyLabel in a polite live region once shown', () => {
@@ -455,51 +460,106 @@ describe('Button: busy', () => {
     );
   });
 
+  /**
+   * 71, Busy overlay, Phase 5 (issue #678): the **Busy button** is as wide as
+   * the wider of its label and its **Busy label** at every phase, both laid
+   * out in one cell and the one not drawn hidden from assistive technology,
+   * so going **Shown** never resizes it and nothing is measured.
+   */
   describe('its width', () => {
-    const IDLE_WIDTH = 183;
+    const PHASES = ['idle', 'waiting', 'shown'] as const;
 
-    beforeEach(() => {
-      vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(
-        IDLE_WIDTH
-      );
-      vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
-        x: 0,
-        y: 0,
-        top: 0,
-        left: 0,
-        bottom: 50,
-        right: IDLE_WIDTH,
-        width: IDLE_WIDTH,
-        height: 50,
-        toJSON: () => ({}),
-      });
-    });
-
-    afterEach(() => {
-      vi.restoreAllMocks();
-    });
-
-    function tree(busy: ButtonProps['busy']) {
+    function tree(busy: ButtonProps['busy'], busyLabel?: string) {
       return (
         <ThemeProvider theme={theme}>
-          <Button label="Save changes" busyLabel="Saving…" busy={busy} />
+          <Button label="Save changes" busyLabel={busyLabel} busy={busy} />
         </ThemeProvider>
       );
     }
 
-    it('holds its idle width while busy, and lets it go when idle again', () => {
-      const { rerender } = render(tree('idle'));
-      const button = () => screen.getByRole('button');
-      expect(button().style.minWidth).toBe('');
+    /** Whether a drawn label is hidden from assistive technology. */
+    const hidden = (label: HTMLElement) =>
+      label.closest('[aria-hidden="true"]') !== null;
 
-      rerender(tree('waiting'));
-      expect(button().style.minWidth).toBe(`${IDLE_WIDTH}px`);
+    it.each(PHASES)(
+      'lays out both labels while %s, exactly one of them aria-hidden',
+      (busy) => {
+        render(tree(busy, 'Saving…'));
 
-      rerender(tree('shown'));
-      expect(button().style.minWidth).toBe(`${IDLE_WIDTH}px`);
+        const button = screen.getByRole('button');
+        const idle = within(button).getByText('Save changes');
+        const busyLabel = within(button).getByText('Saving…');
+        expect([hidden(idle), hidden(busyLabel)].filter(Boolean)).toHaveLength(
+          1
+        );
+      }
+    );
 
-      rerender(tree('idle'));
-      expect(button().style.minWidth).toBe('');
+    it.each([
+      ['idle', 'Save changes', 'Saving…'],
+      ['waiting', 'Save changes', 'Saving…'],
+      ['shown', 'Saving…', 'Save changes'],
+    ] as const)(
+      'is named by its visible label while %s, the other laid out but unheard',
+      (busy, visible, other) => {
+        render(tree(busy, 'Saving…'));
+
+        const button = screen.getByRole('button', { name: visible });
+        const unheard = within(button).getByText(other);
+        expect(hidden(unheard)).toBe(true);
+        expect(hidden(within(button).getByText(visible))).toBe(false);
+      }
+    );
+
+    it.each(PHASES)(
+      'renders as today without a busyLabel while %s: one label, nothing hidden',
+      (busy) => {
+        render(tree(busy));
+
+        const button = screen.getByRole('button', { name: 'Save changes' });
+        expect(button.textContent).toBe('Save changes');
+        expect(button.querySelector('[aria-hidden="true"]')).toBeNull();
+      }
+    );
+
+    describe('nothing measured', () => {
+      beforeEach(() => {
+        vi.spyOn(HTMLElement.prototype, 'offsetWidth', 'get').mockReturnValue(
+          183
+        );
+        vi.spyOn(Element.prototype, 'getBoundingClientRect').mockReturnValue({
+          x: 0,
+          y: 0,
+          top: 0,
+          left: 0,
+          bottom: 50,
+          right: 183,
+          width: 183,
+          height: 50,
+          toJSON: () => ({}),
+        });
+      });
+
+      afterEach(() => {
+        vi.restoreAllMocks();
+      });
+
+      it('reads no width and holds no min-width through every phase', () => {
+        const offsetWidth = vi.spyOn(
+          HTMLElement.prototype,
+          'offsetWidth',
+          'get'
+        );
+        const { rerender } = render(tree('idle', 'Saving…'));
+        const button = () => screen.getByRole('button');
+
+        for (const busy of ['waiting', 'shown', 'idle'] as const) {
+          rerender(tree(busy, 'Saving…'));
+          expect(button().style.minWidth).toBe('');
+        }
+        expect(offsetWidth).not.toHaveBeenCalled();
+        expect(Element.prototype.getBoundingClientRect).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -611,6 +671,9 @@ describe('Button: ariaLabel', () => {
     });
 
     const button = screen.getByRole('button', { name: 'Skip all for Heat' });
-    expect(button.textContent).toBe('Skipping…');
+    const visible = within(button)
+      .getAllByText(/Skip/)
+      .filter((label) => label.closest('[aria-hidden="true"]') === null);
+    expect(visible.map((label) => label.textContent)).toEqual(['Skipping…']);
   });
 });
