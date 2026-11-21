@@ -19,7 +19,8 @@ import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryF
  * as a **Busy row**, on the page.
  *
  * The press locks its own row at once (`inert`, `aria-busy`); past 300ms the
- * row reads _Removing…_ or _Bringing back…_ in place of its _N titles_ line;
+ * row reads _Removing…_ or _Bringing back…_ on its **Busy overlay**, its
+ * _N titles_ line kept under it (71, issue #680);
  * the outcome lands only once the 500ms hold is out. A refused remove puts
  * the row back as it was, its sentence under it. Every other row stays
  * pressable meanwhile.
@@ -73,7 +74,7 @@ async function landed() {
 }
 
 describe('LibraryFolders: a Folder row as a Busy row', () => {
-  it('locks the ✕ row at once and reads Removing… past 300ms, in place of its line', async () => {
+  it('locks the ✕ row at once and reads Removing… past 300ms, its line kept', async () => {
     await landed();
     fireEvent.click(removeButton(KIDS.path));
 
@@ -86,7 +87,7 @@ describe('LibraryFolders: a Folder row as a Busy row', () => {
 
     await advanceClock(1);
     expect(screen.getByRole('status', { name: 'Removing…' })).toBeDefined();
-    expect(screen.queryByText('1 titles')).toBeNull();
+    expect(screen.getByText('1 titles')).toBeDefined();
 
     await advanceClock(100);
     await respond(okResponse({}));
@@ -108,7 +109,7 @@ describe('LibraryFolders: a Folder row as a Busy row', () => {
     expect(
       screen.getByRole('status', { name: 'Bringing back…' })
     ).toBeDefined();
-    expect(screen.queryByText('3 titles')).toBeNull();
+    expect(screen.getByText('3 titles')).toBeDefined();
 
     await advanceClock(100);
     await respond(okResponse({}));

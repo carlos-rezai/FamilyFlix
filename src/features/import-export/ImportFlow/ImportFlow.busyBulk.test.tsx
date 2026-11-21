@@ -13,6 +13,7 @@ import {
 import { advanceClock } from '@/test-support/advanceClock/advanceClock';
 import { heldFetch } from '@/test-support/heldFetch/heldFetch';
 import { makeImportRun } from '@/test-support/makeImportRun/makeImportRun';
+import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
 
 /**
  * 69, Silent waits, Phase 5 (issue #657): the Import review's bulk buttons.
@@ -190,6 +191,12 @@ describe.each(BULK)(
         expect(
           within(row as HTMLElement).queryAllByRole('status', { hidden: true })
         ).toEqual([]);
+        // 71, issue #680: nor any Busy overlay; the row keeps its own face.
+        expect(within(row as HTMLElement).queryByText(label)).toBeNull();
+        const drawn = Array.from(
+          (row as HTMLElement).querySelectorAll<HTMLElement>('*')
+        ).filter((each) => resolvedStyle(each).position === 'absolute');
+        expect(drawn).toEqual([]);
       }
 
       await respond(okResponse(ECHO));

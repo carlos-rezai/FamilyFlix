@@ -14,7 +14,8 @@ import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
  * The review hands the row its `busy` phase; which press it was is the row's
  * own. From `waiting` the row's root is `inert` and `aria-busy`, every
  * control inside keeping its own face, and nothing is read yet. Once `shown`
- * an 18px `inline` **Logo loader** stands in the kind dot's slot, reading
+ * it draws its **Busy overlay** last in its root, the kind dot kept in its
+ * slot (71, issue #680), the overlay's 18px `inline` **Logo loader** reading
  * that press's own label: _Importing…_ for _Import as “…”_ and a picked
  * **Candidate folder**, _Taking out…_ for _Take out of library_, _Updating
  * details…_ for _Apply choices_, and _Skipping…_ for _Skip_ and _Keep all
@@ -178,7 +179,18 @@ describe.each(PRESSES)(
       expect(resolvedStyle(root).opacity).not.toBe('.75');
     });
 
-    it(`stays locked and reads ${label} once shown, in the kind dot's slot`, () => {
+    it('draws no overlay at idle', () => {
+      const { container } = render(tree(problem, 'idle'));
+      const root = rootOf(container);
+
+      expect(screen.queryByRole('status', { hidden: true })).toBeNull();
+      expect(screen.queryByText(label)).toBeNull();
+      expect(
+        resolvedStyle(root.lastElementChild as HTMLElement).position
+      ).not.toBe('absolute');
+    });
+
+    it(`stays locked and keeps its kind dot alongside ${label} once shown`, () => {
       const { container } = pressed('shown');
       const root = rootOf(container);
 
@@ -187,12 +199,40 @@ describe.each(PRESSES)(
 
       const loader = screen.getByRole('status', { name: label });
       expect(loader.textContent).toContain(label);
-      expect(
-        screen.getByText(problem.reason).parentElement?.previousElementSibling
-      ).toBe(loader);
+
+      // The dot's slot, right before the title and reason, is still the dot.
+      const slot = screen.getByText(problem.reason).parentElement
+        ?.previousElementSibling;
+      expect(slot).not.toBeNull();
+      expect(slot).not.toBe(loader);
+      expect(slot?.contains(loader)).toBe(false);
+      expect(slot?.getAttribute('role')).not.toBe('status');
+      expect(slot?.textContent).toBe('');
+    });
+
+    it('draws the overlay last in its root, over the row', () => {
+      const { container } = pressed('shown');
+      const root = rootOf(container);
+      const loader = screen.getByRole('status', { name: label });
+
+      const overlay = root.lastElementChild as HTMLElement;
+      expect(overlay.contains(loader)).toBe(true);
+      expect(overlay.contains(screen.getByText(problem.reason))).toBe(false);
+      expect(resolvedStyle(overlay).position).toBe('absolute');
       expect(Number(loader.querySelector('svg')?.getAttribute('width'))).toBe(
         18
       );
+    });
+
+    it('lays out its head once shown as it did at idle', () => {
+      const idle = render(tree(problem, 'idle'));
+      const head = (reason: string) =>
+        screen.getByText(reason).parentElement?.parentElement?.innerHTML;
+      const before = head(problem.reason);
+      idle.unmount();
+
+      pressed('shown');
+      expect(head(problem.reason)).toBe(before);
     });
 
     it('is not dimmed once shown, a containing block for its overlay', () => {

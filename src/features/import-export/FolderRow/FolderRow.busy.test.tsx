@@ -14,8 +14,10 @@ import { resolvedStyle } from '@/test-support/resolvedStyle/resolvedStyle';
  * The page hands the row its `busy` phase; which press it was is the row's
  * own. From `waiting` the row's root is `inert` and `aria-busy`, every
  * control inside keeping its own face, its _N titles_ line still drawn. Once
- * `shown` an 18px `inline` **Logo loader** stands in that line's slot,
- * reading _Removing…_ for the ✕ and _Bringing back…_ for _Bring back_.
+ * `shown` it draws its **Busy overlay** last in its root, the line kept and
+ * the row no taller (71, issue #680), the overlay's 18px `inline` **Logo
+ * loader** reading _Removing…_ for the ✕ and _Bringing back…_ for _Bring
+ * back_.
  */
 
 const MOVIES: LibraryFolderView = {
@@ -78,7 +80,18 @@ describe.each(PRESSES)(
       expect(screen.queryByText(label)).toBeNull();
     });
 
-    it(`reads ${label} once shown, in place of its N titles line`, () => {
+    it('draws no overlay at idle', () => {
+      const { container } = render(tree('idle'));
+      const root = rootOf(container);
+
+      expect(screen.queryByRole('status', { hidden: true })).toBeNull();
+      expect(screen.queryByText(label)).toBeNull();
+      expect(
+        resolvedStyle(root.lastElementChild as HTMLElement).position
+      ).not.toBe('absolute');
+    });
+
+    it(`stays locked and keeps its N titles line alongside ${label} once shown`, () => {
       const { container } = pressed('shown');
       const root = rootOf(container);
 
@@ -87,11 +100,34 @@ describe.each(PRESSES)(
 
       const loader = screen.getByRole('status', { name: label });
       expect(loader.textContent).toContain(label);
-      expect(screen.queryByText('12 titles')).toBeNull();
-      expect(screen.getByText('E:\\Movies').nextElementSibling).toBe(loader);
+      const line = screen.getByText('12 titles');
+      expect(screen.getByText(MOVIES.path).nextElementSibling).toBe(line);
+      expect(line.contains(loader)).toBe(false);
+    });
+
+    it('draws the overlay last in its root, over the row', () => {
+      const { container } = pressed('shown');
+      const root = rootOf(container);
+      const loader = screen.getByRole('status', { name: label });
+
+      const overlay = root.lastElementChild as HTMLElement;
+      expect(overlay.contains(loader)).toBe(true);
+      expect(overlay.contains(screen.getByText('12 titles'))).toBe(false);
+      expect(resolvedStyle(overlay).position).toBe('absolute');
       expect(Number(loader.querySelector('svg')?.getAttribute('width'))).toBe(
         18
       );
+    });
+
+    it('never grows taller: its text column once shown is as at idle', () => {
+      const idle = render(tree('idle'));
+      const column = () =>
+        screen.getByText(MOVIES.path).parentElement?.innerHTML;
+      const before = column();
+      idle.unmount();
+
+      pressed('shown');
+      expect(column()).toBe(before);
     });
 
     it('is not dimmed once shown, a containing block for its overlay', () => {
