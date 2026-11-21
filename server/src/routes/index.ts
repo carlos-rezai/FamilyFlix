@@ -514,7 +514,9 @@ function parseMinRating(value: string): number | null {
 
 /**
  * The rung of the **Quality ladder** a `?quality=` names, spelled lowercased
- * (`4k`, `1080p`), or `null` for a value off the ladder.
+ * (`4k`, `1080p`), or `null` for a value off the ladder: `parseMinRating`'s
+ * twin. The pill's `QUALITY_CUTOFFS` are that control's vocabulary, not this
+ * endpoint's: the route stays a general API over every rung, SD included.
  */
 function parseMinQuality(value: string): VideoQuality | null {
   return VIDEO_QUALITIES.find((rung) => rung.toLowerCase() === value) ?? null;

@@ -1,9 +1,5 @@
-import {
-  DEFAULT_MOVIE_SORT,
-  VIDEO_QUALITIES,
-  type LibraryQuery,
-} from '@/types';
-import { isMovieSort, parseMinRating } from '@/utils';
+import { DEFAULT_MOVIE_SORT, type LibraryQuery } from '@/types';
+import { isMovieSort, parseMinQuality, parseMinRating } from '@/utils';
 
 /**
  * Turns the URL's query string into the **settled query** the browse home is
@@ -16,13 +12,13 @@ import { isMovieSort, parseMinRating } from '@/utils';
  * Pure, so the same URL always yields the same query.
  *
  * A util rather than a feature-local helper for the same reason as
- * `isMovieSort` and `parseMinRating`, which it is built from: two features read
- * the settled query out of the URL independently — the search feature to draw
- * the pills, the library feature to build the home request — and a second
- * parser is a second set of rules that can come to disagree with this one.
- * That does not show up as a crash; it shows up as the request narrowing on
- * something the pill does not show, or the miss message naming a filter the
- * request ignored. A screen contradicting itself.
+ * `isMovieSort`, `parseMinRating` and `parseMinQuality`, which it is built
+ * from: two features read the settled query out of the URL independently —
+ * the search feature to draw the pills, the library feature to build the home
+ * request — and a second parser is a second set of rules that can come to
+ * disagree with this one. That does not show up as a crash; it shows up as
+ * the request narrowing on something the pill does not show, or the miss
+ * message naming a filter the request ignored. A screen contradicting itself.
  */
 export function parseLibraryQuery(params: URLSearchParams): LibraryQuery {
   const query: LibraryQuery = { sort: DEFAULT_MOVIE_SORT };
@@ -60,13 +56,7 @@ export function parseLibraryQuery(params: URLSearchParams): LibraryQuery {
     query.minRating = minRating;
   }
 
-  // The `?rating=` rule again: only a rung the Quality pill can write reads as
-  // a minimum, the rung lowercased (`4k`). SD has no row, so `?quality=sd` is
-  // ignored rather than narrowing behind a pill saying "All qualities".
-  const quality = params.get('quality');
-  const minQuality = VIDEO_QUALITIES.find(
-    (rung) => rung !== 'SD' && rung.toLowerCase() === quality
-  );
+  const minQuality = parseMinQuality(params.get('quality'));
   if (minQuality !== undefined) {
     query.minQuality = minQuality;
   }
