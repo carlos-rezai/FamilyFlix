@@ -28,8 +28,8 @@ export interface DeleteTitleDialogProps {
  * well, then `DeleteTitleBody`: **What goes** beside **What stays**, and
  * the confirm in `danger` before _Cancel_. Focus lands on the card, the
  * Modal's own rule, so Enter alone deletes nothing. From the confirm press
- * it is **Locked**; once **Shown** it becomes the **Dialog loader** reading
- * _Deleting “<title>”_. Presentational, the organism owns the request.
+ * it is **Locked**; once **Shown** its own card draws the **Dialog loader**
+ * reading _Deleting “<title>”_ over the hidden confirmation. Presentational, the organism owns the request.
  */
 export function DeleteTitleDialog({
   title,
@@ -40,26 +40,11 @@ export function DeleteTitleDialog({
 }: DeleteTitleDialogProps) {
   const view = deleteView(title);
 
-  if (deleting === 'shown') {
-    // Stopgap until issue #682 moves this dialog onto its own card's loader.
-    return (
-      <Modal
-        open
-        bare
-        locked
-        loader={view.loader}
-        title={view.loader}
-        onClose={onClose}
-      >
-        {null}
-      </Modal>
-    );
-  }
-
   return (
     <Modal
       open
       locked={deleting !== 'idle'}
+      loader={deleting === 'shown' ? view.loader : undefined}
       title={view.heading}
       subtitle={view.subtitle}
       icon={<BinIcon size={22} />}

@@ -37,33 +37,18 @@ export interface ResetDialogProps {
  * drawn above the buttons until the next press is answered.
  *
  * From the confirm press the dialog is **Locked** and _Cancel_ disabled, in
- * `waiting` too, until the reset settles; once **Shown** it becomes the
- * **Dialog loader** reading _Erasing everything_.
+ * `waiting` too, until the reset settles; once **Shown** its own card draws the
+ * **Dialog loader** reading _Erasing everything_ over the hidden lists.
  */
 export function ResetDialog({ open, onClose }: ResetDialogProps) {
   const { resetting, refusal, reset } = useFactoryReset();
   const busy = resetting !== 'idle';
 
-  if (open && resetting === 'shown') {
-    // Stopgap until issue #682 moves this dialog onto its own card's loader.
-    return (
-      <Modal
-        open
-        bare
-        locked
-        loader={'Erasing everything'}
-        title={'Erasing everything'}
-        onClose={onClose}
-      >
-        {null}
-      </Modal>
-    );
-  }
-
   return (
     <Modal
       open={open}
       locked={busy}
+      loader={resetting === 'shown' ? 'Erasing everything' : undefined}
       title="Erase everything?"
       subtitle="This can’t be undone."
       icon={<BangTriangleIcon size={22} />}

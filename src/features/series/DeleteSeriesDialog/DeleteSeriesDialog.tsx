@@ -21,8 +21,9 @@ export interface DeleteSeriesDialogProps {
  * The series' **Delete dialog**, `DeleteMovieDialog`'s twin (`page.SeriesPage`):
  * the show named in the heading over _This can’t be undone._, then
  * `DeleteTitleBody`: **What goes / What stays**, and _Delete series_ before
- * _Cancel_. **Locked** from the confirm press, the **Dialog loader** once
- * **Shown**; a failure returns the live idle face with the failure line.
+ * _Cancel_. **Locked** from the confirm press, its own card drawing the
+ * **Dialog loader** once **Shown**; a failure gives the live idle face back
+ * in the same card, with the failure line.
  */
 export function DeleteSeriesDialog({
   seriesId,
@@ -35,26 +36,11 @@ export function DeleteSeriesDialog({
 
   const subject: DeleteSubject = { kind: 'series', title, ...deleteFacts };
 
-  if (open && deleting === 'shown') {
-    // Stopgap until issue #682 moves this dialog onto its own card's loader.
-    return (
-      <Modal
-        open
-        bare
-        locked
-        loader={deleteView(subject).loader}
-        title={deleteView(subject).loader}
-        onClose={onClose}
-      >
-        {null}
-      </Modal>
-    );
-  }
-
   return (
     <Modal
       open={open}
       locked={deleting !== 'idle'}
+      loader={deleting === 'shown' ? deleteView(subject).loader : undefined}
       title={`Delete “${title}”?`}
       subtitle="This can’t be undone."
       icon="🗑"
