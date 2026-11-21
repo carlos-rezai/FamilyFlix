@@ -1,6 +1,6 @@
+import { BusyOverlay } from '@/components';
 import { useBusyRow } from '@/hooks/useBusyRow/useBusyRow';
-import { FolderIcon, LogoLoader, RemoveButton } from '@/primitives';
-import { BUSY_ROW_LOADER_SIZE } from '@/styles/busyRow';
+import { FolderIcon, RemoveButton } from '@/primitives';
 import type { BusyPhase, LibraryFolderView } from '@/types';
 import { folderLine } from '../folderLine/folderLine';
 import {
@@ -18,7 +18,7 @@ export interface FolderRowProps {
   folder: LibraryFolderView;
   /**
    * The row's phase on the **Loader timing**, handed by the page: from
-   * `waiting` it is locked, once `shown` its loader stands in the line's slot.
+   * `waiting` it is locked, once `shown` it draws its **Busy overlay**.
    */
   busy: BusyPhase;
   /**
@@ -47,8 +47,8 @@ const PRESS_LABELS: Record<Press, string> = {
  *
  * A **Busy row**: from `waiting` its root is `inert` and `aria-busy`, every
  * control keeping its own face, and it refuses a press, as a **Busy button**
- * does; once `shown` it dims, and an 18px inline **Logo loader** naming its
- * press stands in the _N titles_ line's slot.
+ * does; once `shown` it draws its **Busy overlay** last in its root, naming
+ * its press over the row, the _N titles_ line kept and the row no taller.
  */
 export function FolderRow({
   folder,
@@ -64,11 +64,7 @@ export function FolderRow({
       </Tile>
       <Text>
         <Path>{folder.path}</Path>
-        {label !== null ? (
-          <LogoLoader size={BUSY_ROW_LOADER_SIZE} inline label={label} />
-        ) : (
-          <Line $unreachable={!folder.reachable}>{folderLine(folder)}</Line>
-        )}
+        <Line $unreachable={!folder.reachable}>{folderLine(folder)}</Line>
         {folder.leftOut > 0 ? (
           <LeftOutLine>
             <span>{`${folder.leftOut} ${folder.leftOut === 1 ? 'video' : 'videos'} left out`}</span>
@@ -85,6 +81,7 @@ export function FolderRow({
         removes={folder.path}
         onClick={pressed('remove', onRemove)}
       />
+      {label !== null ? <BusyOverlay label={label} /> : null}
     </Row>
   );
 }
