@@ -156,6 +156,24 @@ export const Root = styled.button<{
         `}
 `;
 
+/**
+ * A **Busy button**'s label and its busy label, laid out in one grid cell so
+ * the button is always as wide as the wider of the two.
+ */
+export const LabelCell = styled.span`
+  display: inline-grid;
+`;
+
+/** One label in the cell; the one not drawn keeps its width, unseen. */
+export const LabelLayer = styled.span<{ $hidden?: boolean }>`
+  grid-area: 1 / 1;
+  ${({ $hidden }) =>
+    $hidden === true &&
+    css`
+      visibility: hidden;
+    `}
+`;
+
 /** The shine: a brighter band carried across the label, right to left. */
 const sweep = keyframes`
   from {
@@ -186,7 +204,7 @@ const fade = keyframes`
  * Its reduced-motion fade is the one rule allowed to out-rank `GlobalStyle`'s
  * `*`: a shown label must still say it is working when nothing may move.
  */
-export const BusyLabel = styled.span<{ $shine: boolean }>`
+export const BusyLabel = styled(LabelLayer)<{ $shine: boolean }>`
   ${({ $shine }) =>
     $shine &&
     css`

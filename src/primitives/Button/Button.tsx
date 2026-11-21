@@ -1,10 +1,11 @@
-import { useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import type { BusyPhase } from '@/types';
 import { PlayIcon } from '../Icon/PlayIcon';
 import {
   BusyLabel,
+  LabelCell,
+  LabelLayer,
   Root,
   type ButtonVariant,
   type ButtonSize,
@@ -92,15 +93,7 @@ export function Button({
 }: ButtonProps) {
   const busy = form.busy ?? 'idle';
   const isBusy = busy !== 'idle';
-  const rootRef = useRef<HTMLButtonElement>(null);
-  // The idle width, read as `busy` leaves `idle` and held as `min-width` until
-  // it returns, so the _-ing_ label never resizes it. The `waiting` face still
-  // draws the idle label, so the width read then is the idle one; a layout
-  // effect reads it before paint, so no frame draws without it.
-  const [heldWidth, setHeldWidth] = useState<number | null>(null);
-  useLayoutEffect(() => {
-    setHeldWidth(isBusy ? rootRef.current?.offsetWidth || null : null);
-  }, [isBusy]);
+  const shown = busy === 'shown';
 
   const face = {
     className,
@@ -126,23 +119,34 @@ export function Button({
   // Busy: locked, so `onClick` cannot fire, but on the variant's own face.
   return (
     <Root
-      ref={rootRef}
       type="button"
       {...face}
       $busy={isBusy}
       disabled={isBusy || (form.disabled ?? false)}
       aria-busy={isBusy ? 'true' : undefined}
       onClick={isBusy ? undefined : form.onClick}
-      style={
-        isBusy && heldWidth !== null
-          ? { minWidth: `${heldWidth}px` }
-          : undefined
-      }
     >
       {glyph}
-      {isBusy ? (
-        <BusyLabel aria-live="polite" $shine={busy === 'shown'}>
-          {busy === 'shown' ? (form.busyLabel ?? label) : label}
+      {form.busyLabel !== undefined ? (
+        // Both labels laid out in one cell, so the button is always as wide
+        // as the wider; the one not drawn is hidden, from sight and from
+        // assistive technology alike, and nothing is measured.
+        <LabelCell>
+          <LabelLayer aria-hidden={shown ? 'true' : undefined} $hidden={shown}>
+            {label}
+          </LabelLayer>
+          <BusyLabel
+            aria-live="polite"
+            aria-hidden={shown ? undefined : 'true'}
+            $hidden={!shown}
+            $shine={shown}
+          >
+            {form.busyLabel}
+          </BusyLabel>
+        </LabelCell>
+      ) : isBusy ? (
+        <BusyLabel aria-live="polite" $shine={shown}>
+          {label}
         </BusyLabel>
       ) : (
         label
