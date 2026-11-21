@@ -1,4 +1,4 @@
-import { useCallback, useContext, useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import {
@@ -9,7 +9,7 @@ import {
 } from '@/types';
 import { parseLibraryQuery } from '@/utils';
 
-import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { useQualityTags } from '@/App/useQualityTags/useQualityTags';
 
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 
@@ -48,8 +48,7 @@ export function useLibraryQuery(): UseLibraryQueryResult {
 
   // `?quality=` reads only while _Show video quality_ is on, and the URL is
   // never rewritten for it, so turning the toggle back on restores the filter.
-  const qualityTags =
-    useContext(DisplayPreferenceContext)?.qualityTags === true;
+  const qualityTags = useQualityTags();
   const query = useMemo(() => {
     const { minQuality, ...rest } = parseLibraryQuery(searchParams);
     return qualityTags && minQuality !== undefined

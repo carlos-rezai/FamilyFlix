@@ -1,7 +1,5 @@
-import { useContext } from 'react';
-
 import { FilterDropdown } from '@/components';
-import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { useQualityTags } from '@/App/useQualityTags/useQualityTags';
 
 import { ALL_GENRES, genreOptions } from '../genreOptions/genreOptions';
 import { qualityLabel, qualityOptions } from '../qualityOptions/qualityOptions';
@@ -44,8 +42,7 @@ import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
  */
 export function LibraryFilters() {
   const { query, setSort, setGenre, setRating, setQuality } = useLibraryQuery();
-  const qualityTags =
-    useContext(DisplayPreferenceContext)?.qualityTags === true;
+  const qualityTags = useQualityTags();
   const genres = useGenreList();
 
   return (

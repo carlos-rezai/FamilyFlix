@@ -1,10 +1,10 @@
-import { useContext, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import type { LibraryQuery } from '@/types';
 import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 
-import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { useQualityTags } from '@/App/useQualityTags/useQualityTags';
 
 export interface SettledLibraryQuery {
   /**
@@ -35,8 +35,7 @@ export function useSettledLibraryQuery(): SettledLibraryQuery {
   const [searchParams] = useSearchParams();
   // `?quality=` is asked for only while _Show video quality_ is on; the URL
   // keeps it either way, so turning the toggle back on asks again.
-  const qualityTags =
-    useContext(DisplayPreferenceContext)?.qualityTags === true;
+  const qualityTags = useQualityTags();
   const { minQuality, ...rest } = parseLibraryQuery(searchParams);
   const settled = toLibraryQueryParams(
     qualityTags && minQuality !== undefined ? { ...rest, minQuality } : rest
