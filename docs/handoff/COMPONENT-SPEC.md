@@ -443,6 +443,22 @@ idle face with _Couldn’t delete “Coco”. Try again._ above the buttons, in 
 refusal style; a refused Reset keeps its own refusal sentence. A Delete or Reset that lands
 ends as it did before (its snackbar, leaving or reload), after the hold.
 
+Amended by log 71: the Dialog loader is drawn inside the dialog's own card, not on a second
+`Modal`. `Modal` takes `loader?: string`; given, the card is `aria-busy`, takes focus, and
+keeps its header and body laid out but `visibility: hidden`, so it keeps its size and is never
+remounted, with `DialogLoader` over it as an `inset: 0` layer, the 64px loader centred on
+`surface2`. A failure shows the idle face again in the same card.
+
+### BusyOverlay: from `handoff-loading-states/` (log 71)
+
+Target: `components/BusyOverlay/` · the **Busy overlay**: `{ label: string }`, the face a
+**Busy row** draws once **Shown**, last in its root, which is `position: relative`
+(`styles/busyRow.ts`). An absolute `inset: 0` layer, `border-radius: inherit`, on
+`rgba(20, 17, 13, 0.55)` under `backdrop-filter: blur(4px)`, `cursor: progress`, fading in on
+`ffFade` 0.18s, the 18px `inline` `LogoLoader` and its label centred on it. The row under it
+is laid out as at `idle`, its status slot (dot, line or caption) kept, so nothing moves. The
+Decision row, the review's Problem row, the Folder row and the Season choice draw it.
+
 ### Fab — `mol.Fab.dc.html`
 
 Target: `components/Fab/` · reusable floating action button — fixed bottom-right, circular,

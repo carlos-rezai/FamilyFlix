@@ -1190,6 +1190,21 @@ by ffprobe with its runtime, and every **Poster card** can show it.
 | **Quality filter** (new)   | The browse header's _Quality_ pill: a minimum rung (`?quality=`, `minQuality`), keeping titles at or above it, drawn only while _Show video quality_ is on, and while it is off a `?quality=` in the URL is read past, never rewritten (`honouredLibraryQuery`); a title with no quality is kept only by _All qualities_. Its pill offers `QUALITY_CUTOFFS`, the ladder without SD, and the client reads only those (`parseMinQuality`); the route takes any rung. | resolution filter, HD filter          |
 | **Card preferences** (new) | What every **Poster card** is mapped under, `{ tmdbRatings, qualityTags }`: _Fill in ratings from TMDB_ deciding its **Shown rating** and _Show video quality_ its **Quality tag**, each on only once the settings read has landed on; `useCardPreferences`, read from `useTmdbRatings` and `useQualityTags`.                                                                                                                                                      | card flags, display options           |
 
+## Busy overlay
+
+Design log 71: step 53, initiative `busy-overlay`. A loader never moves what is
+around it: a **Busy row** draws its loader over itself, a **Busy button** keeps
+one width, a **Dialog loader** keeps its dialog's size. The loading-states
+handoff is amended (row 3, row 5, timing rule 1).
+
+| Term                        | Definition                                                                                                                                                                                                                                                                | Aliases to avoid                          |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Busy overlay** (new)      | The face a **Busy row** draws once **Shown**, `components/BusyOverlay/`: a scrim, `bg` at .55 under a 4px blur, over the whole row or card, the 18px `inline` **Logo loader** and its _-ing_ label centred on it, the row laid out under it as at `idle`.                 | row spinner, dim, loading mask, blur card |
+| **Busy row** (updated)      | Since log 71, once **Shown** it draws its **Busy overlay** over itself; its status slot keeps its dot, line or caption, and nothing in it moves. No longer dimmed to .75. Its lock is unchanged.                                                                          |                                           |
+| **Busy button** (updated)   | Since log 71 as wide as the wider of its label and its **Busy label** at every phase, both laid out in one cell, so going **Shown** never resizes it; no measured `min-width`.                                                                                            |                                           |
+| **Dialog loader** (updated) | Since log 71 drawn inside the dialog's own card (`Modal`'s `loader`) over its idle face, which stays laid out but hidden, so the card keeps its size and is never remounted; no longer a **Bare modal** of its own. A failure shows the idle face again in the same card. |                                           |
+| **Layout shift** (new)      | Anything around a loader moving as it appears or goes: what log 71 rules out for every action loader. A **Skeleton** giving way to its page is a read landing, not a layout shift of a loader.                                                                            | jump, reflow, jank                        |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1396,6 +1411,8 @@ by ffprobe with its runtime, and every **Poster card** can show it.
 - A **Form skeleton** stands for one read of one job's record; once it answers, the form is drawn whole, or the add if the record is gone (log 69).
 - A **Movie** and an **Episode** each have at most one **Video quality**; a **Series** has none of its own, only its derived **Series quality** (new, log 70).
 - Every write of a video's runtime writes its **Video quality** from the same one probe; the **Quality sweep** writes the Video quality alone, and only where there is none (new, log 70).
+- A **Busy row** draws at most one **Busy overlay**, only while its **Row phase** is `shown`, and the row under it is laid out as at `idle` (new, log 71).
+- A **Busy button** has one width for all three **Busy phases**; a **Dialog loader** is drawn in exactly one card, its dialog's own (new, log 71).
 
 ## Example dialogue
 
@@ -2204,6 +2221,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "The **Quality sweep** measures them after the next start, one at a time. A file nothing could probe keeps no tag and is asked again on the start after."
 > **Dev:** "A show whose first season is DVD and the rest 1080p?"
 > **Domain expert:** "Its **Series quality** is the rung most episodes are on, _1080p_. The **Quality filter** at _1080p+_ keeps it; at _4K_ it goes."
+
+> **Dev:** "Dad picks a poster on a **Decision row** and TMDB is slow. Does the title jump right when the loader comes?"
+> **Domain expert:** "No. At 300ms the **Busy overlay** covers the row, _Saving match…_ centred on it; the dot and the title stay where they were under the blur."
+> **Dev:** "And _Add_ beside the folder field going to _Adding…_?"
+> **Domain expert:** "The **Busy button** was already as wide as _Adding…_, so the field does not shrink. That is no **Layout shift**."
+> **Dev:** "Mum confirms a delete?"
+> **Domain expert:** "The **Dialog loader** comes up inside the same card, at the size it had; nothing pops in a second time."
 
 ## Flagged ambiguities
 
@@ -3216,3 +3240,8 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   one-time backfill; log 70 runs the sweep on every start over titles with
   no quality, so a title measured once is never asked again and one never
   measured is asked each time.
+- **"Busy overlay" is not "Dialog loader" (new):** both draw a loader
+  over a face at its size, but the **Busy overlay** is a row's, 18px on a
+  blurred scrim with the row still faintly there; the **Dialog loader** is
+  a dialog's, 64px, its idle face hidden. Never call a row's overlay a
+  dialog loader, nor the overlay a "dim": the .75 dim is retired.

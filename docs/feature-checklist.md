@@ -82,6 +82,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Export paths: a nested Export imports back whole    | ✅ Done    |
 | Silent waits: every press shows it is working       | ✅ Done    |
 | Video quality: a 4K to SD tag on every poster       | ✅ Done    |
+| Busy overlay: a row's loader over it, not beside it | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -879,3 +880,35 @@ pressing play. Grilled in design log 70:
       stands in when it answers none.
     - **Prototype**: `docs/handoff/handoff-video-quality/`, a new atom
       `prim.MetaTag`, the Quality pill and the Display row.
+
+53. ⬜ **Busy overlay**: a **Busy row**'s shown face moves from its status
+    slot to an overlay, so nothing in the row shifts while it waits. Today
+    the 18px **Logo loader** and its label stand in the kind dot of a
+    **Decision row** or **Problem row** and push the title and the
+    candidate posters right; on a **Season choice** they squeeze into the
+    112px held-poster caption. Instead, once **Shown**, a scrim with a
+    light blur covers the whole row or card, the loader and its label
+    centred on it, in place of today's dim to .75. The status slot keeps
+    its dot or caption. The lock (`inert`, `aria-busy`) and the **Loader
+    timing** stay as they are; one overlay serves every Busy row, the
+    **Folder row** too, since not every press has a poster to blur.
+    Grilled in design log 71, which widens it to every action loader: a
+    loader never moves what is around it.
+    - **Busy row**: a `BusyOverlay` molecule, `bg` at .55 under a 4px
+      blur, the 18px mark and its _-ing_ label centred; the row's root a
+      containing block at every phase. Amends the handoff's row 5 and log
+      69 Q3 and Q4.
+    - **Busy button**: as wide as its wider label at every phase, both
+      labels laid out in one cell, so _Add_ to _Adding…_ beside the folder
+      field and _Skip all_ to _Skipping…_ no longer grow it. The measured
+      `min-width` goes.
+    - **Dialog loader**: drawn inside the dialog's own card over its
+      hidden idle face (`Modal`'s `loader`), so a Delete or Reset dialog
+      keeps its size and never pops in twice; a failure returns in the
+      same card.
+    - **Unchanged**: _＋ Add show folder_'s fixed box, the drop zone, the
+      **Player notice**, the splash, the Skeletons and the live logs,
+      none of which moves anything.
+    - **Prototype**: the loading-states README's row 3, row 5, _Inside a
+      row_ and timing rule 1, and the rule _Lock the control, not the
+      layout_ in `Loading States.dc.html`.
