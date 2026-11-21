@@ -15,7 +15,8 @@ const NOTHING: VideoFacts = { runtimeMinutes: null, videoQuality: null };
 /**
  * The **Runtime label**'s minutes and the **Video quality** of a film that has
  * just landed, each `null` when this machine cannot say, both read off one
- * `Playback.measure`.
+ * `Playback.measure`. Every save calls it, and the **Quality sweep** measures
+ * by it too, so what counts as a measurable video is stated here alone.
  *
  * The form has no runtime or quality field and the prototype designs none, so
  * both are derived from the bytes: `measure` asks the **Playback component**'s
@@ -29,7 +30,7 @@ const NOTHING: VideoFacts = { runtimeMinutes: null, videoQuality: null };
  * is `null` rather than nought, which every reader already treats as unknown.
  */
 export function derivedVideoFacts(
-  playback: Playback,
+  playback: Pick<Playback, 'videoFile' | 'measure'>,
   video: StoredVideo
 ): VideoFacts {
   // A row with no film behind it has nothing to derive from.
