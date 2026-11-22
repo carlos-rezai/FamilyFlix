@@ -199,13 +199,14 @@ const fade = keyframes`
 `;
 
 /**
- * A busy button's label. Once `shown`, the shine is a moving `mask-image` over
- * the label in the button's own ink, so one rule serves every variant (the
- * handoff's `background-clip: text` gradient paints one fixed ink, wrong on
- * the bordered `danger`).
+ * A busy button's label, a `LabelLayer` in the cell. Once `shown`, the shine
+ * is a moving `mask-image` over the label in the button's own ink, so one
+ * rule serves every variant (the handoff's `background-clip: text` gradient
+ * paints one fixed ink, wrong on the bordered `danger`).
  *
  * Its reduced-motion fade is the one rule allowed to out-rank `GlobalStyle`'s
- * `*`: a shown label must still say it is working when nothing may move.
+ * `*`: a shown label must still say it is working when nothing may move. That
+ * rule keys on `[aria-live]`, so the label keeps its `aria-live` while hidden.
  */
 export const BusyLabel = styled(LabelLayer)<{ $shine: boolean }>`
   ${({ $shine }) =>

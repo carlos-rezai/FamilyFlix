@@ -67,7 +67,11 @@ export type ButtonProps =
        * it on its idle label and face; `shown` reads `busyLabel` with a shine.
        */
       busy?: BusyPhase;
-      /** The _-ing_ form drawn once `shown`: _Saving…_, _Adding…_. */
+      /**
+       * The _-ing_ form: _Saving…_, _Adding…_. Laid out with the label in one
+       * cell, so the button is as wide as the wider of the two at every
+       * phase; drawn once `shown`, with a shine.
+       */
       busyLabel?: string;
     });
 

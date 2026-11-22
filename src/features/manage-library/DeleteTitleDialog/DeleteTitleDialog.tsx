@@ -29,7 +29,8 @@ export interface DeleteTitleDialogProps {
  * the confirm in `danger` before _Cancel_. Focus lands on the card, the
  * Modal's own rule, so Enter alone deletes nothing. From the confirm press
  * it is **Locked**; once **Shown** its own card draws the **Dialog loader**
- * reading _Deleting “<title>”_ over the hidden confirmation. Presentational, the organism owns the request.
+ * reading _Deleting “<title>”_ over the hidden confirmation. Presentational,
+ * the organism owns the request.
  */
 export function DeleteTitleDialog({
   title,
