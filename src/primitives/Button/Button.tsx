@@ -132,20 +132,13 @@ export function Button({
         // as the wider; the one not drawn is hidden, from sight and from
         // assistive technology alike, and nothing is measured.
         <LabelCell>
-          <LabelLayer aria-hidden={shown ? 'true' : undefined} $hidden={shown}>
-            {label}
-          </LabelLayer>
-          <BusyLabel
-            aria-live="polite"
-            aria-hidden={shown ? undefined : 'true'}
-            $hidden={!shown}
-            $shine={shown}
-          >
+          <LabelLayer $hidden={shown}>{label}</LabelLayer>
+          <BusyLabel aria-live="polite" $hidden={!shown} $shine={shown}>
             {form.busyLabel}
           </BusyLabel>
         </LabelCell>
       ) : isBusy ? (
-        <BusyLabel aria-live="polite" $shine={shown}>
+        <BusyLabel aria-live="polite" $hidden={false} $shine={shown}>
           {label}
         </BusyLabel>
       ) : (

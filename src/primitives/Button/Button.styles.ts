@@ -164,14 +164,17 @@ export const LabelCell = styled.span`
   display: inline-grid;
 `;
 
-/** One label in the cell; the one not drawn keeps its width, unseen. */
-export const LabelLayer = styled.span<{ $hidden?: boolean }>`
+/**
+ * One label in the cell. `$hidden`, the one not drawn keeps its width but is
+ * unseen and unread: one prop for both.
+ */
+export const LabelLayer = styled.span.attrs<{ $hidden: boolean }>(
+  ({ $hidden }) => ({
+    'aria-hidden': $hidden ? 'true' : undefined,
+  })
+)`
   grid-area: 1 / 1;
-  ${({ $hidden }) =>
-    $hidden === true &&
-    css`
-      visibility: hidden;
-    `}
+  visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
 `;
 
 /** The shine: a brighter band carried across the label, right to left. */
