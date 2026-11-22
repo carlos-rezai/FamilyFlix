@@ -119,9 +119,13 @@ export const Body = styled.div`
 `;
 
 /**
- * The idle face: everything the card draws without a loader. Under one it
- * stays laid out, so the card keeps its size, but is not seen.
+ * The idle face: everything the card draws without a loader. `$hidden`, under
+ * one, it stays laid out, so the card keeps its size, but is unseen, unread
+ * and off the Tab ring: one prop for all three.
  */
-export const Face = styled.div<{ $hidden: boolean }>`
+export const Face = styled.div.attrs<{ $hidden: boolean }>(({ $hidden }) => ({
+  'aria-hidden': $hidden ? 'true' : undefined,
+  inert: $hidden || undefined,
+}))`
   visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
 `;

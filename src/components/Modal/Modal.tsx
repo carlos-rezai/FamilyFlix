@@ -215,11 +215,7 @@ export function Modal({
         tabIndex={-1}
         aria-busy={busy ? 'true' : undefined}
       >
-        <Face
-          $hidden={busy}
-          aria-hidden={busy ? 'true' : undefined}
-          inert={busy}
-        >
+        <Face $hidden={busy}>
           {bare ? (
             children
           ) : (
