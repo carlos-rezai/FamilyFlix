@@ -114,6 +114,8 @@ export function Modal({
 }: ModalProps) {
   const titleId = useId();
   const cardRef = useRef<HTMLDivElement>(null);
+  /** A **Dialog loader** is drawn. */
+  const busy = loader !== undefined;
 
   // Focus in on open, and back out on close, to the element that had it. Taken
   // as the card opens rather than as it shuts: the ✕ that was pressed is gone
@@ -136,7 +138,6 @@ export function Modal({
 
   // A loader hides the button that had focus; focus goes to the card, where
   // the ring finds nothing to move to.
-  const busy = loader !== undefined;
   useEffect(() => {
     if (open && busy) {
       cardRef.current?.focus();
