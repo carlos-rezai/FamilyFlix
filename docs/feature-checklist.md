@@ -83,6 +83,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Silent waits: every press shows it is working       | ✅ Done    |
 | Video quality: a 4K to SD tag on every poster       | ✅ Done    |
 | Busy overlay: no loader moves what is around it     | ✅ Done    |
+| Seamless art: the backdrop lands with the page      | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -918,3 +919,32 @@ pressing play. Grilled in design log 70:
     - **Prototype**: the loading-states README's row 3, row 5, _Inside a
       row_ and timing rule 1, and the rule _Lock the control, not the
       layout_ in `Loading States.dc.html`.
+
+Step 54 came out of testing a library of 400 titles: a detail page draws
+its poster and text at once, but the backdrop takes 1.5 to 2 seconds and
+paints in bands, top to bottom. Not yet grilled:
+
+54. ⬜ **Seamless art**: a detail page opens whole, backdrop included.
+    Three causes, read on 2026-11-22: Enrichment saves TMDB's `original`
+    size (`tmdbClient`'s `IMAGE_BASE`), so 9 of the 12 installed
+    backdrops are 3840x2160 JPEGs of 0.8 to 2.4 MB and posters average
+    1 MB; the backdrop is first asked for on the detail page, as a CSS
+    background, while the poster is already warm from the card; and
+    `/api/images` sends no cache lifetime, so every visit asks again.
+    - **Offline**: art TMDB gave once is never downloaded again, not by
+      a Sync nor by this step. A Sync already holds to that, fetching a
+      poster, backdrop, Season poster or Still only where none is held;
+      it stays the rule.
+    - **Art size**: keep art at screen size (a 1920px backdrop, a poster
+      sized for its frame). New art is stored at that size; art already
+      held is shrunk once on disk, offline, never refetched. Only the
+      copy in the **Managed media directory** shrinks; a Library
+      folder's art is never rewritten.
+    - **Warm start**: fetch and decode the backdrop before it is drawn,
+      from the card's hover or focus, and draw it only once decoded.
+    - **Cache**: art served with a lifetime, its url changing when the
+      file does.
+    - **Open**: what shrinks held art (FFmpeg is the **Default
+      component** and can be replaced or missing); whether new art comes
+      from TMDB at `w1280` or as `original` shrunk on arrival; and
+      whether the backdrop fades in.
