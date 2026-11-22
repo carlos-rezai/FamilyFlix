@@ -6,51 +6,44 @@
 // for its loader: a dialog that passes `loader` renders exactly one `Modal`,
 // so its card keeps its size as the loader shows.
 
-import { readdirSync, readFileSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-/** The frontend's source root, from here. */
-const SRC = fileURLToPath(new URL('../../', import.meta.url));
+import {
+  shippingSources,
+  shippingSourcesMatching,
+  withoutComments,
+} from '@/test-support/shippingSources/shippingSources';
+
+/** The frontend's source root, as every structural guard reads it. */
+const SRC = 'src';
 
 /** Where `Modal` and the loader itself live: the only places it may be drawn. */
-const OWNERS = [
-  ['components', 'Modal'].join(sep),
-  ['components', 'DialogLoader'].join(sep),
-];
+const OWNERS = [`${SRC}/components/Modal/`, `${SRC}/components/DialogLoader/`];
 
-/** Every shipping `.tsx` under `dir`: no tests, no test-support. */
-function shippingTsx(dir: string): string[] {
-  return readdirSync(dir).flatMap((name) => {
-    const path = join(dir, name);
-    if (statSync(path).isDirectory()) {
-      return name === 'test-support' ? [] : shippingTsx(path);
-    }
-    return name.endsWith('.tsx') && !name.includes('.test.') ? [path] : [];
-  });
-}
-
-const SOURCES = shippingTsx(SRC)
-  .map((path) => ({
-    file: relative(SRC, path),
-    text: readFileSync(path, 'utf8'),
-  }))
-  .filter(({ file }) => !OWNERS.some((owner) => file.startsWith(owner)));
+/** A shipping `.tsx` outside the two owners: a file that could be a dialog. */
+const isDialogSource = (path: string) =>
+  path.endsWith('.tsx') && !OWNERS.some((owner) => path.startsWith(owner));
 
 describe('DialogLoader: drawn only through a Modal’s loader', () => {
   it('is rendered by no dialog of its own', () => {
-    const drawing = SOURCES.filter(({ text }) => /<DialogLoader\b/.test(text));
+    const drawing = shippingSourcesMatching(SRC, /<DialogLoader\b/).filter(
+      isDialogSource
+    );
 
-    expect(drawing.map(({ file }) => file)).toEqual([]);
+    expect(drawing).toEqual([]);
   });
 
   it('is given to one Modal per dialog: no second Modal for the loader', () => {
-    const twoCards = SOURCES.filter(
-      ({ text }) =>
-        /\bloader=/.test(text) && (text.match(/<Modal\b/g) ?? []).length !== 1
-    );
+    const twoCards = shippingSources(SRC)
+      .filter(isDialogSource)
+      .filter((path) => {
+        const code = withoutComments(readFileSync(path, 'utf8'));
+        return (
+          /\bloader=/.test(code) && (code.match(/<Modal\b/g) ?? []).length !== 1
+        );
+      });
 
-    expect(twoCards.map(({ file }) => file)).toEqual([]);
+    expect(twoCards).toEqual([]);
   });
 });
