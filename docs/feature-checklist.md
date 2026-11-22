@@ -82,7 +82,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Export paths: a nested Export imports back whole    | ✅ Done    |
 | Silent waits: every press shows it is working       | ✅ Done    |
 | Video quality: a 4K to SD tag on every poster       | ✅ Done    |
-| Busy overlay: a row's loader over it, not beside it | ⬜ Planned |
+| Busy overlay: no loader moves what is around it     | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -881,7 +881,7 @@ pressing play. Grilled in design log 70:
     - **Prototype**: `docs/handoff/handoff-video-quality/`, a new atom
       `prim.MetaTag`, the Quality pill and the Display row.
 
-53. 🔜 **Busy overlay**: a **Busy row**'s shown face moves from its status
+53. ✅ **Busy overlay**: a **Busy row**'s shown face moves from its status
     slot to an overlay, so nothing in the row shifts while it waits. Today
     the 18px **Logo loader** and its label stand in the kind dot of a
     **Decision row** or **Problem row** and push the title and the
@@ -898,7 +898,8 @@ pressing play. Grilled in design log 70:
     **Dialog loader**. Built in issues 676 to 682; the walk (issue 683)
     held each write open in the dev app and measured every row's box, every
     grown button's width and every dialog card's box before, at and after
-    **Shown**: none moved.
+    **Shown**: none moved. The refactor (issue 684) stated each hidden
+    layer's facts once and closed the step.
     - **Busy row**: a `BusyOverlay` molecule, `bg` at .55 under a 4px
       blur, the 18px mark and its _-ing_ label centred; the row's root a
       containing block at every phase. Amends the handoff's row 5 and log

@@ -11,6 +11,70 @@ Newest entry first.
 
 ---
 
+## 2026-11-22: Busy overlay, the refactor (issue 684)
+
+Nine commits against `docs/refactor-plans/71-busy-overlay-refactor.md`,
+one per plan commit. This is the initiative's closing round: step 53 is ✅
+and issue 675 is done. **13043 tests pass across 909 files** (one skipped),
+as at `888f2313`: the round changed no test's claim and added none.
+`tsc -b --force` is clean, and `eslint` over every file the round touched
+reports 0 errors and 0 warnings.
+
+### What each group changed
+
+- **Group 1, each hidden layer states its facts once** (`54fb9602` to
+  `f1d8423c`). `Modal`'s `Face` takes `.attrs` from `$hidden`, giving
+  `aria-hidden` and `inert` beside the `visibility` it reads, both
+  `undefined` at idle; `Modal` passes `$hidden={busy}` alone, and its
+  `busy` sits at the top of the body with `titleId` and `cardRef`.
+  `Button`'s `LabelLayer` takes the same shape for `aria-hidden`, its
+  `$hidden` required; the fallback `BusyLabel` passes `$hidden={false}`.
+- **Group 2, the Dialog loader's guard on the shared scan** (`4da60285`).
+  `DialogLoader.onlyInModal.test` reads `shippingSources('src')` and
+  `shippingSourcesMatching`, comments aside, by forward-slash path; its
+  hand-written walk is gone. Both cases kept their names, and the four
+  dialogs that pass `loader=` are still in its set.
+- **Group 3, comments** (`0d837b52`). `DeleteTitleDialog`'s long line
+  rewrapped; `busyLabel`'s docblock names the one cell; `BusyLabel`'s
+  names it a `LabelLayer` and says why its `aria-live` stays while hidden.
+- **Group 4, the documents** (`b8ba6950` to `db6f0d68` and this entry).
+  The README names `BusyOverlay`, `DialogLoader` as `Modal`'s layer,
+  `busyRow`, `visibleLabel` and its `shownText`; the spec's `BusyOverlay`
+  section wraps; the glossary gains **Modal** (updated); the build has its
+  journal entry; step 53 and its row are ✅.
+
+### Where this round left the plan
+
+- **Commits 1 and 2 stayed two commits**, as planned; the second was
+  small but not empty.
+- **The guard's root is `'src'`**, relative to the repository as every
+  other guard's (`useGoBack.test`), not a `fileURLToPath` from the file.
+- **The README says _visibleLabel and its shownText_**, since `shownText`
+  is exported from `test-support/visibleLabel/`, not a unit of its own.
+- **The touched suites ran after each commit and the full suite at each
+  group's end**, as the plan says, green each time with no flake.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the glass literals as a token,
+`Modal` taking a `BusyPhase`, the dialogs' busy suites' helpers, the five
+suites reading a Busy label through `[aria-live="polite"]`, moving the lock
+off a Busy row's root, and the long comment lines older than the
+initiative. No wire, schema, route, copy, prototype state or drawn pixel
+changed.
+
+### Follow-ups
+
+- **Whether a Busy label is still announced.** Before log 71 the
+  `aria-live` label mounted at `waiting` reading the idle label and
+  changed to the busy label once `shown`; now it mounts with the busy
+  label from the start, `aria-hidden` until `shown`. A live region
+  announces a change of content, so a screen reader may no longer read
+  _Adding…_ out. jsdom cannot tell, and no walk ran a screen reader: a
+  grill, and a check with one.
+
+---
+
 ## 2026-11-21: Busy overlay, the build (issues 676 to 683)
 
 The prototype's amendment (676); six slices run by `issue-loop`, each a RED
