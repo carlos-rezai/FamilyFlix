@@ -922,7 +922,9 @@ pressing play. Grilled in design log 70:
 
 Step 54 came out of testing a library of 400 titles: a detail page draws
 its poster and text at once, but the backdrop takes 1.5 to 2 seconds and
-paints in bands, top to bottom. Not yet grilled:
+paints in bands, top to bottom. Grilled in design log 72, which settles
+the open questions and keeps revalidation in place of a cache lifetime
+(its Q13):
 
 54. ⬜ **Seamless art**: a detail page opens whole, backdrop included.
     Three causes, read on 2026-11-22: Enrichment saves TMDB's `original`

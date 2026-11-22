@@ -1206,6 +1206,22 @@ handoff is amended (row 3, row 5, timing rule 1).
 | **Modal** (updated)         | Since log 71 it takes `loader`, the **Dialog loader**'s label. Given, the card is `aria-busy` and focused, its idle face laid out but hidden, the **Dialog loader** drawn over it, the card never remounted.                                                              |                                           |
 | **Layout shift** (new)      | Anything around a loader moving as it appears or goes: what log 71 rules out for every action loader. A **Skeleton** giving way to its page is a read landing, not a layout shift of a loader.                                                                            | jump, reflow, jank                        |
 
+## Seamless art
+
+Design log 72: step 54, initiative `seamless-art`. A detail page opens whole,
+backdrop included: art is kept at screen size, fitted where it is written and,
+once, where it is held; a Poster card warms its backdrop before it is opened.
+
+| Term                          | Definition                                                                                                                                                                                                                                                                                             | Aliases to avoid                    |
+| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------- |
+| **Art box** (new)             | The widest a stored picture is kept, read off its own shape (`media/artBox/`): a landscape one (a **Backdrop**, a **Still**) 1920px, a portrait one (a **Poster**, a **Season poster**) 780px; never enlarged, the height following.                                                                   | max size, resolution cap            |
+| **Picture size** (new)        | A stored picture's width and height, read off its JPEG, PNG or WebP header (`media/pictureSize/`); none for a header it cannot read, and such a picture is kept as given. Not a **Video quality**, which is a rung.                                                                                    | dimensions, frame size (ffprobe's)  |
+| **Art fit** (new)             | Bringing a picture within its **Art box** in its own format, through the **Playback component** (`Playback.fitArt`, argv from `fitArgs`): what every image write into the **Managed media directory** does to a picture over its box. With no component, or any failure, the picture is kept as it is. | shrink, resize, compress, thumbnail |
+| **Fit budget** (new)          | How long one **Art fit** may take: 10 s; when it runs out the process is killed and the picture is kept as it is.                                                                                                                                                                                      | timeout (in prose)                  |
+| **Art sweep** (new)           | The server's background pass on every start, beside the **Quality sweep**: each held image the rows name, over its **Art box**, fitted in place one at a time, offline, the Managed copy only; stopped by the **Ordered shutdown**. A fitted picture is never asked again.                             | backfill, migration, re-download    |
+| **Warm start** (new)          | A **Detail backdrop** fetched and decoded before its page opens: on a **Poster card**'s pointer enter or focus (`onWarm`), through `warmArt`, the last 8 held decoded.                                                                                                                                 | prefetch, preload (in prose)        |
+| **Detail backdrop** (updated) | Since log 72 its url is drawn only once decoded (`useDecodedArt`): warm, in the page's first paint; cold, the **Gradient fallback** first, then the whole backdrop in one frame. Still no motion.                                                                                                      |                                     |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1414,6 +1430,8 @@ handoff is amended (row 3, row 5, timing rule 1).
 - Every write of a video's runtime writes its **Video quality** from the same one probe; the **Quality sweep** writes the Video quality alone, and only where there is none (new, log 70).
 - A **Busy row** draws at most one **Busy overlay**, only while its **Row phase** is `shown`, and the row under it is laid out as at `idle` (new, log 71).
 - A **Busy button** has one width for all three **Busy phases**; a **Dialog loader** is drawn in exactly one card, its dialog's own (new, log 71).
+- Every picture in the **Managed media directory** is within its **Art box** once its write or the next **Art sweep** has run with a component; a **Library folder**'s art is never fitted (new, log 72).
+- A **Poster card** warms at most one **Detail backdrop**, its own title's; art TMDB gave once is never fetched again (new, log 72).
 
 ## Example dialogue
 
@@ -2229,6 +2247,11 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "The **Busy button** was already as wide as _Adding…_, so the field does not shrink. That is no **Layout shift**."
 > **Dev:** "Mum confirms a delete?"
 > **Domain expert:** "The **Dialog loader** comes up inside the same card, at the size it had; nothing pops in a second time."
+
+> **Dev:** "Mum points at _Die Hard_ and clicks. Does the backdrop come in strips?"
+> **Domain expert:** "No. Her pointer landing on the **Poster card** was the **Warm start**: the backdrop was fetched and decoded before the click, so the page opens with it."
+> **Dev:** "And the 4K backdrop TMDB gave us last year?"
+> **Domain expert:** "The **Art sweep** fitted it to its **Art box** at the next start, on disk, without asking TMDB. The copy in her **Library folder** was never touched."
 
 ## Flagged ambiguities
 
@@ -3246,3 +3269,12 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   blurred scrim with the row still faintly there; the **Dialog loader** is
   a dialog's, 64px, its idle face hidden. Never call a row's overlay a
   dialog loader, nor the overlay a "dim": the .75 dim is retired.
+- **"Art fit" is not "resize" or "thumbnail" (new):** an **Art fit** keeps
+  one picture per role at its **Art box**, in place, under its own name;
+  nothing stores a second, smaller copy. Say "thumbnail" only for
+  `EpisodeRow`'s frame, never for a fitted file.
+- **"Cache" means revalidation here (new):** step 54 first planned a cache
+  lifetime on `/api/images`; log 72 keeps revalidation by ETag, because a
+  stored picture can be rewritten under its own name. Do not call the
+  **Warm start** "caching": it decodes ahead, it does not hold bytes past
+  the session.
