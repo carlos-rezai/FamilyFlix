@@ -459,7 +459,10 @@ Target: `components/BusyOverlay/` · the **Busy overlay**: `{ label: string }`, 
 `rgba(20, 17, 13, 0.55)` under `backdrop-filter: blur(4px)`, `cursor: progress`, fading in on
 `ffFade` 0.18s, the 18px `inline` `LogoLoader` and its label centred on it. The row under it
 is laid out as at `idle`, its status slot (dot, line or caption) kept, so nothing moves. The
-Decision row, the review's Problem row, the Folder row and the Season choice draw it. Exported from the `components` barrel; it adds no control and takes no focus, and sits inside the row's `inert` root, so its `status` is out of the accessible tree while the root says `aria-busy`.
+Decision row, the review's Problem row, the Folder row and the Season choice draw it. Exported
+from the `components` barrel; it adds no control and takes no focus, and sits inside the
+row's `inert` root, so its `status` is out of the accessible tree while the root says
+`aria-busy`.
 
 ### Fab — `mol.Fab.dc.html`
 

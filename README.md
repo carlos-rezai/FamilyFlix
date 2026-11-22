@@ -191,10 +191,10 @@ familyflix/
 │   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
 │   │   └── useSnackbar/      # `{ notify, dismiss }` off the stack, and SnackbarNotice
 │   ├── assets/         # Static images, fonts, icons
-│   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/: controlStates(press), cardLift, cardFocus, and the structural guard in its test
+│   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; busyRow (a Busy row's containing block, lock and loader size); theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/: controlStates(press), cardLift, cardFocus, and the structural guard in its test
 │   ├── tokens/         # Colors, spacing, typography, breakpoints, motion, layout (the Content measure)
 │   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, LogoLoader (the FF mark as a loader), the Icon glyphs: the Snackbar's four, the FAB's two and enrichment's five among them), each with .tsx, .test.tsx, .styles.ts
-│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice, DialogLoader (a Locked dialog's face once its loader shows)), same three-file shape
+│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice, BusyOverlay (a Busy row's face once Shown), DialogLoader (the layer Modal's loader draws)), same three-file shape
 │   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
 │   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
 │   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational, as the stack above owns the timing
@@ -223,7 +223,7 @@ familyflix/
 │   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, useEnrichmentSummary, useLibraryTab, the Library tab the URL names, useImageFallback, the one failed-url rule for a poster or a still, useDelayedBusy, the Loader timing every action loader keeps, useDelayedBusyByKey, the same timing per row with a bulk press's cover, and useBusyRow, the press a Busy row remembers and refuses)
 │   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; busy.ts, the Busy phase; appVersion.d.ts)
 │   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks, accentScale, isLibraryTab, libraryTabOptions and inTrackOrder among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, heldFetch and advanceClock, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, …)
+│   └── test-support/     # Shared test doubles (fakeResponse, heldFetch and advanceClock, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, visibleLabel and its shownText, …)
 ├── release/            # gitignored: the Installer or the AppImage, and win-unpacked/ or linux-unpacked/, the Packaged layout
 └── docs/
     ├── design-logs/    # Immutable feature design snapshots
