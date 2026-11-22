@@ -11,6 +11,93 @@ Newest entry first.
 
 ---
 
+## 2026-11-21: Busy overlay, the build (issues 676 to 683)
+
+The prototype's amendment (676); six slices run by `issue-loop`, each a RED
+and a GREEN commit (677 to 682), two of them with a second test commit
+moving existing suites onto what the slice changed (678, 679); and this
+walk and documents slice (683), which found no gap in the code. **13043
+tests pass across 909 files** (one skipped), against 12978 across 905 at
+the Video quality refactor; `tsc -b --force` is clean, and `eslint` over
+every `src/` file the initiative touched reports 0 errors and 0 warnings.
+Step 53 stays 🔜 until the refactor.
+
+### What shipped
+
+- **The prototype amended** (676). The loading-states handoff's row 3,
+  row 5 and timing rule 1: a row's loader drawn over it, a Busy button at
+  one width, the Dialog loader inside its dialog's own card.
+- **The Busy overlay over the Decision row** (677). `BusyOverlay` in
+  `components/`, exported from the barrel: an `inset: 0` scrim on
+  `rgba(20, 17, 13, 0.55)` under a 4px blur, the 18px `inline`
+  `LogoLoader` and its label centred, drawn last in the row's root.
+  `busyRow` is a containing block at every phase and no longer dims the
+  row to .75; its status slot keeps its dot.
+- **The Busy button's one cell** (678). `Button` lays its label and its
+  `busyLabel` in one grid cell, the one not drawn hidden from sight and
+  from assistive technology, so the button is as wide as the wider of the
+  two at every phase; the measured `min-width` is gone. `visibleLabel` and
+  `shownText` in `test-support/` read the label a button draws, and the
+  eight feature suites that read a busy label by text moved onto them.
+- **Modal draws its own loader** (679). `Modal` takes `loader`: the card
+  is `aria-busy` and focused, its idle face (header and ✕ included) laid
+  out but hidden, `DialogLoader` drawn over it as an `inset: 0` layer, the
+  card never remounted. The Delete movie dialog moved onto it; the other
+  three kept a bare stopgap `Modal` until 682.
+- **The Problem and Folder rows' overlay** (680), and **the Season
+  choice's** (681), each drawing `BusyOverlay` last in its root.
+- **The other three dialogs' loader** (682). The Delete title, Delete
+  series and Reset dialogs pass `loader` to their one `Modal`; the
+  stopgaps are gone, and `DialogLoader.onlyInModal.test` pins that no
+  dialog draws a loader of its own or a second `Modal` for it.
+
+### The walk
+
+The dev app ran in the browser on the dev library, each write held open
+in the page and then failed there, so no delete, reset, export or skip
+reached the server. Every box below (x, y, width, height) read the same
+before the press, at **Shown** and after the loader went:
+
+- **Decision row** (_Skip_): 280, 885, 816, 367.89; under _Apply
+  choices_: 280, 1648.78, 816, 229.84. The dot and every child unmoved.
+- **Problem row** (_Skip_, _Import as_): 280, 451, 816, 128.
+- **Folder row** (_Remove_): 301, 165, 774, 68.
+- **Season choice** (_Poster 1_ for S01): 280, 283, 816, 254.
+- **Busy buttons**: _Add_ 91.09 wide, _Skip all_ 124.34 (Sync) and 90.33
+  (Import), _Exporting…_ 156.5.
+- **Dialog cards**, 520 wide: Delete movie 346.48 high, Delete title
+  444.48, Delete series 301.89, Reset 454.13, from the press through
+  **Shown**, `aria-busy` and the card focused. A failed delete comes back
+  in the same card with its error line (37px taller), as designed; Reset
+  is the same height after.
+
+Left alone and checked unchanged: _＋ Add show folder_ (692 by 42, on a
+faked folder bridge), the Skeleton, the Welcome hold, the import's live
+log and the drop zone's idle face. Not walked: the **Start-up splash**
+(shell only) and the **Player notice**.
+
+### Judgement calls worth knowing
+
+- **The overlay sits inside the row's `inert` root**, so its `status` is
+  out of the accessible tree while the root says `aria-busy`; log 71 kept
+  the lock where it was.
+- **`Modal`'s `loader` is a label, not a `BusyPhase`** (log 71 Q10): each
+  dialog writes `loader={x === 'shown' ? label : undefined}` beside its
+  `locked`.
+- **679 left three stopgaps**, a bare `Modal` early-returned at **Shown**
+  in each of the other three dialogs, so the slice could land on one
+  dialog; 682 removed them.
+
+### Follow-ups for the refactor
+
+- The two new hidden layers (`Modal`'s face, `Button`'s label layer) each
+  pass `visibility`, `aria-hidden` and (the face) `inert` by hand from one
+  boolean.
+- `DialogLoader.onlyInModal.test` walks the tree itself rather than
+  through `shippingSources`, and matches inside comments.
+
+---
+
 ## 2026-11-21: Video quality, the refactor (issue 674)
 
 Nineteen commits against `docs/refactor-plans/70-video-quality-refactor.md`,
