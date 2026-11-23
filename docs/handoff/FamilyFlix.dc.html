@@ -1422,7 +1422,7 @@
                     posterStyle:{display:'block',width:'100%',height:'160px',borderRadius:'8px',background:c.bg}})),
                 }; }):[];
               // log 58: no Write target toggles; the Layout fill and the Library sheet always run.
-              const targets = ['your library', 'each title folder', 'the sheet in Meta'];
+              const targets = ['your library', 'each title folder', 'the sheet in _meta'];
               return {
                 setup:s.enStep==='setup', running:s.enStep==='running', review:s.enStep==='review',
                 onBack:()=>this.backFromEnrich(), onCancel:()=>this.cancelEnrich(), onRetry:()=>this.retryOnline(),
