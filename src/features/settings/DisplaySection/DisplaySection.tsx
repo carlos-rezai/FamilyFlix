@@ -10,7 +10,9 @@ import { Card, GroupHeading, Row, RowDesc, RowTitle } from '../section.styles';
  * heading** over one **Section card** holding four rows: _Ultrawide margins_,
  * _Fill in ratings from TMDB_, _Show video quality_ (each a title, its line
  * and the `Toggle` on the right) and _Start on_, whose **Pill tabs** choose
- * the **Start tab** with no snackbar; all reading and writing through
+ * the **Start tab** with no snackbar. _Show video quality_ turns the
+ * **Quality tag** on the posters on or off, nothing else (log 73), and its
+ * line says so in one sentence. All read and write through
  * `useDisplayPreference`, so the **Content frame** follows a press at once.
  * Each control is not drawn while its value is `null`: **Blank until it
  * lands**.

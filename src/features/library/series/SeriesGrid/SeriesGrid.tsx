@@ -43,7 +43,7 @@ function seriesCountLabel({ series, episodeCount }: SeriesHomePayload): string {
  *
  * It reads the header's **Library query** off the URL the way the Movies tab
  * does: the settled string is the load's key, so only a change to the query
- * reloads, and a flip of the **Row view switch** keeps the query. A search or
+ * reloads; a change of **Row view** alone writes nothing to it. A search or
  * filter that keeps nothing is a no-results face, the search named ahead of
  * the filters; a sort alone narrows nothing, so an empty library under it is
  * still the empty tab. Nothing is drawn until the payload lands. A poster's

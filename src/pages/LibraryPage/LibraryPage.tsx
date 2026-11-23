@@ -8,9 +8,10 @@ import { MainLayout } from '@/layouts/MainLayout/MainLayout';
 /**
  * The browse home (`/`) — the screen the family lands on. Composition only:
  * the **Start tab** gate around the page chrome from `MainLayout`, the Movies /
- * Series switch and the search box in the start slot, the filter pills in the
- * end slot (the Genre pill also choosing the **Row view**), and the body the
- * library feature picks off `tab`.
+ * Series switch and the search box in the start slot, the three filter pills
+ * in the end slot (the Genre pill also choosing the **Row view**), which the
+ * layout holds with Settings as the **Header end**, and the body the library
+ * feature picks off `tab`. Nothing here knows how the header fits the window.
  *
  * It holds no query of its own. The header controls only write the URL and the
  * rows only read it, so the two subtrees never speak to each other and there

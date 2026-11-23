@@ -16,10 +16,11 @@ import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
 /**
  * The header's filter pills — the `headerEnd` slot of `MainLayout`, carrying
  * the Genre, Rating and Sort dropdowns in the prototype's order
- * (`page.LibraryPage.dc.html:84`). They are one feature component rather than
- * three because the prototype renders them as siblings of the header's flex
- * row, so this returns a fragment and adds no wrapper that would take them out
- * of it.
+ * (`page.LibraryPage.dc.html`); the _View_ and _Quality_ pills are gone (log
+ * 73). They are one feature component rather than three because the prototype
+ * renders them as siblings in the **Header end**, beside Settings, so this
+ * returns a fragment and adds no wrapper that would take them out of its row.
+ * How that row fits the window is `MainLayout`'s, never this component's.
  *
  * Like the search box, it only ever *writes* the URL and only ever *reads* it
  * back — each pill shows whatever the URL is carrying, whoever put it there,

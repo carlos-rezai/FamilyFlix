@@ -150,22 +150,30 @@ measured, two fewer pills still leave the header about 1314px wide against
 a 1024px window, so the pills and Settings also wrap whole to a second line
 when the first cannot hold them:
 
-55. ⬜ **Header fit**: every filter pill and the Settings button stay in
-    reach, by drawing two fewer pills.
+55. 🔜 **Header fit**: every filter pill and the Settings button stay in
+    reach, by drawing two fewer pills and wrapping the rest whole.
     - **Row view moves into Genre**: the _View_ pill (**Row view switch**)
-      goes. The Genre dropdown's first two rows become the tab's **Row
-      view**: _All Genres_ is **By genre**, the genre rows and the **Other
-      row** as today, and a new row (working title _Show no genre_) is
-      **All**, one **Library grid**, as Series draws by default. Both stay
-      the household setting per tab (`movie-row-view`, `series-row-view`),
-      never in the URL; a single genre stays `?genre=` as today.
-    - **Series**: the same dropdown; it starts on the new row, its grid,
-      and _All Genres_ gives it genre rows.
+      is gone. The Genre dropdown's first two rows, the **View rows**, set
+      the tab's **Row view**: _All Genres_ is **By genre**, the genre rows
+      and the **Other row**; _All movies_ / _All series_ is **All**, one
+      **Library grid** under that heading. Both stay the household setting
+      per tab, never in the URL; a genre stays `?genre=` and leaves the view
+      as it was. The pill reads the checked row: _All Genres_ on Movies and
+      _All series_ on Series for a fresh household.
     - **Nothing retired downstream**: the Genre rows, **View all** and the
       **Genre page** stay as they are.
-    - **Quality filter goes**: the _Quality_ pill and `?quality=` are
-      dropped; _Show video quality_ only turns the **Quality tag** on the
-      cards on or off.
-    - **Open**: the new row's name; what the dropdown's pill reads under
-      **All**; what a held `?quality=` URL does; whether the route keeps
-      `minQuality`; the prototype amendment.
+    - **Quality filter goes**: the _Quality_ pill, `minQuality` and the
+      route's `400 Invalid quality` are gone; a held `?quality=` is read
+      past, client and server. _Show video quality_ only turns the
+      **Quality tag** on the posters on or off, and its line says so.
+    - **Header end**: Genre, Rating, Sort and Settings are one unit, never
+      split or shrunk. When the first line cannot hold it beside the
+      search at its floor, it moves whole to a right-aligned second line,
+      12px below. No breakpoint: a longer genre moves the wrap.
+    - **Walked** on 2026-11-23 in the dev app, both tabs, _Documentary_
+      chosen: one line at 1920 and 1366px, two at 1280 and 1024px, every
+      pill and Settings on screen and none cut. The walk caught the
+      header's spacer costing the first line a gap of its own, which
+      wrapped it at 1366; with the spacer gone the Header end is pushed by
+      its own margin. Each View row drew its body on each tab, and both
+      choices held over a reload.
