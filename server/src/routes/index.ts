@@ -104,7 +104,6 @@ import {
   LIBRARY_TABS,
   MOVIE_SORTS,
   ROW_VIEWS,
-  VIDEO_QUALITIES,
   type DeleteFacts,
   type EpisodeRead,
   type ExportField,
@@ -129,7 +128,6 @@ import {
   type StorageReport,
   type StoredVideo,
   type Subtitle,
-  type VideoQuality,
 } from '@/types';
 
 /** The two kinds of thing the player plays — each a path segment, `/<kind>s`. */

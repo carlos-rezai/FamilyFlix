@@ -1,6 +1,5 @@
 import type { SqliteDatabase } from '../../db';
 import {
-  VIDEO_QUALITIES,
   type Genre,
   type GenreCount,
   type ListSort,
@@ -8,7 +7,6 @@ import {
   type MovieQuery,
 } from '@/types';
 import type { MovieReader, MovieRow } from '../read/read';
-import { qualityRankSql } from '../qualityRankSql/qualityRankSql';
 
 /**
  * "Started but not finished" — the rule the Continue Watching row is defined by,
