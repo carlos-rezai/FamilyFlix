@@ -12,12 +12,14 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { mediaFilePath } from '../../playback/mediaFilePath/mediaFilePath';
 import { artBox } from '../artBox/artBox';
+import { isImageFilename } from '../fileKinds/fileKinds';
 import { movieFolder } from '../movieFolder/movieFolder';
 import { pictureFormat, pictureSize } from '../pictureSize/pictureSize';
 import { safeFilename } from '../safeFilename/safeFilename';
@@ -108,6 +110,9 @@ export interface Media {
    * The source is a stream and stays one all the way to the file, so a 12 GB
    * film never sits in memory. It resolves once the bytes are on disk, because
    * the row that points at them is written after it.
+   *
+   * An image filename is the exception: read whole and fitted on its way in,
+   * as {@link storeNamed} does. {@link copyIn} fits an image the same way.
    */
   storeUpload(
     folder: string,
@@ -370,8 +375,16 @@ export function createMedia(
 
       // The name is sanitised here rather than at the route, so every caller of
       // this domain — the form, and the bulk importer after it — gets the
-      // guarantee without having to remember it.
-      await pipeline(source, createWriteStream(join(folder, safe)));
+      // guarantee without having to remember it. An image is read whole and
+      // fitted; everything else streams, so a 12 GB film never sits in memory.
+      if (isImageFilename(safe)) {
+        writeFileSync(
+          join(folder, safe),
+          await fitted(await readWhole(source))
+        );
+      } else {
+        await pipeline(source, createWriteStream(join(folder, safe)));
+      }
 
       return storedIn(folder, safe);
     },
@@ -404,12 +417,23 @@ export function createMedia(
       // a 12 GB film that cancel could only wait out is not cancelled. A copy
       // that did not finish — a source that is not there, or the signal —
       // takes its half-file with it, so nothing is left for a row to point at.
+      // An image is read whole and fitted, the signal asked again once the
+      // fit has answered, so a cancel during it still writes nothing.
       try {
-        await pipeline(
-          createReadStream(sourcePath),
-          createWriteStream(target),
-          signal === undefined ? {} : { signal }
-        );
+        if (isImageFilename(safe)) {
+          signal?.throwIfAborted();
+          const picture = await fitted(
+            await readFile(sourcePath, signal === undefined ? {} : { signal })
+          );
+          signal?.throwIfAborted();
+          writeFileSync(target, picture);
+        } else {
+          await pipeline(
+            createReadStream(sourcePath),
+            createWriteStream(target),
+            signal === undefined ? {} : { signal }
+          );
+        }
       } catch (error) {
         rmSync(target, { force: true });
         throw error;
