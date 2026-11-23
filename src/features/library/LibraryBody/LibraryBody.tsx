@@ -28,10 +28,10 @@ function SeriesBody() {
  * default) are `SeriesGrid`, _All series_; under **By genre**, `SeriesRows`,
  * the series genre rows and the **Other series row** last: four bodies, named
  * kind then shape. The Row view is the household's, set from the Genre
- * pill's **View rows** and kept in Settings rather than the URL, so back from a title
- * lands on the same view. Nothing is drawn until the settings read lands. The
- * choice lives here rather than in `LibraryPage`, which stays composition
- * only.
+ * pill's **View rows** and kept in Settings rather than the URL, so back from
+ * a title lands on the same view. Nothing is drawn until the settings read
+ * lands. The choice lives here rather than in `LibraryPage`, which stays
+ * composition only.
  */
 export function LibraryBody() {
   return useLibraryTab() === 'series' ? <SeriesBody /> : <MoviesBody />;

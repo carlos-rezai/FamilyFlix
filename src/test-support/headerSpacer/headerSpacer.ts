@@ -4,10 +4,10 @@ import { screen } from '@testing-library/react';
  * The header's flex spacer — the one child that grows to split the strip.
  *
  * The Genre page's header is one row with a spacer in the middle of it (the
- * browse header has none: its **Header end** is pushed by its own margin), and what a
- * test wants to know is which side of that spacer something landed on. The
- * spacer has no role and no text, so it is found by the one thing that makes it
- * the spacer: it is the child that grows.
+ * browse header has none: its **Header end** is pushed by its own margin), and
+ * what a test wants to know is which side of that spacer something landed on.
+ * The spacer has no role and no text, so it is found by the one thing that
+ * makes it the spacer: it is the child that grows.
  *
  * Throws when the header has lost it, rather than handing back nothing for the
  * caller to assert around: a missing spacer is the failure, and it reads better

@@ -10,9 +10,15 @@ import { Root, Header, HeaderEnd, LogoMark, Body } from './MainLayout.styles';
 export interface MainLayoutProps {
   /** The scrollable page body rendered under the header. */
   children: ReactNode;
-  /** Header content on the first line, after the wordmark: the tabs and the search bar. */
+  /**
+   * Header content on the first line, after the wordmark: the tabs and the
+   * search bar.
+   */
   headerStart?: ReactNode;
-  /** Header content in the **Header end**, before the gear: the filter dropdowns. */
+  /**
+   * Header content in the **Header end**, before the gear: the filter
+   * dropdowns.
+   */
   headerEnd?: ReactNode;
 }
 
@@ -32,13 +38,14 @@ export interface MainLayoutProps {
  * nothing about the library from them) and a page that passes neither gets the
  * header it always had.
  *
- * The **Header end** is the `headerEnd` slot and the gear in one box, never split
- * and never shrunk, pushed right by its own auto margin. The header wraps by
- * content alone: while the first line holds the Header end beside the search at
- * its floor, it sits at the right; when it cannot (below about 1347px), it moves
- * whole to a right-aligned second line, 12px below, and the search grows into
- * the room it left. No spacer, since its gap would wrap the line early, and no
- * breakpoint, so a long genre name moves the wrap rather than cutting a pill.
+ * The **Header end** is the `headerEnd` slot and the gear in one box, never
+ * split and never shrunk, pushed right by its own auto margin. The header wraps
+ * by content alone: while the first line holds the Header end beside the search
+ * at its floor, it sits at the right; when it cannot (below about 1347px), it
+ * moves whole to a right-aligned second line, 12px below, and the search grows
+ * into the room it left. No spacer, since its gap would wrap the line early,
+ * and no breakpoint, so a long genre name moves the wrap rather than cutting a
+ * pill.
  *
  * The body is also where the scrolling happens — the document never scrolls —
  * so the chrome is what remembers where a screen was left, and every page it

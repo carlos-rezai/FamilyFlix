@@ -58,8 +58,8 @@ export type LibraryTab = (typeof LIBRARY_TABS)[number];
 
 /**
  * Every **Row view** a **Library tab** can be shown in: **All** (`'all'`) and
- * **By genre** (`'genre'`), each chosen by one of the Genre pill's **View rows**.
- * `RowView` is derived from the list, the `MOVIE_SORTS` precedent.
+ * **By genre** (`'genre'`), each chosen by one of the Genre pill's **View
+ * rows**. `RowView` is derived from the list, the `MOVIE_SORTS` precedent.
  */
 export const ROW_VIEWS = ['all', 'genre'] as const;
 
