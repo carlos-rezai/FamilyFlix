@@ -9,10 +9,9 @@ import {
   rmSync,
   statSync,
   unlinkSync,
-  writeFileSync,
 } from 'node:fs';
-import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { readFile, rename, rm, writeFile } from 'node:fs/promises';
+import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
@@ -397,7 +396,7 @@ export function createMedia(
       // fitted; everything else streams, so a 12 GB film never sits in memory.
       if (isImageFilename(safe)) {
         const picture = await readWhole(source);
-        writeFileSync(join(folder, safe), (await artFit(picture)) ?? picture);
+        await writeFile(join(folder, safe), (await artFit(picture)) ?? picture);
       } else {
         await pipeline(source, createWriteStream(join(folder, safe)));
       }
@@ -413,7 +412,7 @@ export function createMedia(
       const folder = season === undefined ? title : seasonDir(title, season);
       const safe = safeFilename(name);
       const picture = await readWhole(source);
-      writeFileSync(join(folder, safe), (await artFit(picture)) ?? picture);
+      await writeFile(join(folder, safe), (await artFit(picture)) ?? picture);
       return storedIn(folder, safe);
     },
 
@@ -464,7 +463,7 @@ export function createMedia(
           );
           const fit = await artFit(picture);
           signal?.throwIfAborted();
-          writeFileSync(target, fit ?? picture);
+          await writeFile(target, fit ?? picture);
         } else {
           await pipeline(
             createReadStream(sourcePath),
