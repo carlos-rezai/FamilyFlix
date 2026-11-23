@@ -11,6 +11,79 @@ Newest entry first.
 
 ---
 
+## 2026-11-23: Seamless art, the refactor (issue 692)
+
+Nine commits against `docs/refactor-plans/72-seamless-art-refactor.md`,
+one per plan commit, one of them changed from the plan (below). This is
+the initiative's closing round: step 54 is ✅ and issue 685 is done.
+**13197 tests pass across 931 files** (one skipped), against 13195 at
+`4b094114`: commit 1's two pins are the only new claims. `tsc -b --force`
+is clean, and `eslint` over every file the round touched reports 0
+errors (3 warnings, all in `SeriesDetail.test`'s older lines, which the
+round did not touch).
+
+### What each group changed
+
+- **Group 1, the Art fit stated once** (`420ad89c`, `38d3030f`). Two
+  pins in `createMedia.fitStored.test`: a picture within its box, and one
+  `fitArt` answers `none` for, keep their bytes and their modification
+  time after `fitStored`, with no `.part`. Both passed on arrival. Then
+  `createMedia`'s private `fitted` became `artFit`, answering the fitted
+  picture or `null`; `storeUpload`, `storeNamed` and `copyIn` write
+  `fit ?? picture`, and `fitStored` returns on `null`, its comparison by
+  reference gone.
+- **Group 2, one way to write a picture** (`db637d6f`). Every fitted
+  picture is written with an awaited `writeFile`, as `fitStored` writes;
+  `writeFileSync` left the `node:fs` import, and `node:fs/promises` moved
+  up beside it. The folder housekeeping stays synchronous.
+- **Group 3, the component's spawn** (`5b5a7c17`): not collapsed; see
+  below.
+- **Group 4, comments and a suite's name** (`b5eff226`, `98a75208`). The
+  three detail pages' inline backdrop comments are gone; `pictureFormat`
+  writes `` `ArtFormat` ``; `PORTRAIT_BOX`'s, `ArtSweep.start`'s and the
+  **Ordered shutdown**'s docblocks rewrapped (`pictureFormat`'s fits once
+  its bold is backticks). `createMedia.fitArt.test` is
+  `createMedia.fitNamed.test`.
+- **Group 5, the documents** (`76ae56e8`, `8de40c24` and this entry). The
+  README names the Art fit, `artBox`, `pictureSize`, `fitStored`,
+  `createArtSweep`, `fitArgs`, `fitArt`, `heldArt`, `warmArt`,
+  `useDecodedArt`, `pictureBytes`, `unfittedArt` and `stubImage`; the
+  build has its journal entry; step 54 and its row are ✅.
+
+### Where this round left the plan
+
+- **`ffmpegComponent.spawn` keeps its two calls.** The plan's one call,
+  its stdin slot computed (`input === undefined ? 'ignore' : 'pipe'`),
+  does not typecheck: `@types/node` types `spawn`'s `stdout` as present
+  only for an overload whose `stdio` tuple is literal, and a union in the
+  first slot matches none, so the call falls to the plain `SpawnOptions`
+  overload and `stdout` widens to `Readable | null`, which
+  `PlaybackProcess` refuses. A cast or a runtime check would be worse
+  than the two branches. The commit adds a comment saying why instead,
+  so the next reader does not try it again.
+- **`copyIn`'s fit reads into `fit`**, as `fitStored`'s does, so the
+  signal is still asked between the fit and the write.
+- **The touched suites ran after each commit and the full suite at each
+  group's end**, green each time with no flake.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: `yieldToEventLoop` in both sweeps,
+`pictureSize` and `pictureFormat` each sniffing the format, `collectFit`
+and `collectFrame`'s settle logic, the `@/api/warmArt` import's place, a
+cache lifetime on `/api/images`, and the long comment lines older than the
+initiative. No route, wire, schema, prototype or drawn pixel changed.
+
+### Follow-ups
+
+- **A cancel waits out a fit.** `copyIn` asks its signal before and after
+  the fit, not during it, so a cancelled import can wait one **Fit
+  budget** (10 s) for a picture: a behaviour change, for a grill.
+- **A 400-title library.** The walk ran on a copy of the installed one;
+  whether the library the step came from shows the same is still to see.
+
+---
+
 ## 2026-11-23: Seamless art, the build (issues 686 to 691)
 
 Five slices run by `issue-loop`, each a RED and a GREEN commit (686 to

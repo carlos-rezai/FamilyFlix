@@ -83,7 +83,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Silent waits: every press shows it is working       | ✅ Done    |
 | Video quality: a 4K to SD tag on every poster       | ✅ Done    |
 | Busy overlay: no loader moves what is around it     | ✅ Done    |
-| Seamless art: the backdrop lands with the page      | ⬜ Planned |
+| Seamless art: the backdrop lands with the page      | ✅ Done    |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -926,7 +926,7 @@ paints in bands, top to bottom. Grilled in design log 72, which settles
 the open questions and keeps revalidation in place of a cache lifetime
 (its Q13):
 
-54. 🔜 **Seamless art**: a detail page opens whole, backdrop included.
+54. ✅ **Seamless art**: a detail page opens whole, backdrop included.
     Three causes, read on 2026-11-22: Enrichment saves TMDB's `original`
     size (`tmdbClient`'s `IMAGE_BASE`), so 9 of the 12 installed
     backdrops are 3840x2160 JPEGs of 0.8 to 2.4 MB and posters average
@@ -960,4 +960,6 @@ the open questions and keeps revalidation in place of a cache lifetime
       opened from a hover drew in the poster's frame, 39 ms after the
       click; one opened cold drew whole 22 ms after the poster, never in
       bands. A second visit's poster and backdrop answered 304, and the
-      pre-fit ETag a 200 with the fitted bytes.
+      pre-fit ETag a 200 with the fitted bytes. The refactor (issue 692)
+      stated the Art fit once, answering `null` for a picture kept as
+      given, wrote every fitted picture awaited, and closed the step.
