@@ -32,7 +32,7 @@ export const Header = styled(ChromeHeader)`
 export const HeaderEnd = styled.div`
   display: flex;
   align-items: center;
-  flex-shrink: 0;
+  flex: 0 0 auto;
   flex-wrap: nowrap;
   gap: ${({ theme }) => theme.space.s5};
   margin-left: auto;
