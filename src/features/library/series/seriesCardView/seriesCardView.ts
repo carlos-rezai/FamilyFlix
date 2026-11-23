@@ -32,5 +32,6 @@ export function seriesCardView(
     progress: 0,
     favorite: series.isFavorite,
     quality: qualityTags ? series.videoQuality : null,
+    backdropUrl: imageUrl(series.backdropPath),
   };
 }

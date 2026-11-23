@@ -31,6 +31,11 @@ export interface PosterCardProps {
   onOpen: () => void;
   /** Toggle the movie's favorite flag (does not open the card). */
   onToggleFavorite: () => void;
+  /**
+   * Someone is about to open the card: the pointer entered it or it took
+   * focus. What to make ready is the caller's business.
+   */
+  onWarm?: () => void;
 }
 
 /**
@@ -50,7 +55,8 @@ const FAVORITE_SIZE = 34;
  * badge or in-progress bar, and the title + star rating below, with the
  * **Video quality** tag at the Star row's end when there is one.
  * Presentational: it renders a `PosterCardMovie` and emits `onOpen` /
- * `onToggleFavorite`.
+ * `onToggleFavorite`, and `onWarm` when the pointer enters it or it takes
+ * focus.
  *
  * Unlike `ContinueCard`, this one cannot simply become a `<button>`: the
  * favorite heart inside it is already a button, and a button inside a button is
@@ -64,6 +70,7 @@ export function PosterCard({
   movie,
   onOpen,
   onToggleFavorite,
+  onWarm,
 }: PosterCardProps) {
   const inProgress = !movie.watched && movie.progress > 0;
   const { url: posterUrl, onError } = useImageFallback(movie.posterUrl);
@@ -104,6 +111,8 @@ export function PosterCard({
       aria-label={movie.title}
       onClick={onOpen}
       onKeyDown={handleOpenKey}
+      onPointerEnter={onWarm}
+      onFocus={onWarm}
     >
       <Poster>
         <Artwork

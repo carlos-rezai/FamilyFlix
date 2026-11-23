@@ -45,5 +45,6 @@ export function view(
     ),
     favorite: movie.isFavorite,
     quality: qualityTags ? movie.videoQuality : null,
+    backdropUrl: imageUrl(movie.backdropPath),
   };
 }

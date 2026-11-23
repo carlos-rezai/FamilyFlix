@@ -14,6 +14,7 @@ import {
   HeartIcon,
   HeartOutlineIcon,
 } from '@/primitives';
+import { useDecodedArt } from '@/hooks/useDecodedArt/useDecodedArt';
 import { useImageFallback } from '@/hooks/useImageFallback/useImageFallback';
 import { moviePath } from '@/utils';
 import { EditMenu } from '../EditMenu/EditMenu';
@@ -82,6 +83,10 @@ export function MovieDetail() {
   const poster = useImageFallback(
     detail.status === 'ready' ? detail.movie.posterUrl : null
   );
+  // The backdrop is drawn only once decoded, so it never paints in halves.
+  const backdropUrl = useDecodedArt(
+    detail.status === 'ready' ? detail.movie.backdropUrl : null
+  );
 
   if (detail.status === 'loading') {
     return <LoadingDetail />;
@@ -115,7 +120,7 @@ export function MovieDetail() {
 
   return (
     <>
-      <DetailBackdrop url={movie.backdropUrl} g1={movie.g1} g2={movie.g2} />
+      <DetailBackdrop url={backdropUrl} g1={movie.g1} g2={movie.g2} />
 
       <EditMenu
         movieId={movie.id}

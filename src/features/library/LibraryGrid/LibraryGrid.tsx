@@ -1,5 +1,6 @@
 import { PosterCard } from '@/components';
 import type { PosterCardMovie } from '@/types';
+import { warmArt } from '@/api/warmArt/warmArt';
 import { Grid } from './LibraryGrid.styles';
 
 export interface LibraryGridProps {
@@ -24,6 +25,9 @@ export interface LibraryGridProps {
  *
  * Where a `CardCarousel` scrolls a fixed slice sideways, this one wraps the
  * whole set and gains a column whenever the window has room for one.
+ *
+ * A card someone is about to open has its **Detail backdrop** warmed (the
+ * **Warm start**), so the page opens with it.
  */
 export function LibraryGrid({
   movies,
@@ -38,6 +42,7 @@ export function LibraryGrid({
           movie={movie}
           onOpen={() => onOpenMovie?.(movie.id)}
           onToggleFavorite={() => onToggleFavorite?.(movie.id, !movie.favorite)}
+          onWarm={() => void warmArt(movie.backdropUrl)}
         />
       ))}
     </Grid>

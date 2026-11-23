@@ -34,6 +34,7 @@ import {
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
 import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
+import { stubImage } from '@/test-support/stubImage/stubImage';
 
 const SYNOPSIS =
   'A lighthouse keeper on a fading coast takes in a runaway girl, and the two ' +
@@ -502,6 +503,9 @@ describe('MovieDetail — artwork and the gradient fallback', () => {
  * without a Wordmark. A real poster is never captioned and never branded.
  */
 describe('MovieDetail — the Default poster in the poster frame', () => {
+  // The backdrop waits on a decode jsdom's `Image` cannot give.
+  stubImage();
+
   it('captions a backdrop-only film’s poster frame and draws the Wordmark there', async () => {
     serveMovie({ posterPath: null, backdropPath: 'northwind/backdrop.jpg' });
 
@@ -1281,16 +1285,22 @@ describe('MovieDetail — the load states', () => {
  * is the molecule's suite's to prove, not this one's.
  */
 describe('MovieDetail — the Detail backdrop', () => {
+  // The backdrop is drawn once decoded, which the stub lets each test do.
+  // `warmArt` keeps what it warmed, or is warming, for the life of the page,
+  // so each test names a backdrop of its own.
+  const images = stubImage();
+
   it('draws its backdrop under the Backdrop veil’s accent wash', async () => {
-    serveMovie({ backdropPath: 'northwind/backdrop.jpg' });
+    serveMovie({ backdropPath: 'veil/backdrop.jpg' });
 
     const { container } = renderDetail();
     await findTitle('Northwind');
+    await images.decode('/api/images/veil/backdrop.jpg');
 
     const art = Array.from(container.querySelectorAll('*')).find((el) =>
       window
         .getComputedStyle(el)
-        .backgroundImage.includes('/api/images/northwind/backdrop.jpg')
+        .backgroundImage.includes('/api/images/veil/backdrop.jpg')
     );
     const layer = art?.closest('[aria-hidden="true"]');
     expect(layer).toBeTruthy();
@@ -1302,15 +1312,16 @@ describe('MovieDetail — the Detail backdrop', () => {
   });
 
   it('draws exactly one Detail backdrop', async () => {
-    serveMovie({ backdropPath: 'northwind/backdrop.jpg' });
+    serveMovie({ backdropPath: 'onlyone/backdrop.jpg' });
 
     const { container } = renderDetail();
     await findTitle('Northwind');
+    await images.decode('/api/images/onlyone/backdrop.jpg');
 
     const arts = Array.from(container.querySelectorAll('*')).filter((el) =>
       window
         .getComputedStyle(el)
-        .backgroundImage.includes('/api/images/northwind/backdrop.jpg')
+        .backgroundImage.includes('/api/images/onlyone/backdrop.jpg')
     );
     expect(arts).toHaveLength(1);
     expect(arts[0]?.closest('[aria-hidden="true"]')).toBeTruthy();

@@ -46,6 +46,11 @@ export interface PosterCardMovie {
    * `null` draws none.
    */
   quality: VideoQuality | null;
+  /**
+   * The title's **Detail backdrop** off the image route, or `null` for none:
+   * what the **Warm start** decodes ahead when the card is about to open.
+   */
+  backdropUrl: string | null;
 }
 
 /** Whose rating a **Shown rating** is: the family's own, or TMDB's. */
