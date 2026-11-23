@@ -5,7 +5,6 @@
  */
 
 import type { Genre, Movie } from './movie';
-import type { VideoQuality } from './quality';
 
 /**
  * The **wire's** sort vocabulary: every order a URL may name, a route will
