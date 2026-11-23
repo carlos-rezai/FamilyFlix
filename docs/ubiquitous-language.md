@@ -1241,6 +1241,28 @@ chosen from the Genre dropdown, the **Quality filter** is gone, and the
 | **Row view switch** (retired) | **Retired** by log 73 for the **View rows**. Was: the _View_ **Filter dropdown** after Sort (`RowViewSwitch`, `rowViewOptions`), setting the current tab's **Row view**.                                                          |                                           |
 | **Quality filter** (retired)  | **Retired** by log 73, end to end: no pill, no `?quality=`, no `minQuality`. A held `?quality=` is read past as any unknown parameter. Was: the _Quality_ pill, a minimum rung keeping titles at or above it.                     |                                           |
 
+## Sheet in sight
+
+Design log 74: step 56, initiative `sheet-in-sight`. The **Meta folder** is
+named `_meta/`, so it heads a Library folder in Explorer, and the maintainer
+is told what the **Library sheet** brings back where a folder comes in and
+in the **Reset dialog**; the handoff is
+`docs/handoff/handoff-sheet-in-sight/README.md`.
+
+| Term                         | Definition                                                                                                                                                                                                                                                         | Aliases to avoid                         |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------- |
+| **Old Meta folder** (new)    | `Meta/`, the **Meta folder**'s name before log 74, in a Library folder or an Export written before it: read as the Meta folder is, `_meta/` first when both are there, until the **Meta move**. `OLD_META_FOLDER` in code.                                         | legacy folder, Meta (bare), old sheet    |
+| **Meta move** (new)          | The **Library sheet writer**'s one rename of a Library folder's **Old Meta folder** to `_meta/`, whole, before a write, when `_meta` is not there; refused (a sheet open in Excel), the sheet is written where it lies and the move tried again at the next write. | migration, upgrade, rename step, cleanup |
+| **Sheet note** (new)         | The paragraph after the folder-first rule in _What the scanner accepts_ (`FolderShapes`) saying FamilyFlix keeps `_meta\familyflix-library.csv` in each folder and reads it first, so a scan after a reset brings every title back.                                | sheet hint, sheet banner, sheet tip      |
+| **Meta folder** (updated)    | Since log 74, `_meta/` (`META_FOLDER`), lowercase behind an underscore so it sorts first in Explorer; either it or the **Old Meta folder** is passed in silence and read for the sheet (`isMetaFolder`).                                                           |                                          |
+| **Library sheet** (updated)  | Since log 74, `_meta/familyflix-library.csv`; named in the **Sheet note** and the **Reset dialog**.                                                                                                                                                                |                                          |
+| **Library folder** (updated) | Since log 74, its **Meta folder** is `_meta/`; the **Meta move** is the one rename FamilyFlix makes in it.                                                                                                                                                         |                                          |
+| **Export folder** (updated)  | Since log 74, its sheet lies in `_meta/`; a folder holding either `_meta/` or `Meta/` is an Export folder to the walk.                                                                                                                                             |                                          |
+| **Export file** (updated)    | Since log 74, in the Export folder's `_meta/`.                                                                                                                                                                                                                     |                                          |
+| **Sheet root** (updated)     | Since log 74, the folder above a sheet lying in `_meta/` or `Meta/`.                                                                                                                                                                                               |                                          |
+| **Title folder** (updated)   | Since log 74, any root folder that is not `_meta/`, `Meta/`, an **Export folder** or a system folder.                                                                                                                                                              |                                          |
+| **Reset dialog** (updated)   | Since log 74, _What stays_ lists the Library sheet second: _Each library folder’s \_meta sheet: scanning the folder again brings its titles back as they were (delete \_meta first to start clean)_.                                                               |                                          |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1453,6 +1475,7 @@ chosen from the Genre dropdown, the **Quality filter** is gone, and the
 - A **Poster card** warms at most one **Detail backdrop**, its own title's; art TMDB gave once is never fetched again (new, log 72).
 - The Genre dropdown checks exactly one row: the chosen genre's, else the **View row** of the tab's **Row view** (new, log 73).
 - A browse header has exactly one **Header end**, on its first line or wholly on its second, never split between them (new, log 73).
+- A **Library folder** holds at most one **Library sheet** the scan reads: `_meta/`'s when there, else the **Old Meta folder**'s; the **Meta move** happens at most once per folder and deletes nothing (new, log 74).
 
 ## Example dialogue
 
@@ -2280,6 +2303,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "From the Genre pill: its **View rows** are _All Genres_, the rows, and _All movies_, the grid. That's the tab's **Row view**, kept for the household."
 > **Dev:** "If he then picks _Comedy_?"
 > **Domain expert:** "The genre narrows the grid he chose; picking a genre never changes the **Row view**. And there's no quality pill to look for: the **Quality filter** is retired, only the **Quality tag** stays."
+
+> **Dev:** "The maintainer resets, scans the movies folder again, and every poster comes back. Is the reset broken?"
+> **Domain expert:** "No. The **Library sheet** in `_meta/` stays, and the **Reset dialog** says so under _What stays_. To start clean, delete `_meta/` first; it's the top folder now."
+> **Dev:** "Their folder still has the old `Meta/`."
+> **Domain expert:** "That's an **Old Meta folder**. The scan reads it, and at the end the writer makes the **Meta move**, renaming it whole. If Excel holds the sheet open, it writes in `Meta/` this once and moves it next time."
+> **Dev:** "And how would a new maintainer know any of this?"
+> **Domain expert:** "The **Sheet note** in _What the scanner accepts_, on Import setup and on the Library folders page."
 
 ## Flagged ambiguities
 
@@ -3311,3 +3341,8 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   household setting, not a `?genre=`. Never call _All movies_ "no genre":
   the titles with no genre are the **Other row**, which is why log 73
   rejected the working title _Show no genre_.
+- **"Meta" names two folders for good (new):** since log 74 the **Meta
+  folder** is `_meta/`, and `Meta/` is the **Old Meta folder**, read as long
+  as an old library or Export may turn up. Say "the Meta folder" for
+  `_meta/` only; name `Meta/` as the Old Meta folder. The **Meta line** and
+  **Meta segment** on the Movie detail page are unrelated.

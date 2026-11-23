@@ -149,8 +149,12 @@ through the Movie form, posters linked by hand, then reset and scanned the
 same Library folder again: the posters came back on their own. The
 **Library sheet** (step 41) did its job, but nobody knew it was there, so
 a reset that says _Erase everything_ seemed not to. `Meta/` also sorts
-among hundreds of Title folders, out of sight. Talked through on
-2026-11-23, not yet grilled:
+among hundreds of Title folders, out of sight. Grilled in design log 74,
+which settles the open questions: no _Start clean_ choice (deleting
+`_meta/` by hand starts clean, and the Reset dialog says so), the line is
+a **Sheet note** in _What the scanner accepts_, Linux sorting is not
+chased, and the writer's **Meta move** renames a held `Meta/` whole, or
+writes where the sheet lies when the rename is refused:
 
 56. ⬜ **Sheet in sight**: the **Meta folder** is easy to find, and the
     maintainer is told it exists and what it brings back.
