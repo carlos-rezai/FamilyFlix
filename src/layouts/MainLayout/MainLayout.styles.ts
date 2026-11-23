@@ -52,8 +52,6 @@ export const LogoMark = styled(Wordmark)<{ $hidden: boolean }>`
   visibility: ${({ $hidden }) => ($hidden ? 'hidden' : 'visible')};
 `;
 
-export { Spacer } from '../chrome.styles';
-
 /** The home's rows breathe at the top and clear the fold at the bottom. */
 export const Body = styled(ChromeBody)`
   padding: ${({ theme }) => `${theme.space.s6} 0 ${theme.space.s8}`};

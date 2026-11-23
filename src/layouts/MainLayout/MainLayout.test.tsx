@@ -6,7 +6,6 @@ import { MemoryRouter, Route, Routes, useNavigate } from 'react-router-dom';
 import { MainLayout, type MainLayoutProps } from './MainLayout';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-import { headerSpacer } from '@/test-support/headerSpacer/headerSpacer';
 import {
   LocationProbe,
   pathname,
@@ -89,10 +88,11 @@ describe('MainLayout', () => {
 });
 
 /**
- * The prototype splits the header strip in two: the search bar sits *before* the
- * flex spacer and the genre / rating / sort dropdowns *after* it. One slot cannot
- * reproduce that, so the chrome offers two — and learns nothing about the library
- * in the process. Both are structure: whatever a page hands in, it renders.
+ * The prototype splits the header strip in two: the search bar sits on the first
+ * line and the genre / rating / sort dropdowns in the **Header end**, pushed to
+ * the right. One slot cannot reproduce that, so the chrome offers two, and learns
+ * nothing about the library in the process. Both are structure: whatever a page
+ * hands in, it renders.
  */
 
 describe('MainLayout — the header slots', () => {
@@ -107,15 +107,30 @@ describe('MainLayout — the header slots', () => {
     expect(header.contains(screen.getByText('the dropdowns'))).toBe(true);
   });
 
-  it('puts headerStart before the spacer and headerEnd after it', () => {
+  it('puts headerStart before the Header end and headerEnd inside it', () => {
     renderLayout(<p>the library goes here</p>, '/', {
       headerStart: <p>the search bar</p>,
       headerEnd: <p>the dropdowns</p>,
     });
 
-    const spacer = headerSpacer();
-    expect(comesBefore(screen.getByText('the search bar'), spacer)).toBe(true);
-    expect(comesBefore(spacer, screen.getByText('the dropdowns'))).toBe(true);
+    const end = headerEnd();
+    expect(comesBefore(screen.getByText('the search bar'), end)).toBe(true);
+    expect(end.contains(screen.getByText('the search bar'))).toBe(false);
+    expect(end.contains(screen.getByText('the dropdowns'))).toBe(true);
+  });
+
+  it('holds no spacer: the Header end is pushed right by its own margin', () => {
+    // A spacer would cost the first line a gap of its own and wrap the Header
+    // end about 24px early, at a width where the search could still shrink.
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerStart: <p>the search bar</p>,
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    const growers = Array.from(screen.getByRole('banner').children).filter(
+      (child) => getComputedStyle(child).flexGrow === '1'
+    );
+    expect(growers).toEqual([]);
   });
 
   it('leaves the wordmark first and the gear last', () => {
@@ -135,8 +150,10 @@ describe('MainLayout — the header slots', () => {
       headerEnd: <p>the dropdowns</p>,
     });
 
-    const spacer = headerSpacer();
-    expect(comesBefore(spacer, screen.getByText('the dropdowns'))).toBe(true);
+    expect(comesBefore(wordmark(), screen.getByText('the dropdowns'))).toBe(
+      true
+    );
+    expect(headerEnd().contains(screen.getByText('the dropdowns'))).toBe(true);
   });
 
   it('renders the header it always had when neither slot is given', () => {
@@ -146,7 +163,7 @@ describe('MainLayout — the header slots', () => {
 
     const header = screen.getByRole('banner');
     expect(within(header).getAllByRole('button')).toEqual([gear()]);
-    expect(headerSpacer()).toBeDefined();
+    expect(header.contains(headerEnd())).toBe(true);
   });
 });
 
