@@ -118,6 +118,10 @@ If something seems wrong or missing, amend the prototype in a grill-me first.
 
 ## Tooling and the Commit Gate
 
+- **Running:** `npm run dev` is the everyday loop (server `127.0.0.1:3001`,
+  Vite `localhost:4200`); `npm run electron:dev` the desktop window over it
+  (`electron:native` once first); `npm run electron:start` the installed shape.
+  `npm test` runs Vitest, `npm run typecheck` `tsc -b` (add `--force`).
 - **Never `npx`** (Windows): it spawns a focus-stealing console. Call
   `node_modules/.bin/<tool>` directly; the Husky hooks and lint-staged do too,
   so don't "simplify" them back. The Nx daemon stays off (`nx.json`).
