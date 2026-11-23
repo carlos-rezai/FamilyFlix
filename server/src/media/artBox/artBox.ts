@@ -3,7 +3,10 @@ import type { PictureSize } from '../pictureSize/pictureSize';
 /** The **Art box** of a landscape picture: a backdrop or a still, 1920 wide. */
 export const LANDSCAPE_BOX = 1920;
 
-/** The **Art box** of a portrait picture: the 300px detail poster frame at 2.6x. */
+/**
+ * The **Art box** of a portrait picture: the 300px detail poster frame at
+ * 2.6x.
+ */
 export const PORTRAIT_BOX = 780;
 
 /**

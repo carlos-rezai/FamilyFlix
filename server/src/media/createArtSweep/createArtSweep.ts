@@ -9,7 +9,10 @@ export interface ArtSweepDeps {
 
 /** The **Art sweep**: one background pass over the held art. */
 export interface ArtSweep {
-  /** Fit every held picture over its box, one at a time; resolves when it ends. */
+  /**
+   * Fit every held picture over its box, one at a time; resolves when it
+   * ends.
+   */
   start(): Promise<void>;
   /** End the run after the picture in hand, fitting no more. */
   stop(): Promise<void>;

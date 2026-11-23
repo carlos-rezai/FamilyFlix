@@ -87,7 +87,6 @@ export function MovieDetail() {
   const poster = useImageFallback(
     detail.status === 'ready' ? detail.movie.posterUrl : null
   );
-  // The backdrop is drawn only once decoded, so it never paints in halves.
   const backdropUrl = useDecodedArt(
     detail.status === 'ready' ? detail.movie.backdropUrl : null
   );

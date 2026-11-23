@@ -24,7 +24,7 @@ const isWebp = (bytes: Buffer): boolean =>
   bytes.toString('ascii', 0, 4) === 'RIFF' &&
   bytes.toString('ascii', 8, 12) === 'WEBP';
 
-/** The **ArtFormat** a picture's first bytes say it is, or `null` for another. */
+/** The `ArtFormat` a picture's first bytes say it is, or `null` for another. */
 export function pictureFormat(bytes: Buffer): ArtFormat | null {
   if (isPng(bytes)) return 'png';
   if (isJpeg(bytes)) return 'jpeg';

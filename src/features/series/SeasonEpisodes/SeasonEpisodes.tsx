@@ -68,7 +68,6 @@ function SeasonBody() {
   const { id = '', n = '' } = useParams<{ id: string; n: string }>();
   const number = Number(n);
   const view = useSeasonEpisodes(id, number);
-  // The backdrop is drawn only once decoded, so it never paints in halves.
   const backdropUrl = useDecodedArt(
     view.status === 'ready' ? view.season.backdropUrl : null
   );
