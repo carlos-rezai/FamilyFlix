@@ -85,6 +85,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Busy overlay: no loader moves what is around it     | ✅ Done    |
 | Seamless art: the backdrop lands with the page      | ✅ Done    |
 | Header fit: every filter pill and Settings in reach | ✅ Done    |
+| Sheet in sight: `_meta/` on top, and said aloud     | ⬜ Planned |
 
 Steps 1 to 9 are the first build order, ending with Software update, which
 shipped as v0.2.0. From step 10 on, each step came out of using FamilyFlix
@@ -142,3 +143,36 @@ grilled; once it ships, it is one line and a link.
 53. ✅ **Busy overlay**: no loader moves what is around it ([log 71](design-logs/71-busy-overlay.md)).
 54. ✅ **Seamless art**: the backdrop lands with the page ([log 72](design-logs/72-seamless-art.md)).
 55. ✅ **Header fit**: every filter pill and Settings in reach ([log 73](design-logs/73-header-fit.md)).
+
+Step 56 came out of a Factory reset in real use. A maintainer added films
+through the Movie form, posters linked by hand, then reset and scanned the
+same Library folder again: the posters came back on their own. The
+**Library sheet** (step 41) did its job, but nobody knew it was there, so
+a reset that says _Erase everything_ seemed not to. `Meta/` also sorts
+among hundreds of Title folders, out of sight. Talked through on
+2026-11-23, not yet grilled:
+
+56. ⬜ **Sheet in sight**: the **Meta folder** is easy to find, and the
+    maintainer is told it exists and what it brings back.
+    - **`Meta/` becomes `_meta/`**: it sorts first in a Library folder in
+      Windows Explorer, above every Title folder. A scan reads either
+      name, so a held library keeps working; the **Library sheet writer**
+      moves `Meta/` to `_meta/` on its next write. An Export folder is
+      known by either name.
+    - **Said where a folder comes in**: linking or importing a Library
+      folder draws one line saying FamilyFlix keeps
+      `_meta/familyflix-library.csv` there, so a reset or another
+      computer can rebuild the library, ratings, hearts and Status
+      included.
+    - **Said in the Reset dialog**: _What stays_ names each Library
+      folder's `_meta/` sheet, and that scanning the folder again brings
+      the library back.
+    - **No opt-out toggle**: the sheet is what makes a reset recoverable;
+      an Export is a snapshot in its own folder and goes stale with the
+      first rating after it. Log 58 made the sheet no longer a choice
+      (story 70), and this step keeps that.
+    - **Open**: whether a maintainer can start truly clean (a _Start
+      clean_ choice on a scan that ignores the sheet, or only the Reset
+      dialog's note to delete `_meta/`); the line's wording and where in
+      the link and import flows it is drawn; how Linux file managers
+      sort `_meta`; the prototype amendment.
