@@ -11,6 +11,78 @@ Newest entry first.
 
 ---
 
+## 2026-11-23: Header fit, the build (issues 694 to 698)
+
+The prototype amended (694), three slices run by `issue-loop`, each a RED
+and a GREEN commit (695 to 697), and this walk and documents slice (698),
+which found one gap and closed it (`8b45d900`). **13169 tests pass across
+927 files** (one skipped) at `124ddfaf`, against 13197 across 931 at the
+Seamless art refactor: the Quality filter's units and their suites left
+with it. `tsc -b --force` is clean; `eslint` over every file the initiative
+added or changed reports 0 errors and 8 warnings, the eight imports the
+removal left behind (the refactor's first group). Step 55 stays 🔜 until
+the refactor.
+
+### What shipped
+
+- **The prototype amended** (694). `page.LibraryPage.dc.html` draws the
+  Genre dropdown's two **View rows** and the **Header end** wrapping whole;
+  `page.SettingsPage.dc.html` the _Show video quality_ line; the model and
+  `COMPONENT-SPEC.md` follow.
+- **The Row view chosen from the Genre pill** (695). The dropdown leads
+  with _All Genres_ (**By genre**) and _All movies_ / _All series_
+  (**All**); choosing one takes `?genre=` off and saves the tab's **Row
+  view**, with no snackbar, and a genre leaves the view as it is (log 73,
+  Q10). The pill draws nothing while neither the genre nor the Row view is
+  known (Q11). `allTitlesLabel` in `src/utils/` states _All movies_ / _All
+  series_ once for the dropdown and the three grid headings; `useRowView`
+  moved to `src/hooks/`, since two features read it; `RowViewSwitch` and
+  `rowViewOptions` are deleted.
+- **The Quality filter read past** (696), client and server: the _Quality_
+  pill, `qualityOptions`, `parseMinQuality`, `honouredLibraryQuery`,
+  `minQuality` on both query types, the route's `?quality=` parse and 400,
+  and the two browse `WHERE`s. A held `?quality=` is read past as any
+  unknown parameter (Q15) and stays on the URL. The **Quality tag** and
+  its toggle stay; the toggle's line now says only what it does (Q17).
+- **The Header end** (697). `MainLayout` holds the `headerEnd` slot and
+  Settings in one box, never shrunk and never wrapped inside, pushed right
+  by its own auto margin; the header wraps it whole to a right-aligned
+  second line, 12px below, by content alone, with no breakpoint.
+- **The walk and the documents** (698), below.
+
+### The walk
+
+The dev server and Vite ran against the dev library, driven in a headless
+Edge over the DevTools protocol rather than in the shell the plan named;
+both tabs with _Documentary_, the longest genre name, chosen.
+
+- **1920 and 1366px**: one line. **1280 and 1024px**: two, the Header end
+  at the right of the second, 12px below. Every pill and Settings on
+  screen, nothing cut. The search sits at 205px on one line at 1366 and
+  398px wrapped.
+- **The spacer.** The first run wrapped at 1366px, where the spec keeps
+  one line: the spacer left before the Header end cost the first line a
+  gap of its own. The Header end's auto margin already pushes it right,
+  so `8b45d900` took the spacer out, and the line now holds down to about
+  1347px.
+- **Each View row** drew its body on each tab (the _All movies_ and _All
+  series_ grids, the _All Genres_ rows); both choices held over a fresh
+  load, then the household defaults were put back.
+
+### Judgement calls
+
+- **`GenreSelection` lives in `genreOptions`**, beside the builder that
+  takes it, since one feature reads it (Q13); `ALL_GENRES` stays exported
+  for the suites.
+- **`allTitlesLabel` is a util, `useRowView` a shared hook**: the search
+  and library features both read each, and neither imports the other's.
+- **The chrome's `Spacer` and `headerSpacer` stay**: the Genre page's
+  header still splits around one. Only the browse header lost its spacer.
+- **A held `?quality=` is left on the URL**, not stripped (Q15): a
+  bookmark from an older build opens, narrowing nothing.
+
+---
+
 ## 2026-11-23: Seamless art, the refactor (issue 692)
 
 Nine commits against `docs/refactor-plans/72-seamless-art-refactor.md`,
