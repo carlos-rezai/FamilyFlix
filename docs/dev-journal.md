@@ -11,6 +11,88 @@ Newest entry first.
 
 ---
 
+## 2026-11-23: Seamless art, the build (issues 686 to 691)
+
+Five slices run by `issue-loop`, each a RED and a GREEN commit (686 to
+690), and this walk and documents slice (691), which found no gap in the
+code. **13195 tests pass across 931 files** (one skipped), against 13043
+across 909 at the Busy overlay refactor; `tsc -b --force` is clean, and
+`eslint` over every file the initiative added, and every shipping file it
+changed, reports 0 errors and 0 warnings. Step 54 stays 🔜 until the
+refactor.
+
+### What shipped
+
+- **The Art fit through `storeNamed`** (686). `pictureSize` reads a JPEG,
+  PNG or WebP header's **Picture size**, and `pictureFormat` its
+  `ArtFormat`; `artBox` answers the width a picture is fitted to by shape
+  (`LANDSCAPE_BOX` 1920, `PORTRAIT_BOX` 780), or `null` within its box.
+  `Playback.fitArt` hands the picture to the component on stdin over
+  `fitArgs`, held to the **Fit budget** (10 s), and answers `fitted` or
+  `none` with a reason. `createMedia` takes `Pick<Playback, 'fitArt'>`,
+  and `storeNamed`, the funnel for a **Sync**, a **Season poster** choice
+  and a **Frame still**, writes the fitted picture under its own name.
+  With no component, a picture is kept as given.
+- **The Art fit through upload and copy-in** (687). `storeUpload` reads
+  an image whole and fits it, a video still streaming; `copyIn` does the
+  same, asking the signal before and after the fit, so a cancel during
+  it writes nothing.
+- **The Art sweep** (688). `heldArt`, its own `library/` repository, reads
+  every picture a row names; `createArtSweep` fits each through
+  `Media.fitStored`, one at a time, yielding between them, beside the
+  **Quality sweep** on every start. `fitStored` writes a `.part` and
+  renames it over the original, so a request never reads half a file; a
+  failed rename leaves the original for the next start. The **Ordered
+  shutdown** stops the sweep, awaited.
+- **The Warm start** (689). A **Poster card** emits `onWarm` on pointer
+  enter and focus, and `LibraryGrid` hands it to `warmArt` in `src/api/`,
+  which fetches and decodes a card's backdrop once. `useDecodedArt` in
+  `src/hooks/` answers a url only once its picture is decoded, and
+  `MovieDetail` draws its **Detail backdrop** through it.
+- **The Warm start everywhere a card is drawn** (690). `CardCarousel`
+  warms its cards; `SeriesDetail` and `SeasonEpisodes` draw their
+  backdrop through `useDecodedArt`.
+- **The walk and the documents** (691), below.
+
+### The walk
+
+The dev server and Vite ran against a copy of the installed library (the
+shell's user-data database and media) with the **Default component**; the
+installed library was left untouched. There is no 400-title library on
+this machine, so the walk ran on the copy's 120 held pictures, not on
+the library the step came from.
+
+- **Art sweep**: 120 held pictures, 51 over their box, 78.6 MB before a
+  start; after it, none over and 34.2 MB, no `.part` left. Backdrops now
+  1920x1080 (77), 1600x900 (17) and smaller; posters 780 wide.
+- **Warm start**: a detail page opened from a hover drew its backdrop in
+  the poster's frame, 39 ms after the click. Opened cold (a full load
+  onto the URL), the poster and gradient drew at 452 ms and the whole
+  backdrop at 474 ms, in one step, never in bands.
+- **Revalidation**: a reload's poster and backdrop answered 304
+  (`public, max-age=0`, a weak ETag, `Last-Modified` at the sweep). The
+  backdrop's pre-fit ETag answered 200 with the 364 KB fitted file, so a
+  picture rewritten across starts is never drawn stale. The cache stays
+  as it is (log 72, Q13).
+
+### Judgement calls
+
+- **The box is read by shape, not role**: the media domain writes by
+  filename, so at least as wide as tall is landscape, anything else
+  portrait. The constants keep the glossary's **Art box** names, not the
+  log's drafts.
+- **`ArtFormat` lives in `playback/fitArgs/`** and `media/pictureSize/`
+  reads it, as the media domain already reads `mediaFilePath` from
+  `playback/`; `PictureSize` lives in `pictureSize/`, not `artBox/`.
+- **`heldArt` is its own repository**, as `unmeasuredVideos` is, and the
+  Art sweep is the Quality sweep's twin by decision, `yieldToEventLoop`
+  written in each.
+- **`warmArt` is a wire call in `src/api/`** (log 72, Q9), shared by the
+  three features that draw a card; `PosterCard`'s `onWarm` is optional.
+- **No fade**: a backdrop is drawn once decoded, and only then.
+
+---
+
 ## 2026-11-22: Busy overlay, the refactor (issue 684)
 
 Nine commits against `docs/refactor-plans/71-busy-overlay-refactor.md`,
