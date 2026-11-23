@@ -367,7 +367,7 @@ describe('writeExport — zero titles', () => {
     });
   });
 
-  it('writes the one csv sheet in Meta holding its header row alone', async () => {
+  it('writes the one csv sheet in _meta holding its header row alone', async () => {
     const { media, destination } = sandbox();
 
     await writeExport(media, request(destination), {

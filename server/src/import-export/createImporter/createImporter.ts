@@ -984,8 +984,8 @@ export interface ImporterDeps {
  * **Path cells** fill what its folder's own read left empty
  * (`pathCellFills`), each file looked for first in the matched Title folder,
  * then under the run's **Sheet root** (`sheetRootOf`), so an Export's sheet
- * uploaded from its `_meta/` or `Meta/` folder brings its art back from the Export
- * folder, which is only read.
+ * uploaded from its `_meta/` or `Meta/` folder brings its art back from the
+ * Export folder, which is only read.
  *
  * Each match is imported by the **Movie form**'s own sequence: reserve the
  * **Movie folder**, copy in the video, the poster, the backdrop and each

@@ -143,8 +143,8 @@ async function sheetIn(root: string): Promise<string | null> {
  * line for the whole folder. Each **Doubled place** a Title folder's read
  * reports, a doubled season (`Death Note holds 2 Season 1 folders, Season 01
  * read`) among them, is one Layout warning too. `_meta/` and `Meta/`, an
- * **Export folder** (a folder holding either) and system folders pass in silence; nothing
- * else inside a Title folder warns.
+ * **Export folder** (a folder holding either) and system folders pass in
+ * silence; nothing else inside a Title folder warns.
  *
  * `onFound` is told of each Title folder as it is read. A Title folder that
  * cannot be read is told to `onUnreadable` and skipped; the root itself is

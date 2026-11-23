@@ -236,7 +236,7 @@ describe('writeExport: the Export folder mirrors the layout less the videos', ()
     });
   });
 
-  it('writes only the sheet in Meta with both toggles off', async () => {
+  it('writes only the sheet in _meta with both toggles off', async () => {
     const { media, destination } = sandbox();
 
     await writeExport(
@@ -251,7 +251,7 @@ describe('writeExport: the Export folder mirrors the layout less the videos', ()
   });
 });
 
-describe('writeExport: the sheet in Meta', () => {
+describe('writeExport: the sheet in _meta', () => {
   it.each(['csv', 'xlsx'] as const)(
     'is _meta/familyflix-library.%s whatever the Export name',
     async (format) => {

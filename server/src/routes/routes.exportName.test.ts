@@ -135,7 +135,7 @@ const postExport = (baseUrl: string, destination: string, name: unknown) =>
   });
 
 describe('POST /api/export — the requested name', () => {
-  it('makes the Export folder under the name posted, its sheet in Meta', async () => {
+  it('makes the Export folder under the name posted, its sheet in _meta', async () => {
     const { baseUrl, destination } = freshApi();
 
     const response = await postExport(baseUrl, destination, 'Family films');

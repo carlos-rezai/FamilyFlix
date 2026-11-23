@@ -69,7 +69,8 @@ it only when a top-level folder or one of its rules changes.
   through `server/src/media/`, the only code that touches managed storage.
 - **The only writers into a Library folder** are the **Layout fill**, which
   only ever adds what isn't there, and the **Library sheet** writer, which
-  only ever rewrites `Meta/familyflix-library.csv`. An Export only ever adds
+  only ever rewrites `_meta/familyflix-library.csv` and makes the one **Meta
+  move** (an old `Meta/` renamed `_meta/`, whole). An Export only ever adds
   its own new folder.
 - **Enrichment (TMDB) is the only network client.** File paths are stored
   relative: to the media directory, or a **Linked video**'s to its Library
