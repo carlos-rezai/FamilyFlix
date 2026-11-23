@@ -33,10 +33,6 @@ export interface UseLibraryQueryResult {
  * Every write is a `replace`. A search settles many times on its way to the
  * term the parent meant, and none of those may cost a press of Back on the way
  * out of a movie.
- *
- * It owns no quality setter and reads no Show video quality (log 73): the
- * **Quality filter** is gone, and a held `?quality=` is read past and left on
- * the URL.
  */
 export function useLibraryQuery(): UseLibraryQueryResult {
   const [searchParams] = useSearchParams();
