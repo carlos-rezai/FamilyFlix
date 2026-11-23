@@ -18,6 +18,8 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  statSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -87,6 +89,9 @@ beforeEach(() => {
 /** A fitted poster, within its 780 box: what the component answers. */
 const FITTED = jpegBytes(780, 1170);
 
+/** A time well before any write a case makes. */
+const LONG_AGO = new Date('2020-01-01T00:00:00Z');
+
 /** A media domain over a sandbox, a Movie folder in it holding a 4000-wide poster. */
 function held() {
   const dir = sandboxRoot('familyflix-media-fit-stored-');
@@ -121,6 +126,41 @@ describe('createMedia.fitStored', () => {
 
     expect(asked).toEqual([original]);
     expect(readFileSync(join(folder, 'poster.jpg'))).toEqual(FITTED);
+    expect(readdirSync(folder)).toEqual(['poster.jpg']);
+  });
+
+  it('leaves a picture within its box untouched: its bytes, its modification time, no .part', async () => {
+    const { media, folder, storedPath } = held();
+    const within = jpegBytes(780, 1170);
+    const file = join(folder, 'poster.jpg');
+    writeFileSync(file, within);
+    utimesSync(file, LONG_AGO, LONG_AGO);
+
+    await media.fitStored(storedPath);
+
+    expect(readFileSync(file)).toEqual(within);
+    expect(statSync(file).mtime).toEqual(LONG_AGO);
+    expect(readdirSync(folder)).toEqual(['poster.jpg']);
+  });
+
+  it('leaves a picture fitArt does not fit untouched: its bytes, its modification time, no .part', async () => {
+    const dir = sandboxRoot('familyflix-media-fit-stored-');
+    const root = join(dir, 'media');
+    mkdirSync(root);
+    const media = createMedia(
+      root,
+      unfittedArt(async () => ({ kind: 'none', reason: 'failed' }))
+    );
+    const folder = media.reserveFolder('The Lantern Keeper', 2019);
+    const original = jpegBytes(4000, 6000);
+    const file = join(folder, 'poster.jpg');
+    writeFileSync(file, original);
+    utimesSync(file, LONG_AGO, LONG_AGO);
+
+    await media.fitStored('the-lantern-keeper-2019/poster.jpg');
+
+    expect(readFileSync(file)).toEqual(original);
+    expect(statSync(file).mtime).toEqual(LONG_AGO);
     expect(readdirSync(folder)).toEqual(['poster.jpg']);
   });
 
