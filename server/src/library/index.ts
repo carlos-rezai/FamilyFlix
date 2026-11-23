@@ -73,6 +73,7 @@ import {
   type MeasuredKind,
   type UnmeasuredVideo,
 } from './unmeasuredVideos/unmeasuredVideos';
+import { createHeldArt } from './heldArt/heldArt';
 
 export type { MovieEnrichment, TitleSource } from './enrich/enrich';
 export type { FolderRemoval, StoredLibraryFolder } from './folders/folders';
@@ -570,6 +571,11 @@ export interface LibraryStorage {
     id: string,
     quality: VideoQuality
   ): void;
+  /**
+   * The **Art sweep**'s read: every poster, backdrop, **Season poster** and
+   * **Still** the rows name, each a Managed **Stored path**.
+   */
+  heldArt(): string[];
   /** Close the underlying database connection. */
   close(): void;
 }
@@ -604,6 +610,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
   const leftOut = createLeftOut(db);
   const changes = createChanges(db);
   const unmeasured = createUnmeasuredVideos(db);
+  const held = createHeldArt(db);
   const { touch, folderOfTitle, onTitle, beforeTitle, onEpisode } = changes;
 
   return {
@@ -708,6 +715,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     onChange: changes.onChange,
     unmeasuredVideos: unmeasured.unmeasuredVideos,
     recordVideoQuality: unmeasured.recordVideoQuality,
+    heldArt: held.heldArt,
     close() {
       db.close();
     },

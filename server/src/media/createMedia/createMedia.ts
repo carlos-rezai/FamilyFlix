@@ -12,7 +12,7 @@ import {
   writeFileSync,
 } from 'node:fs';
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
-import { readFile } from 'node:fs/promises';
+import { readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
@@ -147,6 +147,18 @@ export interface Media {
    * escapes the media directory or names no file, `mediaFilePath`'s check.
    */
   readStored(storedPath: string): Promise<Readable>;
+
+  /**
+   * The **Art sweep**'s write: fit the held picture a **Stored path** names,
+   * in place. One over its **Art box** is written as `fitArt`'s answer to a
+   * `.part` beside it and renamed over it, so a request never reads half a
+   * file; one within it, or one `fitArt` answers `none` for, is left as it
+   * is. A rename that fails (a file held open on Windows) takes its `.part`
+   * with it and rejects, the original left for the next start. Rejects,
+   * reading nothing, for a path that escapes the media directory or names no
+   * file, `mediaFilePath`'s check.
+   */
+  fitStored(storedPath: string): Promise<void>;
 
   /**
    * **Copy-in**: {@link storeUpload}'s **Bulk import** counterpart — the same
@@ -407,6 +419,26 @@ export function createMedia(
         throw new Error(`No stored file at ${storedPath}`);
       }
       return createReadStream(file);
+    },
+
+    fitStored: async (storedPath) => {
+      const file = mediaFilePath(mediaPath, storedPath);
+      if (file === null) {
+        throw new Error(`No stored file at ${storedPath}`);
+      }
+      const picture = await readFile(file);
+      const fit = await fitted(picture);
+      if (fit === picture) {
+        return;
+      }
+      const part = `${file}.part`;
+      try {
+        await writeFile(part, fit);
+        await rename(part, file);
+      } catch (error) {
+        await rm(part, { force: true });
+        throw error;
+      }
     },
 
     copyIn: async (folder, sourcePath, signal) => {

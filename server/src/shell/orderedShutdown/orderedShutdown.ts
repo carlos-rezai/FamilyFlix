@@ -8,6 +8,8 @@ export interface ShutdownWorld {
   enrichment: { cancel(): void };
   /** The **Quality sweep**; its `stop()` resolves once it writes no more. */
   qualitySweep: { stop(): Promise<void> };
+  /** The **Art sweep**; its `stop()` resolves once it fits no more. */
+  artSweep: { stop(): Promise<void> };
   /** The **Library sheet writer**; its `flush()` writes every pending sheet. */
   librarySheet: { flush(): Promise<void> };
   server: Pick<Server, 'closeAllConnections' | 'close'>;
@@ -18,7 +20,7 @@ export interface ShutdownWorld {
 
 /**
  * The **Ordered shutdown**: cancel the import (awaiting its rollback) and the
- * sync, stop the Quality sweep (awaited), drop every connection before
+ * sync, stop the Quality sweep and the Art sweep (each awaited), drop every connection before
  * closing the listener (so an open streaming response cannot hold the exit),
  * flush the Library sheet while the library is still open, close the
  * database, exit `0`. The one function both main's `shutdown` command and the
@@ -28,6 +30,7 @@ export async function orderedShutdown(world: ShutdownWorld): Promise<void> {
   await world.importer.cancel();
   world.enrichment.cancel();
   await world.qualitySweep.stop();
+  await world.artSweep.stop();
   world.server.closeAllConnections();
   await new Promise<void>((resolve) => {
     world.server.close(() => resolve());

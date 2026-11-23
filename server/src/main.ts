@@ -6,6 +6,7 @@ import { createImporter } from './import-export/createImporter/createImporter';
 import { createLayoutFill } from './import-export/createLayoutFill/createLayoutFill';
 import { createLibrarySheet } from './import-export/createLibrarySheet/createLibrarySheet';
 import { createSqliteStorage } from './library';
+import { createArtSweep } from './media/createArtSweep/createArtSweep';
 import { createMedia } from './media/createMedia/createMedia';
 import { createComponentSlot } from './playback/componentSlot/componentSlot';
 import { createPlayback } from './playback/createPlayback/createPlayback';
@@ -133,6 +134,9 @@ async function start(): Promise<Started> {
   // measures what has no quality yet, in the background.
   const qualitySweep = createQualitySweep({ storage, playback });
   void qualitySweep.start();
+  // The **Art sweep**, its twin: it fits held art over its box, in place.
+  const artSweep = createArtSweep({ storage, media });
+  void artSweep.start();
 
   let stopping: Promise<void> | undefined;
   const shutdown = () => {
@@ -140,6 +144,7 @@ async function start(): Promise<Started> {
       importer,
       enrichment,
       qualitySweep,
+      artSweep,
       librarySheet,
       server,
       closeDatabase: () => storage.close(),

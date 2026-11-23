@@ -49,7 +49,8 @@ const FITTED_LANDSCAPE = jpegBytes(1920, 1080);
 /** What a working component answers: the picture at the width asked. */
 const fitting = async (
   _picture: Buffer,
-  width: number
+  width: number,
+  _format?: Parameters<Playback['fitArt']>[2]
 ): Promise<FitOutcome> => ({
   kind: 'fitted',
   picture: width === 780 ? FITTED_PORTRAIT : FITTED_LANDSCAPE,
