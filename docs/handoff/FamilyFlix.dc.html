@@ -245,10 +245,6 @@
         sortDefs = [['recent','Recently Added'],['az','Title (A\u2013Z)'],['year','Year'],['unwatched','Unwatched First'],['rating','Highest Rated']];
         ratings = {1:90,2:80,3:70,4:60,5:80,6:90,7:50,8:70,9:60,10:80,11:70,12:90,13:50,14:40,15:80,16:70,17:60,18:50,19:70,20:60,21:60,22:70,23:50};
         ratingDefs = [['0','All ratings'],['80','4+ stars'],['60','3+ stars'],['40','2+ stars']];
-        // The Quality pill's rows (design log 70): each keeps titles at or above its rung.
-        qualityDefs = [['all','All qualities'],['4k','4K'],['1080p','1080p+'],['720p','720p+'],['480p','480p+']];
-        qualityRank = {'SD':0,'480p':1,'720p':2,'1080p':3,'4K':4};
-        qualityFloor = {'4k':4,'1080p':3,'720p':2,'480p':1};
         // Simulated playability, so all four Player notices are reachable by pressing Play.
         // Every other title buffers briefly and then plays.
         //
@@ -300,12 +296,12 @@
 
         // The Row view (design log 63): per Library tab, a household setting kept
         // beside the Start tab. Today's faces are the defaults, Movies 'genre'
-        // (By genre) and Series 'all' (All). The View pill offers them in this order.
-        rowViewDefs = [['all','All'],['genre','By genre']];
+        // (By genre) and Series 'all' (All). The Genre dropdown's two View rows set it (design log 73):
+        // All Genres is By genre, All movies / All series is All.
 
         state = {
           screen:'browse', selectedId:null,
-          search:'', genre:'All Genres', sort:'recent', ratingFilter:'0', qualityFilter:'all',
+          search:'', genre:'All Genres', sort:'recent', ratingFilter:'0',
           fRating:0, fRatingHover:null,
           openDrop:null, gearOpen:false, editMenuOpen:false, overrides:{}, favorites:[4,12,16],
           genreView:null, genreOther:false, genreKind:'movies', genreSearch:'', detailReturn:'browse',
@@ -528,14 +524,17 @@
         toggleSort(){ this.setState(s=>({openDrop:s.openDrop==='sort'?null:'sort',gearOpen:false})); }
         toggleRating(){ this.setState(s=>({openDrop:s.openDrop==='rating'?null:'rating',gearOpen:false})); }
         toggleGear(){ this.setState(s=>({gearOpen:!s.gearOpen,openDrop:null})); }
-        // The Row view switch: the View pill sets the current tab's Row view alone. No snackbar, and the
-        // search, genre, rating and sort stay as they are (the app writes no URL for it).
-        toggleRowView(){ this.setState(s=>({openDrop:s.openDrop==='view'?null:'view',gearOpen:false})); }
-        setRowView(v){ this.setState(s=>({rowViews:{...s.rowViews,[s.tab]:v},openDrop:null})); }
+        // A View row in the Genre dropdown clears the genre and sets the current tab's Row view. No
+        // snackbar; the search, rating and sort stay as they are (the app writes no URL for the view).
+        setRowView(v){ this.setState(s=>({genre:'All Genres',rowViews:{...s.rowViews,[s.tab]:v},openDrop:null})); }
+        // A genre narrows to that genre alone; how the tab is browsed stays as it was.
+        setGenre(g){ this.setState({genre:g,openDrop:null}); }
+        // The tab's All row, and the heading its grid draws: All movies, All series.
+        allTitlesLabel(tab){ return tab==='series'?'All series':'All movies'; }
 
         sortList(list){ const rank=m=>{const e=this.eff(m);return e==='unwatched'?0:e==='progress'?1:2;}; const s=this.state.sort; return [...list].sort((a,b)=> s==='az'?a.title.localeCompare(b.title): s==='year'?b.year-a.year: s==='rating'?(this.ratingOf(b)-this.ratingOf(a)||b.added-a.added): s==='unwatched'?(rank(a)-rank(b)||b.added-a.added): b.added-a.added); }
         passRating(m){ return this.ratingOf(m) >= Number(this.state.ratingFilter||0); }
-        filteredSorted(){ const q=this.state.search.trim().toLowerCase(); const list=this.rawMovies.filter(m=> this.passRating(m) && this.passQuality(m) && (!q || m.title.toLowerCase().includes(q) || m.syn.toLowerCase().includes(q) || m.genres.join(' ').toLowerCase().includes(q))); return this.sortList(list); }
+        filteredSorted(){ const q=this.state.search.trim().toLowerCase(); const list=this.rawMovies.filter(m=> this.passRating(m) &&(!q || m.title.toLowerCase().includes(q) || m.syn.toLowerCase().includes(q) || m.genres.join(' ').toLowerCase().includes(q))); return this.sortList(list); }
         genrePageMovies(){ const q=this.state.genreSearch.trim().toLowerCase(); const series=this.state.genreKind==='series'; let list=this.genrePageAll().filter(m=>series?this.passSeriesRating(m):this.passRating(m)); if(q) list=list.filter(m=>m.title.toLowerCase().includes(q)||m.syn.toLowerCase().includes(q)); return series?this.sortSeriesList(list):this.sortList(list); }
         genrePageViews(){ return this.genrePageMovies().map(m=> this.state.genreKind==='series' ? this.seriesView(m) : this.view(m)); }
         // Movies under All: every film the query keeps, uncapped, genre-less ones included; a genre
@@ -562,15 +561,12 @@
 
         // ---- Series by genre (design log 63): the Movies tab's rows, in series ----
         passSeriesRating(x){ return x.rating >= Number(this.state.ratingFilter||0); }
-        // A title with no quality is kept only by All qualities; off, the filter keeps everything.
-        passQuality(x){ const f=this.state.qualityFilter; if(!this.state.settingsShowQuality||f==='all') return true; return x.quality!=null && this.qualityRank[x.quality] >= this.qualityFloor[f]; }
-        toggleQuality(){ this.setState(s=>({openDrop:s.openDrop==='quality'?null:'quality',gearOpen:false})); }
-        setQualityFilter(v){ this.setState({qualityFilter:v,openDrop:null}); }
+        // Show video quality turns the Quality tag on the posters on or off, nothing else (design log 73).
         toggleShowQuality(){ this.setState(s=>({settingsShowQuality:!s.settingsShowQuality})); }
         qualityTagOf(x){ return this.state.settingsShowQuality ? (x.quality ?? null) : null; }
         sortSeriesList(list){ const held=x=>this.rawSeries.indexOf(x); const s=this.state.sort; const unwatched=x=>{ const p=this.seriesProgress(x.id); return p.watched===0?0:p.watched<p.total?1:2; };
           return [...list].sort((a,b)=> s==='az'?a.title.localeCompare(b.title): s==='year'?b.ys-a.ys: s==='rating'?(b.rating-a.rating||held(b)-held(a)): s==='unwatched'?(unwatched(a)-unwatched(b)||held(b)-held(a)): held(b)-held(a)); }
-        seriesFilteredSorted(){ const q=this.state.search.trim().toLowerCase(); return this.sortSeriesList(this.rawSeries.filter(x=> this.passSeriesRating(x) && this.passQuality(x) && (!q||x.title.toLowerCase().includes(q)||x.syn.toLowerCase().includes(q)||x.genres.join(' ').toLowerCase().includes(q)))); }
+        seriesFilteredSorted(){ const q=this.state.search.trim().toLowerCase(); return this.sortSeriesList(this.rawSeries.filter(x=> this.passSeriesRating(x) &&(!q||x.title.toLowerCase().includes(q)||x.syn.toLowerCase().includes(q)||x.genres.join(' ').toLowerCase().includes(q)))); }
         // A Genre row per populated series genre, busiest first, 15 cards, View all carrying the true count.
         // A genre filter leaves that genre's row alone. View all opens the Genre page for series.
         buildSeriesRows(){
@@ -906,24 +902,30 @@
           const movieGridList=movieGrid.map(m=>this.view(m));
           const favoritesList=(movieRowView==='all'?movieGrid:this.filteredSorted()).filter(m=>s.favorites.includes(m.id)).slice(0,15).map(m=>this.view(m));
           const moviesNoResults=movieRowView==='all' ? movieGrid.length===0 : rows.length===0 && !otherRow;
-          // The View pill: All then By genre, the current tab's one checked, no counts.
+          // The Genre dropdown (design log 73), counted in the tab's titles: the two View rows, All Genres
+          // (By genre) and the tab's All row (All), each with the tab's total; then each genre, busiest
+          // first, A to Z on a tie. The genre's row is checked while one is chosen, else the tab's View row.
           const currentRowView=s.rowViews[s.tab];
-          const rowViewOptions=this.rowViewDefs.map(([v,l])=>({label:l,selected:v===currentRowView,onSelect:()=>this.setRowView(v)}));
-          const rowViewLabel=(this.rowViewDefs.find(d=>d[0]===currentRowView)||['','All'])[1];
-          const counts={}; this.rawMovies.forEach(m=>m.genres.forEach(g=>counts[g]=(counts[g]||0)+1));
+          const tabTitles=s.tab==='series'?this.rawSeries:this.rawMovies;
+          const counts={}; tabTitles.forEach(m=>m.genres.forEach(g=>counts[g]=(counts[g]||0)+1));
           const optStyle=active=>({padding:'9px 12px',borderRadius:'8px',cursor:'pointer',fontFamily:'var(--font-sans)',fontSize:'15px',color:active?accent:'var(--color-text)',fontWeight:active?'600':'400'});
-          const allGenres=['All Genres',...Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b))];
-          const genreOptions=allGenres.map(g=>({label:g,count:g==='All Genres'?this.rawMovies.length:counts[g],selected:g===s.genre,onSelect:()=>this.setState({genre:g,openDrop:null})}));
+          const noGenre=s.genre==='All Genres';
+          const allTitles=this.allTitlesLabel(s.tab);
+          const genreOptions=[
+            {label:'All Genres',count:tabTitles.length,selected:noGenre&&currentRowView==='genre',onSelect:()=>this.setRowView('genre')},
+            {label:allTitles,count:tabTitles.length,selected:noGenre&&currentRowView==='all',onSelect:()=>this.setRowView('all')},
+            ...Object.keys(counts).sort((a,b)=>counts[b]-counts[a]||a.localeCompare(b)).map(g=>({label:g,count:counts[g],selected:g===s.genre,onSelect:()=>this.setGenre(g)})),
+          ];
+          // The pill reads the checked row: the genre, All Genres, or the tab's All row.
+          const genreLabel=!noGenre?s.genre:currentRowView==='all'?allTitles:'All Genres';
           const sortOptions=this.sortDefs.map(([v,l])=>({label:l,selected:v===s.sort,onSelect:()=>this.setState({sort:v,openDrop:null})}));
           const sortLabel=(this.sortDefs.find(d=>d[0]===s.sort)||['','Recently Added'])[1];
           const ratingOptions=this.ratingDefs.map(([v,l])=>({label:l,selected:v===s.ratingFilter,onSelect:()=>this.setRatingFilter(v)}));
           const ratingFilterLabel=(this.ratingDefs.find(d=>d[0]===s.ratingFilter)||['','All ratings'])[1];
-          const qualityOptions=this.qualityDefs.map(([v,l])=>({label:l,selected:v===s.qualityFilter,onSelect:()=>this.setQualityFilter(v)}));
-          const qualityLabel=(this.qualityDefs.find(d=>d[0]===s.qualityFilter)||['','All qualities'])[1];
 
           // series
           const sq=s.search.trim().toLowerCase();
-          const seriesFiltered=this.rawSeries.filter(x=>!sq||x.title.toLowerCase().includes(sq)||x.syn.toLowerCase().includes(sq)||x.genres.join(' ').toLowerCase().includes(sq));
+          const seriesFiltered=this.rawSeries.filter(x=>(s.genre==='All Genres'||x.genres.includes(s.genre))&&(!sq||x.title.toLowerCase().includes(sq)||x.syn.toLowerCase().includes(sq)||x.genres.join(' ').toLowerCase().includes(sq)));
           const seriesList=seriesFiltered.map(x=>this.seriesView(x));
           const seriesFavoritesList=(seriesRowView==='genre'?this.seriesFilteredSorted():seriesFiltered).filter(x=>s.seriesFavs.includes(x.id)).slice(0,15).map(x=>this.seriesView(x));
           // Series by genre: a row per populated series genre, then the Other series row last.
@@ -1087,7 +1089,7 @@
             },
             // header
             search:s.search, onSearch:(e)=>this.onSearch(e),
-            genreLabel:s.genre, sortLabel, genreOpen:s.openDrop==='genre', sortOpen:s.openDrop==='sort', gearOpen:s.gearOpen,
+            genreLabel, sortLabel, genreOpen:s.openDrop==='genre', sortOpen:s.openDrop==='sort', gearOpen:s.gearOpen,
             ratingFilterLabel, ratingOpen:s.openDrop==='rating', toggleRating:()=>this.toggleRating(), ratingOptions,
             toggleGenre:()=>this.toggleGenre(), toggleSort:()=>this.toggleSort(), toggleGear:()=>this.toggleGear(),
             genreOptions, sortOptions, goAdd:()=>this.goAdd(), goImport:()=>this.goImport(), openExport:()=>this.openExport(),
@@ -1100,17 +1102,15 @@
 
               searchPlaceholder:s.tab==='series'?'Search your series':'Search your movies',
               seriesList, seriesCountLabel:seriesList.length+' series · '+totalEpisodes+' episodes', seriesNoResults,
-              // The Row view: the View pill after Sort, and the body each tab draws under it.
-              rowViewLabel, rowViewOptions, rowViewOpen:s.openDrop==='view', onToggleRowView:()=>this.toggleRowView(),
+              // The Row view: set from the Genre dropdown's View rows; the body each tab draws under it.
               isMoviesByGenre:movieRowView==='genre', isMoviesAll:movieRowView==='all',
               isSeriesAll:seriesRowView==='all', isSeriesByGenre:seriesRowView==='genre',
               movieGridList, movieCountLabel:movieGrid.length===1?'1 movie':movieGrid.length+' movies',
               seriesGenreRows:seriesRows, showSeriesOtherRow:!!seriesOtherRow, seriesOtherRow,
               episodeContinueList, showEpisodeContinue:episodeContinueList.length>0,
               seriesFavoritesList, showSeriesFavorites:seriesFavoritesList.length>0,
-              genreLabel:s.genre, genreOptions, genreOpen:s.openDrop==='genre', onToggleGenre:()=>this.toggleGenre(),
+              genreLabel, genreOptions, genreOpen:s.openDrop==='genre', onToggleGenre:()=>this.toggleGenre(),
               ratingLabel:ratingFilterLabel, ratingOptions, ratingOpen:s.openDrop==='rating', onToggleRating:()=>this.toggleRating(),
-              showQuality:s.settingsShowQuality, qualityLabel, qualityOptions, qualityOpen:s.openDrop==='quality', onToggleQuality:()=>this.toggleQuality(),
               sortLabel, sortOptions, sortOpen:s.openDrop==='sort', onToggleSort:()=>this.toggleSort(),
               gearOpen:s.gearOpen, onToggleGear:()=>this.toggleGear(), onAdd:()=>this.goAdd(), onImport:()=>this.goImport(), onExport:()=>this.openExport(), onSettings:()=>this.goSettings(),
               showContinue:continueList.length>0, continueList, showFavorites:favoritesList.length>0, favoritesList,

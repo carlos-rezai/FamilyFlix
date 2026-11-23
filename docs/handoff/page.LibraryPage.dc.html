@@ -29,7 +29,9 @@
             flex: 0 0 auto;
             display: flex;
             align-items: center;
-            gap: var(--space-5);
+            flex-wrap: wrap;
+            column-gap: var(--space-5);
+            row-gap: var(--space-3);
             padding: var(--space-4) var(--space-6);
             border-bottom: 1px solid var(--color-border-soft);
             background: rgba(20, 17, 13, 0.85);
@@ -86,103 +88,83 @@
             hint-size="400px,46px"
           ></dc-import>
 
-          <div style="flex: 1 1 auto"></div>
-
-          <dc-import
-            name="mol.FilterDropdown"
-            label="Genre"
-            value="{{ lib.genreLabel }}"
-            options="{{ lib.genreOptions }}"
-            open="{{ lib.genreOpen }}"
-            on-toggle="{{ lib.onToggleGenre }}"
-            menu-width="200"
-            hint-size="170px,46px"
-          ></dc-import>
-          <dc-import
-            name="mol.FilterDropdown"
-            value="{{ lib.ratingLabel }}"
-            options="{{ lib.ratingOptions }}"
-            open="{{ lib.ratingOpen }}"
-            on-toggle="{{ lib.onToggleRating }}"
-            leading-star="{{ true }}"
-            menu-width="190"
-            hint-size="150px,46px"
-          ></dc-import>
-          <!-- The Quality pill (design log 70): between Rating and Sort, no
-               counts. A row keeps titles at or above it; a title with no
-               quality is kept only by All qualities. Not drawn while Show
-               video quality is off; in the app, not before the settings read
-               lands. It writes ?quality= and shows no snackbar. -->
-          <sc-if
-            value="{{ lib.showQuality }}"
-            hint-placeholder-val="{{ true }}"
+          <!-- The Header end (design log 73): Genre, Rating, Sort, then Settings,
+               24px apart, never split and never shrunk. It sits at the right of
+               the first line while that line can hold it; when it cannot, it
+               moves whole to a second line, right-aligned, 12px below the first,
+               and the search grows into the room it left. No breakpoint: the
+               line wraps when the content does not fit. -->
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: var(--space-5);
+              flex: 0 0 auto;
+              margin-left: auto;
+            "
           >
             <dc-import
               name="mol.FilterDropdown"
-              label="Quality"
-              value="{{ lib.qualityLabel }}"
-              options="{{ lib.qualityOptions }}"
-              open="{{ lib.qualityOpen }}"
-              on-toggle="{{ lib.onToggleQuality }}"
+              label="Genre"
+              value="{{ lib.genreLabel }}"
+              options="{{ lib.genreOptions }}"
+              open="{{ lib.genreOpen }}"
+              on-toggle="{{ lib.onToggleGenre }}"
+              menu-width="200"
+              hint-size="170px,46px"
+            ></dc-import>
+            <dc-import
+              name="mol.FilterDropdown"
+              value="{{ lib.ratingLabel }}"
+              options="{{ lib.ratingOptions }}"
+              open="{{ lib.ratingOpen }}"
+              on-toggle="{{ lib.onToggleRating }}"
+              leading-star="{{ true }}"
               menu-width="190"
+              hint-size="150px,46px"
+            ></dc-import>
+            <dc-import
+              name="mol.FilterDropdown"
+              label="Sort"
+              value="{{ lib.sortLabel }}"
+              options="{{ lib.sortOptions }}"
+              open="{{ lib.sortOpen }}"
+              on-toggle="{{ lib.onToggleSort }}"
+              menu-width="220"
               hint-size="190px,46px"
             ></dc-import>
-          </sc-if>
-          <dc-import
-            name="mol.FilterDropdown"
-            label="Sort"
-            value="{{ lib.sortLabel }}"
-            options="{{ lib.sortOptions }}"
-            open="{{ lib.sortOpen }}"
-            on-toggle="{{ lib.onToggleSort }}"
-            menu-width="220"
-            hint-size="190px,46px"
-          ></dc-import>
-          <!-- The Row view switch: the View pill after Sort, All then By genre,
-               the current tab's one checked, no counts. It sets that tab's Row
-               view alone, with no snackbar; in the app it is not drawn until
-               the household's settings read lands. -->
-          <dc-import
-            name="mol.FilterDropdown"
-            label="View"
-            value="{{ lib.rowViewLabel }}"
-            options="{{ lib.rowViewOptions }}"
-            open="{{ lib.rowViewOpen }}"
-            on-toggle="{{ lib.onToggleRowView }}"
-            menu-width="180"
-            hint-size="170px,46px"
-          ></dc-import>
 
-          <div style="position: relative; flex: 0 0 auto">
-            <button
-              onClick="{{ lib.onSettings }}"
-              title="Settings"
-              style="
-                display: grid;
-                place-items: center;
-                width: 46px;
-                height: 46px;
-                background: transparent;
-                border: 1px solid transparent;
-                border-radius: var(--radius-pill);
-                color: var(--color-text-faint);
-                cursor: pointer;
-              "
-              style-hover="color:var(--color-text-dim);background:var(--color-surface)"
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="currentColor"
+            <div style="position: relative; flex: 0 0 auto">
+              <button
+                onClick="{{ lib.onSettings }}"
+                title="Settings"
+                style="
+                  display: grid;
+                  place-items: center;
+                  width: 46px;
+                  height: 46px;
+                  background: transparent;
+                  border: 1px solid transparent;
+                  border-radius: var(--radius-pill);
+                  color: var(--color-text-faint);
+                  cursor: pointer;
+                "
+                style-hover="color:var(--color-text-dim);background:var(--color-surface)"
               >
-                <path
-                  fill-rule="evenodd"
-                  clip-rule="evenodd"
-                  d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
-                />
-              </svg>
-            </button>
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="currentColor"
+                >
+                  <path
+                    fill-rule="evenodd"
+                    clip-rule="evenodd"
+                    d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.09.63-.09.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"
+                  />
+                </svg>
+              </button>
+            </div>
           </div>
         </header>
 
