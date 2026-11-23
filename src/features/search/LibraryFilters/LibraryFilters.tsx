@@ -49,7 +49,8 @@ import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
 export function LibraryFilters() {
   const { query, setSort, setGenre, setRating } = useLibraryQuery();
   const genres = useGenreList();
-  const allTitles = allTitlesLabel(useLibraryTab());
+  const tab = useLibraryTab();
+  const allTitles = allTitlesLabel(tab);
   const { rowView, setRowView } = useRowView();
 
   const selection: GenreSelection | null = query.genre
