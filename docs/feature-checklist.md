@@ -84,6 +84,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Video quality: a 4K to SD tag on every poster       | ✅ Done    |
 | Busy overlay: no loader moves what is around it     | ✅ Done    |
 | Seamless art: the backdrop lands with the page      | ✅ Done    |
+| Header fit: every filter pill and Settings in reach | ⬜ Planned |
 
 Everything marked ✅ is done — steps 1–9 of the first build order, ending
 with Software update, which shipped as v0.2.0, and steps 10–15, the
@@ -963,3 +964,28 @@ the open questions and keeps revalidation in place of a cache lifetime
       pre-fit ETag a 200 with the fitted bytes. The refactor (issue 692)
       stated the Art fit once, answering `null` for a picture kept as
       given, wrote every fitted picture awaited, and closed the step.
+
+Step 55 came out of the Quality pill (step 52): the browse header now
+carries five pills, and in a narrow window the last of them and the
+Settings button are pushed off screen, out of reach. Talked through on
+2026-11-23, not yet grilled:
+
+55. ⬜ **Header fit**: every filter pill and the Settings button stay in
+    reach, by drawing two fewer pills.
+    - **Row view moves into Genre**: the _View_ pill (**Row view switch**)
+      goes. The Genre dropdown's first two rows become the tab's **Row
+      view**: _All Genres_ is **By genre**, the genre rows and the **Other
+      row** as today, and a new row (working title _Show no genre_) is
+      **All**, one **Library grid**, as Series draws by default. Both stay
+      the household setting per tab (`movie-row-view`, `series-row-view`),
+      never in the URL; a single genre stays `?genre=` as today.
+    - **Series**: the same dropdown; it starts on the new row, its grid,
+      and _All Genres_ gives it genre rows.
+    - **Nothing retired downstream**: the Genre rows, **View all** and the
+      **Genre page** stay as they are.
+    - **Quality filter goes**: the _Quality_ pill and `?quality=` are
+      dropped; _Show video quality_ only turns the **Quality tag** on the
+      cards on or off.
+    - **Open**: the new row's name; what the dropdown's pill reads under
+      **All**; what a held `?quality=` URL does; whether the route keeps
+      `minQuality`; the prototype amendment.
