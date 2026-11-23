@@ -369,3 +369,24 @@ is no Linux-only release.
 The Deck stays on its current version: its **Update check** finds no Linux
 metadata, quietly at launch and `refused` when pressed. The next release
 carries both Platform builds again, and the Deck catches up.
+
+## Maintainer notes
+
+Kept here from the README, for the hands that build a release.
+
+- **The App mark**: when the mark in `docs/handoff/brand/` changes, run
+  `npm run electron:icon` by hand. It renders `electron/assets/icon.ico` and
+  the favicon.
+- **The Default component**: `npm run electron:ffmpeg` downloads the build
+  `electron/packaging/ffmpegPin.json` names for this platform (gyan.dev's on
+  Windows, BtbN's on Linux), refuses it unless its SHA-256 is the pin's, and
+  extracts `ffmpeg`, `ffprobe` and the licence into the gitignored
+  `electron/.ffmpeg/`. `electron:package` runs it anyway; once fetched it
+  needs no network.
+- **The package**: `electron:package` hands
+  `electron/packaging/builderConfig.json` to `electron-builder` for the
+  platform it runs on, with no `node_modules` inside; any platform other than
+  Windows or Linux is refused.
+- **AppImageLauncher**: if it ever added a FamilyFlix entry (an
+  `appimagekit_<hash>-FamilyFlix.desktop` in `~/.local/share/applications/`)
+  on the Deck, remove it: it launches the app with `--no-sandbox`.
