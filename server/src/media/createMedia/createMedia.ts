@@ -254,18 +254,19 @@ export function createMedia(
   playback: Pick<Playback, 'fitArt'>
 ): Media {
   /**
-   * A picture as it is to be stored: `fitArt`'s answer for one over its
-   * **Art box**, and the picture itself for every other.
+   * The **Art fit** of a picture: `fitArt`'s fitted picture for one over its
+   * **Art box**, or `null` for one kept as given (no **Picture size**, no
+   * `ArtFormat`, within its box, or no fit from the component).
    */
-  const fitted = async (picture: Buffer): Promise<Buffer> => {
+  const artFit = async (picture: Buffer): Promise<Buffer | null> => {
     const size = pictureSize(picture);
     const format = pictureFormat(picture);
     const width = size === null ? null : artBox(size);
     if (width === null || format === null) {
-      return picture;
+      return null;
     }
     const outcome = await playback.fitArt(picture, width, format);
-    return outcome.kind === 'fitted' ? outcome.picture : picture;
+    return outcome.kind === 'fitted' ? outcome.picture : null;
   };
 
   /**
@@ -395,10 +396,8 @@ export function createMedia(
       // guarantee without having to remember it. An image is read whole and
       // fitted; everything else streams, so a 12 GB film never sits in memory.
       if (isImageFilename(safe)) {
-        writeFileSync(
-          join(folder, safe),
-          await fitted(await readWhole(source))
-        );
+        const picture = await readWhole(source);
+        writeFileSync(join(folder, safe), (await artFit(picture)) ?? picture);
       } else {
         await pipeline(source, createWriteStream(join(folder, safe)));
       }
@@ -413,8 +412,8 @@ export function createMedia(
       }
       const folder = season === undefined ? title : seasonDir(title, season);
       const safe = safeFilename(name);
-      const picture = await fitted(await readWhole(source));
-      writeFileSync(join(folder, safe), picture);
+      const picture = await readWhole(source);
+      writeFileSync(join(folder, safe), (await artFit(picture)) ?? picture);
       return storedIn(folder, safe);
     },
 
@@ -432,8 +431,8 @@ export function createMedia(
         throw new Error(`No stored file at ${storedPath}`);
       }
       const picture = await readFile(file);
-      const fit = await fitted(picture);
-      if (fit === picture) {
+      const fit = await artFit(picture);
+      if (fit === null) {
         return;
       }
       const part = `${file}.part`;
@@ -459,11 +458,13 @@ export function createMedia(
       try {
         if (isImageFilename(safe)) {
           signal?.throwIfAborted();
-          const picture = await fitted(
-            await readFile(sourcePath, signal === undefined ? {} : { signal })
+          const picture = await readFile(
+            sourcePath,
+            signal === undefined ? {} : { signal }
           );
+          const fit = await artFit(picture);
           signal?.throwIfAborted();
-          writeFileSync(target, picture);
+          writeFileSync(target, fit ?? picture);
         } else {
           await pipeline(
             createReadStream(sourcePath),
