@@ -1,11 +1,20 @@
-import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
+import {
+  lstat,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  stat,
+  writeFile,
+} from 'node:fs/promises';
+import { join } from 'node:path';
 
 import type { Movie, SeriesDetail } from '@/types';
 import type { LibraryStorage } from '../../library';
 import {
   LIBRARY_SHEET_STEM,
   META_FOLDER,
+  OLD_META_FOLDER,
 } from '../../media/folderLayout/folderLayout';
 import {
   pathSegments,
@@ -29,8 +38,8 @@ export const LIBRARY_SHEET = `${META_FOLDER}/${LIBRARY_SHEET_STEM}.csv`;
 /** How long after the last touch a folder's sheet is rewritten. */
 export const LIBRARY_SHEET_DELAY_MS = 3000;
 
-/** The temporary file a rewrite lands through, beside the sheet in `_meta/`. */
-const TEMPORARY_SHEET = `${LIBRARY_SHEET}.tmp`;
+/** The **Library sheet**'s filename inside its **Meta folder**. */
+const SHEET_FILENAME = `${LIBRARY_SHEET_STEM}.csv`;
 
 /**
  * What one Library folder's sheet is written from: the titles recorded
@@ -69,6 +78,45 @@ async function bytesAt(path: string): Promise<Buffer | null> {
   } catch {
     return null;
   }
+}
+
+/** Whether anything at all lies at `path`. */
+async function somethingAt(path: string): Promise<boolean> {
+  try {
+    await lstat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Whether `path` is a folder. */
+async function folderAt(path: string): Promise<boolean> {
+  try {
+    return (await stat(path)).isDirectory();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * The **Meta move**: the folder under `root` a sheet is written in. An **Old
+ * Meta folder** with no `_meta` beside it is renamed whole to the **Meta
+ * folder**; a refused rename (the sheet open in Excel) writes in the Old Meta
+ * folder this time, the move tried again at the next write. Otherwise the
+ * Meta folder; nothing is deleted or merged.
+ */
+async function settledMetaFolder(root: string): Promise<string> {
+  const meta = join(root, META_FOLDER);
+  const oldMeta = join(root, OLD_META_FOLDER);
+  if ((await folderAt(oldMeta)) && !(await somethingAt(meta))) {
+    try {
+      await rename(oldMeta, meta);
+    } catch {
+      return oldMeta;
+    }
+  }
+  return meta;
 }
 
 /** Whether the **Sheet reader** takes `bytes` as the Library sheet. */
@@ -112,7 +160,8 @@ async function readTitleFolders(
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
  * own name by `sourceFoldersOf`, the Export's rule too since log 61, its
  * **Path cells** from each Title folder's **Layout read**, `layoutCells`),
- * through a temporary file in `_meta/` and a rename, behind its BOM; a sheet
+ * through a temporary file beside it and a rename, behind its BOM, in the
+ * folder the **Meta move** settles (`settledMetaFolder`); a sheet
  * whose bytes already match is left alone. A sheet on disk keeps its
  * **Sheet dialect**'s separator (a `;` sheet is rewritten `;`, with decimal
  * commas), always rewritten UTF-8; a brand-new sheet is `,`. Every
@@ -123,7 +172,7 @@ async function readTitleFolders(
  * **Unreachable** one is skipped, as is a sheet on disk the **Sheet reader**
  * refuses, left until it reads or is removed; a later touch that finds it
  * scanned and reachable writes it. The one replacer inside a Library folder,
- * and only of that one file.
+ * and only of that one file, and the one mover, only of the Old Meta folder.
  */
 export function createLibrarySheet({
   storage,
@@ -167,7 +216,8 @@ export function createLibrarySheet({
       layoutCells(reads),
       sourceFolders
     );
-    const sheet = join(folder.path, LIBRARY_SHEET);
+    const metaFolder = await settledMetaFolder(folder.path);
+    const sheet = join(metaFolder, SHEET_FILENAME);
     const onDisk = await bytesAt(sheet);
     if (onDisk && !(await sheetReads(onDisk))) {
       return;
@@ -177,8 +227,8 @@ export function createLibrarySheet({
     if (onDisk?.equals(bytes)) {
       return;
     }
-    const temporary = join(folder.path, TEMPORARY_SHEET);
-    await mkdir(dirname(sheet), { recursive: true });
+    const temporary = `${sheet}.tmp`;
+    await mkdir(metaFolder, { recursive: true });
     try {
       await writeFile(temporary, bytes);
       await rename(temporary, sheet);
