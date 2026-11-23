@@ -816,12 +816,13 @@ describe('LibraryPage: the launch on the Start tab', () => {
 });
 
 /**
- * 63, Row view, Phase 2 (issue #609): the **Row view switch** in the header's
- * end slot, after `LibraryFilters`, showing the current tab's own **Row
- * view**. Mounted under the app's `DisplayPreferenceProvider`, as `App` does,
- * the household storing Movies By genre and Series All.
+ * 73, Header fit, Phase 2 (issue #695): the **Row view switch** is retired
+ * for the Genre dropdown's **View rows**. The header draws no _View_ pill,
+ * and the body still follows the tab's **Row view**, now chosen from the
+ * Genre pill. Mounted under the app's `DisplayPreferenceProvider`, as `App`
+ * does, the household storing Movies By genre and Series All.
  */
-describe('LibraryPage: the Row view switch', () => {
+describe('LibraryPage: the Row view in the Genre pill', () => {
   const NO_SERIES: SeriesHomePayload = {
     series: [],
     episodeCount: 0,
@@ -841,11 +842,22 @@ describe('LibraryPage: the Row view switch', () => {
       if (url === '/api/settings/movie-row-view') {
         return Promise.resolve(okResponse({ value: 'all' }));
       }
+      if (url === '/api/settings/series-row-view') {
+        return Promise.resolve(okResponse({ value: 'genre' }));
+      }
       if (url.includes('/api/genres') || url.includes('/api/series/genres')) {
         return Promise.resolve(genreListResponse());
       }
       if (url.includes('/api/series')) {
         return Promise.resolve(okResponse(NO_SERIES));
+      }
+      if (url.includes('/api/movies')) {
+        return Promise.resolve(
+          okResponse({
+            movies: [makeMovie({ id: 'a1', title: 'Northwind' })],
+            continueWatching: [],
+          })
+        );
       }
       if (url.includes('/api/home')) {
         return Promise.resolve(homeResponse(HOME_PAYLOAD));
@@ -868,63 +880,65 @@ describe('LibraryPage: the Row view switch', () => {
     return view;
   }
 
-  const tabs = () => screen.getByRole('group', { name: 'Library' });
-  const viewPill = (value: string) =>
-    screen.findByRole('button', { name: `View: ${value}` });
+  const genrePill = (value: string) =>
+    screen.findByRole('button', { name: `Genre: ${value}` });
 
-  it('draws the switch after the filters, Sort last among them', async () => {
+  it('draws no View pill on either tab', async () => {
     await renderWithPreferences();
+    await genrePill('All Genres');
 
-    const view = await viewPill('By genre');
-    const sort = screen.getByRole('button', { name: 'Sort: Recently Added' });
-    const genre = screen.getByRole('button', { name: 'Genre: All Genres' });
+    expect(screen.queryByRole('button', { name: /^View:/ })).toBeNull();
 
-    expect(comesBefore(genre, view)).toBe(true);
-    expect(comesBefore(sort, view)).toBe(true);
+    act(() => {
+      within(screen.getByRole('group', { name: 'Library' }))
+        .getByRole('button', { name: 'Series' })
+        .click();
+    });
+    await genrePill('All series');
+
+    expect(screen.queryByRole('button', { name: /^View:/ })).toBeNull();
+  });
+
+  it('draws the Movies grid once “All movies” is chosen from the Genre pill', async () => {
+    await renderWithPreferences();
+    const control = await genrePill('All Genres');
     expect(
-      within(screen.getByRole('banner')).getByRole('button', {
-        name: 'View: By genre',
-      })
-    ).toBe(view);
-  });
-
-  it('shows each tab’s own value as the tabs switch', async () => {
-    await renderWithPreferences();
-    expect(await viewPill('By genre')).toBeDefined();
-
-    act(() => {
-      within(tabs()).getByRole('button', { name: 'Series' }).click();
-    });
-    expect(await viewPill('All')).toBeDefined();
-
-    act(() => {
-      within(tabs()).getByRole('button', { name: 'Movies' }).click();
-    });
-    expect(await viewPill('By genre')).toBeDefined();
-  });
-
-  it('keeps the search text and the genre, rating and sort pills through a choice', async () => {
-    await renderWithPreferences(
-      '/?q=northwind&genre=Action&rating=6&sort=year'
-    );
-    const control = await viewPill('By genre');
+      screen.queryByRole('heading', { name: 'All movies', level: 2 })
+    ).toBeNull();
 
     act(() => control.focus());
     fireEvent.click(control);
-    fireEvent.click(screen.getByRole('menuitem', { name: 'All' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'All movies' }));
 
-    expect(await viewPill('All')).toBeDefined();
-    expect(searchBox().value).toBe('northwind');
-    expect(screen.getByRole('button', { name: 'Genre: Action' })).toBeDefined();
     expect(
-      screen.getByRole('button', { name: 'Minimum rating: 3+ stars' })
+      await screen.findByRole('heading', { name: 'All movies', level: 2 })
     ).toBeDefined();
-    expect(screen.getByRole('button', { name: 'Sort: Year' })).toBeDefined();
+    expect(await genrePill('All movies')).toBeDefined();
   });
 
-  it('opens on Series showing Series’ own value', async () => {
+  it('opens Series on its grid, the pill reading “All series”', async () => {
     await renderWithPreferences('/?tab=series');
 
-    expect(await viewPill('All')).toBeDefined();
+    expect(await genrePill('All series')).toBeDefined();
+    expect(
+      await screen.findByRole('heading', { name: 'All series', level: 2 })
+    ).toBeDefined();
+  });
+
+  it('leaves the Series grid once “All Genres” is chosen', async () => {
+    await renderWithPreferences('/?tab=series');
+    const control = await genrePill('All series');
+    await screen.findByRole('heading', { name: 'All series', level: 2 });
+
+    act(() => control.focus());
+    fireEvent.click(control);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'All Genres' }));
+
+    expect(await genrePill('All Genres')).toBeDefined();
+    await waitFor(() =>
+      expect(
+        screen.queryByRole('heading', { name: 'All series', level: 2 })
+      ).toBeNull()
+    );
   });
 });

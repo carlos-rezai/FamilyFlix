@@ -1,7 +1,15 @@
 import { describe, it, expect, vi } from 'vitest';
 
-import { genreOptions } from './genreOptions';
+import { genreLabel, genreOptions, type GenreSelection } from './genreOptions';
 import type { GenreListPayload } from '@/types';
+
+/**
+ * 73, Header fit, Phase 2 (issue #695): the Genre dropdown's rows. Two
+ * **View rows** lead, _All Genres_ (**By genre**) and the tab's _All_ row
+ * (**All**), both carrying the list total; then every genre, busiest first,
+ * A to Z on a tie. Exactly one row is checked: the chosen genre's, else the
+ * **View row** of the tab's **Row view**.
+ */
 
 /**
  * A list whose counts are deliberately not alphabetical, and which holds a tie
@@ -18,21 +26,32 @@ const GENRES: GenreListPayload = {
   ],
 };
 
+const EMPTY: GenreListPayload = { total: 0, genres: [] };
+
+const BY_GENRE: GenreSelection = { rowView: 'genre' };
+const ALL: GenreSelection = { rowView: 'all' };
+
 const noop = () => undefined;
 
 /** The rows as the panel draws them, top to bottom. */
-const labelsOf = (list: GenreListPayload, selected?: string) =>
-  genreOptions(list, selected, noop).map((option) => option.label);
+const labelsOf = (
+  list: GenreListPayload,
+  selection: GenreSelection = BY_GENRE,
+  allTitles = 'All movies'
+) =>
+  genreOptions(list, selection, allTitles, noop).map((option) => option.label);
 
-describe('genreOptions — the order of the list', () => {
-  it('puts “All Genres” first, whatever the counts are', () => {
-    // The way out of a filter is always the first thing under the finger.
-    expect(labelsOf(GENRES)[0]).toBe('All Genres');
-  });
+/** The labels of the checked rows. */
+const checkedOf = (selection: GenreSelection, allTitles = 'All movies') =>
+  genreOptions(GENRES, selection, allTitles, noop)
+    .filter((option) => option.selected)
+    .map((option) => option.label);
 
-  it('orders the genres by count, most first', () => {
+describe('genreOptions: the order of the list', () => {
+  it('leads with “All Genres”, then the tab’s All row, then the genres by count', () => {
     expect(labelsOf(GENRES)).toEqual([
       'All Genres',
+      'All movies',
       'Drama',
       'Action',
       'Adventure',
@@ -40,38 +59,60 @@ describe('genreOptions — the order of the list', () => {
     ]);
   });
 
+  it('names the All row for the Series tab with the words it is handed', () => {
+    expect(labelsOf(GENRES, BY_GENRE, 'All series').slice(0, 2)).toEqual([
+      'All Genres',
+      'All series',
+    ]);
+  });
+
+  it('keeps the View rows first whichever row is checked', () => {
+    expect(labelsOf(GENRES, { genre: 'Comedy' }).slice(0, 2)).toEqual([
+      'All Genres',
+      'All movies',
+    ]);
+    expect(labelsOf(GENRES, ALL).slice(0, 2)).toEqual([
+      'All Genres',
+      'All movies',
+    ]);
+  });
+
   it('breaks a tie alphabetically', () => {
     // Adventure and Comedy both hold 4; the list has to be stable enough to
-    // learn, so the tie is settled by name rather than by the order the route
-    // happened to send them in.
-    expect(labelsOf(GENRES).slice(3)).toEqual(['Adventure', 'Comedy']);
+    // learn, so the tie is settled by name rather than by the route's order.
+    expect(labelsOf(GENRES).slice(4)).toEqual(['Adventure', 'Comedy']);
   });
 
   it('leaves the list it was handed untouched', () => {
     const original = GENRES.genres.map((genre) => genre.name);
 
-    genreOptions(GENRES, undefined, noop);
+    genreOptions(GENRES, BY_GENRE, 'All movies', noop);
 
     expect(GENRES.genres.map((genre) => genre.name)).toEqual(original);
   });
-
-  it('gives the same answer for the same list, every time', () => {
-    expect(labelsOf(GENRES)).toEqual(labelsOf(GENRES));
-  });
 });
 
-describe('genreOptions — the counts', () => {
-  it('gives “All Genres” the library total, not the sum of the genres', () => {
-    // Summing would double-count every movie tagged twice; 9 + 4 + 12 + 4 is
-    // 29, and the library holds 24.
-    const [all] = genreOptions(GENRES, undefined, noop);
+describe('genreOptions: the counts', () => {
+  it.each(['All movies', 'All series'])(
+    'gives both View rows the list total, not the sum of the genres (%s)',
+    (allTitles) => {
+      // Summing would double-count every title tagged twice; 9 + 4 + 12 + 4
+      // is 29, and the library holds 24.
+      const [allGenres, allRow] = genreOptions(
+        GENRES,
+        BY_GENRE,
+        allTitles,
+        noop
+      );
 
-    expect(all.count).toBe(24);
-  });
+      expect(allGenres.count).toBe(24);
+      expect(allRow.count).toBe(24);
+    }
+  );
 
-  it('gives every genre its own count, so the panel can show it', () => {
+  it('gives every genre its own count', () => {
     const counts = new Map(
-      genreOptions(GENRES, undefined, noop).map((option) => [
+      genreOptions(GENRES, BY_GENRE, 'All movies', noop).map((option) => [
         option.label,
         option.count,
       ])
@@ -82,98 +123,107 @@ describe('genreOptions — the counts', () => {
     expect(counts.get('Comedy')).toBe(4);
   });
 
-  it('shows a zero library as zero rather than as nothing', () => {
-    const [all] = genreOptions({ total: 0, genres: [] }, undefined, noop);
-
-    expect(all.count).toBe(0);
-  });
-});
-
-describe('genreOptions — which row is ticked', () => {
-  it('ticks “All Genres” when no genre is set', () => {
-    const [all] = genreOptions(GENRES, undefined, noop);
-
-    expect(all.selected).toBe(true);
-  });
-
-  it('ticks the genre the query is carrying', () => {
-    const options = genreOptions(GENRES, 'Action', noop);
-
-    expect(options.find((option) => option.label === 'Action')?.selected).toBe(
-      true
-    );
-  });
-
-  it('ticks exactly one row, and it is the current one', () => {
-    const ticked = genreOptions(GENRES, 'Comedy', noop).filter(
-      (option) => option.selected
+  it('shows a zero library as zero on both View rows', () => {
+    const [allGenres, allRow] = genreOptions(
+      EMPTY,
+      BY_GENRE,
+      'All movies',
+      noop
     );
 
-    expect(ticked.map((option) => option.label)).toEqual(['Comedy']);
-  });
-
-  it('unticks “All Genres” once a genre is chosen', () => {
-    const [all] = genreOptions(GENRES, 'Action', noop);
-
-    expect(all.selected).toBe(false);
+    expect(allGenres.count).toBe(0);
+    expect(allRow.count).toBe(0);
   });
 });
 
-describe('genreOptions — an empty list', () => {
-  it('still offers “All Genres”, so the dropdown is never empty', () => {
-    const options = genreOptions({ total: 0, genres: [] }, undefined, noop);
-
-    expect(options.map((option) => option.label)).toEqual(['All Genres']);
+describe('genreOptions: which row is checked', () => {
+  it('checks the chosen genre alone', () => {
+    expect(checkedOf({ genre: 'Action' })).toEqual(['Action']);
   });
 
-  it('offers that one row whatever the URL is carrying', () => {
-    // This is the shape a failed `/api/genres` leaves behind: the rows are gone
-    // but the way out of the filter is still there to press.
-    const options = genreOptions({ total: 0, genres: [] }, 'Action', noop);
+  it('checks “All Genres” alone under By genre', () => {
+    expect(checkedOf(BY_GENRE)).toEqual(['All Genres']);
+  });
 
-    expect(options.map((option) => option.label)).toEqual(['All Genres']);
+  it('checks the tab’s All row alone under All', () => {
+    expect(checkedOf(ALL)).toEqual(['All movies']);
+    expect(checkedOf(ALL, 'All series')).toEqual(['All series']);
   });
 });
 
-describe('genreOptions — choosing a row', () => {
-  it('reports the genre’s name when a genre is chosen', () => {
-    const onSelect = vi.fn<(genre: string) => void>();
-    const options = genreOptions(GENRES, undefined, onSelect);
-
-    options.find((option) => option.label === 'Drama')?.onSelect();
-
-    expect(onSelect).toHaveBeenCalledWith('Drama');
+describe('genreOptions: an empty list', () => {
+  it('still offers both View rows, so the dropdown is never empty', () => {
+    expect(labelsOf(EMPTY)).toEqual(['All Genres', 'All movies']);
   });
 
-  it('reports the empty string for “All Genres”, which is how it clears', () => {
-    // "All Genres" is the absence of the filter, and the empty string is what
-    // takes the parameter back off the URL.
-    const onSelect = vi.fn<(genre: string) => void>();
-    const [all] = genreOptions(GENRES, undefined, onSelect);
+  it('offers them whatever the URL is carrying', () => {
+    // The shape a failed genre list leaves behind: the genres are gone but
+    // the View rows are still there to press.
+    expect(labelsOf(EMPTY, { genre: 'Action' }, 'All series')).toEqual([
+      'All Genres',
+      'All series',
+    ]);
+  });
+});
 
-    all.onSelect();
+describe('genreOptions: choosing a row', () => {
+  function chooseRow(label: string, selection: GenreSelection = BY_GENRE) {
+    const onSelect = vi.fn<(selection: GenreSelection) => void>();
+    genreOptions(GENRES, selection, 'All movies', onSelect)
+      .find((option) => option.label === label)
+      ?.onSelect();
+    return onSelect;
+  }
 
-    expect(onSelect).toHaveBeenCalledWith('');
+  it('reports By genre for “All Genres”', () => {
+    expect(chooseRow('All Genres', { genre: 'Drama' })).toHaveBeenCalledWith({
+      rowView: 'genre',
+    });
   });
 
-  it('reports nothing until a row is actually chosen', () => {
-    const onSelect = vi.fn<(genre: string) => void>();
+  it('reports All for the tab’s All row', () => {
+    expect(chooseRow('All movies')).toHaveBeenCalledWith({ rowView: 'all' });
+  });
 
-    genreOptions(GENRES, undefined, onSelect);
-
-    expect(onSelect).not.toHaveBeenCalled();
+  it('reports the genre’s name for a genre', () => {
+    expect(chooseRow('Drama', ALL)).toHaveBeenCalledWith({ genre: 'Drama' });
   });
 
   it('reports the genre exactly as the library spells it', () => {
-    const onSelect = vi.fn<(genre: string) => void>();
+    const onSelect = vi.fn<(selection: GenreSelection) => void>();
     const options = genreOptions(
       { total: 3, genres: [{ id: 'g1', name: 'Science Fiction', count: 3 }] },
-      undefined,
+      BY_GENRE,
+      'All movies',
       onSelect
     );
 
-    options[1].onSelect();
+    options[2].onSelect();
 
-    expect(onSelect).toHaveBeenCalledWith('Science Fiction');
+    expect(onSelect).toHaveBeenCalledWith({ genre: 'Science Fiction' });
+  });
+
+  it('reports nothing until a row is actually chosen', () => {
+    const onSelect = vi.fn<(selection: GenreSelection) => void>();
+
+    genreOptions(GENRES, BY_GENRE, 'All movies', onSelect);
+
+    expect(onSelect).not.toHaveBeenCalled();
+  });
+});
+
+describe('genreLabel', () => {
+  it('answers the genre for a chosen genre', () => {
+    expect(genreLabel({ genre: 'Drama' }, 'All movies')).toBe('Drama');
+  });
+
+  it('answers “All Genres” under By genre', () => {
+    expect(genreLabel(BY_GENRE, 'All movies')).toBe('All Genres');
+    expect(genreLabel(BY_GENRE, 'All series')).toBe('All Genres');
+  });
+
+  it('answers the tab’s All words under All', () => {
+    expect(genreLabel(ALL, 'All movies')).toBe('All movies');
+    expect(genreLabel(ALL, 'All series')).toBe('All series');
   });
 });

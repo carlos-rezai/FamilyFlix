@@ -12,6 +12,8 @@ import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
 
 import { LibraryFilters } from './LibraryFilters';
 import { theme } from '@/styles/theme';
+import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
+import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 import { okResponse } from '@/test-support/fakeResponse/fakeResponse';
 
 /**
@@ -42,8 +44,28 @@ const GENRE_LIST = {
   ],
 };
 
-/** The order the panel draws them in: the total first, then count-descending. */
-const GENRE_ROWS = ['All Genres', 'Drama', 'Action', 'Adventure', 'Comedy'];
+/**
+ * The order the panel draws them in: the two View rows first, then
+ * count-descending (log 73).
+ */
+const GENRE_ROWS = [
+  'All Genres',
+  'All movies',
+  'Drama',
+  'Action',
+  'Adventure',
+  'Comedy',
+];
+
+/**
+ * Both tabs browsed By genre, so _All Genres_ is the pill's value wherever no
+ * genre is chosen, as it was before the View rows. The View rows' own
+ * behaviour is `LibraryFilters.rowView.test.tsx`'s.
+ */
+const BY_GENRE_HOUSEHOLD = makeDisplayPreferenceApi({
+  movieRowView: 'genre',
+  seriesRowView: 'genre',
+});
 
 let fetchMock: ReturnType<
   typeof vi.fn<(input: RequestInfo | URL) => Promise<Response>>
@@ -94,9 +116,11 @@ function UrlProbe() {
 async function renderFilters(url = '/') {
   const view = render(
     <MemoryRouter initialEntries={[url]}>
-      <ThemeProvider theme={theme}>
-        <LibraryFilters />
-      </ThemeProvider>
+      <DisplayPreferenceContext.Provider value={BY_GENRE_HOUSEHOLD}>
+        <ThemeProvider theme={theme}>
+          <LibraryFilters />
+        </ThemeProvider>
+      </DisplayPreferenceContext.Provider>
       <UrlProbe />
     </MemoryRouter>
   );
@@ -400,7 +424,7 @@ describe('LibraryFilters — the genre pill', () => {
 });
 
 describe('LibraryFilters — the genre list', () => {
-  it('lists “All Genres” first, then the genres by count, most first', async () => {
+  it('lists the View rows first, then the genres by count, most first', async () => {
     await renderFilters('/');
 
     const control = await openGenre();
@@ -566,7 +590,7 @@ describe('LibraryFilters — two pills in one header', () => {
 });
 
 describe('LibraryFilters — when the genre list cannot be loaded', () => {
-  it('offers “All Genres” alone rather than an empty panel', async () => {
+  it('offers the View rows alone rather than an empty panel', async () => {
     fetchMock.mockRejectedValue(new Error('offline'));
     await renderFilters('/');
 
@@ -575,7 +599,7 @@ describe('LibraryFilters — when the genre list cannot be loaded', () => {
     fireEvent.click(control);
 
     await waitFor(() => expect(genreRequests()).toHaveLength(1));
-    expect(panelRowLabels(control)).toEqual(['All Genres']);
+    expect(panelRowLabels(control)).toEqual(['All Genres', 'All movies']);
   });
 
   it('leaves the sort pill working', async () => {
@@ -933,7 +957,12 @@ describe('LibraryFilters — the Series tab’s genre list', () => {
 
     const control = await openGenre();
 
-    expect(panelRowLabels(control)).toEqual(['All Genres', 'Drama', 'Family']);
+    expect(panelRowLabels(control)).toEqual([
+      'All Genres',
+      'All series',
+      'Drama',
+      'Family',
+    ]);
   });
 
   it('shows each genre counted in series, and the series total beside “All Genres”', async () => {
