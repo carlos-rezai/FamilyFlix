@@ -88,6 +88,7 @@ function fakeComponent(prober: Prober): PlaybackComponent {
     },
     spawn: (): PlaybackProcess => ({
       stdout: Readable.from([]),
+      exited: Promise.resolve(0),
       kill: () => undefined,
     }),
   };

@@ -103,7 +103,11 @@ function fakeComponent(
     probe: () => probe,
     spawn: (args: string[]): PlaybackProcess => {
       component.spawned.push(args);
-      return { stdout: Readable.from([]), kill: () => undefined };
+      return {
+        stdout: Readable.from([]),
+        exited: Promise.resolve(0),
+        kill: () => undefined,
+      };
     },
   };
   return component;

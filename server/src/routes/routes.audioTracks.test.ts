@@ -108,6 +108,7 @@ function recordingComponent(probe: MediaProbe): RecordingComponent {
       component.spawned.push(args);
       return {
         stdout: Readable.from([CONVERTED_BYTES]),
+        exited: Promise.resolve(0),
         kill: () => undefined,
       };
     },

@@ -98,6 +98,10 @@ afterEach(async () => {
   }
 });
 
+/** The real `Media` seam, its pictures stored as given. */
+const unfittedMedia = (mediaPath: string): Media =>
+  createMedia(mediaPath, unfittedArt());
+
 /**
  * A fresh library behind a listening API, the base URL to call it on, and the
  * managed media directory the two file-serving routes read.
@@ -126,7 +130,7 @@ afterEach(async () => {
  */
 function freshApi(
   component: PlaybackComponent | null = null,
-  seam: (mediaPath: string) => Media = createMedia,
+  seam: (mediaPath: string) => Media = unfittedMedia,
   storage: LibraryStorage = createSqliteStorage(':memory:')
 ): {
   storage: LibraryStorage;
@@ -1861,7 +1865,7 @@ describe('GET /api/genre-less', () => {
   it('leaves a genre named Other on its own /genre/:name page', async () => {
     const { storage, baseUrl } = freshApi(
       null,
-      createMedia,
+      unfittedMedia,
       storageWithAnOtherGenre()
     );
     storage.addMovie({
@@ -3114,6 +3118,7 @@ function fakeComponent({
 
       return {
         stdout,
+        exited: Promise.resolve(0),
         kill: () => {
           component.killed = true;
           stdout.push(null);

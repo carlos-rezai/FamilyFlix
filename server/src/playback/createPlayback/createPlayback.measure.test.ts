@@ -43,6 +43,7 @@ function fakeComponent(probe: MediaProbe | null): PlaybackComponent & {
     probe: vi.fn(() => probe),
     spawn: (): PlaybackProcess => ({
       stdout: Readable.from([]),
+      exited: Promise.resolve(0),
       kill: () => undefined,
     }),
   };

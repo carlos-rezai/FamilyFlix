@@ -92,6 +92,7 @@ function scriptedComponent(
       }
       return {
         stdout,
+        exited: Promise.resolve(0),
         kill: () => {
           component.killed += 1;
           stdout.destroy();

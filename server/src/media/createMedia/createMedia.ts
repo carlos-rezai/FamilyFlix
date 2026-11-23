@@ -9,13 +9,17 @@ import {
   rmSync,
   statSync,
   unlinkSync,
+  writeFileSync,
 } from 'node:fs';
 import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { pipeline } from 'node:stream/promises';
 import type { Readable } from 'node:stream';
 
+import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { mediaFilePath } from '../../playback/mediaFilePath/mediaFilePath';
+import { artBox } from '../artBox/artBox';
 import { movieFolder } from '../movieFolder/movieFolder';
+import { pictureFormat, pictureSize } from '../pictureSize/pictureSize';
 import { safeFilename } from '../safeFilename/safeFilename';
 
 /**
@@ -119,6 +123,11 @@ export interface Media {
    * Season poster, a Still. A file of that name is replaced, so a second Sync
    * leaves one poster. Rejects, writing nothing, for a folder that is not
    * there, is the media root, or lies outside it.
+   *
+   * The picture is read whole and fitted on its way in: one over its **Art
+   * box** is written as `fitArt`'s answer, under the same name; one within
+   * it, one whose header will not read, and one `fitArt` answers `none` for
+   * are written byte for byte.
    */
   storeNamed(
     folder: string,
@@ -195,6 +204,15 @@ export interface Media {
   emptyRoot(): void;
 }
 
+/** A stream read whole into one buffer. */
+async function readWhole(source: Readable): Promise<Buffer> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of source) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk as string));
+  }
+  return Buffer.concat(chunks);
+}
+
 /**
  * Compose the media domain over a **Managed media directory**.
  *
@@ -209,7 +227,25 @@ export interface Media {
  * own rather than a second spelling of it, because a second spelling is where
  * the two drift apart.
  */
-export function createMedia(mediaPath: string): Media {
+export function createMedia(
+  mediaPath: string,
+  playback: Pick<Playback, 'fitArt'>
+): Media {
+  /**
+   * A picture as it is to be stored: `fitArt`'s answer for one over its
+   * **Art box**, and the picture itself for every other.
+   */
+  const fitted = async (picture: Buffer): Promise<Buffer> => {
+    const size = pictureSize(picture);
+    const format = pictureFormat(picture);
+    const width = size === null ? null : artBox(size);
+    if (width === null || format === null) {
+      return picture;
+    }
+    const outcome = await playback.fitArt(picture, width, format);
+    return outcome.kind === 'fitted' ? outcome.picture : picture;
+  };
+
   /**
    * A free name for a folder, without creating it: the slug itself if nothing
    * holds it, and `-2`, `-3` … until something is free.
@@ -347,7 +383,8 @@ export function createMedia(mediaPath: string): Media {
       }
       const folder = season === undefined ? title : seasonDir(title, season);
       const safe = safeFilename(name);
-      await pipeline(source, createWriteStream(join(folder, safe)));
+      const picture = await fitted(await readWhole(source));
+      writeFileSync(join(folder, safe), picture);
       return storedIn(folder, safe);
     },
 

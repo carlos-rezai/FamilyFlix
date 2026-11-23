@@ -24,6 +24,7 @@ import type {
   PlaybackComponent,
   PlaybackProcess,
 } from '../ffmpegComponent/ffmpegComponent';
+import { type ArtFormat, fitArgs } from '../fitArgs/fitArgs';
 import { FRAME_POINT, frameArgs } from '../frameArgs/frameArgs';
 import { audioTracks } from '../audioTracks/audioTracks';
 import { mediaDuration } from '../mediaDuration/mediaDuration';
@@ -218,7 +219,29 @@ export interface Playback {
    * rule).
    */
   frame(video: StoredVideo, signal: AbortSignal): Promise<FrameOutcome>;
+
+  /**
+   * One picture fitted to `width`, written back in its own `format`: the
+   * component the slot holds at the call spawned over `fitArgs`, the picture
+   * on its stdin, its stdout collected. `fitted` once the process exits `0`;
+   * otherwise `none` with its reason, the process killed past the **Fit
+   * budget**. A `none` means the caller keeps the picture as it is. It never
+   * rejects.
+   */
+  fitArt(
+    picture: Buffer,
+    width: number,
+    format: ArtFormat
+  ): Promise<FitOutcome>;
 }
+
+/** Why a {@link Playback.fitArt} answered no fitted picture. */
+export type NoFitReason = 'no-component' | 'failed' | 'timed-out';
+
+/** A fitted picture, or the reason there is none. */
+export type FitOutcome =
+  | { kind: 'fitted'; picture: Buffer }
+  | { kind: 'none'; reason: NoFitReason };
 
 /**
  * What {@link Playback.measure} learns about a film from one probe: how long
@@ -251,6 +274,56 @@ export type FrameOutcome =
  * damaged file is what this is for.
  */
 const FRAME_BUDGET_MS = 20_000;
+
+/**
+ * The **Fit budget**: how long one fit may take before its process is killed.
+ */
+const FIT_BUDGET_MS = 10_000;
+
+/**
+ * A fit's stdout collected whole, answered once the process exits: `fitted`
+ * on `0`, `failed` on any other exit or an error, `timed-out` at the budget,
+ * the process killed.
+ */
+function collectFit(fit: PlaybackProcess): Promise<FitOutcome> {
+  return new Promise((resolve) => {
+    const chunks: Buffer[] = [];
+    let settled = false;
+
+    const settle = (outcome: FitOutcome): void => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      clearTimeout(timer);
+      if (outcome.kind === 'none') {
+        fit.kill();
+      }
+      resolve(outcome);
+    };
+    const timer = setTimeout(
+      () => settle({ kind: 'none', reason: 'timed-out' }),
+      FIT_BUDGET_MS
+    );
+    const ended = new Promise<void>((done) => {
+      fit.stdout.on('end', done);
+      fit.stdout.on('close', done);
+      fit.stdout.on('error', done);
+    });
+
+    fit.stdout.on('data', (chunk: Buffer | string) => {
+      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    });
+    void Promise.all([fit.exited, ended]).then(([code]) => {
+      const bytes = Buffer.concat(chunks);
+      settle(
+        code === 0 && bytes.length > 0
+          ? { kind: 'fitted', picture: bytes }
+          : { kind: 'none', reason: 'failed' }
+      );
+    });
+  });
+}
 
 /**
  * A grab's stdout collected whole as a `frame`, or `none` with its reason —
@@ -529,6 +602,19 @@ export function createPlayback(
           frameArgs(found.file, seconds * FRAME_POINT)
         );
         return await collectFrame(conversion, signal);
+      } catch {
+        return { kind: 'none', reason: 'failed' };
+      }
+    },
+    fitArt: async (picture, width, format) => {
+      try {
+        const component = slot.current();
+        if (component === null) {
+          return { kind: 'none', reason: 'no-component' };
+        }
+        return await collectFit(
+          component.spawn(fitArgs(width, format), picture)
+        );
       } catch {
         return { kind: 'none', reason: 'failed' };
       }

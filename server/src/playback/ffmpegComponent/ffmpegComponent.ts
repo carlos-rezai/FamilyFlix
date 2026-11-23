@@ -15,6 +15,8 @@ import { probe as probeFile, type MediaProbe } from '../probe/probe';
  */
 export interface PlaybackProcess {
   stdout: Readable;
+  /** How it ended: its exit code, or `null` once killed. */
+  exited: Promise<number | null>;
   /** Stop it. Safe to call on one that has already finished. */
   kill(): void;
 }
@@ -47,8 +49,11 @@ export interface PlaybackComponent {
   decoders(): string | null;
   /** What a file is, or `null` for every way of not knowing. */
   probe(file: string): MediaProbe | null;
-  /** Start a conversion over the given argv. */
-  spawn(args: string[]): PlaybackProcess;
+  /**
+   * Start a conversion over the given argv, `input` handed in as its stdin
+   * when given: the picture a fit reads off `pipe:0`.
+   */
+  spawn(args: string[], input?: Buffer): PlaybackProcess;
 }
 
 /**
@@ -202,14 +207,33 @@ export function ffmpegComponent(
     hardwareEncoder: detectHardwareEncoder(binaries.ffmpeg, listed),
     decoders: () => listed.decoders(binaries.ffmpeg),
     probe: (file) => probeFile(binaries.ffprobe, file),
-    spawn: (args) => {
-      const child = spawn(binaries.ffmpeg, args, {
-        stdio: ['ignore', 'pipe', 'ignore'],
-        windowsHide: true,
+    spawn: (args, input) => {
+      // A stdin only for a picture to hand in: a conversion reads its file.
+      const child =
+        input === undefined
+          ? spawn(binaries.ffmpeg, args, {
+              stdio: ['ignore', 'pipe', 'ignore'],
+              windowsHide: true,
+            })
+          : spawn(binaries.ffmpeg, args, {
+              stdio: ['pipe', 'pipe', 'ignore'],
+              windowsHide: true,
+            });
+      const exited = new Promise<number | null>((resolve) => {
+        child.on('error', () => resolve(null));
+        child.on('close', (code) => resolve(code));
       });
+      // The picture a fit reads off `pipe:0`. A process that exits before
+      // reading it all closes the pipe under the write; the exit code is what
+      // says how it went.
+      if (input !== undefined && child.stdin !== null) {
+        child.stdin.on('error', () => undefined);
+        child.stdin.end(input);
+      }
 
       return {
         stdout: child.stdout,
+        exited,
         kill: () => {
           child.kill();
         },

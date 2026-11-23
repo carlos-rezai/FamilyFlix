@@ -225,6 +225,7 @@ function fakeComponent(decoders: string | null): PlaybackComponent {
     probe: () => null,
     spawn: (): PlaybackProcess => ({
       stdout: Readable.from([]),
+      exited: Promise.resolve(0),
       kill: () => undefined,
     }),
   };

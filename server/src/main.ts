@@ -73,7 +73,8 @@ async function start(): Promise<Started> {
     (id) =>
       storage.libraryFolders().find((folder) => folder.id === id)?.path ?? null
   );
-  const media = createMedia(MEDIA_PATH);
+  // Every picture stored is fitted through the same component.
+  const media = createMedia(MEDIA_PATH, playback);
   // The one **Layout fill**, run after an add, an edit and a Sync.
   const layoutFill = createLayoutFill({ storage, media });
 
