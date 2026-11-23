@@ -1,10 +1,10 @@
 import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
+import { useRowView } from '@/hooks/useRowView/useRowView';
 
 import { MovieRows } from '../home/MovieRows/MovieRows';
 import { MovieGrid } from '../home/MovieGrid/MovieGrid';
 import { SeriesGrid } from '../series/SeriesGrid/SeriesGrid';
 import { SeriesRows } from '../series/SeriesRows/SeriesRows';
-import { useRowView } from '@/hooks/useRowView/useRowView';
 
 /** Movies' body, picked off its **Row view**: nothing until the read lands. */
 function MoviesBody() {
