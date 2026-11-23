@@ -1,5 +1,5 @@
 import { DEFAULT_MOVIE_SORT, type LibraryQuery } from '@/types';
-import { isMovieSort, parseMinQuality, parseMinRating } from '@/utils';
+import { isMovieSort, parseMinRating } from '@/utils';
 
 /**
  * Turns the URL's query string into the **settled query** the browse home is
@@ -12,8 +12,7 @@ import { isMovieSort, parseMinQuality, parseMinRating } from '@/utils';
  * Pure, so the same URL always yields the same query.
  *
  * A util rather than a feature-local helper for the same reason as
- * `isMovieSort`, `parseMinRating` and `parseMinQuality`, which it is built
- * from: two features read the settled query out of the URL independently —
+ * `isMovieSort` and `parseMinRating`, which it is built from: two features read the settled query out of the URL independently —
  * the search feature to draw the pills, the library feature to build the home
  * request — and a second parser is a second set of rules that can come to
  * disagree with this one. That does not show up as a crash; it shows up as
@@ -54,11 +53,6 @@ export function parseLibraryQuery(params: URLSearchParams): LibraryQuery {
   const minRating = parseMinRating(params.get('rating'));
   if (minRating !== undefined) {
     query.minRating = minRating;
-  }
-
-  const minQuality = parseMinQuality(params.get('quality'));
-  if (minQuality !== undefined) {
-    query.minQuality = minQuality;
   }
 
   return query;

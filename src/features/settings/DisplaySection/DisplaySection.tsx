@@ -73,7 +73,7 @@ export function DisplaySection() {
             <RowTitle>Show video quality</RowTitle>
             <RowDesc>
               Tag each poster with how sharp its video is: 4K, 1080p, 720p, 480p
-              or SD. Turning this off also hides the quality filter.
+              or SD.
             </RowDesc>
           </div>
           {qualityTags === null ? null : (

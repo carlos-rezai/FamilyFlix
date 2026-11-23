@@ -109,11 +109,6 @@ export interface MovieQuery {
   /** Keep only movies with `rating >= minRating`; unrated movies are excluded. */
   minRating?: number;
   /**
-   * Keep only movies at or above this rung of the **Quality ladder**;
-   * unmeasured movies are excluded.
-   */
-  minQuality?: VideoQuality;
-  /**
    * Case-insensitive substring match on the title, the synopsis, **or** a genre
    * name — a movie matching on several of those arms still comes back once.
    */
@@ -153,8 +148,6 @@ export interface LibraryQuery {
   genre?: string;
   /** @see MovieQuery.minRating */
   minRating?: number;
-  /** @see MovieQuery.minQuality */
-  minQuality?: VideoQuality;
 }
 
 /** A genre plus how many movies are tagged with it — for the home genre rows. */

@@ -125,11 +125,6 @@ function buildListQuery(
     where.push(`${shownRating} >= ?`);
     whereParams.push(query.minRating);
   }
-  if (query.minQuality !== undefined) {
-    // An unmeasured film ranks `NULL`, so no rung keeps it.
-    where.push(`${qualityRankSql('m.video_quality')} <= ?`);
-    whereParams.push(VIDEO_QUALITIES.indexOf(query.minQuality));
-  }
   if (query.search !== undefined) {
     // Title OR synopsis OR genre name, so a half-remembered plot fragment or a
     // genre typed into the box both find the film. The genre arm reuses the

@@ -1,15 +1,8 @@
 import { useCallback, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
-import {
-  DEFAULT_MOVIE_SORT,
-  type LibraryQuery,
-  type MovieSort,
-  type VideoQuality,
-} from '@/types';
-import { honouredLibraryQuery, parseLibraryQuery } from '@/utils';
-
-import { useQualityTags } from '@/App/useQualityTags/useQualityTags';
+import { DEFAULT_MOVIE_SORT, type LibraryQuery, type MovieSort } from '@/types';
+import { parseLibraryQuery } from '@/utils';
 
 import { useQueryParamWriter } from '@/hooks/useQueryParamWriter/useQueryParamWriter';
 
@@ -24,8 +17,6 @@ export interface UseLibraryQueryResult {
   setGenre: (value: string) => void;
   /** Write the minimum rating; nought ("All ratings") takes `rating` back off. */
   setRating: (value: number) => void;
-  /** Write the minimum quality; none ("All qualities") takes `quality` off. */
-  setQuality: (value: VideoQuality | undefined) => void;
 }
 
 /**
@@ -46,11 +37,7 @@ export interface UseLibraryQueryResult {
 export function useLibraryQuery(): UseLibraryQueryResult {
   const [searchParams] = useSearchParams();
 
-  const qualityTags = useQualityTags();
-  const query = useMemo(
-    () => honouredLibraryQuery(parseLibraryQuery(searchParams), qualityTags),
-    [searchParams, qualityTags]
-  );
+  const query = useMemo(() => parseLibraryQuery(searchParams), [searchParams]);
 
   const setParam = useQueryParamWriter();
 
@@ -76,11 +63,5 @@ export function useLibraryQuery(): UseLibraryQueryResult {
     [setParam]
   );
 
-  const setQuality = useCallback(
-    (value: VideoQuality | undefined) =>
-      setParam('quality', value?.toLowerCase() ?? '', ''),
-    [setParam]
-  );
-
-  return { query, setSearch, setSort, setGenre, setRating, setQuality };
+  return { query, setSearch, setSort, setGenre, setRating };
 }

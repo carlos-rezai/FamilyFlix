@@ -2,13 +2,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 
 import type { LibraryQuery } from '@/types';
-import {
-  honouredLibraryQuery,
-  parseLibraryQuery,
-  toLibraryQueryParams,
-} from '@/utils';
-
-import { useQualityTags } from '@/App/useQualityTags/useQualityTags';
+import { parseLibraryQuery, toLibraryQueryParams } from '@/utils';
 
 export interface SettledLibraryQuery {
   /**
@@ -37,9 +31,8 @@ export interface SettledLibraryQuery {
  */
 export function useSettledLibraryQuery(): SettledLibraryQuery {
   const [searchParams] = useSearchParams();
-  const qualityTags = useQualityTags();
   const settled = toLibraryQueryParams(
-    honouredLibraryQuery(parseLibraryQuery(searchParams), qualityTags)
+    parseLibraryQuery(searchParams)
   ).toString();
   const query = useMemo(
     () => parseLibraryQuery(new URLSearchParams(settled)),

@@ -86,11 +86,6 @@ function seriesWhere(
     where.push(`${shownRatingSql('s', tmdbRatings)} >= ?`);
     params.push(query.minRating);
   }
-  if (query.minQuality !== undefined) {
-    // Ranked on the **Series quality**, so a stray 4K episode lifts nothing.
-    where.push(`${qualityRankSql(seriesQualitySql('s.id'))} <= ?`);
-    params.push(VIDEO_QUALITIES.indexOf(query.minQuality));
-  }
   return {
     sql: where.length > 0 ? `WHERE ${where.join(' AND ')}` : '',
     params,

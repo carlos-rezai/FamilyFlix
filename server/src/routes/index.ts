@@ -513,18 +513,8 @@ function parseMinRating(value: string): number | null {
 }
 
 /**
- * The rung of the **Quality ladder** a `?quality=` names, spelled lowercased
- * (`4k`, `1080p`), or `null` for a value off the ladder: `parseMinRating`'s
- * twin. The pill's `QUALITY_CUTOFFS` are that control's vocabulary, not this
- * endpoint's: the route stays a general API over every rung, SD included.
- */
-function parseMinQuality(value: string): VideoQuality | null {
-  return VIDEO_QUALITIES.find((rung) => rung.toLowerCase() === value) ?? null;
-}
-
-/**
  * The **Library query** a request carries — `q`, `genre`, `rating`,
- * `quality`, `sort` — read once for every screen that takes it, `/home` and
+ * `sort` — read once for every screen that takes it, `/home` and
  * `/series` alike; or `null` once a 400 has been answered for an unknown sort
  * or an off-scale minimum. An empty value is no parameter at all, and a
  * minimum of `0` is no minimum.
@@ -559,16 +549,6 @@ function libraryQueryOr400(req: Request, res: Response): LibraryQuery | null {
     if (minimum > 0) {
       query.minRating = minimum;
     }
-  }
-
-  const qualityParam = queryString(req.query.quality);
-  if (qualityParam !== undefined && qualityParam !== '') {
-    const minimum = parseMinQuality(qualityParam);
-    if (minimum === null) {
-      res.status(400).json({ error: `Invalid quality: ${qualityParam}` });
-      return null;
-    }
-    query.minQuality = minimum;
   }
 
   return query;
