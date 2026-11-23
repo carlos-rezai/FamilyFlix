@@ -56,6 +56,9 @@ src/
 shipping code. A wire call or hook moves up to `src/api/` or `src/hooks/` only
 when a second feature needs it; no feature imports another's wire.
 
+The README's _Project Structure_ names folders and rules, never units: touch
+it only when a top-level folder or one of its rules changes.
+
 ## Architectural Boundaries
 
 - **The server is organized by domain**, each owning its data access and logic.

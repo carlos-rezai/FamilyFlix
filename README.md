@@ -57,71 +57,32 @@ A rescan never adds a title twice: a video FamilyFlix already plays is known whe
 
 ## Development Methodology
 
-This project is built using a structured Claude Code skill workflow. Unlike a typical feature-by-feature build, FamilyFlix starts with a full Claude Design prototype: the browse grid, search, movie form, and player are designed up front, before any feature code is written, and that prototype becomes the visual reference for everything that follows.
+FamilyFlix was designed whole in Claude Design before any feature code was written. That prototype lives in `docs/handoff/` and is the spec: every feature is a 1:1 translation of it, and a change to how a screen looks is made in the prototype first. Each feature then runs the same Claude Code skill chain:
 
-ui-design-handoff → grill-me → design-log → ubiquitous-language → write-a-prd → prd-to-plan → prd-to-issues → tdd → build → request-refactor-plan → refactor
+grill-me (→ design-log → ubiquitous-language) → write-a-prd → prd-to-plan → prd-to-issues → tdd → build → request-refactor-plan → refactor
 
-**What this means in practice:**
+- **grill-me** interrogates the design until every assumption is settled, and records it as an immutable design log.
+- **ubiquitous-language** locks every domain term in `docs/ubiquitous-language.md`.
+- **write-a-prd** to **prd-to-issues** turn the decisions into GitHub issues before code is written.
+- **tdd** writes the failing tests (stopping at RED), **build** makes them pass, and the refactor pair closes the feature.
 
-- The Claude Design prototype is built first and lives in docs/handoff/; every feature is implemented against it, not designed ad hoc as it's built
-- Every feature starts with a grill-me session, where Claude interrogates the design until every assumption is resolved
-- A PRD is written and filed as a GitHub issue before implementation begins
-- Tests are written before code (TDD, stopping at RED)
-- All domain terminology is locked in docs/ubiquitous-language.md
-- Design decisions are recorded in docs/design-logs/
-- All UI code strictly follows Atomic Design; see Component Architecture below
-
-The `.claude/` folder contains all skill definitions. The `docs/` folder contains the full paper trail (PRDs, design logs, and the ubiquitous language dictionary), so the reasoning behind every decision is readable alongside the code.
+The skills live in `.claude/skills/`; `docs/` holds the full paper trail, so the reasoning behind every decision is readable beside the code.
 
 ---
 
 ## Component Architecture: Atomic Design
 
-Every piece of UI maps to a rung on the Atomic Design ladder, and nothing skips a rung:
+Every piece of UI maps to a rung, and nothing skips one:
 
-| Rung      | Folder        | Examples                       |
-| --------- | ------------- | ------------------------------ |
-| Atoms     | `primitives/` | Button, Input, Text, Icon      |
-| Molecules | `components/` | PosterCard, Modal, ProgressBar |
-| Organisms | `features/`   | LibraryGrid, MovieForm         |
-| Templates | `layouts/`    | MainLayout                     |
-| Pages     | `pages/`      | LibraryPage, MoviePage         |
+| Rung      | Folder        | Rule                                             |
+| --------- | ------------- | ------------------------------------------------ |
+| Atoms     | `primitives/` | Dumb UI, no business logic, no data fetching     |
+| Molecules | `components/` | Composed primitives, no domain knowledge         |
+| Organisms | `features/`   | Domain UI + logic: owns its hooks, types, `api/` |
+| Templates | `layouts/`    | Page chrome, structure only                      |
+| Pages     | `pages/`      | Route views, composition only                    |
 
-Every component, at every rung, follows the same three-file shape:
-
-```
-ComponentName/
-├── ComponentName.tsx
-├── ComponentName.test.tsx
-└── ComponentName.styles.ts
-```
-
-There is no per-component `index.ts`. Category folders (`primitives/`, `components/`, `utils/`, `tokens/`) carry the one barrel, re-exporting each unit straight from its file, so components are imported from the category, not from their individual folder.
-
-Three folders under `src/` sit outside the ladder, because what they hold is not UI:
-
-| Folder          | Purpose              | Rule                                                           |
-| --------------- | -------------------- | -------------------------------------------------------------- |
-| `api/`          | Shared wire calls    | One folder per call with its test. No barrel; imported by path |
-| `App/`          | Router and providers | The shell every page renders inside. No domain logic           |
-| `test-support/` | Shared test doubles  | Never imported by shipping code                                |
-
-`server/src/` carries the mirror of the last of those. It is otherwise organised
-strictly by domain (`library/`, `media/`, `import-export/`, `playback/`, with
-`db/` as shared infrastructure and no miscellaneous catch-all), and that rule is
-about **backend logic** having a domain home. Test doubles are not backend logic, so
-`server/src/test-support/` gets the same one-line rule the frontend's rung has:
-shared test doubles, one folder per unit with its test, never imported by
-shipping code.
-
-`api/` is the narrow one and the rule is what keeps it narrow: a call lives there
-only once **two or more features** make it, because the alternative is one feature
-importing another's wire. A call with a single caller stays with the feature that
-makes it, and moves up only when a second feature asks for it.
-
----
-
-Every feature is a 1:1 translation of the canonical prototype in docs/handoff/: the prototype is designed and resolved first, then implemented against, never redesigned mid-build.
+Each unit is one folder with its companions beside it (`Button/Button.tsx`, `Button.test.tsx`, `Button.styles.ts`) and no `index.ts` of its own; only `primitives/`, `components/`, `utils/` and `tokens/` have a barrel.
 
 ---
 
@@ -143,97 +104,39 @@ Every feature is a 1:1 translation of the canonical prototype in docs/handoff/: 
 
 ```
 familyflix/
-├── .claude/            # Claude Code skills and CLAUDE.md
-├── electron/           # The Desktop shell's main process: main.ts, wiring only, over one unit per decision
-│   ├── shellMode/ shellPaths/ # dev / start / installed, read once; every path the shell and the server need, for that mode
-│   ├── serverLaunch/ serverHandle/ awaitExitOrKill/ # the entry and environment off ShellPaths, fork the bundled server, wait for ready, shut it down or kill it
-│   ├── quitAfterShutdown/ reloadOnce/ loadRenderer/ splashPage/ # the quit gate, one reload after a crash, loading until Vite answers, the Start-up splash the window opens over
-│   ├── rendererUrl/ windowPolicy/ downloadPath/     # where the window points, what it may open, where a download lands
-│   ├── pickFolders/        # the native folder dialog's answer → the paths to add, behind the preload's folders bridge and its Path bridge (a picked file's absolute path)
-│   ├── shellDialogs/ shellLog/ appIdentity/         # the two failure dialogs, the Shell log, the taskbar identity
-│   ├── assets/             # icon.ico, the App mark, and its guard
-│   ├── packaging/          # builderConfig.json, ffmpegPin.json, and the guard that holds them to the shell
-│   ├── scripts/            # buildElectron.mjs, buildIcon.mjs, fetchNative.mjs, fetchFfmpeg.mjs, packageApp.mjs; verifyDigest/ and zipEntries/, pure units the scripts import
-│   ├── test-support/       # fakeServerChild, never imported by shipping code
-│   └── .native/ .ffmpeg/ dist/ # gitignored: the Electron-ABI binding, the Default component, the two bundles
-├── server/             # Express backend
-│   └── src/
-│       ├── routes/         # HTTP layer only: parses requests, calls a domain module; enrichmentBody/ reads a Sync's start and Apply choices, seriesFormBody/ a series save, foundPathRefusal/ a found path both adds read, heldVideoRefusal/ the Held video refusal both adds read; loopbackGuard/ and rendererRouter/ stand in front of the API
-│       ├── library/        # movie CRUD, SQLite queries, watch-state + resume position, the household's settings and the TMDB key and stamp beside them; heldArt, the Art sweep's read of every held picture
-│       │   ├── enrich/            # a Sync's film writes, the counts over both kinds, the Source folders, and Full details spelled once
-│       │   ├── folders/           # the Library folders: the list, its title counts, the remove that keeps the titles, and folderOverlap
-│       │   ├── holding/           # the Held video rule's read: the title a video already belongs to
-│       │   ├── leftOut/           # the Left-out videos a scan skips, and titleVideos, the ones a keep-files Delete records
-│       │   ├── changes/           # which write touches which Library sheet: the change listener and its touch wrappers
-│       │   └── series/            # series storage, one unit per concern: read, browse, write, watch, curation, enrich, nextEpisodeOf, and yearSpan, the one reading of a Year range
-│       ├── media/          # folder scanning, copying files into managed storage (a season's folder among them), a Sync's art (storeNamed, into a title's Media folder or a season under it; readStored), subtitle detection, removing a title's Media folder after a delete, space used; the Art fit at every image write (storeNamed, storeUpload, copyIn), artBox (the Art box by shape), pictureSize (a header's Picture size, and pictureFormat), fitStored (one held picture fitted in place) and createArtSweep (the Art sweep)
-│       │   ├── readableFolder/        # whether a path is a folder the app can read, never throwing
-│       │   ├── walkLibraryFolder/     # a Library folder → its Title folders, Layout warnings and Meta/ sheet
-│       │   ├── readTitleFolder/       # one Title folder by the layout: a film, a series of Season folders, or left out
-│       │   ├── folderKeyOf/           # the Folder key: a Title folder's name, its year read off a trailing (YYYY), spelled back, and compared folded, NFC then case
-│       │   ├── seasonNumberOf/        # the Season folder: Season NN read as its number, and spelled back
-│       │   ├── folderLayout/          # the layout's folder and sheet names, and the image role and track name rules
-│       │   ├── detectSubtitleLanguage/ # the language tag in a subtitle's name
-│       │   ├── episodeTag/            # the Episode tag: read off a filename, and spelled back as S01E03
-│       │   ├── spaceUsed/             # the bytes under the media root, never throwing
-│       │   ├── writableFolder/        # whether a folder can be written into, never throwing
-│       │   └── fileKinds/             # what an image, a subtitle and a video may be called
-│       ├── import-export/  # the bulk importer and the exporter: readSheet, sheetDialect (the Sheet dialect), titleKey, matchRows, numberShow, admitFolder, heldValues, readShowFolder, listedFolderOf, foldersToScan, heldByVideo, placeFoundVideo, leftOutEntries, placeTitleFolder, placeShowFolder, placeFilmFolder, copyFoundEpisodes, planSheetFields, plannedSheetFill, createImporter (+ its film and series fixtures), writeSheet, exportName, exportRows, sourceFoldersOf (each title's Source folder, both sheets' Folder key), exportSummary, writeExport, filePlan (the Export's File plan), createLibrarySheet (the Library sheet writer), layoutCells (the Library sheet's Path cells), pathCellFills (a path cell fills an empty place), createLayoutFill and fillLayout (the Layout fill)
-│       ├── playback/       # the Playback component (probe, spawn, decoders), the Component slot it lives in (componentSlot, componentBinary, verifyComponent), the path choice, streaming, subtitle parsing, derivedVideoFacts and qualityOf (a video's runtime and Video quality from one probe), the Quality sweep, capabilities(component); fitArgs and fitArt, a picture brought within its Art box under the Fit budget
-│       ├── enrichment/     # the fifth domain, the one network client: tmdbClient, tmdbAuth, tmdbGenres, matchScore, fetchedFields, currentFields, planFields, planEpisode, plannedEnrichment, decisionFace, createEnrichment
-│       ├── db/             # SQLite connection + schema/migrations (3: the settings table; 4: series and episodes; 5: original title, TMDB score and source folder on both titles, stills on episodes; 6: the Library folders; 7: the old library root carried onto them; 8 and 9: the Source file an episode and a film remember across scans; 10: season posters); the Electron-ABI binding when FAMILYFLIX_SQLITE_BINDING names one
-│       ├── shell/          # the server's half of the shell seam: shellHandshake, listen (the loopback bind and boundPort), orderedShutdown
-│       └── test-support/   # Shared test doubles, never imported by shipping code (heldCopy, libraryFixture, seriesFixture, fixedSlot, componentDir, fakeTmdb, offlineTmdb, pictureBytes, unfittedArt, …)
-├── src/                # React frontend
-│   ├── App/            # Router and app-level providers
-│   │   ├── DisplayPreferenceProvider/ # the household's display preferences, held app-wide; useDisplayPreference, useTmdbRatings, useQualityTags and useCardPreferences read them, saveUltrawideMargins, saveTmdbRatings and saveQualityTags write them
-│   │   ├── ContentFrame/     # the Content frame: every route but the player's, capped at 1920px and centred while Ultrawide margins is on
-│   │   ├── SnackbarProvider/ # the Snackbar stack: the queue, the timers, the fixed bottom-right column; an action persists, everything else dies at 5s
-│   │   └── useSnackbar/      # `{ notify, dismiss }` off the stack, and SnackbarNotice
-│   ├── assets/         # Static images, fonts, icons
-│   ├── styles/         # Global CSS reset and Reduced motion, visuallyHidden; busyRow (a Busy row's containing block, lock and loader size); theme.ts, the createTheme(accent) factory spreading the Accent scale; interactionStates/: controlStates(press), cardLift, cardFocus, and the structural guard in its test
-│   ├── tokens/         # Colors, spacing, typography, breakpoints, motion, layout (the Content measure)
-│   ├── primitives/     # Atomic UI elements (Button, Input, Text, Toggle, Artwork and the Wordmark, LogoLoader (the FF mark as a loader), the Icon glyphs: the Snackbar's four, the FAB's two and enrichment's five among them), each with .tsx, .test.tsx, .styles.ts
-│   ├── components/     # Composed UI blocks (PosterCard, Modal, ProgressBar, CreditsRow, SeasonCard, EpisodeRow, PillTabs, EpisodeFileRow, ChoiceCard, ImportModeChoice, BusyOverlay (a Busy row's face once Shown), DialogLoader (the layer Modal's loader draws)), same three-file shape
-│   │   ├── Modal/          # the scrimmed card every dialog is drawn on; owns its own dismissal and focus; `bare` for a card that is its children alone
-│   │   ├── LogConsole/     # the import's Activity log, pinned to its bottom
-│   │   ├── Snackbar/       # the transient bottom-right card, one of four variants; presentational, as the stack above owns the timing
-│   │   ├── Fab/            # the FAB: the accent circle in the bottom-right corner, one of two glyphs; presentational, as it does not know there is a threshold
-│   │   └── BackToTop/      # the control over a scrolling container: the Scroll threshold, the passive listener, the read on attach, the press; mounts the FAB or nothing
-│   ├── features/       # Domain UI + logic co-located
-│   │   ├── library/        # browse grid, genre rows, and the Movies / Series tabs, with the Series tab under series/; StartTabGate and useStartTabSettled, which open the app on the Start tab
-│   │   ├── search/          # search-as-you-type, filters
-│   │   ├── movie-detail/    # the movie page, its ⋯ menu, and the Delete dialog the menu opens
-│   │   │   ├── EditMenu/          # Edit details, and the red Delete row
-│   │   │   ├── DeleteMovieDialog/ # Modal + the fixed copy + Delete movie / Cancel
-│   │   │   ├── useDeleteMovie/    # sends the delete, then steps back through history
-│   │   │   └── api/               # saveRating, deleteMovie, one caller each
-│   │   ├── series/          # the Series page and the Season page: SeriesDetail, SeasonEpisodes, SeriesMetaLine, LoadingSeries, useSeriesRead and the two page hooks, seriesView, seasonView
-│   │   ├── player/          # built-in video player for any Playable, the Audio picker (AudioMenu) and the Subtitle picker (SubtitleMenu, subtitleLabel), their Audio and Subtitle choices held by PlayerScreen for the sitting, subtitles (useSubtitles reads the preferred language), resume, and Up next (UpNextCard, useUpNext)
-│   │   ├── movie-form/      # Add a movie or a series, Edit a movie: one form, manual pickers, the Kind tabs; MovieForm, MovieFormFiles and SeriesFormFiles over filesCard.styles.ts and filesCard.ts, useMovieForm, useEpisodeList, useImportMode, useShowFolderPick, readEpisodeTag, titleFromFilename, and createSeries, readShowFolder and containingFolder in its api/; and Resolve, the Import context
-│   │   ├── import-export/   # the bulk importer's screen: ImportFlow and its three steps, useImportRun, importView; the Library folders page: LibraryFolders, FolderRow, useLibraryFolders, useFolderScan; and the Export dialog: ExportModal, useExport, startExport in its api/; pathField.styles.ts, the path row both draw
-│   │   ├── enrichment/      # the Sync with TMDB: EnrichmentFlow and its three steps, SetupBanner, ScopeCard, SavedRow, DecisionRow over CandidatePicker, TitleSearch and FieldDiff, useEnrichmentRun, enrichmentView, and its api/
-│   │   ├── settings/        # the Maintainer's hub: SettingsHeader; LibrarySection + ActionRow; PlaybackSection (the Codecs row onto the Codecs page); DisplaySection (the Ultrawide margins and TMDB ratings Toggles, and the Start on Pill tabs); CodecManager (the Codecs page's screen) over CodecRow, ComponentDropZone, codecView, zoneFace; NavigationRow, the row both the Codecs row and the sync row draw through; NetworkSection + useTmdbKey + syncLine; StorageSection; AboutSection; useCapabilities, useSettings, useStorageReport; and its api/
-│   │   │   └── section.styles.ts # the Group heading, the Section card, the divider, an item's title and lede, and the row furniture: what every group draws with
-│   │   ├── maintainer.styles.ts # the header and the captioned field the Maintainer's screens share
-│   │   └── collections/     # playlists (roadmap)
-│   ├── layouts/         # Page chrome (MainLayout mounts Back-to-top over its body, on the ref useRestoredScroll attached)
-│   ├── pages/           # Route-level views, composition only (ImportPage, EnrichmentPage, CodecsPage and LibraryFoldersPage among them)
-│   ├── api/             # Wire calls two or more features share (saveFavorite, fetchMovie, saveWatched, dismissProblem, fetchSettings, saveSeriesFavorite, saveEpisodeWatched, fetchEnrichmentSummary, fetchTmdbKey; warmArt, the Warm start a Poster card's onWarm calls)
-│   ├── hooks/            # Global shared hooks (useGoBack(fallback): the one Back rule, a history step with the screen's own landing behind it; useRestoredScroll, useOptimisticEdit, useEnrichmentSummary, useLibraryTab, the Library tab the URL names, useImageFallback, the one failed-url rule for a poster or a still, useDelayedBusy, the Loader timing every action loader keeps, useDelayedBusyByKey, the same timing per row with a bulk press's cover, and useBusyRow, the press a Busy row remembers and refuses; useDecodedArt, a Detail backdrop's url only once decoded)
-│   ├── types/            # Shared TypeScript interfaces (import.ts, export.ts, settings.ts, playback.ts, series.ts, enrichment.ts, read by both build targets; form.ts, the Movie form's shapes; shell.ts, the Shell handshake, read by the server and the shell; busy.ts, the Busy phase; appVersion.d.ts)
-│   ├── utils/            # Pure helper functions (formatBytes, formatElapsed, formatEpisodeTag, moviePath, enrichPath, seriesPath, seasonPath, episodePlayPath, imageUrl, shownRating, tmdbMarks, accentScale, isLibraryTab, libraryTabOptions and inTrackOrder among them)
-│   └── test-support/     # Shared test doubles (fakeResponse, heldFetch and advanceClock, fakeFolderBridge, makeSeriesDetail, makeContinueCardMovie, makeEnrichmentRun, stubScrollMetrics, stubScrollTo, comesBefore, snackbarStack, LocationProbe and its navigationType reader, shippingSources, resolvedStyle and normCss, visibleLabel and its shownText, stubImage, …)
-├── release/            # gitignored: the Installer or the AppImage, and win-unpacked/ or linux-unpacked/, the Packaged layout
+├── electron/          # the desktop shell: main.ts and preload.ts wire one small unit per decision
+├── server/src/
+│   ├── routes/        # HTTP only: parse, call a domain, respond
+│   ├── library/       # titles, series, watch state, settings, Library folders
+│   ├── media/         # every file FamilyFlix touches: scans, copies, art, subtitles
+│   ├── import-export/ # bulk import, the Library sheet, the Layout fill, Export
+│   ├── playback/      # FFmpeg: probing, streaming, remux and transcode, art fitting
+│   ├── enrichment/    # TMDB, the only network client
+│   ├── db/            # SQLite connection and migrations
+│   └── shell/         # the server's half of the shell handshake and shutdown
+├── src/
+│   ├── primitives/ components/ features/ layouts/ pages/   # the Atomic Design rungs
+│   ├── api/ hooks/    # wire calls and hooks two or more features share
+│   ├── App/           # router and app-wide providers
+│   ├── tokens/ styles/ utils/ types/
+│   └── test-support/  # test doubles (also in server/src/ and electron/)
 └── docs/
-    ├── design-logs/    # Immutable feature design snapshots
-    ├── PRDs/           # Product requirements and implementation plans
-    ├── refactor-plans/ # Refactor RFCs filed as work items
-    ├── handoff/        # Canonical design prototype: spec, screens, brand
+    ├── handoff/       # the prototype: the visual spec
+    ├── design-logs/   # one immutable grill-me record per feature
+    ├── PRDs/ refactor-plans/
     ├── ubiquitous-language.md
-    ├── feature-checklist.md  # Every feature, shipped and planned, in build order
+    ├── feature-checklist.md
     └── dev-journal.md
 ```
+
+The rules that hold the shape (the full set is in [`.claude/CLAUDE.md`](./.claude/CLAUDE.md)):
+
+- **The server is organised by domain.** Each domain owns its data and logic, and is injected into the router; there is no `services/` or `lib/` catch-all. Logic that fits no domain earns a new one.
+- **`src/` never touches SQLite or the filesystem.** All file access goes through `server/src/media/`.
+- **TMDB is the only network call**, and only Enrichment makes it.
+- **FamilyFlix deletes nothing outside its own media folder.** The only writers into a Library folder are the Layout fill, which only adds what is missing, and the Library sheet writer.
+- **A shared call or hook moves up** to `src/api/` or `src/hooks/` only when a second feature needs it; no feature imports another's.
+- **`test-support/` is never imported by shipping code**, and every `src/utils/` function has a test.
 
 ---
 
@@ -360,7 +263,7 @@ Every shipped and planned feature, in build order, lives in the [Feature Checkli
 - [Design Logs](./docs/design-logs/)
 - [PRDs](./docs/PRDs/)
 - [Refactor Plans](./docs/refactor-plans/)
-- [Design Handoff](./docs/handoff/HANDOFF.md)
+- [Design Handoff](./docs/handoff/README.md)
 - [Feature Checklist](./docs/feature-checklist.md): every feature, shipped and planned, in build order
 - [Dev Journal](./docs/dev-journal.md)
 - [Release Checklist](./docs/release-checklist.md): the Package smoke a release is ticked against
