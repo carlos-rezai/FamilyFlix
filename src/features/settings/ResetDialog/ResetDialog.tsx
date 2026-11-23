@@ -16,6 +16,7 @@ const WHAT_GOES = [
 /** Everything it leaves, so the maintainer is sure their own files are safe. */
 const WHAT_STAYS = [
   'Your library folders and every file in them',
+  'Each library folder’s _meta sheet: scanning the folder again brings its titles back as they were (delete _meta first to start clean)',
   'Your exports',
   'FamilyFlix itself',
 ];

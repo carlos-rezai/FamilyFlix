@@ -13,7 +13,8 @@ import {
 /**
  * _What the scanner accepts_, from `feat.ImportFlow.dc.html`: the three folder
  * shapes in mono with the prototype's backslashes — the loose shape's note in
- * the sans face — then the folder-first rule, its two tags in mono. No props:
+ * the sans face — then the folder-first rule, its two tags in mono, and the
+ * **Sheet note** in the rule's style, its path in mono. No props:
  * Import setup and the Library folders page's group **Scan** draw the same
  * block.
  */
@@ -37,6 +38,12 @@ export function FolderShapes() {
           Season and episode numbers come from the folder first, then the
           filename (<Mono>S01E03</Mono>, <Mono>1x03</Mono>). Anything it can’t
           place lands in the review list.
+        </AcceptsRule>
+        <AcceptsRule>
+          FamilyFlix keeps a sheet of each folder’s titles in{' '}
+          <Mono>{'_meta\\familyflix-library.csv'}</Mono> and reads it first, so
+          a scan after a reset or on another computer brings every title back as
+          it was, ratings, hearts and what’s been watched included.
         </AcceptsRule>
       </AcceptsBody>
     </Accepts>
