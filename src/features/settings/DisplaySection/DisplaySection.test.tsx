@@ -493,8 +493,9 @@ describe('DisplaySection: Start on, the Pill tabs', () => {
  */
 const QUALITY_ROUTE = '/api/settings/quality-tags';
 const QUALITY_TITLE = 'Show video quality';
+// 73, Header fit (issue #696): the line drops the quality filter's sentence.
 const QUALITY_LINE =
-  'Tag each poster with how sharp its video is: 4K, 1080p, 720p, 480p or SD. Turning this off also hides the quality filter.';
+  'Tag each poster with how sharp its video is: 4K, 1080p, 720p, 480p or SD.';
 
 /** A household whose _Show video quality_ reads `on`. */
 const withQualityTags = (on: boolean): Settings =>

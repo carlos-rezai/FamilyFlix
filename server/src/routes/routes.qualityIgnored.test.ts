@@ -1,13 +1,9 @@
 // @vitest-environment node
 //
-// 70, Video quality, Phase 7: the filter (issue #670).
-//
-// Every route that reads `?rating=` also reads `?quality=`, the rung
-// lowercased (`4k`, `1080p`, `720p`, `480p`), as the **Library query**'s
-// `minQuality`. Movies are kept on their own `video_quality` and series on
-// their **Series quality**, both ranked on the **Quality ladder**, so a rung
-// keeps every title at or above it and drops the unmeasured ones; the filter
-// combines with genre and rating. A value off the ladder is a 400.
+// 73, Header fit, Phase 3 (issue #696): the filter by quality is gone. A
+// held `?quality=`, a rung or not, is read past as any unknown parameter:
+// every browse answers 200 with the whole library, replacing 70's filter
+// and its `400 Invalid quality`.
 //
 // Over a real listener and a real `:memory:` library, `routes.movieGrid`'s
 // harness.
@@ -59,7 +55,7 @@ function freshApi() {
   const storage = createSqliteStorage(':memory:');
   storages.push(storage);
 
-  const media = join(sandboxRoot('familyflix-quality-filter-'), 'media');
+  const media = join(sandboxRoot('familyflix-quality-ignored-'), 'media');
   mkdirSync(media);
   const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
@@ -158,143 +154,74 @@ function seedSeries(storage: LibraryStorage) {
   );
 }
 
-async function moviesAt(baseUrl: string, search: string): Promise<string[]> {
-  const response = await fetch(`${baseUrl}/api/movies?sort=a-z&${search}`);
+const ALL_FILMS = [
+  'Film 1080p',
+  'Film 480p',
+  'Film 4K',
+  'Film 720p',
+  'Film SD',
+  'Film unmeasured',
+];
+
+const ALL_SERIES = ['Show 480p', 'Show 4K', 'Show 720p', 'Show unmeasured'];
+
+async function ok<T>(baseUrl: string, path: string): Promise<T> {
+  const response = await fetch(`${baseUrl}${path}`);
   expect(response.status).toBe(200);
-  const body = (await response.json()) as MovieGridPayload;
-  return body.movies.map((movie) => movie.title);
+  return (await response.json()) as T;
 }
 
-async function seriesAt(baseUrl: string, search: string): Promise<string[]> {
-  const response = await fetch(`${baseUrl}/api/series?sort=a-z&${search}`);
-  expect(response.status).toBe(200);
-  const body = (await response.json()) as SeriesHomePayload;
-  return body.series.map((series) => series.title);
-}
-
-describe('?quality= on the movies', () => {
-  it('keeps the films at or above the rung and drops the unmeasured ones', async () => {
+describe('a held ?quality= on the movies', () => {
+  it('answers GET /api/home?quality=4k with the whole library', async () => {
     const { baseUrl, storage } = freshApi();
     seedFilms(storage);
 
-    expect(await moviesAt(baseUrl, 'quality=4k')).toEqual(['Film 4K']);
-    expect(await moviesAt(baseUrl, 'quality=1080p')).toEqual([
-      'Film 1080p',
-      'Film 4K',
-    ]);
-    expect(await moviesAt(baseUrl, 'quality=720p')).toEqual([
-      'Film 1080p',
-      'Film 4K',
-      'Film 720p',
-    ]);
-    expect(await moviesAt(baseUrl, 'quality=480p')).toEqual([
-      'Film 1080p',
-      'Film 480p',
-      'Film 4K',
-      'Film 720p',
-    ]);
-  });
+    const body = await ok<HomePayload>(baseUrl, '/api/home?quality=4k');
 
-  it('narrows the home rows and its sections the same way', async () => {
-    const { baseUrl, storage } = freshApi();
-    seedFilms(storage);
-
-    const response = await fetch(`${baseUrl}/api/home?quality=1080p`);
-
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as HomePayload;
     const comedy = body.rows.find((row) => row.genre === 'Comedy');
-    expect(comedy?.movies.map((movie) => movie.title).sort()).toEqual([
-      'Film 1080p',
-      'Film 4K',
-    ]);
+    expect(comedy?.movies.map((movie) => movie.title).sort()).toEqual(
+      ALL_FILMS
+    );
   });
 
-  it('combines with the genre and the rating', async () => {
+  it('answers GET /api/movies?quality=1080p with every film', async () => {
     const { baseUrl, storage } = freshApi();
     seedFilms(storage);
-    storage.addMovie(
-      newMovie({
-        title: 'Weepie 4K',
-        videoPath: 'Weepie/weepie.mkv',
-        genres: ['Drama'],
-        rating: 8,
-        videoQuality: '4K',
-      })
-    );
-    storage.addMovie(
-      newMovie({
-        title: 'Low-rated 4K',
-        videoPath: 'Low/low.mkv',
-        genres: ['Comedy'],
-        rating: 4,
-        videoQuality: '4K',
-      })
+
+    const body = await ok<MovieGridPayload>(
+      baseUrl,
+      '/api/movies?sort=a-z&quality=1080p'
     );
 
-    expect(
-      await moviesAt(baseUrl, 'quality=1080p&genre=Comedy&rating=8')
-    ).toEqual(['Film 1080p', 'Film 4K']);
+    expect(body.movies.map((movie) => movie.title)).toEqual(ALL_FILMS);
   });
 });
 
-describe('?quality= on the series', () => {
-  it('keeps the series whose Series quality is at or above the rung', async () => {
+describe('a held ?quality= on the series', () => {
+  it('answers GET /api/series?quality=nope with the whole library', async () => {
     const { baseUrl, storage } = freshApi();
     seedSeries(storage);
 
-    expect(await seriesAt(baseUrl, 'quality=4k')).toEqual(['Show 4K']);
-    expect(await seriesAt(baseUrl, 'quality=720p')).toEqual([
-      'Show 4K',
-      'Show 720p',
-    ]);
-    expect(await seriesAt(baseUrl, 'quality=480p')).toEqual([
-      'Show 480p',
-      'Show 4K',
-      'Show 720p',
-    ]);
+    const body = await ok<SeriesHomePayload>(
+      baseUrl,
+      '/api/series?sort=a-z&quality=nope'
+    );
+
+    expect(body.series.map((series) => series.title)).toEqual(ALL_SERIES);
   });
 
-  it('narrows the By genre rows the same way, combined with genre and rating', async () => {
+  it('answers GET /api/series/rows?quality=4k with every series', async () => {
     const { baseUrl, storage } = freshApi();
     seedSeries(storage);
-    storage.addSeries(
-      { title: 'Drama 4K', genres: ['Drama'], rating: 8 },
-      episodes('Drama 4K', ['4K'])
-    );
-    storage.addSeries(
-      { title: 'Low-rated 4K', genres: ['Comedy'], rating: 4 },
-      episodes('Low-rated 4K', ['4K'])
+
+    const body = await ok<SeriesRowsPayload>(
+      baseUrl,
+      '/api/series/rows?sort=a-z&quality=4k'
     );
 
-    const response = await fetch(
-      `${baseUrl}/api/series/rows?sort=a-z&quality=720p&genre=Comedy&rating=8`
-    );
-
-    expect(response.status).toBe(200);
-    const body = (await response.json()) as SeriesRowsPayload;
     expect(body.rows.map((row) => row.genre)).toEqual(['Comedy']);
-    expect(body.rows[0].series.map((series) => series.title)).toEqual([
-      'Show 4K',
-      'Show 720p',
-    ]);
-  });
-});
-
-describe('?quality= off the ladder', () => {
-  it.each([
-    ['/api/home', '8k'],
-    ['/api/movies', '1080'],
-    ['/api/series', 'best'],
-    ['/api/series/rows', '2160p'],
-  ])('answers %s?quality=%s with 400 Invalid quality', async (path, value) => {
-    const { baseUrl } = freshApi();
-
-    const response = await fetch(`${baseUrl}${path}?quality=${value}`);
-
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({
-      error: `Invalid quality: ${value}`,
-    });
+    expect(body.rows[0].series.map((series) => series.title)).toEqual(
+      ALL_SERIES
+    );
   });
 });

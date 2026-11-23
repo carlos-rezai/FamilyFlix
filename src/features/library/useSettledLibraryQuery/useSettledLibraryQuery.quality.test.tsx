@@ -9,59 +9,33 @@ import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceAp
 import { LocationProbe, url } from '@/test-support/LocationProbe/LocationProbe';
 
 /**
- * 70, Video quality, Phase 7 (issue #670): the bodies' request carries
- * `?quality=` only while _Show video quality_ is on, so a link carrying it
- * shows the whole library while the toggle is off; the URL is never rewritten,
- * so turning the toggle back on asks for the filter again.
+ * 73, Header fit, Phase 3 (issue #696): the filter by quality is gone. A
+ * link carrying `?quality=` loads the whole library even with _Show video
+ * quality_ on: the parameter never reaches the load, and stays on the URL.
  */
-function renderAt(entry: string, qualityTags: boolean) {
-  const preference = { qualityTags };
+function renderAt(entry: string) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <MemoryRouter initialEntries={[entry]}>
       <DisplayPreferenceContext.Provider
-        value={makeDisplayPreferenceApi({
-          qualityTags: preference.qualityTags,
-        })}
+        value={makeDisplayPreferenceApi({ qualityTags: true })}
       >
         {children}
         <LocationProbe />
       </DisplayPreferenceContext.Provider>
     </MemoryRouter>
   );
-  const view = renderHook(() => useSettledLibraryQuery(), { wrapper });
-  const flip = (next: boolean) => {
-    preference.qualityTags = next;
-    view.rerender();
-  };
-  return { ...view, flip };
+  return renderHook(() => useSettledLibraryQuery(), { wrapper });
 }
 
-describe('useSettledLibraryQuery — the minimum quality', () => {
-  it('carries ?quality= into the load while the toggle is on', () => {
-    const { result } = renderAt('/?genre=Comedy&quality=1080p', true);
+describe('useSettledLibraryQuery — a held ?quality=', () => {
+  it('leaves it out of the load with the toggle on, the URL untouched', () => {
+    const { result } = renderAt('/?genre=Comedy&quality=1080p');
 
+    expect(result.current.settled).toBe('genre=Comedy');
     expect(result.current.query).toEqual({
       sort: 'recently-added',
       genre: 'Comedy',
-      minQuality: '1080p',
     });
-    expect(
-      Object.fromEntries(new URLSearchParams(result.current.settled))
-    ).toEqual({ genre: 'Comedy', quality: '1080p' });
-  });
-
-  it('leaves it out while the toggle is off, the URL untouched, and brings it back when on', () => {
-    const { result, flip } = renderAt('/?quality=4k', true);
-    expect(result.current.settled).toBe('quality=4k');
-
-    flip(false);
-
-    expect(result.current.settled).toBe('');
-    expect(result.current.query.minQuality).toBeUndefined();
-    expect(url()).toBe('/?quality=4k');
-
-    flip(true);
-
-    expect(result.current.settled).toBe('quality=4k');
+    expect(url()).toBe('/?genre=Comedy&quality=1080p');
   });
 });
