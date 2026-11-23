@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { ContinueCard, PosterCard } from '@/components';
 import { ChevronLeftIcon, ChevronRightIcon } from '@/primitives';
 import type { ContinueCardMovie, PosterCardMovie } from '@/types';
+import { warmArt } from '@/api/warmArt/warmArt';
 import {
   CARD_WIDTH,
   Root,
@@ -175,6 +176,7 @@ export function CardCarousel(props: CardCarouselProps) {
                   movie={item.movie}
                   onOpen={item.onOpen}
                   onToggleFavorite={item.onToggleFavorite}
+                  onWarm={() => void warmArt(item.movie.backdropUrl)}
                 />
               )
             )}

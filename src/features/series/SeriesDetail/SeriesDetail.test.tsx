@@ -32,6 +32,7 @@ import { paintedBackgrounds } from '@/test-support/paintedBackgrounds/paintedBac
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
 import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayPreference';
 import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
+import { stubImage } from '@/test-support/stubImage/stubImage';
 
 /**
  * 22 — Series (TV), Phase 2 (issue #191): the series page's organism.
@@ -301,6 +302,9 @@ describe('SeriesDetail — the series on screen', () => {
  * never captioned and never branded.
  */
 describe('SeriesDetail — the Default poster in the poster frame', () => {
+  // The backdrop waits on a decode jsdom's `Image` cannot give.
+  stubImage();
+
   it('captions a backdrop-only show’s poster frame and draws the Wordmark there', async () => {
     serve(unstarted({ posterPath: null, backdropPath: 'harbor/backdrop.jpg' }));
 
@@ -733,16 +737,22 @@ describe('SeriesDetail — the heart', () => {
  * art's geometry is the molecule's suite's to prove, not this one's.
  */
 describe('SeriesDetail — the Detail backdrop', () => {
+  // The backdrop is drawn once decoded, which the stub lets each test do.
+  // `warmArt` keeps what it warmed, or is warming, for the life of the page,
+  // so each test names a backdrop of its own.
+  const images = stubImage();
+
   it('draws its backdrop under the Backdrop veil’s accent wash', async () => {
-    serve(unstarted({ backdropPath: 'harbor/backdrop.jpg' }));
+    serve(unstarted({ backdropPath: 'veil/backdrop.jpg' }));
 
     const { container } = renderDetail();
     await findTitle('Harbor & Vine');
+    await images.decode('/api/images/veil/backdrop.jpg');
 
     const art = Array.from(container.querySelectorAll('*')).find((el) =>
       window
         .getComputedStyle(el)
-        .backgroundImage.includes('/api/images/harbor/backdrop.jpg')
+        .backgroundImage.includes('/api/images/veil/backdrop.jpg')
     );
     const layer = art?.closest('[aria-hidden="true"]');
     expect(layer).toBeTruthy();
@@ -754,15 +764,16 @@ describe('SeriesDetail — the Detail backdrop', () => {
   });
 
   it('draws exactly one Detail backdrop', async () => {
-    serve(unstarted({ backdropPath: 'harbor/backdrop.jpg' }));
+    serve(unstarted({ backdropPath: 'onlyone/backdrop.jpg' }));
 
     const { container } = renderDetail();
     await findTitle('Harbor & Vine');
+    await images.decode('/api/images/onlyone/backdrop.jpg');
 
     const arts = Array.from(container.querySelectorAll('*')).filter((el) =>
       window
         .getComputedStyle(el)
-        .backgroundImage.includes('/api/images/harbor/backdrop.jpg')
+        .backgroundImage.includes('/api/images/onlyone/backdrop.jpg')
     );
     expect(arts).toHaveLength(1);
     expect(arts[0]?.closest('[aria-hidden="true"]')).toBeTruthy();

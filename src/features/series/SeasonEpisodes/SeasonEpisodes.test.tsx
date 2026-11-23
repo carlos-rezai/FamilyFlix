@@ -33,6 +33,7 @@ import {
   okResponse,
   serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { stubImage } from '@/test-support/stubImage/stubImage';
 
 /**
  * 22 — Series (TV), Phase 3 (issue #193): the season page's organism.
@@ -717,23 +718,29 @@ describe('SeasonEpisodes — no ⋯ menu', () => {
  * The veil and the art's geometry are the molecule's suite's to prove.
  */
 describe('SeasonEpisodes — the Detail backdrop', () => {
+  // The backdrop is drawn once decoded, which the stub lets the test do.
+  // `warmArt` keeps what it warmed for the life of the page, so the test
+  // names a backdrop of its own.
+  const images = stubImage();
+
   /** Every element painting the series' backdrop image. */
   function backdropArt(container: HTMLElement): Element[] {
     return Array.from(container.querySelectorAll('*')).filter((el) =>
       window
         .getComputedStyle(el)
-        .backgroundImage.includes('/api/images/harbor/backdrop.jpg')
+        .backgroundImage.includes('/api/images/behind/backdrop.jpg')
     );
   }
 
   it('draws the series’ backdrop behind the season, exactly once', async () => {
     serve({
       ...harbor(),
-      series: makeSeries({ backdropPath: 'harbor/backdrop.jpg' }),
+      series: makeSeries({ backdropPath: 'behind/backdrop.jpg' }),
     });
 
     const { container } = renderSeason();
     const heading = await findSeasonHeading('Season 2');
+    await images.decode('/api/images/behind/backdrop.jpg');
 
     const arts = backdropArt(container);
     expect(arts).toHaveLength(1);

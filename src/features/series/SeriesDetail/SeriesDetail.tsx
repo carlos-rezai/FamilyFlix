@@ -15,6 +15,7 @@ import {
   HeartIcon,
   HeartOutlineIcon,
 } from '@/primitives';
+import { useDecodedArt } from '@/hooks/useDecodedArt/useDecodedArt';
 import { useImageFallback } from '@/hooks/useImageFallback/useImageFallback';
 import { episodePlayPath, seasonPath } from '@/utils';
 import { LoadingSeries } from '../LoadingSeries/LoadingSeries';
@@ -80,6 +81,10 @@ export function SeriesDetail() {
   const poster = useImageFallback(
     detail.status === 'ready' ? detail.series.posterUrl : null
   );
+  // The backdrop is drawn only once decoded, so it never paints in halves.
+  const backdropUrl = useDecodedArt(
+    detail.status === 'ready' ? detail.series.backdropUrl : null
+  );
 
   if (detail.status === 'loading') {
     return <LoadingSeries />;
@@ -112,7 +117,7 @@ export function SeriesDetail() {
 
   return (
     <>
-      <DetailBackdrop url={series.backdropUrl} g1={series.g1} g2={series.g2} />
+      <DetailBackdrop url={backdropUrl} g1={series.g1} g2={series.g2} />
       <SeriesEditMenu
         seriesId={series.id}
         title={series.title}

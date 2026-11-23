@@ -7,6 +7,7 @@ import {
   PageHeader,
 } from '@/components';
 import { Button } from '@/primitives';
+import { useDecodedArt } from '@/hooks/useDecodedArt/useDecodedArt';
 import { useGoBack } from '@/hooks/useGoBack/useGoBack';
 import { episodePlayPath, range, seasonPath, seriesPath } from '@/utils';
 import { useSeasonEpisodes } from '../useSeasonEpisodes/useSeasonEpisodes';
@@ -64,6 +65,10 @@ function SeasonBody() {
   const { id = '', n = '' } = useParams<{ id: string; n: string }>();
   const number = Number(n);
   const view = useSeasonEpisodes(id, number);
+  // The backdrop is drawn only once decoded, so it never paints in halves.
+  const backdropUrl = useDecodedArt(
+    view.status === 'ready' ? view.season.backdropUrl : null
+  );
 
   if (view.status === 'loading') {
     return (
@@ -120,7 +125,7 @@ function SeasonBody() {
 
   return (
     <>
-      <DetailBackdrop url={season.backdropUrl} g1={season.g1} g2={season.g2} />
+      <DetailBackdrop url={backdropUrl} g1={season.g1} g2={season.g2} />
       <Column>
         <PageHeader
           eyebrow={season.seriesTitle}
