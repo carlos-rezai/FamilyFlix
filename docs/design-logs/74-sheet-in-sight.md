@@ -1,7 +1,7 @@
 # 74: Sheet in sight
 
 > **Initiative:** `sheet-in-sight`
-> **PRD:** `docs/PRDs/74-sheet-in-sight.md` (to be written)
+> **PRD:** `docs/PRDs/74-sheet-in-sight.md`, issue #700
 > **Handoff:** `docs/handoff/handoff-sheet-in-sight/`
 
 This log is the `grill-me` session for step 56 of the build order, **Sheet in
