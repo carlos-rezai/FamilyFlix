@@ -3644,6 +3644,12 @@ export function createApiRouter(
   // Posters and backdrops straight off disk. Serves nothing until an import
   // populates the managed media directory; cards fall back to their gradient
   // until then.
+  //
+  // Revalidation, by decision (design log 72, Q13): `max-age=0` with an ETag
+  // and `Last-Modified`, so every visit asks and a held picture answers a
+  // bodiless 304. No cache lifetime: a picture rewritten in place (a fit by
+  // the **Art sweep**, a replaced poster) keeps its url, and its new size and
+  // time are a new ETag, so it is never drawn stale across starts.
   router.use('/images', express.static(mediaPath, { index: false }));
 
   return router;

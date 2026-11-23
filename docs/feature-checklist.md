@@ -926,7 +926,7 @@ paints in bands, top to bottom. Grilled in design log 72, which settles
 the open questions and keeps revalidation in place of a cache lifetime
 (its Q13):
 
-54. ⬜ **Seamless art**: a detail page opens whole, backdrop included.
+54. 🔜 **Seamless art**: a detail page opens whole, backdrop included.
     Three causes, read on 2026-11-22: Enrichment saves TMDB's `original`
     size (`tmdbClient`'s `IMAGE_BASE`), so 9 of the 12 installed
     backdrops are 3840x2160 JPEGs of 0.8 to 2.4 MB and posters average
@@ -944,9 +944,20 @@ the open questions and keeps revalidation in place of a cache lifetime
       folder's art is never rewritten.
     - **Warm start**: fetch and decode the backdrop before it is drawn,
       from the card's hover or focus, and draw it only once decoded.
-    - **Cache**: art served with a lifetime, its url changing when the
-      file does.
-    - **Open**: what shrinks held art (FFmpeg is the **Default
-      component** and can be replaced or missing); whether new art comes
-      from TMDB at `w1280` or as `original` shrunk on arrival; and
-      whether the backdrop fades in.
+    - **Cache**: revalidation stays (log 72, Q13): `max-age=0` with an
+      ETag and `Last-Modified`, so a second visit's art answers 304 and a
+      picture rewritten in place is never drawn stale.
+    - **Settled** in log 72: the **Playback component** fits, through
+      `Playback.fitArt` held to the **Fit budget**, and with none a
+      picture is kept as given; new art comes as `original`, fitted on
+      arrival by every image write (`storeNamed`, `storeUpload`,
+      `copyIn`) to its **Art box**; held art is fitted by the **Art
+      sweep** on each start; and the backdrop is drawn once decoded, with
+      no fade.
+      Built in issues 686 to 690; the walk (issue 691) ran the dev app on a
+      copy of the installed library: 120 held pictures, 51 over their box
+      and 78.6 MB before a start, none over and 34.2 MB after. A backdrop
+      opened from a hover drew in the poster's frame, 39 ms after the
+      click; one opened cold drew whole 22 ms after the poster, never in
+      bands. A second visit's poster and backdrop answered 304, and the
+      pre-fit ETag a 200 with the fitted bytes.

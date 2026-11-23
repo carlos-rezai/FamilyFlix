@@ -238,6 +238,11 @@ async function readWhole(source: Readable): Promise<Buffer> {
  * different root by a request. `main.ts` composes it from
  * `FAMILYFLIX_MEDIA_PATH`; the tests compose it from a temporary directory.
  *
+ * `playback` is only its `fitArt`: every image written in (`storeNamed`,
+ * `storeUpload`, `copyIn`) and every held one the **Art sweep** hands to
+ * `fitStored` is fitted to its **Art box** through it, so art is kept at
+ * screen size. With no component, a picture is kept as given.
+ *
  * **Containment is checked on the resolved path, on both deletions.** This is
  * the only thing in the app that removes media, so the media root is the whole
  * of what it is allowed to remove inside — and the rule is `mediaFilePath`'s

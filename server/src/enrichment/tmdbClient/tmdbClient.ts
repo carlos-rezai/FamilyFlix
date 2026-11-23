@@ -194,6 +194,12 @@ export interface TmdbClientOptions {
 }
 
 const TMDB_ORIGIN = 'https://api.themoviedb.org';
+/**
+ * Art is asked for at TMDB's `original` size, and fitted on arrival: every
+ * picture stored passes `Media.storeNamed`, which fits one over its **Art
+ * box** to screen size through the **Playback component**. One fetch, one
+ * fit, no second size to choose; with no component it is kept as given.
+ */
 const IMAGE_BASE = 'https://image.tmdb.org/t/p/original';
 /** Every answer fixed to one language, whatever machine asks. */
 const LANGUAGE = 'en-US';

@@ -44,6 +44,9 @@ const SKELETON_ROWS = 4;
  * pills are a **Sideways move** — a `replace` — so Back is one step to the
  * series page, which is also the page's **Landing**. The play button and a
  * row open the player on their episode, as a push.
+ *
+ * The backdrop is drawn once decoded (`useDecodedArt`), as the **Series page**
+ * draws it: the gradient alone until then, then the whole picture.
  */
 export function SeasonEpisodes() {
   const { id = '' } = useParams<{ id: string }>();

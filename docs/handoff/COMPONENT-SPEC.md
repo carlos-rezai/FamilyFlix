@@ -363,9 +363,10 @@ Target: `components/PosterCard/` · composes StarRating + StatusBadge + Progress
 MetaTag + a favorite toggle. The library's primary tile.
 | Prop | Type | Notes |
 | --- | --- | --- |
-| `movie` | `{ title, g1, g2, rating, watched, progress, favorite, posterUrl, quality }` | `g1/g2` = poster gradient stops; `posterUrl` (or `null`) a layer over them — none draws the **Default poster**; `quality` (or `null`) the **Video quality** |
+| `movie` | `{ title, g1, g2, rating, watched, progress, favorite, posterUrl, backdropUrl, quality }` | `g1/g2` = poster gradient stops; `posterUrl` (or `null`) a layer over them — none draws the **Default poster**; `backdropUrl` (or `null`) is never drawn here, only warmed; `quality` (or `null`) the **Video quality** |
 | `onOpen` | () => void | navigate to detail |
 | `onToggleFav` | () => void | stops propagation internally |
+| `onWarm` | () => void (optional) | the **Warm start**: fired on pointer enter and on focus, never on a click or Enter alone; the grid, the carousels and a genre's titles pass `warmArt(backdropUrl)`, a Continue card none |
 
 States: hover (lift −4px + deeper shadow + accent-line border, §2a), press (settles to −1px),
 focus-visible (offset outline on the card root), watched (badge), in-progress (bottom bar),
@@ -703,6 +704,12 @@ over it; the `100vh` is coupled to the scroller's own height. Inside, the backdr
 **Gradient fallback**, then the **Backdrop veil**: a 180° gradient — `rgba(20,17,13,.65)` 0%,
 `.85` 50%, `--color-bg` 100% — over `--color-accent-soft`. No motion, no blur.
 Props: `url` (string | null), `g1`, `g2`.
+
+**Drawn once decoded** (step 54, log 72): the page hands it only what `useDecodedArt`
+answers, so `url` is `null` (the Gradient fallback alone) until the backdrop is fetched and
+decoded, then the whole backdrop at once: never painted in bands, and no fade. A backdrop
+already warm (`warmArt`, from the card's `onWarm`) is in the first paint; one that fails to
+decode leaves the gradient alone. `DetailBackdrop` itself draws whatever `url` it is given.
 
 ### Menu — drawn inline in `page.MoviePage`, `page.SeriesPage` and `page.ManageLibraryPage`
 

@@ -91,6 +91,10 @@ const MIN_PAGE = 240;
  * never intercepted; the arrows are an addition on top of it, each paging ~80%
  * of the visible width. They appear only where there is somewhere to go —
  * hidden at the start, at the end, and entirely when the row doesn't overflow.
+ *
+ * A poster card someone is about to open has its **Detail backdrop** warmed
+ * (the **Warm start**), so the page opens with it; a Continue card warms
+ * nothing.
  */
 export function CardCarousel(props: CardCarouselProps) {
   const { items } = props;

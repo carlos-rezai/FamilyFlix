@@ -73,6 +73,10 @@ const FAVORITE_TIP = {
  * watched tick over every episode, then the series' heart — each shown at
  * once, put back if the save is refused. The button opens the player on the
  * episode it names, as a push.
+ *
+ * The backdrop is drawn once decoded (`useDecodedArt`): the gradient alone
+ * until then, then the whole picture, never in bands; one warmed from its card
+ * is in the first paint.
  */
 export function SeriesDetail() {
   const navigate = useNavigate();
