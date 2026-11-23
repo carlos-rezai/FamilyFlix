@@ -1222,6 +1222,25 @@ once, where it is held; a Poster card warms its backdrop before it is opened.
 | **Warm start** (new)          | A **Detail backdrop** fetched and decoded before its page opens: on a **Poster card**'s pointer enter or focus (`onWarm`), through `warmArt`, the last 8 held decoded.                                                                                                                                 | prefetch, preload (in prose)        |
 | **Detail backdrop** (updated) | Since log 72 its url is drawn only once decoded (`useDecodedArt`): warm, in the page's first paint; cold, the **Gradient fallback** first, then the whole backdrop in one frame. Still no motion.                                                                                                      |                                     |
 
+## Header fit
+
+Design log 73: step 55, initiative `header-fit`. Every filter pill and the
+Settings button stay on screen at every window width: the **Row view** is
+chosen from the Genre dropdown, the **Quality filter** is gone, and the
+**Header end** wraps whole; the handoff is
+`docs/handoff/handoff-header-fit/README.md`.
+
+| Term                          | Definition                                                                                                                                                                                                                        | Aliases to avoid                          |
+| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Header end** (new)          | `MainLayout`'s `headerEnd` slot and the Settings button as one unit (`HeaderEnd`): never split, never shrunk, at the right of the header's first line while it fits, else moved whole to a second line, right-aligned.            | overflow, toolbar, filter bar, right side |
+| **View rows** (new)           | The Genre dropdown's first two rows, _All Genres_ (**By genre**) and the tab's _All_ row, _All movies_ or _All series_ (**All**): choosing one takes `?genre=` off and sets the tab's **Row view**. Each carries the tab's total. | view options, layout rows, Show no genre  |
+| **Row view** (updated)        | Since log 73, chosen from the **View rows** of the Genre dropdown; a genre chosen there leaves it as it is.                                                                                                                       |                                           |
+| **All** (updated)             | Since log 73, its **View row** reads the heading it draws, _All movies_ or _All series_ (`allTitlesLabel`).                                                                                                                       |                                           |
+| **Header slot** (updated)     | Since log 73, `MainLayout`'s `headerEnd` is drawn inside the **Header end**, beside the Settings button.                                                                                                                          |                                           |
+| **Quality tag** (updated)     | Since log 73, _Show video quality_ turns the tag on or off and nothing else: there is no filter by quality.                                                                                                                       |                                           |
+| **Row view switch** (retired) | **Retired** by log 73 for the **View rows**. Was: the _View_ **Filter dropdown** after Sort (`RowViewSwitch`, `rowViewOptions`), setting the current tab's **Row view**.                                                          |                                           |
+| **Quality filter** (retired)  | **Retired** by log 73, end to end: no pill, no `?quality=`, no `minQuality`. A held `?quality=` is read past as any unknown parameter. Was: the _Quality_ pill, a minimum rung keeping titles at or above it.                     |                                           |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1432,6 +1451,8 @@ once, where it is held; a Poster card warms its backdrop before it is opened.
 - A **Busy button** has one width for all three **Busy phases**; a **Dialog loader** is drawn in exactly one card, its dialog's own (new, log 71).
 - Every picture in the **Managed media directory** is within its **Art box** once its write or the next **Art sweep** has run with a component; a **Library folder**'s art is never fitted (new, log 72).
 - A **Poster card** warms at most one **Detail backdrop**, its own title's; art TMDB gave once is never fetched again (new, log 72).
+- The Genre dropdown checks exactly one row: the chosen genre's, else the **View row** of the tab's **Row view** (new, log 73).
+- A browse header has exactly one **Header end**, on its first line or wholly on its second, never split between them (new, log 73).
 
 ## Example dialogue
 
@@ -2252,6 +2273,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "No. Her pointer landing on the **Poster card** was the **Warm start**: the backdrop was fetched and decoded before the click, so the page opens with it."
 > **Dev:** "And the 4K backdrop TMDB gave us last year?"
 > **Domain expert:** "The **Art sweep** fitted it to its **Art box** at the next start, on disk, without asking TMDB. The copy in her **Library folder** was never touched."
+
+> **Dev:** "Dad snaps FamilyFlix to half his screen. Where did the gear go?"
+> **Domain expert:** "Nowhere. The first line can't hold the **Header end**, so the three pills and Settings move together to a second line, at the right."
+> **Dev:** "And how does he get every film in one grid now the _View_ pill is gone?"
+> **Domain expert:** "From the Genre pill: its **View rows** are _All Genres_, the rows, and _All movies_, the grid. That's the tab's **Row view**, kept for the household."
+> **Dev:** "If he then picks _Comedy_?"
+> **Domain expert:** "The genre narrows the grid he chose; picking a genre never changes the **Row view**. And there's no quality pill to look for: the **Quality filter** is retired, only the **Quality tag** stays."
 
 ## Flagged ambiguities
 
@@ -3278,3 +3306,8 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   stored picture can be rewritten under its own name. Do not call the
   **Warm start** "caching": it decodes ahead, it does not hold bytes past
   the session.
+- **"View rows" are not a genre (new):** _All Genres_ and _All movies_ /
+  _All series_ sit in the Genre dropdown but choose the **Row view**, a
+  household setting, not a `?genre=`. Never call _All movies_ "no genre":
+  the titles with no genre are the **Other row**, which is why log 73
+  rejected the working title _Show no genre_.

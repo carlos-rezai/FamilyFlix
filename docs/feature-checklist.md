@@ -144,8 +144,11 @@ grilled; once it ships, it is one line and a link.
 
 Step 55 came out of the Quality pill (step 52): the browse header now
 carries five pills, and in a narrow window the last of them and the
-Settings button are pushed off screen, out of reach. Talked through on
-2026-11-23, not yet grilled:
+Settings button are pushed off screen, out of reach. Grilled in design
+log 73, which settles the open questions and adds a fit rule (its Q3):
+measured, two fewer pills still leave the header about 1314px wide against
+a 1024px window, so the pills and Settings also wrap whole to a second line
+when the first cannot hold them:
 
 55. ⬜ **Header fit**: every filter pill and the Settings button stay in
     reach, by drawing two fewer pills.
