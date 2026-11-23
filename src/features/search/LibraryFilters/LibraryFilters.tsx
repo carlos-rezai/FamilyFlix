@@ -24,14 +24,14 @@ import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
  *
  * Like the search box, it only ever *writes* the URL and only ever *reads* it
  * back — each pill shows whatever the URL is carrying, whoever put it there,
- * and no pill reads another. Nothing here knows that the rows exist.
+ * and no pill reads another. Nothing here knows what a body draws for a view.
  *
  * The genre list is the one thing this component loads, and it loads it once
  * per mount rather than per query: the counts describe the whole library, so
  * they must not reshuffle under a finger already reaching for them. It renders
- * before that list arrives — and if it never arrives — with "All Genres" alone,
- * so a failed list is a quieter dropdown rather than a broken header, and the
- * other pills are untouched by it.
+ * before that list arrives — and if it never arrives — with the two **View
+ * rows** alone, so a failed list is a quieter dropdown rather than a broken
+ * header, and the other pills are untouched by it.
  *
  * The Genre pill also chooses how the tab is browsed (log 73): its value is
  * the URL's genre, else the tab's **Row view**, and it is not drawn while

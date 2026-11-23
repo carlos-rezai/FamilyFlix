@@ -8,8 +8,8 @@ import { isMovieSort, parseMinRating } from '@/utils';
  * parameter that is absent falls back to its default, an empty value means the
  * same as absent, and anything this slice doesn't read is left alone rather
  * than rejected — a bookmark from an older build still opens. A held
- * `?quality=` is one such: the **Quality filter** is gone (log 73), so it is
- * read past and stays on the URL, narrowing nothing.
+ * `?quality=`, from a build that filtered by quality, is read past and narrows
+ * nothing; it stays on the URL.
  *
  * Pure, so the same URL always yields the same query.
  *

@@ -515,8 +515,9 @@ function parseMinRating(value: string): number | null {
  * `sort` — read once for every screen that takes it, `/home` and
  * `/series` alike; or `null` once a 400 has been answered for an unknown sort
  * or an off-scale minimum. An empty value is no parameter at all, and a
- * minimum of `0` is no minimum. Anything else is read past, a held
- * `?quality=` from before log 73 among it: no browse narrows by quality.
+ * minimum of `0` is no minimum. Anything else is left unread. A held
+ * `?quality=`, from a build that filtered by quality, is read past and narrows
+ * nothing.
  */
 function libraryQueryOr400(req: Request, res: Response): LibraryQuery | null {
   const sortParam = queryString(req.query.sort);
