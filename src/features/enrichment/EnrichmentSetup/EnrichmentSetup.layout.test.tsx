@@ -31,7 +31,7 @@ const ROOT = String.raw`E:\Movies`;
 const ARCHIVE = String.raw`F:\Archive`;
 
 const NOTE =
-  "Art goes into each title folder's Images folder, only where there isn’t one already: nothing of yours is ever replaced. The sheet in Meta is FamilyFlix’s own and is kept up to date.";
+  "Art goes into each title folder's Images folder, only where there isn’t one already: nothing of yours is ever replaced. The sheet in _meta is FamilyFlix’s own and is kept up to date.";
 
 function renderSetup(libraryFolders: string[]) {
   render(
