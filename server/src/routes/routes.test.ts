@@ -58,6 +58,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import {
   FIXTURE_DURATION_SECONDS,
   FIXTURE_VIDEO,
@@ -3159,7 +3160,7 @@ function relisten(
   component: PlaybackComponent | null
 ): string {
   const playback = createPlayback(media, fixedSlot(component), () => null);
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const app = express();
   app.use(
     '/api',
@@ -6650,7 +6651,7 @@ describe('DELETE /api/movies/:id', () => {
     it('reaches the bytes through the Media seam and nothing else', async () => {
       const removed: string[] = [];
       const recording = (mediaPath: string): Media => ({
-        ...createMedia(mediaPath),
+        ...createMedia(mediaPath, unfittedArt()),
         removeTitleFolder: (folder) => {
           removed.push(folder);
         },

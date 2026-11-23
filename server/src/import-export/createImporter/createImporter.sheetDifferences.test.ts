@@ -27,6 +27,7 @@ import { createImporter, type Importer } from './createImporter';
 import { openDatabase, type SqliteDatabase } from '../../db';
 import { createSqliteStorage, type LibraryStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import {
@@ -79,7 +80,7 @@ function sandbox(): Sandbox {
   const db = track(openDatabase(dbPath));
   const importer = createImporter({
     storage,
-    media: createMedia(media),
+    media: createMedia(media, unfittedArt()),
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),

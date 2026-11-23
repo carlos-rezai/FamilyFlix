@@ -29,6 +29,7 @@ import {
   type StoredLibraryFolder,
 } from '../../library';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   createPlayback,
   type Playback,
@@ -78,7 +79,7 @@ function sandbox({
   );
   const importer = createImporter({
     storage,
-    media: mediaSeam(createMedia(media)),
+    media: mediaSeam(createMedia(media, unfittedArt())),
     playback,
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),

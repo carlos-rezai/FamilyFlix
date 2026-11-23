@@ -34,6 +34,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ENRICH_FIELDS, type EnrichField, type StoredVideo } from '@/types';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
@@ -122,7 +123,7 @@ function world({
   const storage = freshStorage();
   storage.setTmdbKey(TMDB_KEY);
   const root = sandboxRoot('familyflix-frame-still-');
-  const realMedia = createMedia(root);
+  const realMedia = createMedia(root, unfittedArt());
   const frameMock = vi.fn<Frame>(frame);
   const playback = framelessPlayback(frameMock);
   const domainMedia = media === undefined ? realMedia : media(realMedia);
@@ -487,7 +488,7 @@ describe('createEnrichment: a frame of a Linked video', () => {
     const listed = storage.addLibraryFolder(libraryFolder);
     const folder = storedFolder(
       root,
-      createMedia(root).reserveFolder(TITLE, 2018)
+      createMedia(root, unfittedArt()).reserveFolder(TITLE, 2018)
     );
     const series = storage.addSeries({
       title: TITLE,

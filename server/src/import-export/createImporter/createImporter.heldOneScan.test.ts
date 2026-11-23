@@ -31,6 +31,7 @@ import { describe, expect, it } from 'vitest';
 import { createImporter, type Importer } from './createImporter';
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -119,7 +120,7 @@ function sandbox(): Sandbox {
   const storage = freshStorage();
   const importer = createImporter({
     storage,
-    media: createMedia(media),
+    media: createMedia(media, unfittedArt()),
     // A Linked video resolves under its Library folder, so a linked Heat is
     // held where it lies, not Found again.
     playback: createPlayback(

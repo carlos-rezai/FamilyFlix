@@ -45,6 +45,7 @@ import {
   type StoredLibraryFolder,
 } from '../../library';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import {
   fakeTmdb,
@@ -141,7 +142,7 @@ function sandbox(): Sandbox {
   storage.setTmdbKey(TMDB_KEY);
   const writer = createLibrarySheet({ storage });
   storage.onChange((folderIds) => writer.touch(folderIds));
-  const media = createMedia(mediaDir);
+  const media = createMedia(mediaDir, unfittedArt());
   const layoutFill = createLayoutFill({ storage, media });
   const importer = createImporter({
     storage,

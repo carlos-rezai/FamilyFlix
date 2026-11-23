@@ -31,6 +31,7 @@ import {
   type StoredLibraryFolder,
 } from '../../library';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import {
@@ -91,7 +92,7 @@ function sandbox(): Sandbox {
   const storage = track(createSqliteStorage(join(dir, 'familyflix.db')));
   const writer = createLibrarySheet({ storage });
   storage.onChange((folderIds) => writer.touch(folderIds));
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const importer = createImporter({
     storage,
     media: mediaDomain,

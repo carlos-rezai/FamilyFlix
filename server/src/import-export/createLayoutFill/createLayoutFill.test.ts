@@ -25,6 +25,7 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
@@ -55,7 +56,10 @@ function world() {
 
   const storage = freshStorage();
   const folder = storage.addLibraryFolder(library);
-  const fill = createLayoutFill({ storage, media: createMedia(mediaRoot) });
+  const fill = createLayoutFill({
+    storage,
+    media: createMedia(mediaRoot, unfittedArt()),
+  });
   return { library, storage, folder, fill };
 }
 

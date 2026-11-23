@@ -26,6 +26,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
@@ -99,7 +100,7 @@ function freshApi() {
     join(films, 'Harbor and Vine', 'Harbor.and.Vine.S01E01.Pilot.mp4')
   );
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(
     media,
     fixedSlot(null),

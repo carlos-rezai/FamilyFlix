@@ -27,6 +27,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -60,7 +61,7 @@ function freshApi(): { storage: LibraryStorage; baseUrl: string } {
 
   const media = join(sandboxRoot('familyflix-series-api-'), 'media');
   mkdirSync(media);
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
 
   const app = express();

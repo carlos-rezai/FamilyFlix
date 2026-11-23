@@ -31,6 +31,7 @@ import {
 } from '@/types';
 import type { StillSource } from '../../library';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { writeExport } from '../../import-export/writeExport/writeExport';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -160,7 +161,7 @@ function world({
   const storage = freshStorage();
   storage.setTmdbKey(TMDB_KEY);
   const root = sandboxRoot('familyflix-frame-upgrade-');
-  const realMedia = createMedia(root);
+  const realMedia = createMedia(root, unfittedArt());
   const frameMock = vi.fn<Frame>(frame);
   const playback = framelessPlayback(frameMock);
   const domainMedia = media === undefined ? realMedia : media(realMedia);
@@ -438,7 +439,7 @@ describe('an Export of a show holding a frame', () => {
     const detail = storage.getSeriesDetail(id);
     if (detail === null) throw new Error('no series detail');
     const outcome = await writeExport(
-      createMedia(root),
+      createMedia(root, unfittedArt()),
       {
         format: 'csv',
         destination,

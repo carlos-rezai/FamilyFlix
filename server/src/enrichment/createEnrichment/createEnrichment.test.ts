@@ -25,6 +25,7 @@ import { describe, expect, it } from 'vitest';
 import { ENRICH_FIELDS, type EnrichField } from '@/types';
 import type { LibraryStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -97,7 +98,7 @@ function world(
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const mediaRoot = sandboxRoot('familyflix-enrich-');
-  const media = createMedia(mediaRoot);
+  const media = createMedia(mediaRoot, unfittedArt());
   const enrichment = createEnrichment({
     storage,
     client,

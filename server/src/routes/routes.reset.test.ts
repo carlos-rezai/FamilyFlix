@@ -31,6 +31,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import type {
   ComponentSlot,
   RemoveOutcome,
@@ -153,7 +154,7 @@ async function filledApi({
   mkdirSync(media);
   const { root, sheet } = libraryFixture(dir);
 
-  const mediaDomain = seam(createMedia(media));
+  const mediaDomain = seam(createMedia(media, unfittedArt()));
   const { slot, removes } = removableSlot({ outcome: removal });
   const playback = createPlayback(media, slot, () => null);
   const importer = createImporter({

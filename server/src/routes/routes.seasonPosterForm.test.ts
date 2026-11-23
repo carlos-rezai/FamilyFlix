@@ -30,6 +30,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
@@ -62,7 +63,7 @@ function freshApi(): {
 
   const media = join(sandboxRoot('familyflix-season-poster-form-'), 'media');
   mkdirSync(media);
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
 
   const app = express();

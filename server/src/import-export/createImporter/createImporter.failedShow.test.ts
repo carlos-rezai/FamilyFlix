@@ -24,6 +24,7 @@ import { describe, expect, it } from 'vitest';
 
 import { createImporter, type Importer } from './createImporter';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -112,7 +113,7 @@ function sandbox(
   const storage = freshStorage();
   const importer = createImporter({
     storage,
-    media: failing(failures)(createMedia(media)),
+    media: failing(failures)(createMedia(media, unfittedArt())),
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
@@ -312,7 +313,7 @@ describe('createImporter — at most one Problem per kind per source', () => {
     const storage = freshStorage();
     const importer = createImporter({
       storage,
-      media: failing('all')(createMedia(media)),
+      media: failing('all')(createMedia(media, unfittedArt())),
       playback: createPlayback(media, fixedSlot(null), () => null),
       librarySheet: idleLibrarySheet(),
       layoutFill: idleLayoutFill(),

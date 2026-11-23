@@ -34,6 +34,7 @@ import type { Episode, Movie, SeriesDetail, StartExport } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeExport } from './writeExport';
 
@@ -129,7 +130,12 @@ function sandbox(): Sandbox {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, bytes);
   }
-  return { media: createMedia(mediaPath), dir, mediaPath, destination };
+  return {
+    media: createMedia(mediaPath, unfittedArt()),
+    dir,
+    mediaPath,
+    destination,
+  };
 }
 
 const request = (

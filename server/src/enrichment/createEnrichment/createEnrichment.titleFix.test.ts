@@ -22,6 +22,7 @@ import {
   type EnrichmentRun,
 } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -62,7 +63,10 @@ const ALL_TMDB: ConflictChoices = {
 function world() {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
-  const media = createMedia(sandboxRoot('familyflix-enrich-title-fix-'));
+  const media = createMedia(
+    sandboxRoot('familyflix-enrich-title-fix-'),
+    unfittedArt()
+  );
   const client = fakeTmdb({
     searches: {
       // Two releases under a spelling of ours: ambiguous.

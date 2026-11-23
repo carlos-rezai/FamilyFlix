@@ -21,6 +21,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ENRICH_FIELDS, type EnrichField } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -51,7 +52,7 @@ function world() {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const root = sandboxRoot('familyflix-enrich-media-folder-');
-  const media = createMedia(root);
+  const media = createMedia(root, unfittedArt());
   const client = fakeTmdb({
     searches: { [FILM]: [tmdbMovieResult(FILM_ID, FILM, 2019)] },
     movies: [tmdbMovieDetail(FILM_ID, FILM, 2019)],

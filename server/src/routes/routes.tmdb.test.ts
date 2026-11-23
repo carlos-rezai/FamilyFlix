@@ -31,6 +31,7 @@ import { createTmdbClient } from '../enrichment/tmdbClient/tmdbClient';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
@@ -91,7 +92,7 @@ function freshApi(tmdb: Tmdb = 'accepts'): Api {
 
   const media = join(sandboxRoot('familyflix-tmdb-api-'), 'media');
   mkdirSync(media);
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
   const tmdbFetch = fakeTmdb(tmdb);
   const enrichment = createEnrichment({

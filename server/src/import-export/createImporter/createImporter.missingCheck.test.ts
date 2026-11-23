@@ -40,6 +40,7 @@ import {
   type StoredLibraryFolder,
 } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import {
@@ -94,7 +95,7 @@ function sandbox(): Sandbox {
   );
   const importer = createImporter({
     storage,
-    media: createMedia(media),
+    media: createMedia(media, unfittedArt()),
     playback,
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),

@@ -71,6 +71,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import type {
   ComponentSlot,
   InstallOutcome,
@@ -160,7 +161,7 @@ function freshApi({
     mkdirSync(media);
   }
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(
     media,
     slot ?? fixedSlot(component, componentInfo),

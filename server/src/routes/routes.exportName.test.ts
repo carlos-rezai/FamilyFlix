@@ -24,6 +24,7 @@ import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -87,7 +88,7 @@ function freshApi(): { baseUrl: string; dir: string; destination: string } {
     newMovie({ title: 'Zephyr', year: 2020, videoPath: 'zephyr-2020/z.mkv' })
   );
 
-  const media = createMedia(mediaPath);
+  const media = createMedia(mediaPath, unfittedArt());
   const playback = createPlayback(mediaPath, fixedSlot(null), () => null);
   const app = express();
   app.use(

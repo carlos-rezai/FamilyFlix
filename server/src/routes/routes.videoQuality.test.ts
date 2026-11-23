@@ -27,6 +27,7 @@ import { createImporter } from '../import-export/createImporter/createImporter';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
   PlaybackComponent,
@@ -118,7 +119,7 @@ function freshApi(component: PlaybackComponent): {
   mkdirSync(media);
 
   const playback = createPlayback(media, fixedSlot(component), () => null);
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const app = express();
   app.use(
     '/api',

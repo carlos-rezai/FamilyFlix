@@ -26,6 +26,7 @@ import {
 } from '@/types';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   closeTracked,
   track,
@@ -72,7 +73,7 @@ function world() {
   const dbPath = join(dir, 'familyflix.db');
   const storage = track(createSqliteStorage(dbPath));
   storage.setTmdbKey(KEY);
-  const media = createMedia(join(dir, 'media'));
+  const media = createMedia(join(dir, 'media'), unfittedArt());
   const enrichment = createEnrichment({
     storage,
     client: fakeTmdb({ searches: SEARCHES, movies: DETAILS }),

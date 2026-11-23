@@ -23,6 +23,7 @@ import {
   type StartEnrichment,
 } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   fakeTmdb,
   reviewed,
@@ -91,7 +92,10 @@ const HARBOR: TmdbMovieDetail = {
 function world() {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
-  const media = createMedia(sandboxRoot('familyflix-enrich-added-'));
+  const media = createMedia(
+    sandboxRoot('familyflix-enrich-added-'),
+    unfittedArt()
+  );
   const client = fakeTmdb({ movies: [LANTERN, HARBOR] });
   const enrichment = createEnrichment({
     storage,

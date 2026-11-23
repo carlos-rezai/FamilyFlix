@@ -29,6 +29,7 @@ import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { readSheet } from '../import-export/readSheet/readSheet';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -77,7 +78,7 @@ function freshApi(): {
   mkdirSync(media);
   const { root, sheet } = seriesFixture(dir, 'library.csv');
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
   const app = express();
   app.use(

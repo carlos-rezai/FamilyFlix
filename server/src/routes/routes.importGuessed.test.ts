@@ -27,6 +27,7 @@ import {
   type Importer,
 } from '../import-export/createImporter/createImporter';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -68,7 +69,7 @@ function freshApi({
   writeFileSync(join(unnamed, 'Ironwood.mp4'), '');
   storage.addLibraryFolder(root);
 
-  const mediaDomain = seam(createMedia(media));
+  const mediaDomain = seam(createMedia(media, unfittedArt()));
   const playback = createPlayback(media, fixedSlot(null), () => null);
   const composed = createImporter({
     storage,

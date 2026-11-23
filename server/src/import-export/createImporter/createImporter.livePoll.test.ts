@@ -21,6 +21,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createImporter, type Importer } from './createImporter';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import {
@@ -71,7 +72,7 @@ describe('createImporter — the Import phase under Link', () => {
     const turnAtEachTitle: number[] = [];
     const importer = createImporter({
       storage,
-      media: createMedia(media),
+      media: createMedia(media, unfittedArt()),
       playback: {
         ...real,
         measure: (file) => {

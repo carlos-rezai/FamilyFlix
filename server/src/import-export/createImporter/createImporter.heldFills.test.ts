@@ -23,6 +23,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { createImporter, type Importer } from './createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import {
@@ -189,7 +190,7 @@ function sandbox(): Sandbox {
   const storage = track(createSqliteStorage(join(dir, 'familyflix.db')));
   const importer = createImporter({
     storage,
-    media: createMedia(media),
+    media: createMedia(media, unfittedArt()),
     playback: createPlayback(
       media,
       fixedSlot(null),

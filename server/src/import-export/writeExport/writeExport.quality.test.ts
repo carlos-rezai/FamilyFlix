@@ -18,6 +18,7 @@ import { describe, expect, it } from 'vitest';
 import type { Movie, StartExport } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { UTF8_BOM } from '../sheetDialect/sheetDialect';
 import { writeExport } from './writeExport';
@@ -88,7 +89,7 @@ async function exported(): Promise<string[][]> {
     subtitles: false,
     name: NAME,
   };
-  await writeExport(createMedia(mediaPath), request, {
+  await writeExport(createMedia(mediaPath, unfittedArt()), request, {
     movies: [DIE_HARD, AMELIE],
     series: [],
     sourceFolders: new Map(),

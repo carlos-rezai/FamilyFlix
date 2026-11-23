@@ -37,6 +37,7 @@ import { dirname, join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { fillLayout, type HeldTitleFiles } from './fillLayout';
 
@@ -71,7 +72,7 @@ function world(folder: string): { root: string; title: string; media: Media } {
   }
   const title = join(root, folder);
   mkdirSync(title, { recursive: true });
-  return { root, title, media: createMedia(mediaRoot) };
+  return { root, title, media: createMedia(mediaRoot, unfittedArt()) };
 }
 
 /** A film's held files: a poster, a backdrop, its tracks. */

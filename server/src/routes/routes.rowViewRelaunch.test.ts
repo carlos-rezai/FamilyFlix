@@ -20,6 +20,7 @@ import { createImporter } from '../import-export/createImporter/createImporter';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
@@ -46,7 +47,7 @@ afterEach(async () => {
 /** One launch: the library file opened and the API composed over it. */
 function launch(dbPath: string, media: string): Launch {
   const storage: LibraryStorage = createSqliteStorage(dbPath);
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
   const layoutFill = createLayoutFill({ storage, media: mediaDomain });
   const app = express();

@@ -32,6 +32,7 @@ import { createImporter, type Importer } from './createImporter';
 import { createLayoutFill } from '../createLayoutFill/createLayoutFill';
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -70,7 +71,7 @@ function compose(dir: string, root: string, title: string): Sandbox {
   const mediaDir = join(dir, 'media');
   mkdirSync(mediaDir);
   const storage = freshStorage();
-  const media = createMedia(mediaDir);
+  const media = createMedia(mediaDir, unfittedArt());
   const importer = createImporter({
     storage,
     media,

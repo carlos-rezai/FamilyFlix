@@ -28,6 +28,7 @@ import {
   type EnrichmentRun,
 } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -86,7 +87,10 @@ const DETAILS: TmdbMovieDetail[] = [
 function world() {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
-  const media = createMedia(sandboxRoot('familyflix-enrich-decisions-'));
+  const media = createMedia(
+    sandboxRoot('familyflix-enrich-decisions-'),
+    unfittedArt()
+  );
   const client = fakeTmdb({ searches: SEARCHES, movies: DETAILS });
   const enrichment = createEnrichment({
     storage,

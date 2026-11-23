@@ -36,6 +36,7 @@ import type { TmdbSeason } from '../enrichment/tmdbClient/tmdbClient';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import {
   fakeTmdb,
@@ -111,7 +112,7 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
   storage.setTmdbKey(KEY);
 
   const root = sandboxRoot('familyflix-enrich-season-poster-api-');
-  const media = createMedia(root);
+  const media = createMedia(root, unfittedArt());
   const playback = createPlayback(root, fixedSlot(null), () => null);
   const enrichment = createEnrichment({
     storage,

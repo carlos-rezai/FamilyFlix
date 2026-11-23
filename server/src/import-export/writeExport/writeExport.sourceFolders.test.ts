@@ -27,6 +27,7 @@ import type { Movie, SeriesDetail, StartExport } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDetail';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { UTF8_BOM } from '../sheetDialect/sheetDialect';
 import { writeExport } from './writeExport';
@@ -106,7 +107,7 @@ function sandbox(): Sandbox {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, bytes);
   }
-  return { media: createMedia(mediaPath), destination };
+  return { media: createMedia(mediaPath, unfittedArt()), destination };
 }
 
 const request = (destination: string): StartExport => ({

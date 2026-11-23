@@ -30,6 +30,7 @@ import { createImporter, type Importer } from './createImporter';
 import { createLayoutFill } from '../createLayoutFill/createLayoutFill';
 import type { StoredLibraryFolder } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -83,7 +84,7 @@ function sandbox(): Sandbox {
   writeFileSync(join(root, 'Meta', 'familyflix-library.csv'), SHEET);
 
   const storage = freshStorage();
-  const media = createMedia(mediaDir);
+  const media = createMedia(mediaDir, unfittedArt());
   const importer = createImporter({
     storage,
     media,

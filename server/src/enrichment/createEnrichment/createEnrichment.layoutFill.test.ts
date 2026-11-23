@@ -29,6 +29,7 @@ import {
 } from '@/types';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   closeTracked,
   track,
@@ -76,7 +77,7 @@ async function world() {
   const dir = sandboxRoot('familyflix-enrich-layoutfill-');
   const storage = track(createSqliteStorage(join(dir, 'familyflix.db')));
   storage.setTmdbKey(KEY);
-  const media = createMedia(join(dir, 'media'));
+  const media = createMedia(join(dir, 'media'), unfittedArt());
 
   const root = join(dir, 'collection');
   const titleFolder = join(root, TITLE_FOLDER);

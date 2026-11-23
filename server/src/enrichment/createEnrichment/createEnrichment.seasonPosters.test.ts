@@ -27,6 +27,7 @@ import { describe, expect, it } from 'vitest';
 
 import { ENRICH_FIELDS, type EnrichField, type EnrichScope } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -104,7 +105,7 @@ function world({
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
   const root = sandboxRoot('familyflix-enrich-season-posters-');
-  const realMedia = createMedia(root);
+  const realMedia = createMedia(root, unfittedArt());
   const media = wrapMedia(realMedia);
   const enrichment = createEnrichment({
     storage,

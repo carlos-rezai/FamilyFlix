@@ -25,6 +25,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import type { TmdbClient } from '../enrichment/tmdbClient/tmdbClient';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -75,7 +76,7 @@ function freshApi() {
   const { root, sheet } = libraryFixture(dir);
   storage.addLibraryFolder(root);
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
   const importer = createImporter({
     storage,

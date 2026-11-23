@@ -34,6 +34,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import type { ComponentSlot } from '../playback/componentSlot/componentSlot';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -68,7 +69,7 @@ async function freshApi() {
   mkdirSync(media);
   mkdirSync(library);
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   // Nothing uploaded: a Factory reset's take-back is refused, never thrown.
   const slot: ComponentSlot = {
     ...fixedSlot(null),

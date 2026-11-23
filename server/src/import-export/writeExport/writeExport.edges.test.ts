@@ -35,6 +35,7 @@ import { describe, expect, it } from 'vitest';
 import type { Movie, StartExport } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeExport } from './writeExport';
 
@@ -82,7 +83,12 @@ function sandbox(): Sandbox {
     mkdirSync(dirname(file), { recursive: true });
     writeFileSync(file, bytes);
   }
-  return { media: createMedia(mediaPath), mediaPath, destination, dir };
+  return {
+    media: createMedia(mediaPath, unfittedArt()),
+    mediaPath,
+    destination,
+    dir,
+  };
 }
 
 const request = (

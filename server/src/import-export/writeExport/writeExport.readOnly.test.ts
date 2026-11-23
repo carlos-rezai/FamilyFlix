@@ -21,6 +21,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { StartExport } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeExport } from './writeExport';
 
@@ -75,7 +76,7 @@ function sandbox(): {
   mkdirSync(mediaPath);
   mkdirSync(destination);
   readOnly.add(destination);
-  return { media: createMedia(mediaPath), destination, dir };
+  return { media: createMedia(mediaPath, unfittedArt()), destination, dir };
 }
 
 describe('writeExport — a folder FamilyFlix can’t write to', () => {

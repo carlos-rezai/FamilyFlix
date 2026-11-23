@@ -17,6 +17,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   fakeTmdb,
   TMDB_KEY as KEY,
@@ -31,7 +32,10 @@ import { framelessPlayback } from '../../test-support/framelessPlayback/frameles
 function world({ reachable = true } = {}) {
   const storage = freshStorage();
   const client = fakeTmdb({ reachable });
-  const media = createMedia(sandboxRoot('familyflix-enrich-summary-'));
+  const media = createMedia(
+    sandboxRoot('familyflix-enrich-summary-'),
+    unfittedArt()
+  );
   const enrichment = createEnrichment({
     storage,
     client,

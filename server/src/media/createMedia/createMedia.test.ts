@@ -38,6 +38,7 @@ import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { mediaFilePath } from '../../playback/mediaFilePath/mediaFilePath';
 
 import { createMedia, type Media } from './createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 
 /**
  * A managed media directory with a sibling beside it, and the domain composed
@@ -53,7 +54,7 @@ function sandbox(): { media: Media; root: string; outside: string } {
   mkdirSync(root);
   mkdirSync(outside);
 
-  return { media: createMedia(root), root, outside };
+  return { media: createMedia(root, unfittedArt()), root, outside };
 }
 
 /** One part's bytes, the way `busboy` hands them over. */
@@ -292,7 +293,10 @@ describe('createMedia — reserveFolder', () => {
     const sandboxDir = sandboxRoot('familyflix-media-');
     const root = join(sandboxDir, 'media');
 
-    const folder = createMedia(root).reserveFolder('The Lantern Keeper', 2019);
+    const folder = createMedia(root, unfittedArt()).reserveFolder(
+      'The Lantern Keeper',
+      2019
+    );
 
     // The dev default is `./media`, which does not exist until the first film
     // is added — and the first film added is exactly this call.
@@ -805,7 +809,7 @@ describe('createMedia — emptyRoot', () => {
   it('is nothing to do for a root that does not exist', () => {
     const dir = sandboxRoot('familyflix-media-');
     const root = join(dir, 'never-made');
-    const media = createMedia(root);
+    const media = createMedia(root, unfittedArt());
 
     expect(() => media.emptyRoot()).not.toThrow();
   });

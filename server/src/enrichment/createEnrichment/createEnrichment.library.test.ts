@@ -28,6 +28,7 @@ import {
   type EnrichScope,
 } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -114,7 +115,10 @@ interface FilmValues {
 function world(client: FakeTmdb = knowsBoth()) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
-  const media = createMedia(sandboxRoot('familyflix-enrich-library-'));
+  const media = createMedia(
+    sandboxRoot('familyflix-enrich-library-'),
+    unfittedArt()
+  );
   const enrichment = createEnrichment({
     storage,
     client,

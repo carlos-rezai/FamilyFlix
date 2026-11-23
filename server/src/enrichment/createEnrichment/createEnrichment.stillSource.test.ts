@@ -15,6 +15,7 @@ import { ENRICH_FIELDS } from '@/types';
 import { openDatabase } from '../../db';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   fakeTmdb,
   reviewed,
@@ -66,7 +67,7 @@ describe('a Sync writes the Still source', () => {
     const dbPath = join(sandbox, 'library.db');
     const storage = track(createSqliteStorage(dbPath));
     storage.setTmdbKey(TMDB_KEY);
-    const media = createMedia(join(sandbox, 'media'));
+    const media = createMedia(join(sandbox, 'media'), unfittedArt());
     const client = fakeTmdb({
       tvSearches: { [TITLE]: [tmdbTvResult(SHOW_ID, TITLE, 2018)] },
       shows: [tmdbTvDetail(SHOW_ID, TITLE, 2018)],

@@ -19,6 +19,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { ENRICH_FIELDS, type EnrichField } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import type { Playback } from '../../playback/createPlayback/createPlayback';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
@@ -96,7 +97,7 @@ async function world() {
   const storage = freshStorage();
   storage.setTmdbKey(TMDB_KEY);
   const root = sandboxRoot('familyflix-missing-season-');
-  const media = createMedia(root);
+  const media = createMedia(root, unfittedArt());
   const frame = vi.fn<Frame>(pictured);
   const client = knowsBothShows();
   const enrichment = createEnrichment({

@@ -26,6 +26,7 @@ import { createApiRouter } from '.';
 import { createEnrichment } from '../enrichment/createEnrichment/createEnrichment';
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createMedia, type Media } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
@@ -113,7 +114,7 @@ function freshApi(options: { breakReads?: boolean } = {}): {
     })
   );
 
-  const real = createMedia(mediaPath);
+  const real = createMedia(mediaPath, unfittedArt());
   const media = options.breakReads === true ? breaking(real) : real;
   const playback = createPlayback(mediaPath, fixedSlot(null), () => null);
   const app = express();

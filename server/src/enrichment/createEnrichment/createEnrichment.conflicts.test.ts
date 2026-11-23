@@ -28,6 +28,7 @@ import {
   type FieldConflict,
 } from '@/types';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -94,7 +95,10 @@ const HARBOR: TmdbMovieDetail = {
 function world() {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
-  const media = createMedia(sandboxRoot('familyflix-enrich-conflicts-'));
+  const media = createMedia(
+    sandboxRoot('familyflix-enrich-conflicts-'),
+    unfittedArt()
+  );
   const client = fakeTmdb({ movies: [LANTERN, HARBOR] });
   const enrichment = createEnrichment({
     storage,

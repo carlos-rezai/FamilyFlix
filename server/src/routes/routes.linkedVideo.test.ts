@@ -37,6 +37,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import type {
   PlaybackComponent,
@@ -119,7 +120,7 @@ function freshApi(component: PlaybackComponent | null = null): {
   mkdirSync(library);
   const folderId = storage.addLibraryFolder(library).id;
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   // A Factory reset takes back the uploaded component; this slot never had
   // one, so it answers as a real slot with nothing uploaded does.
   const playback = createPlayback(

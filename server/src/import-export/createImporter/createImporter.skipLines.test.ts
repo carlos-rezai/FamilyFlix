@@ -24,6 +24,7 @@ import { createImporter, type Importer } from './createImporter';
 import { createLayoutFill } from '../createLayoutFill/createLayoutFill';
 import type { LibraryStorage, StoredLibraryFolder } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -75,7 +76,7 @@ function sandbox(lines: string[]): Sandbox {
   );
 
   const storage = freshStorage();
-  const mediaRoot = createMedia(media);
+  const mediaRoot = createMedia(media, unfittedArt());
   const importer = createImporter({
     storage,
     media: mediaRoot,

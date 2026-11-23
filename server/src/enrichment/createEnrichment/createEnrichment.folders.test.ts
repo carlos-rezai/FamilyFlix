@@ -23,6 +23,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { ENRICH_FIELDS, type EnrichmentRun } from '@/types';
 import { createSqliteStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   closeTracked,
   track,
@@ -67,7 +68,7 @@ function world() {
   const dir = sandboxRoot('familyflix-enrich-folders-');
   const storage = track(createSqliteStorage(join(dir, 'familyflix.db')));
   storage.setTmdbKey(KEY);
-  const media = createMedia(join(dir, 'media'));
+  const media = createMedia(join(dir, 'media'), unfittedArt());
 
   /** The three Library folders: two on disk, one listed but gone. */
   const paths: Record<Home, string> = {

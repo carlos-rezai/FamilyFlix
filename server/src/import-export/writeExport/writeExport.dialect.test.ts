@@ -14,6 +14,7 @@ import { describe, expect, it } from 'vitest';
 import { SHEET_COLUMNS } from '@/types';
 import { makeMovie } from '@/test-support/makeMovie/makeMovie';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { writeExport } from './writeExport';
 
@@ -36,7 +37,7 @@ describe('writeExport: the Sheet dialect', () => {
     );
 
     const outcome = await writeExport(
-      createMedia(mediaPath),
+      createMedia(mediaPath, unfittedArt()),
       {
         format: 'csv',
         destination,

@@ -17,6 +17,7 @@ import { describe, expect, it } from 'vitest';
 
 import { copyFoundEpisodes } from './copyFoundEpisodes';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 
 /** A file at `relative` under `root`, made, holding its own name. */
@@ -31,7 +32,7 @@ function fileAt(root: string, relative: string): string {
 function freshSeries() {
   const root = sandboxRoot('familyflix-copy-found-');
   const mediaRoot = join(root, 'media');
-  const media = createMedia(mediaRoot);
+  const media = createMedia(mediaRoot, unfittedArt());
   const folder = media.reserveFolder('Harbor and Vine', 2019);
   return { root, mediaRoot, media, folder };
 }

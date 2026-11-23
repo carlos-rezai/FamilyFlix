@@ -26,6 +26,7 @@ import {
 } from '@/types';
 import { searchQuery } from '../../import-export/titleKey/titleKey';
 import { createMedia } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -98,7 +99,10 @@ function knowsTheLibrary(): FakeTmdb {
 function world(client: FakeTmdb = knowsTheLibrary()) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
-  const media = createMedia(sandboxRoot('familyflix-enrich-ladder-'));
+  const media = createMedia(
+    sandboxRoot('familyflix-enrich-ladder-'),
+    unfittedArt()
+  );
   const enrichment = createEnrichment({
     storage,
     client,

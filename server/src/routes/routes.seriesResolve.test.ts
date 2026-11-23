@@ -35,6 +35,7 @@ import { createEnrichment } from '../enrichment/createEnrichment/createEnrichmen
 import { createImporter } from '../import-export/createImporter/createImporter';
 import { createSqliteStorage, type LibraryStorage } from '../library';
 import { createMedia } from '../media/createMedia/createMedia';
+import { unfittedArt } from '../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { LIBRARY_FIXTURE } from '../test-support/libraryFixture/libraryFixture';
@@ -110,7 +111,7 @@ function freshApi(episodes: string[]): {
   const sheet = join(dir, 'library.csv');
   writeFileSync(sheet, SHEET);
 
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const playback = createPlayback(media, fixedSlot(null), () => null);
   const app = express();
   app.use(

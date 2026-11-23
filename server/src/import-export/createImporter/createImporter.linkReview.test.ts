@@ -30,6 +30,7 @@ import {
   type StoredLibraryFolder,
 } from '../../library';
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
+import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   createPlayback,
   type Playback,
@@ -85,7 +86,7 @@ function sandbox(kind: 'films' | 'shows'): Sandbox {
     (id) =>
       storage.libraryFolders().find((folder) => folder.id === id)?.path ?? null
   );
-  const mediaDomain = createMedia(media);
+  const mediaDomain = createMedia(media, unfittedArt());
   const importer = createImporter({
     storage,
     media: mediaDomain,
