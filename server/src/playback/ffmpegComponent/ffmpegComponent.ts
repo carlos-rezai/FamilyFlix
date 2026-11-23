@@ -209,6 +209,9 @@ export function ffmpegComponent(
     probe: (file) => probeFile(binaries.ffprobe, file),
     spawn: (args, input) => {
       // A stdin only for a picture to hand in: a conversion reads its file.
+      // Two calls rather than one with a computed slot: Node types `stdout`
+      // as present only for a literal `stdio` tuple, so one call would widen
+      // it to `Readable | null`.
       const child =
         input === undefined
           ? spawn(binaries.ffmpeg, args, {
