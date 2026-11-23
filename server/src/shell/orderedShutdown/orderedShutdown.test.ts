@@ -9,6 +9,8 @@
 //   2. cancel the **Current enrichment run**;
 //   2b. stop the **Quality sweep** (issue #668), awaited, so no quality is
 //      written after the database closes;
+//   2c. stop the **Art sweep** with it (issue #688), awaited, so no picture is
+//      fitted after the shutdown has begun;
 //   3. `closeAllConnections()`, **before** `close()`, so a playing film's
 //      streaming response cannot hold the exit past the shell's 5 s;
 //   4. flush the **Library sheet writer** (issue #540), awaited, while the
@@ -102,6 +104,11 @@ function worldOver(server: Server, log: string[]): ShutdownWorld {
         log.push('stop quality sweep');
       }),
     },
+    artSweep: {
+      stop: vi.fn(async () => {
+        log.push('stop art sweep');
+      }),
+    },
     librarySheet: {
       flush: vi.fn(async () => {
         log.push('flush library sheet');
@@ -118,7 +125,7 @@ function worldOver(server: Server, log: string[]): ShutdownWorld {
 }
 
 describe('orderedShutdown', () => {
-  it('cancels the import and the sync, drops connections before closing, flushes the Library sheet, closes the database, and exits 0, in that order', async () => {
+  it('cancels the import and the sync, stops both sweeps, drops connections before closing, flushes the Library sheet, closes the database, and exits 0, in that order', async () => {
     const log: string[] = [];
     const server = await listening();
 
@@ -128,6 +135,7 @@ describe('orderedShutdown', () => {
       'cancel import',
       'cancel enrichment',
       'stop quality sweep',
+      'stop art sweep',
       'closeAllConnections',
       'close',
       'flush library sheet',
@@ -190,6 +198,36 @@ describe('orderedShutdown', () => {
     await done;
 
     expect(log.indexOf('quality sweep stopped')).toBeLessThan(
+      log.indexOf('close database')
+    );
+    expect(world.exit).toHaveBeenCalledWith(0);
+  });
+
+  it('waits for the Art sweep’s stop before closing the database', async () => {
+    const log: string[] = [];
+    const server = await listening();
+    const world = worldOver(server, log);
+    let swept!: () => void;
+    world.artSweep.stop = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          swept = () => {
+            log.push('art sweep stopped');
+            resolve();
+          };
+        })
+    );
+
+    const done = orderedShutdown(world);
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(world.artSweep.stop).toHaveBeenCalledTimes(1);
+    expect(world.closeDatabase).not.toHaveBeenCalled();
+    expect(world.exit).not.toHaveBeenCalled();
+
+    swept();
+    await done;
+
+    expect(log.indexOf('art sweep stopped')).toBeLessThan(
       log.indexOf('close database')
     );
     expect(world.exit).toHaveBeenCalledWith(0);
