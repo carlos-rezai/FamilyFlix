@@ -103,3 +103,57 @@ describe('FolderShapes — what the scanner accepts', () => {
     }
   });
 });
+
+/**
+ * 74 — Sheet in sight, Phase 4 (issue #704).
+ *
+ * The **Sheet note**, from the amended `feat.ImportFlow.dc.html`: a second
+ * paragraph after the folder-first rule, in the rule's style, the path
+ * `_meta\familyflix-library.csv` in mono. No control comes with it.
+ */
+const SHEET_PATH = '_meta\\familyflix-library.csv';
+const SHEET_NOTE = `FamilyFlix keeps a sheet of each folder’s titles in ${SHEET_PATH} and reads it first, so a scan after a reset or on another computer brings every title back as it was, ratings, hearts and what’s been watched included.`;
+
+describe('FolderShapes — the Sheet note', () => {
+  it('states the Sheet note word for word, after the folder-first rule', () => {
+    renderShapes();
+
+    const text = normalized(document.body.textContent);
+    expect(text).toContain(SHEET_NOTE);
+    expect(text.indexOf(RULE)).toBeLessThan(text.indexOf(SHEET_NOTE));
+  });
+
+  it('sets the sheet’s path in mono', () => {
+    renderShapes();
+
+    expect(getComputedStyle(screen.getByText(SHEET_PATH)).fontFamily).toContain(
+      'JetBrains Mono'
+    );
+  });
+
+  it('draws the note as its own paragraph, in the rule’s style', () => {
+    renderShapes();
+
+    const note = innermost(SHEET_NOTE);
+    const rule = innermost(RULE);
+    expect(note).not.toBe(rule);
+    expect(rule.contains(note)).toBe(false);
+    expect(note.contains(rule)).toBe(false);
+    const drawn = getComputedStyle(note);
+    const ruled = getComputedStyle(rule);
+    expect(drawn.fontFamily).toContain('Hanken Grotesk');
+    expect(drawn.fontSize).toBe(ruled.fontSize);
+    expect(drawn.color).toBe(ruled.color);
+    expect(drawn.display).toBe('block');
+  });
+
+  it('draws the note and no control with it', () => {
+    renderShapes();
+
+    expect(normalized(document.body.textContent)).toContain(SHEET_NOTE);
+    expect(screen.queryAllByRole('button')).toHaveLength(0);
+    expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
+    expect(screen.queryAllByRole('switch')).toHaveLength(0);
+    expect(screen.queryAllByRole('status')).toHaveLength(0);
+  });
+});

@@ -67,6 +67,8 @@ const WHAT_GOES = [
 ];
 const WHAT_STAYS = [
   'Your library folders and every file in them',
+  // 74 — Sheet in sight, Phase 4 (issue #704): the sheet, second.
+  'Each library folder’s _meta sheet: scanning the folder again brings its titles back as they were (delete _meta first to start clean)',
   'Your exports',
   'FamilyFlix itself',
 ];
@@ -142,6 +144,22 @@ describe('ResetDialog — the copy', () => {
     expect(comesBefore(goes, stays)).toBe(true);
     const items = within(stays).getAllByRole('listitem');
     expect(items.map((item) => item.textContent)).toEqual(WHAT_STAYS);
+  });
+
+  it('lists four items under What stays, the sheet second, and adds no control', () => {
+    renderDialog();
+
+    const items = within(listUnder('What stays')).getAllByRole('listitem');
+    expect(items).toHaveLength(4);
+    expect(items[1]?.textContent).toBe(WHAT_STAYS[1]);
+    expect(items[1]?.children).toHaveLength(0);
+    expect(within(dialog()).getAllByRole('button')).toHaveLength(3);
+    for (const name of ['Erase everything', 'Cancel', 'Close']) {
+      expect(within(dialog()).getByRole('button', { name })).toBeDefined();
+    }
+    expect(within(dialog()).queryAllByRole('checkbox')).toHaveLength(0);
+    expect(within(dialog()).queryAllByRole('switch')).toHaveLength(0);
+    expect(screen.queryAllByRole('status')).toHaveLength(0);
   });
 
   it('draws the warning glyph, decorative', () => {

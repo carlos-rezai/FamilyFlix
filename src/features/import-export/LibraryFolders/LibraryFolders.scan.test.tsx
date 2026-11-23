@@ -487,3 +487,27 @@ describe('LibraryFolders: Scan new folders and Scan all folders', () => {
     }
   );
 });
+
+/**
+ * 74 — Sheet in sight, Phase 4 (issue #704): the group **Scan** draws the
+ * **Sheet note** in _What the scanner accepts_, its path in mono.
+ */
+describe('LibraryFolders — the Sheet note', () => {
+  const SHEET_PATH = '_meta\\familyflix-library.csv';
+  const SHEET_NOTE = `FamilyFlix keeps a sheet of each folder’s titles in ${SHEET_PATH} and reads it first, so a scan after a reset or on another computer brings every title back as it was, ratings, hearts and what’s been watched included.`;
+
+  it('draws the Sheet note in the group Scan, its path in mono, before Scan all folders', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    const button = await scanButton();
+    const text = (document.body.textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).toContain(SHEET_NOTE);
+    const sheetPath = screen.getByText(SHEET_PATH);
+    expect(getComputedStyle(sheetPath).fontFamily).toContain('JetBrains Mono');
+    expect(
+      sheetPath.compareDocumentPosition(button) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+});

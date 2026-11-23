@@ -590,3 +590,22 @@ describe('ImportSetup — what the scanner accepts', () => {
     }
   });
 });
+
+/**
+ * 74 — Sheet in sight, Phase 4 (issue #704): Import setup draws the **Sheet
+ * note** in _What the scanner accepts_, its path in mono.
+ */
+describe('ImportSetup — the Sheet note', () => {
+  const SHEET_PATH = '_meta\\familyflix-library.csv';
+  const SHEET_NOTE = `FamilyFlix keeps a sheet of each folder’s titles in ${SHEET_PATH} and reads it first, so a scan after a reset or on another computer brings every title back as it was, ratings, hearts and what’s been watched included.`;
+
+  it('draws the Sheet note, its path in mono, above Start import', () => {
+    renderSetup();
+
+    const text = (document.body.textContent ?? '').replace(/\s+/g, ' ');
+    expect(text).toContain(SHEET_NOTE);
+    const sheetPath = screen.getByText(SHEET_PATH);
+    expect(getComputedStyle(sheetPath).fontFamily).toContain('JetBrains Mono');
+    expect(comesBefore(sheetPath, startButton())).toBe(true);
+  });
+});
