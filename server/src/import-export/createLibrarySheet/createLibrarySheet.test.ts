@@ -4,9 +4,10 @@
 //
 // `createLibrarySheet({ storage })` is the **Library sheet writer**: told
 // which **Library folders** a write touched, it waits a few seconds after the
-// last touch, then rewrites each folder's `Meta/familyflix-library.csv` from
-// the library, through a temporary file in `Meta/` and a rename, behind its
-// BOM, making `Meta/` when absent. The sheet holds every title recorded
+// last touch, then rewrites each folder's `_meta/familyflix-library.csv` from
+// the library, through a temporary file in `_meta/` and a rename, behind its
+// BOM, making `_meta/` when absent (74, Sheet in sight, issue #701: the
+// **Meta folder** is `_meta/`). The sheet holds every title recorded
 // against that folder with a **Source folder**; a copied title is in no
 // sheet. An **Unreachable** folder is skipped and written when a later touch
 // finds it reachable. `flush` writes every pending sheet now. A **Factory
@@ -26,7 +27,7 @@ import {
   utimesSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
@@ -129,8 +130,8 @@ async function titlesIn(folderPath: string): Promise<string[]> {
 }
 
 describe('LIBRARY_SHEET', () => {
-  it('is the CSV in the Meta folder', () => {
-    expect(LIBRARY_SHEET).toBe('Meta/familyflix-library.csv');
+  it('is the CSV in the _meta folder', () => {
+    expect(LIBRARY_SHEET).toBe('_meta/familyflix-library.csv');
   });
 });
 
@@ -157,21 +158,22 @@ describe('createLibrarySheet: the debounce', () => {
 });
 
 describe('createLibrarySheet: the rewrite', () => {
-  it('makes Meta/ when absent and writes the sheet behind its BOM', async () => {
+  it('makes _meta/ when absent and writes the sheet behind its BOM', async () => {
     const { storage, sheet, a, pathA, heat } = world();
-    expect(existsSync(join(pathA, 'Meta'))).toBe(false);
+    expect(existsSync(join(pathA, '_meta'))).toBe(false);
     storage.setRating(heat.id, 8);
 
     sheet.touch([a.id]);
     await sheet.flush();
 
-    const bytes = readFileSync(sheetOf(pathA));
+    expect(existsSync(join(pathA, 'Meta'))).toBe(false);
+    const bytes = readFileSync(join(pathA, '_meta', 'familyflix-library.csv'));
     expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     const rows = await readSheet(bytes, 'familyflix-library.csv');
     expect(rows.find((row) => row.title === 'Heat')?.rating).toBe(8);
   });
 
-  it('lands by rename from a temporary file in Meta/, leaving nothing else there', async () => {
+  it('lands by rename from a temporary file in _meta/, leaving nothing else there', async () => {
     const { storage, sheet, a, pathA, heat } = world();
     sheet.touch([a.id]);
     await sheet.flush();
@@ -184,7 +186,7 @@ describe('createLibrarySheet: the rewrite', () => {
     // A rename puts a new file in the sheet's place; an in-place write would
     // keep the old one.
     expect(statSync(sheetOf(pathA), { bigint: true }).ino).not.toBe(before);
-    expect(readdirSync(join(pathA, 'Meta'))).toEqual([
+    expect(readdirSync(join(pathA, '_meta'))).toEqual([
       'familyflix-library.csv',
     ]);
     const rows = await readSheet(
@@ -530,7 +532,7 @@ describe('createLibrarySheet: a New folder', () => {
   it('is never written by a touch, its sheet left as the family had it', async () => {
     const { root, storage, sheet } = world();
     const path = join(root, 'Added back');
-    mkdirSync(join(path, 'Meta'), { recursive: true });
+    mkdirSync(dirname(sheetOf(path)), { recursive: true });
     writeFileSync(sheetOf(path), 'Type,Folder,Title\n');
     const before = readFileSync(sheetOf(path));
     const folder = storage.addLibraryFolder(path);
@@ -617,7 +619,7 @@ describe('createLibrarySheet: a rewrite with equal bytes', () => {
 describe('createLibrarySheet: startup', () => {
   it('writes no sheet: wired to the library’s changes as the server wires it, nothing is written until a touch', async () => {
     const { storage, sheet, pathA, pathB } = world();
-    mkdirSync(join(pathA, 'Meta'));
+    mkdirSync(dirname(sheetOf(pathA)), { recursive: true });
     writeFileSync(sheetOf(pathA), 'Type,Folder,Title\n');
     const before = readFileSync(sheetOf(pathA));
     storage.onChange((folderIds) => sheet.touch(folderIds));

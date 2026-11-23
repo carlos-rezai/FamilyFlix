@@ -48,7 +48,7 @@ const AMELIE: Movie = makeMovie({
 
 /** The csv's every row as text cells, header first. */
 async function csvRows(destination: string): Promise<string[][]> {
-  const path = join(destination, NAME, 'Meta', 'familyflix-library.csv');
+  const path = join(destination, NAME, '_meta', 'familyflix-library.csv');
   const workbook = new ExcelJS.Workbook();
   await workbook.csv.read(
     Readable.from([

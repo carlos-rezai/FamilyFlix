@@ -461,7 +461,7 @@ describe('an Export of a show holding a frame', () => {
           line.split(',').map((cell) => cell.replace(/^"|"$/g, ''))
         );
 
-    const sheet = rows('Meta/familyflix-library.csv');
+    const sheet = rows('_meta/familyflix-library.csv');
     expect(sheet[0]).toEqual([...SHEET_COLUMNS]);
     const stillAt = SHEET_COLUMNS.indexOf('Still');
     const e01 = sheet.find(

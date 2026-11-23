@@ -326,7 +326,7 @@ describe('POST /api/export — written', () => {
     ).json()) as ExportResult;
 
     expect(readdirSync(destination)).toEqual([NAME]);
-    const sheet = join(result.folder, 'Meta', 'familyflix-library.xlsx');
+    const sheet = join(result.folder, '_meta', 'familyflix-library.xlsx');
     const rows = await readSheet(
       readFileSync(sheet),
       'familyflix-library.xlsx'
@@ -451,7 +451,7 @@ async function exportedFixture(
   });
   expect(response.status).toBe(201);
   const { folder: written } = (await response.json()) as ExportResult;
-  return join(written, 'Meta', `familyflix-library.${format}`);
+  return join(written, '_meta', `familyflix-library.${format}`);
 }
 
 async function withRowEdited(
@@ -717,7 +717,7 @@ async function exportedSheet(
   });
   expect(response.status).toBe(201);
   const { folder: written } = (await response.json()) as ExportResult;
-  return readFileSync(join(written, 'Meta', `familyflix-library.${format}`));
+  return readFileSync(join(written, '_meta', `familyflix-library.${format}`));
 }
 
 describe.each(FORMATS)(
@@ -812,7 +812,7 @@ describe.each(FORMATS)(
       const result = (await response.json()) as ExportResult;
       expect(result).toMatchObject({ movieCount: 0, seriesCount: 0 });
       const bytes = readFileSync(
-        join(result.folder, 'Meta', `familyflix-library.${format}`)
+        join(result.folder, '_meta', `familyflix-library.${format}`)
       );
       expect(await readSheet(bytes, `familyflix-library.${format}`)).toEqual(
         []

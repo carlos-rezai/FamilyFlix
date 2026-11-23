@@ -4,7 +4,7 @@
 // the one sheet.
 //
 // `writeExport` makes an **Export folder** that is the **Folder layout**
-// less the videos (log 58, Q19): `Meta/familyflix-library.<csv|xlsx>`
+// less the videos (log 58, Q19): `_meta/familyflix-library.<csv|xlsx>`
 // whatever the **Export name**, and a Title folder per title carrying
 // something, each file in its layout place, named as the **Layout fill**
 // names it. The sheet carries every row of the library; a path cell names
@@ -221,7 +221,7 @@ describe('writeExport: the Export folder mirrors the layout less the videos', ()
     await writeExport(media, request(destination), CONTENT);
 
     const files = tree(join(destination, NAME));
-    delete files['Meta/familyflix-library.csv'];
+    delete files['_meta/familyflix-library.csv'];
     expect(files).toEqual({
       'Heat (1995)/Images/poster.jpg': 'heat poster',
       'Heat (1995)/Images/backdrop.png': 'heat backdrop',
@@ -246,14 +246,14 @@ describe('writeExport: the Export folder mirrors the layout less the videos', ()
     );
 
     expect(Object.keys(tree(join(destination, NAME)))).toEqual([
-      'Meta/familyflix-library.csv',
+      '_meta/familyflix-library.csv',
     ]);
   });
 });
 
 describe('writeExport: the sheet in Meta', () => {
   it.each(['csv', 'xlsx'] as const)(
-    'is Meta/familyflix-library.%s whatever the Export name',
+    'is _meta/familyflix-library.%s whatever the Export name',
     async (format) => {
       const { media, destination } = sandbox();
 
@@ -264,7 +264,7 @@ describe('writeExport: the sheet in Meta', () => {
       );
 
       const folder = join(destination, 'Family films');
-      expect(readdirSync(join(folder, 'Meta'))).toEqual([
+      expect(readdirSync(join(folder, '_meta'))).toEqual([
         `familyflix-library.${format}`,
       ]);
       expect(readdirSync(folder)).not.toContain(`Family films.${format}`);
@@ -279,7 +279,7 @@ describe('writeExport: the sheet in Meta', () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(
       readFileSync(
-        join(destination, NAME, 'Meta', 'familyflix-library.xlsx')
+        join(destination, NAME, '_meta', 'familyflix-library.xlsx')
       ) as unknown as ArrayBuffer
     );
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Library']);
@@ -291,7 +291,7 @@ describe('writeExport: the sheet in Meta', () => {
     await writeExport(media, request(destination), CONTENT);
 
     const bytes = readFileSync(
-      join(destination, NAME, 'Meta', 'familyflix-library.csv')
+      join(destination, NAME, '_meta', 'familyflix-library.csv')
     );
     expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
   });
@@ -302,7 +302,7 @@ describe('writeExport: the sheet in Meta', () => {
     await writeExport(media, request(destination), CONTENT);
 
     const rows = await sheetRows(
-      join(destination, NAME, 'Meta', 'familyflix-library.csv'),
+      join(destination, NAME, '_meta', 'familyflix-library.csv'),
       'csv'
     );
     expect(rows.map((row) => row.Type)).toEqual([
@@ -337,7 +337,7 @@ describe('writeExport: the sheet in Meta', () => {
     const folder = join(destination, NAME);
     const files = new Set(Object.keys(tree(folder)));
     const rows = await sheetRows(
-      join(folder, 'Meta', 'familyflix-library.csv'),
+      join(folder, '_meta', 'familyflix-library.csv'),
       'csv'
     );
     const named = rows.flatMap((row) =>
@@ -363,7 +363,7 @@ describe('writeExport: the sheet in Meta', () => {
     });
 
     const rows = await sheetRows(
-      join(destination, NAME, 'Meta', 'familyflix-library.csv'),
+      join(destination, NAME, '_meta', 'familyflix-library.csv'),
       'csv'
     );
     expect(find(rows, 'Movie')?.Poster).toBe('');
@@ -392,7 +392,7 @@ describe('writeExport: two titles sharing a Folder key', () => {
     });
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
-      ['Heat (1995)', 'Heat (1995) (1)', 'Meta'].sort()
+      ['Heat (1995)', 'Heat (1995) (1)', '_meta'].sort()
     );
   });
 

@@ -12,7 +12,7 @@
 // as bytes; only `setTimeout` is faked.
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SHEET_COLUMNS } from '@/types';
@@ -68,7 +68,7 @@ const sheetOf = (root: string): string => join(root, LIBRARY_SHEET);
 /** Put the corrupt sheet in the folder's `Meta/`, checking the reader refuses it. */
 async function placeCorrupt(root: string): Promise<void> {
   await expect(readSheet(CORRUPT, 'familyflix-library.csv')).rejects.toThrow();
-  mkdirSync(join(root, 'Meta'), { recursive: true });
+  mkdirSync(dirname(sheetOf(root)), { recursive: true });
   writeFileSync(sheetOf(root), CORRUPT);
 }
 

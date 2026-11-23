@@ -103,7 +103,7 @@ describe('writeExport — a valid destination', () => {
       sourceFolders: new Map(),
     });
 
-    const sheet = join(destination, NAME, 'Meta', 'familyflix-library.csv');
+    const sheet = join(destination, NAME, '_meta', 'familyflix-library.csv');
     expect(existsSync(sheet)).toBe(true);
     const rows = await readSheet(readFileSync(sheet), 'familyflix-library.csv');
     expect(rows.map((row) => row.title)).toEqual(['Amélie', 'Zephyr']);
@@ -118,7 +118,7 @@ describe('writeExport — a valid destination', () => {
       sourceFolders: new Map(),
     });
 
-    const sheet = join(destination, NAME, 'Meta', 'familyflix-library.xlsx');
+    const sheet = join(destination, NAME, '_meta', 'familyflix-library.xlsx');
     expect(existsSync(sheet)).toBe(true);
     const rows = await readSheet(
       readFileSync(sheet),
@@ -136,7 +136,7 @@ describe('writeExport — a valid destination', () => {
       sourceFolders: new Map(),
     });
 
-    expect(readdirSync(join(destination, NAME))).toEqual(['Meta']);
+    expect(readdirSync(join(destination, NAME))).toEqual(['_meta']);
   });
 });
 

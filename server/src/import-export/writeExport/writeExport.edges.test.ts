@@ -275,7 +275,7 @@ describe('writeExport — a stored file that can’t be read', () => {
     });
 
     const sheet = readFileSync(
-      join(destination, NAME, 'Meta', 'familyflix-library.csv'),
+      join(destination, NAME, '_meta', 'familyflix-library.csv'),
       'utf8'
     );
     expect(sheet).not.toContain('Heat (1995)/Images/poster.jpg');
@@ -377,11 +377,11 @@ describe('writeExport — zero titles', () => {
     });
 
     const folder = join(destination, NAME);
-    expect(readdirSync(folder)).toEqual(['Meta']);
-    expect(readdirSync(join(folder, 'Meta'))).toEqual([
+    expect(readdirSync(folder)).toEqual(['_meta']);
+    expect(readdirSync(join(folder, '_meta'))).toEqual([
       'familyflix-library.csv',
     ]);
-    const lines = csvLines(join(folder, 'Meta', 'familyflix-library.csv'));
+    const lines = csvLines(join(folder, '_meta', 'familyflix-library.csv'));
     expect(lines).toHaveLength(1);
     expect(lines[0]).toMatch(/^Type,Folder,Season,Episode,Title,/);
   });
@@ -395,7 +395,7 @@ describe('writeExport — zero titles', () => {
       sourceFolders: new Map(),
     });
 
-    const folder = join(destination, NAME, 'Meta');
+    const folder = join(destination, NAME, '_meta');
     expect(readdirSync(folder)).toEqual(['familyflix-library.xlsx']);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(

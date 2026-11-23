@@ -7,7 +7,7 @@
 // The library is exported (`POST /api/export`), Factory reset
 // (`POST /api/reset`), the inner `Movies/` folder linked as a Library folder
 // (`POST /api/library-folders`) and the Export's sheet uploaded from its
-// `Meta/` folder (`POST /api/import`, Link). Every title is back, no
+// `_meta/` folder (`POST /api/import`, Link). Every title is back, no
 // **Problem** is raised, and every poster is set: each path cell is found
 // under the run's **Sheet root**, the Export folder.
 //
@@ -187,7 +187,7 @@ async function untilReview(baseUrl: string): Promise<ImportRun> {
 
 /**
  * The maintainer's case up to review: export, Factory reset, link the inner
- * folder, upload the Export's sheet from its `Meta/` folder in Link.
+ * folder, upload the Export's sheet from its `_meta/` folder in Link.
  */
 async function exportedResetAndUploaded(): Promise<{
   storage: LibraryStorage;
@@ -217,7 +217,7 @@ async function exportedResetAndUploaded(): Promise<{
   expect(
     (
       await post(baseUrl, '/import', {
-        sheetPath: join(destination, NAME, 'Meta', 'familyflix-library.csv'),
+        sheetPath: join(destination, NAME, '_meta', 'familyflix-library.csv'),
         mode: 'link',
       })
     ).status

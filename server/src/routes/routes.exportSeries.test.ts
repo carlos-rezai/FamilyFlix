@@ -7,7 +7,7 @@
 // each series' detail over the full series list and hands it to the writer:
 //
 // - an export of a library holding _Heat_ and _Severance_ lists both in the
-//   one sheet, `Meta/familyflix-library.<csv|xlsx>`, A to Z by Folder key,
+//   one sheet, `_meta/familyflix-library.<csv|xlsx>`, A to Z by Folder key,
 //   _Severance_'s Season and Episode rows after its Series row, in order;
 // - the `201` counts the series in `seriesCount`;
 // - the round trip, with series rows and their synopses among the titles: an
@@ -217,13 +217,13 @@ describe('POST /api/export — series and episodes', () => {
     const { result } = await exported(api, 'xlsx');
 
     expect(result).toMatchObject({ movieCount: 1, seriesCount: 1 });
-    expect(readdirSync(join(result.folder, 'Meta'))).toEqual([
+    expect(readdirSync(join(result.folder, '_meta'))).toEqual([
       'familyflix-library.xlsx',
     ]);
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(
       readFileSync(
-        join(result.folder, 'Meta', 'familyflix-library.xlsx')
+        join(result.folder, '_meta', 'familyflix-library.xlsx')
       ) as unknown as ArrayBuffer
     );
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual(['Library']);
@@ -242,11 +242,11 @@ describe('POST /api/export — series and episodes', () => {
     const { result } = await exported(api, 'csv');
 
     expect(result).toMatchObject({ movieCount: 1, seriesCount: 1 });
-    expect(readdirSync(join(result.folder, 'Meta'))).toEqual([
+    expect(readdirSync(join(result.folder, '_meta'))).toEqual([
       'familyflix-library.csv',
     ]);
     const sheet = await csvSheet(
-      join(result.folder, 'Meta', 'familyflix-library.csv')
+      join(result.folder, '_meta', 'familyflix-library.csv')
     );
     expect(identities(sheet)).toEqual(HEAT_AND_SEVERANCE_IN_ORDER);
   });
@@ -318,7 +318,7 @@ describe.each(FORMATS)(
       expect(result.seriesCount).toBe(2);
       const sheetPath = join(
         result.folder,
-        'Meta',
+        '_meta',
         `familyflix-library.${format}`
       );
       const exportedRows = await readSheet(readFileSync(sheetPath), sheetPath);

@@ -74,7 +74,7 @@ describe('writeExport — the folder and the sheet take the requested name', () 
     await writeExport(media, request(destination), CONTENT);
 
     expect(
-      readdirSync(join(destination, 'Heat (1995) – kopia', 'Meta'))
+      readdirSync(join(destination, 'Heat (1995) – kopia', '_meta'))
     ).toEqual(['familyflix-library.csv']);
   });
 
@@ -87,7 +87,7 @@ describe('writeExport — the folder and the sheet take the requested name', () 
       CONTENT
     );
 
-    expect(readdirSync(join(destination, 'Family films', 'Meta'))).toEqual([
+    expect(readdirSync(join(destination, 'Family films', '_meta'))).toEqual([
       'familyflix-library.xlsx',
     ]);
   });
@@ -104,7 +104,7 @@ describe('writeExport — the folder and the sheet take the requested name', () 
     expect(readdirSync(destination)).toEqual(['  Family films']);
     expect(
       existsSync(
-        join(destination, '  Family films', 'Meta', 'familyflix-library.csv')
+        join(destination, '  Family films', '_meta', 'familyflix-library.csv')
       )
     ).toBe(true);
   });
@@ -127,7 +127,7 @@ describe('writeExport — a taken requested name', () => {
     });
     expect(readdirSync(join(destination, 'Family films'))).toEqual([]);
     expect(
-      readdirSync(join(destination, 'Family films (1)', 'Meta'))
+      readdirSync(join(destination, 'Family films (1)', '_meta'))
     ).toContain('familyflix-library.csv');
   });
 });

@@ -170,7 +170,7 @@ const text = (cell: unknown): string => {
 async function sheetRows(
   destination: string
 ): Promise<Record<string, string>[]> {
-  const path = join(destination, NAME, 'Meta', 'familyflix-library.csv');
+  const path = join(destination, NAME, '_meta', 'familyflix-library.csv');
   const workbook = new ExcelJS.Workbook();
   await workbook.csv.read(
     Readable.from([

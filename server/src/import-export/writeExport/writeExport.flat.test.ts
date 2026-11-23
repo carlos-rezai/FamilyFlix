@@ -110,7 +110,7 @@ const text = (cell: unknown): string => {
 async function sheetRows(
   destination: string
 ): Promise<Record<string, string>[]> {
-  const path = join(destination, NAME, 'Meta', 'familyflix-library.csv');
+  const path = join(destination, NAME, '_meta', 'familyflix-library.csv');
   const workbook = new ExcelJS.Workbook();
   await workbook.csv.read(
     Readable.from([
@@ -146,7 +146,7 @@ describe('writeExport: a library of nested Source folders', () => {
     const { destination } = await exported();
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
-      ['Amelie (2001)', 'Die Hard (1988)', 'Meta', 'Tidewater (2018)'].sort()
+      ['Amelie (2001)', 'Die Hard (1988)', '_meta', 'Tidewater (2018)'].sort()
     );
     expect(
       readFileSync(

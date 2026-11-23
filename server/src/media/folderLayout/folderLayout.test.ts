@@ -7,10 +7,21 @@
 // names a second track of one language `<Language> (2)` (Q17), and
 // `trackLanguageOf` reads such a name back as its language. Prior art:
 // `folderKeyOf`'s tables.
+//
+// 74, Sheet in sight, Phase 1 (issue #701): the **Meta folder** is `_meta/`
+// and the **Old Meta folder** `Meta/`; `isMetaFolder` is true for exactly
+// those two names, compared exactly as `readdir` spells them.
 
 import { describe, expect, it } from 'vitest';
 
-import { endsInRole, spellTrackName, trackLanguageOf } from './folderLayout';
+import {
+  endsInRole,
+  isMetaFolder,
+  META_FOLDER,
+  OLD_META_FOLDER,
+  spellTrackName,
+  trackLanguageOf,
+} from './folderLayout';
 
 describe('endsInRole: the art of a role', () => {
   it.each([
@@ -65,6 +76,24 @@ describe('trackLanguageOf: a track name read back', () => {
       expect(trackLanguageOf(`${spellTrackName(language, 2)}.srt`)).toBe(
         language
       );
+    }
+  );
+});
+
+describe('the Meta folder and the Old Meta folder', () => {
+  it('names the Meta folder _meta and the Old Meta folder Meta', () => {
+    expect(META_FOLDER).toBe('_meta');
+    expect(OLD_META_FOLDER).toBe('Meta');
+  });
+
+  it.each(['_meta', 'Meta'])('reads %s as a Meta folder', (name) => {
+    expect(isMetaFolder(name)).toBe(true);
+  });
+
+  it.each(['meta', '_Meta', 'Meta (2019)'])(
+    'refuses %s as a Meta folder',
+    (name) => {
+      expect(isMetaFolder(name)).toBe(false);
     }
   );
 });

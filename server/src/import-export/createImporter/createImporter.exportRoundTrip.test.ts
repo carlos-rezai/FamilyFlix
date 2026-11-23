@@ -239,7 +239,7 @@ describe('createImporter: the Export round trip, uploaded after a Factory reset'
     box.storage.addLibraryFolder(box.root);
 
     await box.importer.start(
-      join(folder, 'Meta', 'familyflix-library.csv'),
+      join(folder, '_meta', 'familyflix-library.csv'),
       false
     );
     return untilReview(box.importer);

@@ -16,6 +16,9 @@
 // rewrites byte for byte, `,` and `;`, has every row as wide as its header, a
 // Season row's trailing blanks written as empty fields.
 //
+// 74, Sheet in sight, Phase 1 (issue #701): the sheet the Round trip writes,
+// reads and rewrites lies in the **Meta folder** `_meta/`.
+//
 // The run is real: Die Hard from the importer's fixture and Tidewater from its
 // series fixture, copied into a sandboxed Library folder with art at every
 // place of the **Folder layout** (the series' poster and backdrop, its Season
@@ -150,7 +153,7 @@ async function scanAndClose(box: Sandbox): Promise<void> {
 
 /** The Library folder's sheet, as bytes. */
 const sheetBytes = (box: Sandbox): Buffer =>
-  readFileSync(join(box.root, 'Meta', 'familyflix-library.csv'));
+  readFileSync(join(box.root, '_meta', 'familyflix-library.csv'));
 
 /** A file's content by its stored path, so a copy under a new name compares equal. */
 function contentOf(box: Sandbox, stored: string | null): string | null {
@@ -422,7 +425,7 @@ describe('createImporter.scan: the Round trip over a `;` sheet', () => {
     await originalLibrary(box);
     const sheet = await semicolonSheet(sheetBytes(box));
     expect(sheet.toString('utf8').split(/[;\n]/)).toContain('7,8');
-    writeFileSync(join(box.root, 'Meta', 'familyflix-library.csv'), sheet);
+    writeFileSync(join(box.root, '_meta', 'familyflix-library.csv'), sheet);
     return sheet;
   }
 

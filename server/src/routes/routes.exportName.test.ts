@@ -144,7 +144,7 @@ describe('POST /api/export — the requested name', () => {
     expect(await response.json()).toMatchObject({
       folder: join(destination, 'Family films'),
     });
-    expect(readdirSync(join(destination, 'Family films', 'Meta'))).toEqual([
+    expect(readdirSync(join(destination, 'Family films', '_meta'))).toEqual([
       'familyflix-library.csv',
     ]);
   });

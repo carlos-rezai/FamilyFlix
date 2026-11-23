@@ -129,7 +129,7 @@ const text = (cell: unknown): string => {
 async function sheetRows(
   destination: string
 ): Promise<Record<string, string>[]> {
-  const path = join(destination, NAME, 'Meta', 'familyflix-library.csv');
+  const path = join(destination, NAME, '_meta', 'familyflix-library.csv');
   const workbook = new ExcelJS.Workbook();
   await workbook.csv.read(
     Readable.from([
@@ -198,7 +198,7 @@ describe('writeExport: each title is named by its Source folder', () => {
     });
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
-      ['Amélie (2001)', 'Heat (1995)', 'Meta', 'Tidewater (2018)'].sort()
+      ['Amélie (2001)', 'Heat (1995)', '_meta', 'Tidewater (2018)'].sort()
     );
     expect(
       readFileSync(
@@ -239,7 +239,7 @@ describe('writeExport: two titles on one Source folder key', () => {
     await writeExport(media, request(destination), content);
 
     expect(readdirSync(join(destination, NAME)).sort()).toEqual(
-      ['Amélie (2001)', 'Amélie (2001) (1)', 'Meta'].sort()
+      ['Amélie (2001)', 'Amélie (2001) (1)', '_meta'].sort()
     );
     const folders = (await sheetRows(destination))
       .filter((row) => row.Type === 'Movie')

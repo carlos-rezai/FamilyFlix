@@ -19,7 +19,7 @@ import {
   utimesSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { SHEET_COLUMNS } from '@/types';
@@ -139,7 +139,7 @@ describe('createLibrarySheet: every row as wide as its header', () => {
   for (const separator of [',', ';'] as const) {
     it(`writes every row of a \`${separator}\` sheet, the Season row too, with the header's width`, async () => {
       const { root, folder, sheet } = world();
-      mkdirSync(join(root, 'Meta'), { recursive: true });
+      mkdirSync(dirname(sheetOf(root)), { recursive: true });
       writeFileSync(
         sheetOf(root),
         Buffer.concat([
@@ -160,7 +160,7 @@ describe('createLibrarySheet: every row as wide as its header', () => {
 
     it(`rewrites a short-rowed \`${separator}\` sheet once, then a touch writes nothing`, async () => {
       const { root, folder, sheet } = world();
-      mkdirSync(join(root, 'Meta'), { recursive: true });
+      mkdirSync(dirname(sheetOf(root)), { recursive: true });
       writeFileSync(
         sheetOf(root),
         Buffer.concat([

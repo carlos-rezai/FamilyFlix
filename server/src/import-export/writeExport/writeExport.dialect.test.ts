@@ -4,7 +4,7 @@
 //
 // The **Library sheet writer** keeps a Library sheet's **Sheet dialect**; an
 // **Export** does not look at it. Exported into a Library folder whose
-// `Meta/familyflix-library.csv` is `;`-separated, the Export's own sheet is
+// `_meta/familyflix-library.csv` is `;`-separated, the Export's own sheet is
 // `,`, its decimals written with a point, UTF-8 behind a BOM (log 60, Q6).
 
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -26,13 +26,13 @@ describe('writeExport: the Sheet dialect', () => {
     const mediaPath = join(dir, 'media');
     const destination = join(dir, 'Movies');
     mkdirSync(mediaPath);
-    mkdirSync(join(destination, 'Meta'), { recursive: true });
+    mkdirSync(join(destination, '_meta'), { recursive: true });
     const librarySheet = Buffer.concat([
       Buffer.from([0xef, 0xbb, 0xbf]),
       Buffer.from(`${SHEET_COLUMNS.join(';')}\nMovie;Heat (1995);Heat\n`),
     ]);
     writeFileSync(
-      join(destination, 'Meta', 'familyflix-library.csv'),
+      join(destination, '_meta', 'familyflix-library.csv'),
       librarySheet
     );
 
@@ -54,7 +54,7 @@ describe('writeExport: the Sheet dialect', () => {
 
     expect(outcome.kind).toBe('written');
     const bytes = readFileSync(
-      join(destination, NAME, 'Meta', 'familyflix-library.csv')
+      join(destination, NAME, '_meta', 'familyflix-library.csv')
     );
     expect([...bytes.subarray(0, 3)]).toEqual([0xef, 0xbb, 0xbf]);
     const [header, ...rows] = bytes
@@ -68,7 +68,7 @@ describe('writeExport: the Sheet dialect', () => {
     );
     // The Library sheet itself is left as it was.
     expect(
-      readFileSync(join(destination, 'Meta', 'familyflix-library.csv')).equals(
+      readFileSync(join(destination, '_meta', 'familyflix-library.csv')).equals(
         librarySheet
       )
     ).toBe(true);
