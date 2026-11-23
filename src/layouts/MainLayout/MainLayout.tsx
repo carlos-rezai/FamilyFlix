@@ -5,14 +5,21 @@ import { BackToTop } from '@/components';
 import { useRestoredScroll } from '@/hooks/useRestoredScroll/useRestoredScroll';
 import { useWelcome } from '@/App/useWelcome/useWelcome';
 import { GearIcon, IconButton } from '@/primitives';
-import { Root, Header, LogoMark, Spacer, Body } from './MainLayout.styles';
+import {
+  Root,
+  Header,
+  HeaderEnd,
+  LogoMark,
+  Spacer,
+  Body,
+} from './MainLayout.styles';
 
 export interface MainLayoutProps {
   /** The scrollable page body rendered under the header. */
   children: ReactNode;
   /** Header content between the wordmark and the spacer — the search bar. */
   headerStart?: ReactNode;
-  /** Header content between the spacer and the gear — the filter dropdowns. */
+  /** Header content in the **Header end**, before the gear: the filter dropdowns. */
   headerEnd?: ReactNode;
 }
 
@@ -59,12 +66,14 @@ export function MainLayout({
         <LogoMark ref={wordmarkRef} $hidden={wordmarkHidden} />
         {headerStart}
         <Spacer />
-        {headerEnd}
-        {/* The one call site that wears `IconButton`'s ghost face unaltered —
-            46px, transparent, faint ink — so it adds no chrome of its own. */}
-        <IconButton label="Settings" onClick={() => navigate('/settings')}>
-          <GearIcon size={22} />
-        </IconButton>
+        <HeaderEnd>
+          {headerEnd}
+          {/* The one call site that wears `IconButton`'s ghost face unaltered:
+              46px, transparent, faint ink, so it adds no chrome of its own. */}
+          <IconButton label="Settings" onClick={() => navigate('/settings')}>
+            <GearIcon size={22} />
+          </IconButton>
+        </HeaderEnd>
       </Header>
       <Body ref={body}>{children}</Body>
       <BackToTop container={body} />
