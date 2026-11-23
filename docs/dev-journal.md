@@ -11,6 +11,76 @@ Newest entry first.
 
 ---
 
+## 2026-11-23: Header fit, the refactor (issue 699)
+
+Eleven commits against `docs/refactor-plans/73-header-fit-refactor.md`,
+one per plan commit, none changed from the plan. This is the initiative's
+closing round: step 55 is ✅ and issue 693 is done. **13169 tests pass
+across 927 files** (one skipped), the same as at `124ddfaf`: no test was
+added, weakened or changed its claim. `tsc -b --force` is clean, and
+`eslint` over every code file the round touched reports 0 errors and 0
+warnings, down from the 8 the build left.
+
+### What each group changed
+
+- **Group 1, the Quality filter's last imports** (`2ed47ed3`,
+  `ab465636`). `VIDEO_QUALITIES` and `qualityRankSql` left the movie
+  browse; those two and `seriesQualitySql` the series browse;
+  `VIDEO_QUALITIES` and `VideoQuality` the routes; `VideoQuality`
+  `src/types/browse.ts`. `qualityRankSql` and `seriesQualitySql` stay for
+  the **Series quality** and the sweep.
+- **Group 2, the Header end in the house idiom** (`a4374949`). `HeaderEnd`
+  declares `flex: 0 0 auto`; `flex-wrap: nowrap` stays. `MainLayout.test`
+  read the same through jsdom.
+- **Group 3, imports and hook calls** (`ad969654`, `999886c3`).
+  `LibraryBody`'s `useRowView` import sits beside `useLibraryTab`'s;
+  `LibraryFilters` names its tab before passing it to `allTitlesLabel`.
+- **Group 4, docblocks that say what is** (`d087b2f1`, `a0179866`,
+  `5602bf26`). `LibraryFilters`, `useLibraryQuery`, `useQualityTags` and
+  `DisplaySection` no longer narrate what is gone, and no shipping code
+  bolds **Quality filter**. `parseLibraryQuery` and the routes'
+  `libraryQueryOr400` state a held `?quality=` in the same words (the
+  client adding that it stays on the URL). `LibraryFilters` says the
+  dropdown renders with the two **View rows** alone until the genre list
+  lands. The eight long lines are rewrapped; `parseLibraryQuery`'s
+  paragraph reflowed to its end rather than leave a short line.
+- **Group 5, a suite's name and the documents** (`f6c8b2dd`, `545387c4`
+  and this entry). The five held-quality suites are `*.heldQuality.test.*`;
+  the build has its journal entry; step 55 is one line and a link, its row
+  ✅ Done.
+
+### Where this round left the plan
+
+- **The suites ran after each commit and the full suite at each group's
+  end.** The full suite flaked three times, once on the baseline: one of
+  the two `.warm` backdrop tests (`MovieDetail.warm`, `SeriesDetail.warm`)
+  timing out under load, green alone and on a rerun. No commit touched
+  either.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the held-quality route suite's
+fixture, `genreOptions` reading the selection's arm twice, the test
+docblocks that name retired terms, the glossary's older sections, a
+`?quality=` stripped from the URL, the Genre page's header, and the long
+comment lines older than the initiative (`MainLayout`'s first slot
+paragraph, `LibraryBody`'s `SeriesBody` line and the routes' among them).
+No route, wire, schema, prototype or drawn pixel changed.
+
+### Follow-ups
+
+- **The installed app at 1024px.** The walk ran in a headless Edge
+  against the dev server, not in the shell; the next look at the installed
+  app at its minimum width confirms the wrap there.
+- **The second header line's cost.** Whether the about 58px a second line
+  takes is felt in a narrow window is still to see.
+- **The `.warm` backdrop tests under load.** `MovieDetail.warm` and
+  `SeriesDetail.warm` failed under the full suite three times this round
+  and passed alone; worth a look at their timing before they read as
+  noise.
+
+---
+
 ## 2026-11-23: Header fit, the build (issues 694 to 698)
 
 The prototype amended (694), three slices run by `issue-loop`, each a RED

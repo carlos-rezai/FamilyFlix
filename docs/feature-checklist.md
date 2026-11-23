@@ -84,7 +84,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Video quality: a 4K to SD tag on every poster       | ✅ Done    |
 | Busy overlay: no loader moves what is around it     | ✅ Done    |
 | Seamless art: the backdrop lands with the page      | ✅ Done    |
-| Header fit: every filter pill and Settings in reach | ⬜ Planned |
+| Header fit: every filter pill and Settings in reach | ✅ Done    |
 
 Steps 1 to 9 are the first build order, ending with Software update, which
 shipped as v0.2.0. From step 10 on, each step came out of using FamilyFlix
@@ -141,39 +141,4 @@ grilled; once it ships, it is one line and a link.
 52. ✅ **Video quality**: a 4K to SD tag on every poster ([log 70](design-logs/70-video-quality.md)).
 53. ✅ **Busy overlay**: no loader moves what is around it ([log 71](design-logs/71-busy-overlay.md)).
 54. ✅ **Seamless art**: the backdrop lands with the page ([log 72](design-logs/72-seamless-art.md)).
-
-Step 55 came out of the Quality pill (step 52): the browse header now
-carries five pills, and in a narrow window the last of them and the
-Settings button are pushed off screen, out of reach. Grilled in design
-log 73, which settles the open questions and adds a fit rule (its Q3):
-measured, two fewer pills still leave the header about 1314px wide against
-a 1024px window, so the pills and Settings also wrap whole to a second line
-when the first cannot hold them:
-
-55. 🔜 **Header fit**: every filter pill and the Settings button stay in
-    reach, by drawing two fewer pills and wrapping the rest whole.
-    - **Row view moves into Genre**: the _View_ pill (**Row view switch**)
-      is gone. The Genre dropdown's first two rows, the **View rows**, set
-      the tab's **Row view**: _All Genres_ is **By genre**, the genre rows
-      and the **Other row**; _All movies_ / _All series_ is **All**, one
-      **Library grid** under that heading. Both stay the household setting
-      per tab, never in the URL; a genre stays `?genre=` and leaves the view
-      as it was. The pill reads the checked row: _All Genres_ on Movies and
-      _All series_ on Series for a fresh household.
-    - **Nothing retired downstream**: the Genre rows, **View all** and the
-      **Genre page** stay as they are.
-    - **Quality filter goes**: the _Quality_ pill, `minQuality` and the
-      route's `400 Invalid quality` are gone; a held `?quality=` is read
-      past, client and server. _Show video quality_ only turns the
-      **Quality tag** on the posters on or off, and its line says so.
-    - **Header end**: Genre, Rating, Sort and Settings are one unit, never
-      split or shrunk. When the first line cannot hold it beside the
-      search at its floor, it moves whole to a right-aligned second line,
-      12px below. No breakpoint: a longer genre moves the wrap.
-    - **Walked** on 2026-11-23 in the dev app, both tabs, _Documentary_
-      chosen: one line at 1920 and 1366px, two at 1280 and 1024px, every
-      pill and Settings on screen and none cut. The walk caught the
-      header's spacer costing the first line a gap of its own, which
-      wrapped it at 1366; with the spacer gone the Header end is pushed by
-      its own margin. Each View row drew its body on each tab, and both
-      choices held over a reload.
+55. ✅ **Header fit**: every filter pill and Settings in reach ([log 73](design-logs/73-header-fit.md)).
