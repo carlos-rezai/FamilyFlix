@@ -1,7 +1,14 @@
 import { FilterDropdown } from '@/components';
 import { useQualityTags } from '@/App/useQualityTags/useQualityTags';
+import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
+import { useRowView } from '@/hooks/useRowView/useRowView';
+import { allTitlesLabel } from '@/utils';
 
-import { ALL_GENRES, genreOptions } from '../genreOptions/genreOptions';
+import {
+  genreLabel,
+  genreOptions,
+  type GenreSelection,
+} from '../genreOptions/genreOptions';
 import { qualityLabel, qualityOptions } from '../qualityOptions/qualityOptions';
 import { ratingLabel, ratingOptions } from '../ratingOptions/ratingOptions';
 import { sortLabel, sortOptions } from '../sortOptions/sortOptions';
@@ -27,6 +34,11 @@ import { useLibraryQuery } from '../useLibraryQuery/useLibraryQuery';
  * so a failed list is a quieter dropdown rather than a broken header, and the
  * other pills are untouched by it.
  *
+ * The Genre pill also chooses how the tab is browsed (log 73): its value is
+ * the URL's genre, else the tab's **Row view**, and it is not drawn while
+ * neither is known. A **View row** takes `?genre=` off and saves the tab's
+ * view, with no snackbar; a genre writes `?genre=` alone and leaves the view.
+ *
  * The rating pill is the one that wears a ★ instead of a caption: `label` still
  * supplies its accessible name, so hiding the words on screen never leaves it
  * announcing a value with no subject.
@@ -44,14 +56,31 @@ export function LibraryFilters() {
   const { query, setSort, setGenre, setRating, setQuality } = useLibraryQuery();
   const qualityTags = useQualityTags();
   const genres = useGenreList();
+  const allTitles = allTitlesLabel(useLibraryTab());
+  const { rowView, setRowView } = useRowView();
+
+  const selection: GenreSelection | null = query.genre
+    ? { genre: query.genre }
+    : rowView && { rowView };
+
+  const select = (chosen: GenreSelection) => {
+    if ('genre' in chosen) {
+      setGenre(chosen.genre);
+      return;
+    }
+    setGenre('');
+    void setRowView(chosen.rowView);
+  };
 
   return (
     <>
-      <FilterDropdown
-        label="Genre"
-        value={query.genre ?? ALL_GENRES}
-        options={genreOptions(genres, query.genre, setGenre)}
-      />
+      {selection && (
+        <FilterDropdown
+          label="Genre"
+          value={genreLabel(selection, allTitles)}
+          options={genreOptions(genres, selection, allTitles, select)}
+        />
+      )}
       <FilterDropdown
         label="Minimum rating"
         showLabel={false}

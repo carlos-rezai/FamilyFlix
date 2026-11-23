@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { moviePath } from '@/utils';
+import { allTitlesLabel, moviePath } from '@/utils';
 import { saveFavorite } from '@/api/saveFavorite/saveFavorite';
 import { useCardPreferences } from '@/App/useCardPreferences/useCardPreferences';
 import { fetchMovieGrid } from '../../api/api';
@@ -131,7 +131,7 @@ export function MovieGrid() {
         onToggleFavorite={toggleFavorite}
       />
       <LibraryGridHeading
-        title="All movies"
+        title={allTitlesLabel('movies')}
         count={movieCountLabel(data.movies.length)}
       />
       <LibraryGrid

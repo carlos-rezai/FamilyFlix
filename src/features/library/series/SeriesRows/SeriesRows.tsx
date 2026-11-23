@@ -1,7 +1,13 @@
 import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
-import { episodePlayPath, genreLessPath, genrePath, seriesPath } from '@/utils';
+import {
+  allTitlesLabel,
+  episodePlayPath,
+  genreLessPath,
+  genrePath,
+  seriesPath,
+} from '@/utils';
 import { ContinueRow } from '../../home/ContinueRow/ContinueRow';
 import { FavoritesRow } from '../../home/FavoritesRow/FavoritesRow';
 import { GenreRow } from '../../home/GenreRow/GenreRow';
@@ -74,7 +80,10 @@ export function SeriesRows() {
     }
     return (
       <section>
-        <LibraryGridHeading title="All series" count="0 series · 0 episodes" />
+        <LibraryGridHeading
+          title={allTitlesLabel('series')}
+          count="0 series · 0 episodes"
+        />
       </section>
     );
   }

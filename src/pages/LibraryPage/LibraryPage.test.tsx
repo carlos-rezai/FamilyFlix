@@ -848,6 +848,16 @@ describe('LibraryPage: the Row view in the Genre pill', () => {
       if (url.includes('/api/genres') || url.includes('/api/series/genres')) {
         return Promise.resolve(genreListResponse());
       }
+      if (url.includes('/api/series/rows')) {
+        return Promise.resolve(
+          okResponse({
+            rows: [{ genre: 'Drama', count: 0, series: [] }],
+            other: null,
+            favorites: [],
+            continueWatching: [],
+          })
+        );
+      }
       if (url.includes('/api/series')) {
         return Promise.resolve(okResponse(NO_SERIES));
       }

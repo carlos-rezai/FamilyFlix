@@ -2,7 +2,7 @@ import { useDisplayPreference } from '@/App/useDisplayPreference/useDisplayPrefe
 import { useLibraryTab } from '@/hooks/useLibraryTab/useLibraryTab';
 import type { RowView } from '@/types';
 
-/** What `useRowView()` hands the switch and the body. */
+/** What `useRowView()` hands the Genre pill and the body. */
 export interface RowViewApi {
   /** The current tab's **Row view**: `null` until the settings read lands. */
   rowView: RowView | null;
@@ -12,7 +12,7 @@ export interface RowViewApi {
 
 /**
  * The current **Library tab**'s **Row view** and a setter for it alone, read
- * off the URL's tab, so neither the switch nor the body knows the household
+ * off the URL's tab, so neither the Genre pill nor the body knows the household
  * keeps one per tab.
  */
 export function useRowView(): RowViewApi {

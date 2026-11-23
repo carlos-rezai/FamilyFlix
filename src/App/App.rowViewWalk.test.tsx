@@ -283,15 +283,16 @@ const bodyReadsSince = (from: number) =>
     .filter((path) => path !== '/api/settings' && !path.endsWith('/genres'));
 
 /** Choose one item from a header pill, the way a parent does. */
-function choose(pillName: string | RegExp, item: string) {
+function choose(pillName: string | RegExp, item: string | RegExp) {
   const pill = screen.getByRole('button', { name: pillName });
   act(() => pill.focus());
   fireEvent.click(pill);
   fireEvent.click(screen.getByRole('menuitem', { name: item }));
 }
 
-/** Set the current tab's **Row view** through the switch. */
-const chooseView = (view: 'All' | 'By genre') => choose(/^View: /, view);
+/** Set the current tab's **Row view** through the Genre pill's View rows. */
+const chooseView = (view: 'All' | 'By genre') =>
+  choose(/^Genre: /, view === 'All' ? /^All (movies|series)$/ : 'All Genres');
 
 /** Press one **Library tab**. */
 function openTab(name: 'Movies' | 'Series') {
@@ -325,7 +326,7 @@ describe('App: the Row view walk, each tab both ways', () => {
     // The file's first render pays for App's imports (issue #510).
     await screen.findByRole('region', { name: 'Action' }, { timeout: 3000 });
     expect(
-      screen.getByRole('button', { name: 'View: By genre' })
+      screen.getByRole('button', { name: 'Genre: All Genres' })
     ).toBeDefined();
 
     // Movies: By genre to All.
@@ -339,7 +340,9 @@ describe('App: the Row view walk, each tab both ways', () => {
     // Series keeps its own view: All, as stored.
     openTab('Series');
     await findLevel2('All series');
-    expect(screen.getByRole('button', { name: 'View: All' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Genre: All series' })
+    ).toBeDefined();
 
     // Series: All to By genre.
     mark = requests().length;
@@ -582,7 +585,7 @@ describe('App: View all from Series By genre, and Back', () => {
     expect(pathname()).toBe('/');
     expect(new URLSearchParams(search() ?? '').get('tab')).toBe('series');
     expect(
-      screen.getByRole('button', { name: 'View: By genre' })
+      screen.getByRole('button', { name: 'Genre: All Genres' })
     ).toBeDefined();
   }
 
@@ -644,11 +647,13 @@ describe('App: the relaunch', () => {
     const mark = requests().length;
     renderApp('/');
     await findLevel2('All movies');
-    expect(screen.getByRole('button', { name: 'View: All' })).toBeDefined();
+    expect(
+      screen.getByRole('button', { name: 'Genre: All movies' })
+    ).toBeDefined();
     openTab('Series');
     await seriesByGenre();
     expect(
-      screen.getByRole('button', { name: 'View: By genre' })
+      screen.getByRole('button', { name: 'Genre: All Genres' })
     ).toBeDefined();
 
     // Neither default was ever drawn: no genre rows read, no All series read.

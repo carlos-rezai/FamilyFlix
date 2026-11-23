@@ -38,7 +38,11 @@ function tree(entry: string, qualityTags: boolean | null) {
   return (
     <MemoryRouter initialEntries={[entry]}>
       <DisplayPreferenceContext.Provider
-        value={makeDisplayPreferenceApi({ qualityTags })}
+        value={makeDisplayPreferenceApi({
+          qualityTags,
+          movieRowView: 'genre',
+          seriesRowView: 'genre',
+        })}
       >
         <ThemeProvider theme={theme}>
           <LibraryFilters />

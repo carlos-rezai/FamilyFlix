@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 import { LoadMessage } from '@/components';
 import type { SeriesHomePayload } from '@/types';
-import { episodePlayPath, seriesPath } from '@/utils';
+import { allTitlesLabel, episodePlayPath, seriesPath } from '@/utils';
 import { saveSeriesFavorite } from '@/api/saveSeriesFavorite/saveSeriesFavorite';
 import { fetchSeriesHome } from '../../api/api';
 import { LibraryGrid } from '../../LibraryGrid/LibraryGrid';
@@ -138,7 +138,10 @@ export function SeriesGrid() {
         onOpenMovie={(id) => navigate(seriesPath(id))}
         onToggleFavorite={toggleFavorite}
       />
-      <LibraryGridHeading title="All series" count={seriesCountLabel(data)} />
+      <LibraryGridHeading
+        title={allTitlesLabel('series')}
+        count={seriesCountLabel(data)}
+      />
       <LibraryGrid
         movies={cards}
         onOpenMovie={(id) => navigate(seriesPath(id))}

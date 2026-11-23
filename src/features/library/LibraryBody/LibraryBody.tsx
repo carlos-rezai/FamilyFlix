@@ -4,7 +4,7 @@ import { MovieRows } from '../home/MovieRows/MovieRows';
 import { MovieGrid } from '../home/MovieGrid/MovieGrid';
 import { SeriesGrid } from '../series/SeriesGrid/SeriesGrid';
 import { SeriesRows } from '../series/SeriesRows/SeriesRows';
-import { useRowView } from '../useRowView/useRowView';
+import { useRowView } from '@/hooks/useRowView/useRowView';
 
 /** Movies' body, picked off its **Row view**: nothing until the read lands. */
 function MoviesBody() {
@@ -27,8 +27,8 @@ function SeriesBody() {
  * `MovieGrid`, _All movies_ in one uncapped grid. Series under **All** (the
  * default) are `SeriesGrid`, _All series_; under **By genre**, `SeriesRows`,
  * the series genre rows and the **Other series row** last: four bodies, named
- * kind then shape. The Row view is the household's, set by the **Row view
- * switch** and kept in Settings rather than the URL, so back from a title
+ * kind then shape. The Row view is the household's, set from the Genre
+ * pill's **View rows** and kept in Settings rather than the URL, so back from a title
  * lands on the same view. Nothing is drawn until the settings read lands. The
  * choice lives here rather than in `LibraryPage`, which stays composition
  * only.

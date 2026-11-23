@@ -21,7 +21,6 @@ import { DisplayPreferenceContext } from '@/App/useDisplayPreference/useDisplayP
 import { makeDisplayPreferenceApi } from '@/test-support/makeDisplayPreferenceApi/makeDisplayPreferenceApi';
 import { DisplayPreferenceProvider } from '@/App/DisplayPreferenceProvider/DisplayPreferenceProvider';
 import { makeSettings } from '@/test-support/makeSettings/makeSettings';
-import { RowViewSwitch } from '../RowViewSwitch/RowViewSwitch';
 
 /**
  * 63, Row view, Phase 3 (issue #610): `LibraryBody` picks the Movies tab's
@@ -268,7 +267,7 @@ describe('LibraryBody: the Series tab�s Row view', () => {
 
 /**
  * 63, Row view, Phase 6 (issue #613): under the household's own provider,
- * neither the **Row view switch** nor the body is drawn until the settings
+ * the body is not drawn until the settings
  * read lands, so the home is drawn once, in the household's view, and never
  * first in a default it then leaves. A refused read lands the defaults.
  */
@@ -298,7 +297,6 @@ describe('LibraryBody: waiting on the settings read', () => {
       <MemoryRouter initialEntries={['/']}>
         <ThemeProvider theme={theme}>
           <DisplayPreferenceProvider>
-            <RowViewSwitch />
             <LibraryBody />
           </DisplayPreferenceProvider>
         </ThemeProvider>
@@ -308,13 +306,12 @@ describe('LibraryBody: waiting on the settings read', () => {
 
   const bodyReads = () => requested().filter((url) => url !== '/api/settings');
 
-  it('draws neither the switch nor the body, and reads no body, until the read lands', () => {
+  it('draws no body, and reads no body, until the read lands', () => {
     holdRead();
 
     const { container } = renderHome();
 
     expect(container.textContent).toBe('');
-    expect(screen.queryByRole('button', { name: /^View/ })).toBeNull();
     expect(bodyReads()).toEqual([]);
   });
 
@@ -325,7 +322,6 @@ describe('LibraryBody: waiting on the settings read', () => {
     await read.land(okResponse(makeSettings({ movieRowView: 'all' })));
 
     expect(await allMovies()).toBeDefined();
-    expect(screen.getByRole('button', { name: 'View: All' })).toBeDefined();
     expect(requested().some((url) => url.includes('/api/home'))).toBe(false);
   });
 
@@ -336,9 +332,6 @@ describe('LibraryBody: waiting on the settings read', () => {
     await read.land(serverErrorResponse());
 
     expect(await actionRow()).toBeDefined();
-    expect(
-      screen.getByRole('button', { name: 'View: By genre' })
-    ).toBeDefined();
     expect(requested().some((url) => url.includes('/api/movies'))).toBe(false);
   });
 });

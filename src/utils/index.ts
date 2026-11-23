@@ -61,3 +61,4 @@ export {
 export { accentScale, type AccentScale } from './accentScale/accentScale';
 export { imageUrl } from './imageUrl/imageUrl';
 export { kindFilter, type KindFilter } from './kindFilter/kindFilter';
+export { allTitlesLabel } from './allTitlesLabel/allTitlesLabel';
