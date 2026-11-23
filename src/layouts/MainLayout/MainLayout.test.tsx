@@ -314,3 +314,67 @@ describe('MainLayout: the wordmark outside a welcome', () => {
     expect(getComputedStyle(wordmark()).visibility).not.toBe('hidden');
   });
 });
+
+/**
+ * 55, Header fit, Phase 4 (issue #697): the **Header end**. The `headerEnd`
+ * slot and the Settings button are one unit, never split: they sit at the
+ * right of the header's first line while it fits, else move whole to a second
+ * line. jsdom does no layout, so the wrap itself is proved in the walk; these
+ * tests hold the structure and the fit rule's own declarations.
+ */
+
+/** The box that holds the Settings button: the **Header end**. */
+const headerEnd = () => gear().parentElement as HTMLElement;
+
+describe('MainLayout: the Header end', () => {
+  it('draws the Settings button beside the headerEnd slot, in one box of the header', () => {
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerStart: <p>the search bar</p>,
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    const banner = screen.getByRole('banner');
+    const end = headerEnd();
+    expect(end).not.toBe(banner);
+    expect(end.parentElement).toBe(banner);
+    expect(end.contains(screen.getByText('the dropdowns'))).toBe(true);
+    expect(end.contains(screen.getByText('the search bar'))).toBe(false);
+    expect(comesBefore(screen.getByText('the dropdowns'), gear())).toBe(true);
+  });
+
+  it('keeps the Settings button in the Header end when no headerEnd is given', () => {
+    renderLayout(<p>the library goes here</p>);
+
+    const end = headerEnd();
+    expect(end).not.toBe(screen.getByRole('banner'));
+    expect(end.parentElement).toBe(screen.getByRole('banner'));
+  });
+
+  it('holds the Header end whole: never shrunk, never wrapped inside, pushed right', () => {
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    const style = getComputedStyle(headerEnd());
+    expect(style.display).toBe('flex');
+    expect(style.flexShrink).toBe('0');
+    expect(style.flexWrap).toBe('nowrap');
+    expect(style.marginLeft).toBe('auto');
+    expect(style.gap).toBe(theme.space.s5);
+  });
+
+  it('wraps the header by content alone, 12px under the first line, with no media or container query', () => {
+    renderLayout(<p>the library goes here</p>, '/', {
+      headerEnd: <p>the dropdowns</p>,
+    });
+
+    const style = getComputedStyle(screen.getByRole('banner'));
+    expect(style.flexWrap).toBe('wrap');
+    expect(style.rowGap).toBe(theme.space.s3);
+
+    const css = Array.from(document.querySelectorAll('style'))
+      .map((tag) => tag.textContent ?? '')
+      .join('\n');
+    expect(css).not.toMatch(/@media|@container/);
+  });
+});
