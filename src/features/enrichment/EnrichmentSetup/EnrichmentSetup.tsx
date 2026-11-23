@@ -201,7 +201,7 @@ export function EnrichmentSetup({
           Art goes into each title folder's{' '}
           <SourceNoteMono>Images</SourceNoteMono> folder, only where there isn’t
           one already: nothing of yours is ever replaced. The sheet in{' '}
-          <SourceNoteMono>Meta</SourceNoteMono> is FamilyFlix’s own and is kept
+          <SourceNoteMono>_meta</SourceNoteMono> is FamilyFlix’s own and is kept
           up to date.
         </SourceNote>
       </div>
