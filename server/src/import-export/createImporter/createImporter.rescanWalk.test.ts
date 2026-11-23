@@ -295,7 +295,7 @@ describe('createImporter: log 64 walked, Heat/ and Death Note/Season 1/ dropped 
       'Death Note',
       'Die Hard (1988)',
       'Heat',
-      'Meta',
+      '_meta',
     ]);
     expect(foldersIn(box.root)).toEqual(before);
     expect(foldersIn(join(box.root, 'Death Note'))).toEqual([
@@ -333,7 +333,7 @@ describe('createImporter: log 64 walked, Heat/ and Death Note/Season 1/ dropped 
       'Death Note',
       'Die Hard (1988)',
       'Heat',
-      'Meta',
+      '_meta',
     ]);
     expect(foldersIn(join(exported, 'Death Note'))).toEqual([
       'Images',

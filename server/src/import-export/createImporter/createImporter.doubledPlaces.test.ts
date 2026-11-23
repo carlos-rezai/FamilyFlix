@@ -211,7 +211,7 @@ describe('createImporter.scan: the Doubled place lines', () => {
     await box.writer.flush();
 
     const rows = await readSheet(
-      readFileSync(join(box.root, 'Meta', 'familyflix-library.csv')),
+      readFileSync(join(box.root, '_meta', 'familyflix-library.csv')),
       'familyflix-library.csv'
     );
     expect(rows.find((row) => row.title === 'Heat')).toMatchObject({

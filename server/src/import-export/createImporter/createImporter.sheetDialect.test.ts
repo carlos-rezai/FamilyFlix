@@ -145,7 +145,7 @@ describe('createImporter.scan: the Heat repro', () => {
 
     // Excel opens the sheet and saves it back in its own dialect.
     writeFileSync(
-      join(box.root, 'Meta', 'familyflix-library.csv'),
+      join(box.root, '_meta', 'familyflix-library.csv'),
       Buffer.from(RESAVED, 'latin1')
     );
 

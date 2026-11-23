@@ -11,7 +11,7 @@
 // uploaded rows, so those rows meet Heat as a held title: a cell Heat lacks
 // is a **Sheet fill**, a cell the two sheets disagree on a **Sheet
 // difference**, _Yours 9 | Spreadsheet 5_. _Finish_ with _Yours_ keeps 9 and
-// the heart, and `Meta/familyflix-library.csv` is not rewritten to 5. A
+// the heart, and `_meta/familyflix-library.csv` is not rewritten to 5. A
 // scanned folder, or an unscanned one with no sheet, is unchanged; the run is
 // still one run, one complete line, one review.
 //
@@ -190,7 +190,7 @@ async function heatExported(box: Sandbox): Promise<string> {
   box.storage.setFavorite(id, true);
   box.storage.updateMovie(id, { director: null });
   await box.writer.flush();
-  return join(outcome.folder, 'Meta', 'familyflix-library.csv');
+  return join(outcome.folder, '_meta', 'familyflix-library.csv');
 }
 
 /** The Export's sheet uploaded over the library as it stands, run to review. */
@@ -215,7 +215,7 @@ const differsOf = (run: ImportRun): ImportProblem[] =>
 /** Heat's row of the Library folder's own sheet, by column name. */
 function metaHeatRow(box: Sandbox): Record<string, string> {
   const [header, ...rows] = readFileSync(
-    join(box.root, 'Meta', 'familyflix-library.csv'),
+    join(box.root, '_meta', 'familyflix-library.csv'),
     'utf8'
   )
     .split(/\r?\n/)
@@ -264,7 +264,7 @@ describe('createImporter.start: an upload into an unscanned folder holding a Lib
     ]);
   });
 
-  it('leaves Meta/familyflix-library.csv saying 9 and the heart after Finish', async () => {
+  it('leaves _meta/familyflix-library.csv saying 9 and the heart after Finish', async () => {
     const box = sandbox();
     const run = await heatRepro(box);
     for (const problem of differsOf(run)) {
@@ -318,7 +318,7 @@ describe('createImporter.start: an upload the change leaves as it was', () => {
     const box = sandbox();
     const sheet = await heatExported(box);
     box.storage.reset();
-    rmSync(join(box.root, 'Meta'), { recursive: true, force: true });
+    rmSync(join(box.root, '_meta'), { recursive: true, force: true });
     box.storage.addLibraryFolder(box.root);
 
     const run = await upload(box, sheet);

@@ -29,7 +29,7 @@ export const LIBRARY_SHEET = `${META_FOLDER}/${LIBRARY_SHEET_STEM}.csv`;
 /** How long after the last touch a folder's sheet is rewritten. */
 export const LIBRARY_SHEET_DELAY_MS = 3000;
 
-/** The temporary file a rewrite lands through, beside the sheet in `Meta/`. */
+/** The temporary file a rewrite lands through, beside the sheet in `_meta/`. */
 const TEMPORARY_SHEET = `${LIBRARY_SHEET}.tmp`;
 
 /**
@@ -112,7 +112,7 @@ async function readTitleFolders(
  * columns** (`exportRows`, each title's **Folder key** its **Title folder**'s
  * own name by `sourceFoldersOf`, the Export's rule too since log 61, its
  * **Path cells** from each Title folder's **Layout read**, `layoutCells`),
- * through a temporary file in `Meta/` and a rename, behind its BOM; a sheet
+ * through a temporary file in `_meta/` and a rename, behind its BOM; a sheet
  * whose bytes already match is left alone. A sheet on disk keeps its
  * **Sheet dialect**'s separator (a `;` sheet is rewritten `;`, with decimal
  * commas), always rewritten UTF-8; a brand-new sheet is `,`. Every

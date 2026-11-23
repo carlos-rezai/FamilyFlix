@@ -4,7 +4,12 @@ import { basename, join } from 'node:path';
 
 import { spellEpisodeTag } from '../episodeTag/episodeTag';
 import { isVideoFilename } from '../fileKinds/fileKinds';
-import { LIBRARY_SHEET_STEM, META_FOLDER } from '../folderLayout/folderLayout';
+import {
+  isMetaFolder,
+  LIBRARY_SHEET_STEM,
+  META_FOLDER,
+  OLD_META_FOLDER,
+} from '../folderLayout/folderLayout';
 import {
   readTitleFolder,
   type DoubledPlace,
@@ -20,7 +25,7 @@ export type WalkedTitle = FilmFolderScan | SeriesFolderScan;
 /**
  * What a walk of one **Library folder** answers: the **Title folders** read,
  * each **Layout warning**'s text, each **Off-layout folder** the walk turned
- * away, and the `Meta/` sheet's path, or `null`.
+ * away, and the Meta folder sheet's path, or `null`.
  */
 export interface LayoutWalk {
   titles: WalkedTitle[];
@@ -39,7 +44,7 @@ export interface OffLayoutFolder {
   reason: LeftOutReason;
 }
 
-/** The `Meta/` sheets a walk reads, the **Library sheet** first. */
+/** The sheets a walk reads in a Meta folder, the **Library sheet** first. */
 const SHEETS = [`${LIBRARY_SHEET_STEM}.csv`, `${LIBRARY_SHEET_STEM}.xlsx`];
 
 /** A **Layout warning**'s text for a root folder left out. */
@@ -89,12 +94,12 @@ const isSystemFolder = (name: string): boolean =>
   name.startsWith('$') ||
   name === 'System Volume Information';
 
-/** Whether a folder holds a `Meta/` folder: an **Export folder**. */
+/** Whether a folder holds a `_meta/` or `Meta/` folder: an **Export folder**. */
 async function holdsMeta(dir: string): Promise<boolean> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
     return entries.some(
-      (entry) => entry.isDirectory() && entry.name === META_FOLDER
+      (entry) => entry.isDirectory() && isMetaFolder(entry.name)
     );
   } catch {
     return false;
@@ -102,21 +107,30 @@ async function holdsMeta(dir: string): Promise<boolean> {
 }
 
 /**
- * The root's `Meta/` sheet, the `.csv` when there, else the `.xlsx`, or
- * `null` when there is neither.
+ * A Meta folder's sheet, the `.csv` when there, else the `.xlsx`, or `null`
+ * when there is neither.
  */
-async function sheetIn(root: string): Promise<string | null> {
+async function sheetInFolder(folder: string): Promise<string | null> {
   try {
-    const entries = await readdir(join(root, META_FOLDER), {
-      withFileTypes: true,
-    });
+    const entries = await readdir(folder, { withFileTypes: true });
     const sheet = SHEETS.find((name) =>
       entries.some((entry) => entry.isFile() && entry.name === name)
     );
-    return sheet === undefined ? null : join(root, META_FOLDER, sheet);
+    return sheet === undefined ? null : join(folder, sheet);
   } catch {
     return null;
   }
+}
+
+/**
+ * The root's sheet: from `_meta/` when it holds one, else from `Meta/`, the
+ * `.csv` before the `.xlsx` in each, or `null` when neither holds a sheet.
+ */
+async function sheetIn(root: string): Promise<string | null> {
+  return (
+    (await sheetInFolder(join(root, META_FOLDER))) ??
+    (await sheetInFolder(join(root, OLD_META_FOLDER)))
+  );
 }
 
 /**
@@ -128,8 +142,8 @@ async function sheetIn(root: string): Promise<string | null> {
  * importer files as an `off-layout` **Problem**; the root's loose videos one
  * line for the whole folder. Each **Doubled place** a Title folder's read
  * reports, a doubled season (`Death Note holds 2 Season 1 folders, Season 01
- * read`) among them, is one Layout warning too. `Meta/`, an **Export folder**
- * (a folder holding `Meta/`) and system folders pass in silence; nothing
+ * read`) among them, is one Layout warning too. `_meta/` and `Meta/`, an
+ * **Export folder** (a folder holding either) and system folders pass in silence; nothing
  * else inside a Title folder warns.
  *
  * `onFound` is told of each Title folder as it is read. A Title folder that
@@ -152,7 +166,7 @@ export async function walkLibraryFolder(
     }
     const dir = join(root, entry.name);
     if (
-      entry.name === META_FOLDER ||
+      isMetaFolder(entry.name) ||
       isSystemFolder(entry.name) ||
       (await holdsMeta(dir))
     ) {

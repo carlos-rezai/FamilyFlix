@@ -832,7 +832,7 @@ interface WalkedFolder {
   folder: StoredLibraryFolder;
   films: FilmScan[];
   shows: ShowScan[];
-  /** The folder's `Meta/` sheet's path, or `null` when it has none. */
+  /** The folder's Meta folder sheet's path, or `null` when it has none. */
   sheet: string | null;
 }
 
@@ -984,7 +984,7 @@ export interface ImporterDeps {
  * **Path cells** fill what its folder's own read left empty
  * (`pathCellFills`), each file looked for first in the matched Title folder,
  * then under the run's **Sheet root** (`sheetRootOf`), so an Export's sheet
- * uploaded from its `Meta/` folder brings its art back from the Export
+ * uploaded from its `_meta/` or `Meta/` folder brings its art back from the Export
  * folder, which is only read.
  *
  * Each match is imported by the **Movie form**'s own sequence: reserve the
@@ -1017,7 +1017,7 @@ export function createImporter({
   layoutFill,
 }: ImporterDeps): Importer {
   let run: ImportRun | null = null;
-  /** The Library folders whose `Meta/` sheet the **Current run** read, held. */
+  /** The Library folders whose Meta folder sheet the **Current run** read, held. */
   const heldSheets = new Set<string>();
   /**
    * Hold a Library folder's sheet until the run closes, so its sheet catches
@@ -3103,7 +3103,7 @@ export function createImporter({
   };
 
   /**
-   * A Library folder's `Meta/` sheet, read for a **Folder scan**. The walk
+   * A Library folder's Meta folder sheet, read for a **Folder scan**. The walk
    * already held the folder, so the **Library sheet** keeps the values the run
    * reads until it closes. Each skip the reader reports is a **Warning line**
    * by `skipLine`, as an upload logs it; a sheet that cannot be read is one
@@ -3129,7 +3129,7 @@ export function createImporter({
 
   /**
    * A **Folder scan**: each listed folder walked in the order given, every
-   * film and show named by its folder's `Meta/` sheet, through `matchRows`,
+   * film and show named by its folder's Meta folder sheet, through `matchRows`,
    * else off its own folder. **Already in library** is the sheet run's rules
    * in order; a held title a row names takes its **Sheet fills** and files
    * its **Sheet differences**. A held show still gains the episodes it lacks.
@@ -3217,7 +3217,7 @@ export function createImporter({
 
   /**
    * One walked folder placed as a **Folder scan** places it: every film and
-   * show named by the folder's own `Meta/` sheet, through `matchRows`, else
+   * show named by the folder's own Meta folder sheet, through `matchRows`, else
    * off its own folder. A held title is linked, takes its **Sheet fills** and
    * files its **Sheet differences** here; the rest are answered for the
    * Import phase. `null` once the run was cancelled.

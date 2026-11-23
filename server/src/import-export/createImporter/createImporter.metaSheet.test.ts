@@ -3,7 +3,7 @@
 // 58, Folder layout, Phase 8 (issue #541): the scan reads Meta/.
 //
 // A **Folder scan** reads its **Library folder**'s **Meta folder** sheet,
-// `Meta/familyflix-library.csv` when there, else the `.xlsx`, as that
+// `_meta/familyflix-library.csv` when there, else the `.xlsx`, as that
 // folder's sheet; a folder with neither scans as the layout alone names it.
 //
 // - A new title imports with every field and art the sheet and its folder
@@ -64,7 +64,7 @@ afterEach(closeTracked);
 /** The fixture's own sheet, every path cell relative to the Library folder. */
 const FIXTURE_CSV = readFileSync(join(LIBRARY_FIXTURE, 'library.csv'), 'utf8');
 
-/** What the Library folder's `Meta/` holds. */
+/** What the Library folder's `_meta/` holds. */
 type MetaSheet =
   | { kind: 'none' }
   | { kind: 'csv'; text?: string }
@@ -83,7 +83,7 @@ interface Sandbox {
 
 /**
  * The fixture library copied into a Library folder with `meta` in its
- * `Meta/`, a fresh library over it, and the **Library sheet writer** wired to
+ * `_meta/`, a fresh library over it, and the **Library sheet writer** wired to
  * the library's changes.
  */
 function sandbox(meta: MetaSheet): Sandbox {
@@ -92,7 +92,7 @@ function sandbox(meta: MetaSheet): Sandbox {
   mkdirSync(media);
   const root = join(dir, 'Movies');
   cpSync(join(LIBRARY_FIXTURE, 'root'), root, { recursive: true });
-  const metaDir = join(root, 'Meta');
+  const metaDir = join(root, '_meta');
   if (meta.kind !== 'none') {
     mkdirSync(metaDir);
   }
@@ -186,7 +186,7 @@ const fixtureWith = (from: string, to: string): string => {
 /** The Library folder's CSV sheet, read back as rows. */
 async function sheetRows(root: string) {
   return readSheet(
-    readFileSync(join(root, 'Meta', 'familyflix-library.csv')),
+    readFileSync(join(root, '_meta', 'familyflix-library.csv')),
     'familyflix-library.csv'
   );
 }
@@ -207,7 +207,7 @@ function holdDieHard(box: Sandbox): Movie {
 }
 
 describe('createImporter.scan: which sheet it reads', () => {
-  it('reads Meta/familyflix-library.csv as the folder’s sheet', async () => {
+  it('reads _meta/familyflix-library.csv as the folder’s sheet', async () => {
     const box = sandbox({ kind: 'csv' });
 
     await scanned(box.importer, box.folder);
@@ -221,7 +221,7 @@ describe('createImporter.scan: which sheet it reads', () => {
     expect(genresOf(dieHard)).toEqual(['Action', 'Thriller']);
   });
 
-  it('reads Meta/familyflix-library.xlsx when there is no CSV', async () => {
+  it('reads _meta/familyflix-library.xlsx when there is no CSV', async () => {
     const box = sandbox({ kind: 'xlsx' });
 
     await scanned(box.importer, box.folder);
@@ -340,7 +340,7 @@ describe('createImporter.start: Import from spreadsheet of a Library sheet', () 
 
     box.storage.reset();
     box.storage.addLibraryFolder(box.root);
-    await box.importer.start(join(box.root, 'Meta', 'familyflix-library.csv'));
+    await box.importer.start(join(box.root, '_meta', 'familyflix-library.csv'));
     await untilReview(box.importer);
 
     expect(titles(box.storage)).toEqual(['Amelie', 'Die Hard']);
@@ -411,7 +411,7 @@ describe('createImporter.scan: the Library sheet held during the run', () => {
   it('leaves the sheet as it was while the run is in review', async () => {
     const box = sandbox({ kind: 'csv' });
     holdDieHard(box);
-    const sheet = join(box.root, 'Meta', 'familyflix-library.csv');
+    const sheet = join(box.root, '_meta', 'familyflix-library.csv');
     const before = readFileSync(sheet);
 
     await scanned(box.importer, box.folder);

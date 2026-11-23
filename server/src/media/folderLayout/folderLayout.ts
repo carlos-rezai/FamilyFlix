@@ -11,8 +11,18 @@ export const STILLS_FOLDER = 'Stills';
 /** The **Subtitles folder**: `Subtitles/` in a Title folder or a Season folder. */
 export const SUBTITLES_FOLDER = 'Subtitles';
 
-/** The **Meta folder**: `Meta/` in a Library folder's or an Export's root. */
-export const META_FOLDER = 'Meta';
+/** The **Meta folder**: `_meta/` in a Library folder's or an Export's root. */
+export const META_FOLDER = '_meta';
+
+/** The **Old Meta folder**: `Meta/`, the Meta folder's name before `_meta/`. */
+export const OLD_META_FOLDER = 'Meta';
+
+/**
+ * Whether a folder is the **Meta folder** or the **Old Meta folder**, its
+ * name compared exactly as `readdir` spells it.
+ */
+export const isMetaFolder = (name: string): boolean =>
+  name === META_FOLDER || name === OLD_META_FOLDER;
 
 /**
  * The **Library sheet**'s name before its extension, in a Library folder's

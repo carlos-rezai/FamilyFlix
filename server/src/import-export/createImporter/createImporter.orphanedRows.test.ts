@@ -126,7 +126,7 @@ async function orphanBoth(box: Sandbox): Promise<void> {
   });
   await box.writer.flush();
   const sheet = readFileSync(
-    join(box.root, 'Meta', 'familyflix-library.csv'),
+    join(box.root, '_meta', 'familyflix-library.csv'),
     'utf8'
   );
   expect(sheet).toContain('Die Hard (1988)');
@@ -186,7 +186,7 @@ describe('createImporter.scan: the Orphaned-row line', () => {
 
     expect(orphanLines(run)).toHaveLength(2);
     const sheet = readFileSync(
-      join(box.root, 'Meta', 'familyflix-library.csv'),
+      join(box.root, '_meta', 'familyflix-library.csv'),
       'utf8'
     );
     expect(sheet).toContain('Heat (1995)');

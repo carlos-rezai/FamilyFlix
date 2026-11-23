@@ -66,9 +66,9 @@ function sandbox(): Sandbox {
   const root = join(dir, 'Movies');
   mkdirSync(join(root, AMELIE_NFD), { recursive: true });
   copyFileSync(FIXTURE_VIDEO, join(root, AMELIE_NFD, 'Amelie.mp4'));
-  mkdirSync(join(root, 'Meta'));
+  mkdirSync(join(root, '_meta'));
   writeFileSync(
-    join(root, 'Meta', 'familyflix-library.csv'),
+    join(root, '_meta', 'familyflix-library.csv'),
     [
       'Type,Folder,Title,Year,Rating',
       `Movie,${AMELIE_NFC},Amelie,2001,9`,
@@ -115,7 +115,7 @@ describe('createImporter.scan: an NFD folder and an NFC row', () => {
     await box.writer.flush();
 
     const rows = await readSheet(
-      readFileSync(join(box.root, 'Meta', 'familyflix-library.csv')),
+      readFileSync(join(box.root, '_meta', 'familyflix-library.csv')),
       'familyflix-library.csv'
     );
     expect(rows).toHaveLength(1);

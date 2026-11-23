@@ -11,7 +11,7 @@
 // - the Export's **Title folders** copied over it scan back whole: a
 //   **Folder scan** imports every title with its poster and backdrop, as the
 //   new Export is flat, one Title folder per title directly in it;
-// - the Export's sheet uploaded from its `Meta/` does too.
+// - the Export's sheet uploaded from its `_meta/` does too.
 //
 // Real SQLite, a real `createMedia`, real folders in a sandbox.
 
@@ -146,10 +146,10 @@ async function sandbox(): Promise<Sandbox> {
   return { storage, importer, movies, exported };
 }
 
-/** The Export's folders but its `Meta/`, copied over the inner folder. */
+/** The Export's folders but its `_meta/`, copied over the inner folder. */
 function copyTitleFoldersOver(box: Sandbox): void {
   for (const entry of readdirSync(box.exported)) {
-    if (entry !== 'Meta') {
+    if (entry !== '_meta') {
       cpSync(join(box.exported, entry), join(box.movies, entry), {
         recursive: true,
       });
@@ -215,7 +215,7 @@ describe('createImporter: a new Export’s sheet uploaded over the re-linked fol
     box.storage.addLibraryFolder(box.movies);
 
     await box.importer.start(
-      join(box.exported, 'Meta', 'familyflix-library.csv'),
+      join(box.exported, '_meta', 'familyflix-library.csv'),
       false
     );
     await untilReview(box.importer);
