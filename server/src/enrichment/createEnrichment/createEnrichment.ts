@@ -488,11 +488,7 @@ export function createEnrichment({
     const enrichment = movieEnrichment(detail.id, fill);
     // The film's **Media folder**, one **Late reserve** for its poster and
     // backdrop, reserved only once one of them has arrived to store.
-    const movieFolder = lateReserve({ storage, media }, 'movie', {
-      id: movie.id,
-      title: movie.title,
-      year: movie.year,
-    });
+    const movieFolder = lateReserve({ storage, media }, 'movie', movie);
     if (fill.poster) {
       const stored = await storeImage(
         current,
@@ -740,11 +736,7 @@ export function createEnrichment({
     // The show's **Media folder**, one **Late reserve** for the whole pass:
     // its images, its Season posters and its Stills all go under it, and it is
     // reserved only once one of them has arrived to store.
-    const seriesFolder = lateReserve({ storage, media }, 'series', {
-      id: series.id,
-      title: series.title,
-      year: series.year,
-    });
+    const seriesFolder = lateReserve({ storage, media }, 'series', series);
     // Each episode's **Still source**, read once for the whole show.
     const stillSources = storage.stillSourcesOf(series.id);
     const { conflicts, fetched } = await writeSeries(
