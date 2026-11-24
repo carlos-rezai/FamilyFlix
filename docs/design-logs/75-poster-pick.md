@@ -1,7 +1,7 @@
 # 75: Poster pick
 
 > **Initiative:** `poster-pick`
-> **PRD:** to come, from `write-a-prd`
+> **PRD:** `docs/PRDs/75-poster-pick.md`, issue #707
 > **Handoff:** `docs/handoff/handoff-poster-pick/`
 
 This log is the `grill-me` session for step 57 of the build order, **Poster
