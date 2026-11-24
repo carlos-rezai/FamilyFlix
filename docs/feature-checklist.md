@@ -86,7 +86,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Seamless art: the backdrop lands with the page      | ✅ Done    |
 | Header fit: every filter pill and Settings in reach | ✅ Done    |
 | Sheet in sight: `_meta/` on top, and said aloud     | ✅ Done    |
-| Poster pick: a chosen season poster always lands    | ⬜ Planned |
+| Poster pick: a chosen season poster always lands    | ✅ Done    |
 
 Steps 1 to 9 are the first build order, ending with Software update, which
 shipped as v0.2.0. From step 10 on, each step came out of using FamilyFlix
@@ -145,36 +145,4 @@ grilled; once it ships, it is one line and a link.
 54. ✅ **Seamless art**: the backdrop lands with the page ([log 72](design-logs/72-seamless-art.md)).
 55. ✅ **Header fit**: every filter pill and Settings in reach ([log 73](design-logs/73-header-fit.md)).
 56. ✅ **Sheet in sight**: `_meta/` heads the folder, and the sheet is said aloud ([log 74](design-logs/74-sheet-in-sight.md)).
-
-Step 57 came out of a single-series Sync in real use. On the Death Note
-series page, the Sync's review offered each season a row of TMDB posters,
-but pressing one set nothing: the held tile kept reading _No poster yet_,
-however many times a poster was pressed. Confirmed on 2026-11-24 against a
-linked show: a show added through the **Show folder pick** with no art of
-its own is recorded with no **Media folder** (a linked video names none),
-so the Sync stores no art for it and quietly skips each season poster, and
-a **Season choice** answers `404` _No sync holds that season._, which the
-page swallows. Grilled in design log 75, which settles the open questions:
-no migration (a held library's folder-less titles get one at their next
-Sync, the **Late reserve**), a refused pick draws a **Poster refusal** line
-on the season's card and no snackbar, a movie added the same way has the
-same gap and the same fix, and the prototype gains that one line:
-
-57. 🔜 **Poster pick**: a synced title's art always lands, on a linked
-    title too, and a refused season poster says so.
-    - **The Late reserve**: a film or series with no **Media folder** (or
-      one that no longer opens) gets one reserved by its title and year
-      the first time a Sync or a **Season choice** has an image to store,
-      and recorded on the title, so the next Sync, the **Layout fill** and
-      a Delete all find it. One reserve serves a whole title pass, so the
-      poster, backdrop, Season posters and Stills land in the one folder.
-      With no image to store (Poster and Backdrop off, or every TMDB image
-      failing) nothing is made. No migration: a held library's folder-less
-      titles get theirs at their next Sync.
-    - **Videos stay where they lie**: a Linked video's path is unchanged,
-      the folder is in the **Managed media directory**, and the Sync writes
-      nothing into a Library folder.
-    - **The Poster refusal**: a Season choice that cannot be stored draws
-      _That poster wasn’t saved. Try again._ under that season's picker,
-      with no choice pressed and the held caption kept; the season's next
-      press clears it, another season is untouched, and no snackbar shows.
+57. ✅ **Poster pick**: a synced title's art always lands, and a refused season poster says so ([log 75](design-logs/75-poster-pick.md)).

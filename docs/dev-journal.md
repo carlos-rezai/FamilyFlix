@@ -11,6 +11,63 @@ Newest entry first.
 
 ---
 
+## 2026-11-24: Poster pick, the refactor (issue 714)
+
+Eight commits against `docs/refactor-plans/75-poster-pick-refactor.md`,
+one per plan commit, none changed from the plan. This is the initiative's
+closing round: step 57 is ✅ and issue 707 is done. **13242 tests pass
+across 931 files** (one skipped), the same as at `5b9c3cc6`: no test was
+added, weakened or changed its claim. `tsc -b --force` is clean, and
+`eslint` over every code file the round touched reports 0 errors and 0
+warnings.
+
+### What each group changed
+
+- **Group 1, the Late reserve in the house's idiom** (`92927b7f`,
+  `67805119`, `a9e4c91a`). `lateReserve`'s getter is
+  `answered ??= settle()`, the two answers in one local `settle`; a
+  throwing `settle` leaves `answered` unset, as the hand memo did. `write`
+  hands `lateReserve` the `Movie` and `writeShow` the `Series`, each a
+  `ReservedTitle` as it stands; `chooseSeasonPoster`'s literal stays for
+  issue 713. `LibraryStorage` describes `recordMediaFolder` in `Enrich`'s
+  sentence.
+- **Group 2, the suite's header** (`af054d85`). The late reserve suite's
+  header is back under 80 columns, no word changed.
+- **Group 3, the documents** (`bb3355f9`, `8b86610a`, `b663b195` and this
+  entry). `COMPONENT-SPEC.md`'s Seasons props name `seasonPhase(season)`
+  and `seasonRefused(season)` after `onChoose(season, path)`, on a line of
+  their own; the release checklist has a _Poster pick_ smoke step after _A
+  linked series add_; the build has its journal entry; step 57 is one line
+  and a link, its row ✅ Done.
+
+### Where this round left the plan
+
+- **The suites ran after each commit and the full suite at each group's
+  end**, green every time with no flake.
+- **The spec's refusal sentence needed no rewrap.** Its five lines already
+  sat inside the paragraph's width; only the closing line ran past it, so
+  the props took a line of their own and no other line moved.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: issue 713, a shared refusal line,
+the empty arrow in `EnrichmentReview.test.tsx` (issue 362), the long `it`
+titles and comment lines in the initiative's suites, the edit routes' own
+reserve-and-record, and the handoff README and the glossary's earlier
+sections. No route, wire, schema, prototype or drawn pixel changed.
+
+### Follow-ups
+
+- **Issue 713.** A Poster refusal outlives its run, and a Season choice on
+  a series deleted while its review is open leaves an orphan folder.
+- **A shared refusal line.** `Refusal`, `ErrorLine`, `Failure` and
+  `Unreachable` across five features are the same 13px danger sentence;
+  older than this step.
+- **The next release runs the checklist's new Poster pick step** on the
+  installed app.
+
+---
+
 ## 2026-11-24: Poster pick, the build (issues 708 to 712)
 
 Two server slices (708, 709), the prototype amended (710), the client slice
