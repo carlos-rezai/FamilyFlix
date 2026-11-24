@@ -154,7 +154,11 @@ linked show: a show added through the **Show folder pick** with no art of
 its own is recorded with no **Media folder** (a linked video names none),
 so the Sync stores no art for it and quietly skips each season poster, and
 a **Season choice** answers `404` _No sync holds that season._, which the
-page swallows. Talked through on 2026-11-24, not yet grilled:
+page swallows. Grilled in design log 75, which settles the open questions:
+no migration (a held library's folder-less titles get one at their next
+Sync, the **Late reserve**), a refused pick draws a **Poster refusal** line
+on the season's card and no snackbar, a movie added the same way has the
+same gap and the same fix, and the prototype gains that one line:
 
 57. ⬜ **Poster pick**: a chosen season poster always lands, on a linked
     show too.

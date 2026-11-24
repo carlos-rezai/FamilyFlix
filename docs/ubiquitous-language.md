@@ -1263,6 +1263,22 @@ in the **Reset dialog**; the handoff is
 | **Title folder** (updated)   | Since log 74, any root folder that is not `_meta/`, `Meta/`, an **Export folder** or a system folder.                                                                                                                                                              |                                          |
 | **Reset dialog** (updated)   | Since log 74, _What stays_ lists the Library sheet second: _Each library folder’s \_meta sheet: scanning the folder again brings its titles back as they were (delete \_meta first to start clean)_.                                                               |                                          |
 
+## Poster pick
+
+Design log 75: step 57, initiative `poster-pick`. A title added linked with
+no art of its own has no **Media folder**, so a Sync stored none of its
+images and a **Season choice** was refused; the Sync now reserves the folder
+when art first needs one, and a refused pick says so on its card. The
+handoff is `docs/handoff/handoff-poster-pick/README.md`.
+
+| Term                        | Definition                                                                                                                                                                                                                             | Aliases to avoid                          |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------- |
+| **Late reserve** (new)      | A **Media folder** reserved by a title's name and year and recorded the first time a **Sync** or a **Season choice** has an image in hand for a title whose recorded folder is missing or gone; at most once per pass (`lateReserve`). | art folder, lazy folder, fallback folder  |
+| **Poster refusal** (new)    | The line _That poster wasn’t saved. Try again._ on a **Season choice**'s card after a refused press, once its Busy phase is `idle`, until that season's next press; no choice reads pressed while it is drawn (`seasonRefused`).       | error snackbar, pick error, failure toast |
+| **Media folder** (updated)  | Since log 75, also recorded by a **Late reserve**, so every title holding art has one, a linked one included.                                                                                                                          |                                           |
+| **Series folder** (updated) | Since log 75, a linked show added with no art gets its Series folder from the **Late reserve** at its first Sync, as log 41 meant.                                                                                                     |                                           |
+| **Season choice** (updated) | Since log 75, a press on a show with no Media folder lands through the **Late reserve**; a refused press draws the **Poster refusal**; `404` means only that no single-series run holds the season.                                    |                                           |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1476,6 +1492,8 @@ in the **Reset dialog**; the handoff is
 - The Genre dropdown checks exactly one row: the chosen genre's, else the **View row** of the tab's **Row view** (new, log 73).
 - A browse header has exactly one **Header end**, on its first line or wholly on its second, never split between them (new, log 73).
 - A **Library folder** holds at most one **Library sheet** the scan reads: `_meta/`'s when there, else the **Old Meta folder**'s; the **Meta move** happens at most once per folder and deletes nothing (new, log 74).
+- A title has at most one **Media folder**; a **Late reserve** makes it at most once per Sync pass or Season choice, and only once an image has arrived (new, log 75).
+- A **Season choice**'s card draws at most one **Poster refusal**, its own season's (new, log 75).
 
 ## Example dialogue
 
@@ -2310,6 +2328,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "That's an **Old Meta folder**. The scan reads it, and at the end the writer makes the **Meta move**, renaming it whole. If Excel holds the sheet open, it writes in `Meta/` this once and moves it next time."
 > **Dev:** "And how would a new maintainer know any of this?"
 > **Domain expert:** "The **Sheet note** in _What the scanner accepts_, on Import setup and on the Library folders page."
+
+> **Dev:** "The maintainer added Death Note by the **Show folder pick**, no art, and synced it. Where do the posters go? Its videos are linked."
+> **Domain expert:** "Into a **Media folder** the Sync makes for it, the **Late reserve**, the moment the first poster arrives. The videos stay where they lie."
+> **Dev:** "And if they had turned Poster off?"
+> **Domain expert:** "Then no image arrives and no folder is made."
+> **Dev:** "Mum presses a season's poster while the Wi-Fi drops."
+> **Domain expert:** "The card draws the **Poster refusal**, _That poster wasn’t saved. Try again._, and no poster reads pressed. Her next press clears it."
 
 ## Flagged ambiguities
 
@@ -3346,3 +3371,7 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   as an old library or Export may turn up. Say "the Meta folder" for
   `_meta/` only; name `Meta/` as the Old Meta folder. The **Meta line** and
   **Meta segment** on the Movie detail page are unrelated.
+- **"Late reserve" is not a second folder (new):** it is how a title gets
+  its one **Media folder** when no add or edit reserved it. Never call the
+  folder an "art folder": it is the Media folder, and a Delete removes it
+  as any other.
