@@ -396,7 +396,10 @@ export interface LibraryStorage {
    * kind does not hold. Never on the wire.
    */
   mediaFolderOf(kind: 'movie' | 'series', id: string): string | null;
-  /** Record a title's **Media folder** late, over a gone one. */
+  /**
+   * Record a title's **Media folder** late, over whatever was recorded: what
+   * the **Late reserve** writes once it has reserved one.
+   */
   recordMediaFolder(kind: 'movie' | 'series', id: string, folder: string): void;
   /**
    * Where a Movie or Series sits on disk: its Library folder's path joined to
