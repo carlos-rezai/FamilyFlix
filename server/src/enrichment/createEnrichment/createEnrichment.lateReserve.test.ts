@@ -14,6 +14,11 @@
 //
 // Composed over a real in-memory library, a real `Media` over a sandbox, a
 // fake TMDB and a Playback whose `frame` is scripted: no test goes online.
+//
+// Phase 2 (issue #709): a linked film's art lands. A film added with its video
+// linked where it lies has no Media folder either; its Sync makes one Late
+// reserve for its poster and backdrop, so both land in one new folder,
+// recorded on the film, and its video path stays as it was.
 
 import {
   existsSync,
@@ -35,6 +40,8 @@ import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import {
   fakeTmdb,
   reviewed,
+  tmdbMovieDetail,
+  tmdbMovieResult,
   TMDB_KEY,
   tmdbSeason,
   tmdbTvDetail,
@@ -54,14 +61,24 @@ const TITLE = 'The Hollow Coast';
 /** What `reserveFolder(TITLE, 2018)` names in an empty media root. */
 const RESERVED = 'the-hollow-coast-2018';
 
+const FILM_ID = 550123;
+const FILM = 'The Lantern Keeper';
+/** What `reserveFolder(FILM, 2019)` names in an empty media root. */
+const FILM_RESERVED = 'the-lantern-keeper-2019';
+/** The film's video, linked where it lies in the Library folder. */
+const FILM_VIDEO = `${FILM} (2019)/lantern.mkv`;
+
 const image = (file_path: string) => ({ file_path, vote_average: 5 });
 
 /**
  * A TMDB that knows the show, its poster and backdrop, and season 1 with its
  * own poster: E01 with a still, E02 without one, so E02 takes a Frame still.
+ * It knows the film too, with its poster and backdrop.
  */
 const knowsTheShow = () =>
   fakeTmdb({
+    searches: { [FILM]: [tmdbMovieResult(FILM_ID, FILM, 2019)] },
+    movies: [tmdbMovieDetail(FILM_ID, FILM, 2019)],
     tvSearches: { [TITLE]: [tmdbTvResult(SHOW_ID, TITLE, 2018)] },
     shows: [tmdbTvDetail(SHOW_ID, TITLE, 2018)],
     seasons: {
@@ -148,7 +165,31 @@ function world({ media }: Options = {}) {
     return series.id;
   }
 
-  return { storage, enrichment, root, realMedia, libraryFolder, addShow };
+  /**
+   * The film as a linked add makes it: its video linked where it lies in the
+   * Library folder, so no Media folder is recorded, unless one is given.
+   */
+  function addFilm(mediaFolder?: string): string {
+    mkdirSync(join(libraryFolder, `${FILM} (2019)`), { recursive: true });
+    writeFileSync(join(libraryFolder, FILM_VIDEO), 'video');
+    return storage.addMovie({
+      title: FILM,
+      year: 2019,
+      videoPath: FILM_VIDEO,
+      videoFolderId: listed.id,
+      mediaFolder,
+    }).id;
+  }
+
+  return {
+    storage,
+    enrichment,
+    root,
+    realMedia,
+    libraryFolder,
+    addShow,
+    addFilm,
+  };
 }
 
 type World = ReturnType<typeof world>;
@@ -159,6 +200,16 @@ async function syncTheSeries(
   fields: EnrichField[] = ALL_FIELDS
 ) {
   const outcome = await enrichment.start({ scope: 'single', seriesId, fields });
+  expect(outcome.kind).toBe('started');
+  return reviewed(enrichment);
+}
+
+async function syncTheFilm(
+  enrichment: World['enrichment'],
+  movieId: string,
+  fields: EnrichField[] = ALL_FIELDS
+) {
+  const outcome = await enrichment.start({ scope: 'single', movieId, fields });
   expect(outcome.kind).toBe('started');
   return reviewed(enrichment);
 }
@@ -316,5 +367,66 @@ describe('createEnrichment: a refused reserve', () => {
       ['Low Tide', null],
       ['Driftwood', null],
     ]);
+  });
+});
+
+describe('createEnrichment: a film with no Media folder, synced', () => {
+  it('lands its poster and backdrop in one new folder, recorded on the film', async () => {
+    const { storage, enrichment, root, addFilm } = world();
+    const id = addFilm();
+
+    await syncTheFilm(enrichment, id);
+
+    expect(storage.mediaFolderOf('movie', id)).toBe(FILM_RESERVED);
+    expect(readdirSync(root)).toEqual([FILM_RESERVED]);
+    expect(filesUnder(join(root, FILM_RESERVED))).toEqual([
+      'backdrop.jpg',
+      'poster.jpg',
+    ]);
+    const movie = storage.getMovie(id);
+    expect(movie?.posterPath).toBe(`${FILM_RESERVED}/poster.jpg`);
+    expect(movie?.backdropPath).toBe(`${FILM_RESERVED}/backdrop.jpg`);
+  });
+
+  it('leaves its video path as it was and writes nothing into the Library folder', async () => {
+    const { storage, enrichment, libraryFolder, addFilm } = world();
+    const id = addFilm();
+
+    await syncTheFilm(enrichment, id);
+
+    // The pass did store its art, so this is not a Sync that wrote nothing.
+    expect(storage.mediaFolderOf('movie', id)).toBe(FILM_RESERVED);
+    expect(storage.getMovie(id)?.videoPath).toBe(FILM_VIDEO);
+    expect(filesUnder(libraryFolder)).toEqual([FILM_VIDEO]);
+  });
+});
+
+describe('createEnrichment: a film whose Media folder opens', () => {
+  it('keeps using it, and no new folder is made', async () => {
+    const { storage, enrichment, root, realMedia, addFilm } = world();
+    const held = relative(root, realMedia.reserveFolder('Held Folder', null))
+      .split(sep)
+      .join('/');
+    const id = addFilm(held);
+
+    await syncTheFilm(enrichment, id);
+
+    expect(storage.mediaFolderOf('movie', id)).toBe(held);
+    expect(readdirSync(root)).toEqual([held]);
+    const movie = storage.getMovie(id);
+    expect(movie?.posterPath).toBe(`${held}/poster.jpg`);
+    expect(movie?.backdropPath).toBe(`${held}/backdrop.jpg`);
+  });
+});
+
+describe('createEnrichment: a folder-less film with Poster and Backdrop off', () => {
+  it('makes no folder and records none', async () => {
+    const { storage, enrichment, root, addFilm } = world();
+    const id = addFilm();
+
+    await syncTheFilm(enrichment, id, NO_ART);
+
+    expect(readdirSync(root)).toEqual([]);
+    expect(storage.mediaFolderOf('movie', id)).toBeNull();
   });
 });
