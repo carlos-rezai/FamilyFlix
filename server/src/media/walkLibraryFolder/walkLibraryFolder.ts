@@ -25,7 +25,8 @@ export type WalkedTitle = FilmFolderScan | SeriesFolderScan;
 /**
  * What a walk of one **Library folder** answers: the **Title folders** read,
  * each **Layout warning**'s text, each **Off-layout folder** the walk turned
- * away, and the Meta folder sheet's path, or `null`.
+ * away, and the path of the sheet in the root's **Meta folder**, either name,
+ * or `null`.
  */
 export interface LayoutWalk {
   titles: WalkedTitle[];
