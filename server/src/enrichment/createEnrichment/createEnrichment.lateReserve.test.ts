@@ -391,13 +391,16 @@ describe('createEnrichment: a film with no Media folder, synced', () => {
   it('leaves its video path as it was and writes nothing into the Library folder', async () => {
     const { storage, enrichment, libraryFolder, addFilm } = world();
     const id = addFilm();
+    // The world's show is linked from the same Library folder.
+    const before = filesUnder(libraryFolder);
+    expect(before).toContain(FILM_VIDEO);
 
     await syncTheFilm(enrichment, id);
 
     // The pass did store its art, so this is not a Sync that wrote nothing.
     expect(storage.mediaFolderOf('movie', id)).toBe(FILM_RESERVED);
     expect(storage.getMovie(id)?.videoPath).toBe(FILM_VIDEO);
-    expect(filesUnder(libraryFolder)).toEqual([FILM_VIDEO]);
+    expect(filesUnder(libraryFolder)).toEqual(before);
   });
 });
 

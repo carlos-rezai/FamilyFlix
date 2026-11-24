@@ -483,10 +483,14 @@ export function createEnrichment({
     });
 
     const enrichment = movieEnrichment(detail.id, fill);
-    // A film with no recorded Media folder stores no art yet.
-    const recorded = storage.mediaFolderOf('movie', movie.id);
-    const movieFolder = recorded === null ? null : () => recorded;
-    if (fill.poster && movieFolder !== null) {
+    // The film's **Media folder**, one **Late reserve** for its poster and
+    // backdrop, reserved only once one of them has arrived to store.
+    const movieFolder = lateReserve({ storage, media }, 'movie', {
+      id: movie.id,
+      title: movie.title,
+      year: movie.year,
+    });
+    if (fill.poster) {
       const stored = await storeImage(
         current,
         movieFolder,
@@ -496,7 +500,7 @@ export function createEnrichment({
       );
       if (stored !== null) enrichment.posterPath = stored;
     }
-    if (fill.backdrop && movieFolder !== null) {
+    if (fill.backdrop) {
       const stored = await storeImage(
         current,
         movieFolder,
