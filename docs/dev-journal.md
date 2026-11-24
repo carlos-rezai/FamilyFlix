@@ -11,6 +11,73 @@ Newest entry first.
 
 ---
 
+## 2026-11-24: Sheet in sight, the refactor (issue 706)
+
+Eight commits against `docs/refactor-plans/74-sheet-in-sight-refactor.md`,
+one per plan commit, none changed from the plan. This is the initiative's
+closing round: step 56 is ✅ and issue 700 is done. **13208 tests pass
+across 929 files** (one skipped), the same as at `75eac67a`: no test was
+added, weakened or changed its claim. `tsc -b --force` is clean, and
+`eslint` over every code file the round touched reports 0 errors and 0
+warnings.
+
+### What each group changed
+
+- **Group 1, the Meta move in the house's reads** (`09e35cf3`,
+  `8b96505d`). `settledMetaFolder` asks `readableFolder` both of its
+  questions: the move is made when the Old Meta folder reads `'readable'`
+  and the Meta folder `'missing'`. `folderAt` and `somethingAt` are gone,
+  and with them the `lstat` and `stat` imports. `LIBRARY_SHEET` is built
+  from `SHEET_FILENAME`, so the `.csv` is spelled once; its value is
+  unchanged.
+- **Group 2, docblocks in the glossary's words** (`6bbc9ff9`,
+  `1c8c2f12`). The five `createImporter` docblocks that said _Meta folder
+  sheet_ say **Library sheet**, the `heldSheets` one now under the width;
+  `LayoutWalk` answers the path of the sheet in the root's **Meta folder**,
+  either name. The walk's `holdsMeta` docblock, and the paragraphs of
+  `createLibrarySheet`'s and `FolderShapes`' docblocks, are rewrapped with
+  no word changed.
+- **Group 3, the documents** (`82f150c1`, `1145c1ac`, `60c1c726` and this
+  entry). `COMPONENT-SPEC.md`'s Enrichment row, Storage decision and
+  server-side note say `_meta`, the last naming the Meta move. The release
+  checklist's seven paths a current build writes read `_meta\` (the
+  v0.16.1 fixture's `Meta\` stays), and a new _Sheet in sight_ smoke step
+  follows rebuild edges. The build has its journal entry; step 56 is one
+  line and a link, its row ✅ Done.
+
+### Where this round left the plan
+
+- **The suites ran after each commit and the full suite at each group's
+  end.** The full suite flaked once, on the baseline: one test failed under
+  load and the rerun was green at the plan's 13208. No commit had touched
+  code yet.
+- **A dangling link named `_meta`** now reads `'missing'`, so the rename is
+  tried and refused and the sheet is written in `Meta/`: the refused path
+  log 74 Q6 settles, for a case no household makes.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: the Sheet note's words in its three
+screen suites, the Reset dialog's long `WHAT_STAYS` string, the long `it`
+titles and comment lines in the initiative's suites, the unused `name` in
+`routes.exportSeries.test.ts` (issue 277), a `_meta` that is a file, and
+the older handoff READMEs and glossary sections that say `Meta/`. No
+route, wire, schema, prototype or drawn pixel changed.
+
+### Follow-ups
+
+- **The Enrichment done summary.** The app reads _Saved to your library,
+  the sheet in your collection root_ off a `written.sheet` the server
+  always answers `false`, where the prototype draws _your library, each
+  title folder, the sheet in \_meta_ since log 58. Older than this step
+  (issue 211), and a visible change.
+- **`fillLayout`'s private `isDirectory`** asks the question
+  `readableFolder` answers; written by log 58's build.
+- **The next release runs the checklist's new Sheet in sight step** on the
+  installed app.
+
+---
+
 ## 2026-11-23: Sheet in sight, the build (issues 701 to 705)
 
 Two server slices (701, 702), the prototype amended (703), the client slice

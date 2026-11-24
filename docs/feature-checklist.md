@@ -85,7 +85,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Busy overlay: no loader moves what is around it     | ✅ Done    |
 | Seamless art: the backdrop lands with the page      | ✅ Done    |
 | Header fit: every filter pill and Settings in reach | ✅ Done    |
-| Sheet in sight: `_meta/` on top, and said aloud     | ⬜ Planned |
+| Sheet in sight: `_meta/` on top, and said aloud     | ✅ Done    |
 
 Steps 1 to 9 are the first build order, ending with Software update, which
 shipped as v0.2.0. From step 10 on, each step came out of using FamilyFlix
@@ -143,56 +143,4 @@ grilled; once it ships, it is one line and a link.
 53. ✅ **Busy overlay**: no loader moves what is around it ([log 71](design-logs/71-busy-overlay.md)).
 54. ✅ **Seamless art**: the backdrop lands with the page ([log 72](design-logs/72-seamless-art.md)).
 55. ✅ **Header fit**: every filter pill and Settings in reach ([log 73](design-logs/73-header-fit.md)).
-
-Step 56 came out of a Factory reset in real use. A maintainer added films
-through the Movie form, posters linked by hand, then reset and scanned the
-same Library folder again: the posters came back on their own. The
-**Library sheet** (step 41) did its job, but nobody knew it was there, so
-a reset that says _Erase everything_ seemed not to. `Meta/` also sorts
-among hundreds of Title folders, out of sight. Grilled in design log 74,
-which settles the open questions: no _Start clean_ choice (deleting
-`_meta/` by hand starts clean, and the Reset dialog says so), the line is
-a **Sheet note** in _What the scanner accepts_, Linux sorting is not
-chased, and the writer's **Meta move** renames a held `Meta/` whole, or
-writes where the sheet lies when the rename is refused:
-
-56. 🔜 **Sheet in sight**: the **Meta folder** is easy to find, and the
-    maintainer is told it exists and what it brings back.
-    - **`Meta/` becomes `_meta/`**: it sorts first in a Library folder in
-      Windows Explorer, above every Title folder. Every reader knows both
-      names by one rule (`isMetaFolder`, exact spelling): the walk passes
-      either in silence, reads the sheet from `_meta/` before `Meta/`, and
-      knows an Export folder by either; an Export writes `_meta/`. Linux
-      file managers' sorting is not chased.
-    - **The Meta move**: before writing a folder's sheet, the **Library
-      sheet writer** renames a held `Meta/` whole to `_meta/` when no
-      `_meta` is there, a second file in it included, even when no cell
-      changed. A refused rename (the sheet open in Excel) writes where the
-      sheet lies and is tried again at the next write. Nothing is deleted
-      or merged, an Export folder is never moved, and when both are there
-      `_meta/` rules and `Meta/` is left alone.
-    - **Said where a folder comes in**: the **Sheet note**, a second
-      paragraph in _What the scanner accepts_ on Import setup and the
-      Library folders page's Scan, names
-      `_meta\familyflix-library.csv` and says a scan after a reset or on
-      another computer brings every title back as it was.
-    - **Said in the Reset dialog**: _What stays_ lists four items, the
-      second each Library folder's `_meta` sheet, and that deleting
-      `_meta` first starts clean. No _Start clean_ choice: deleting the
-      folder by hand is the clean start, and the scan's end writes a fresh
-      sheet.
-    - **No opt-out toggle**: the sheet is what makes a reset recoverable;
-      an Export is a snapshot in its own folder and goes stale with the
-      first rating after it. Log 58 made the sheet no longer a choice
-      (story 70), and this step keeps that.
-    - **Walked** on 2026-11-23 in the shell, on scratch Library folders
-      copied from the importer's fixture: a fresh folder scanned and rated
-      grew `_meta/familyflix-library.csv`, first in Explorer's order; a
-      copied `Meta/` with a second file moved on scan, both byte for byte;
-      with the sheet held open by another process the scan recorded both
-      titles and `Meta/` stayed, and the first rating after the handle
-      closed moved it; the v0.16.1 Export, its sheet in `Meta/`, imported
-      over re-linked folders with every poster, backdrop, Still and track;
-      the note and the dialog's four items drew; a reset then a scan
-      brought the rating back, and with `_meta/` deleted a reset then a
-      scan started clean and wrote a fresh sheet.
+56. ✅ **Sheet in sight**: `_meta/` heads the folder, and the sheet is said aloud ([log 74](design-logs/74-sheet-in-sight.md)).
