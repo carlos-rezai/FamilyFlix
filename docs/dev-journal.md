@@ -11,6 +11,83 @@ Newest entry first.
 
 ---
 
+## 2026-11-23: Sheet in sight, the build (issues 701 to 705)
+
+Two server slices (701, 702), the prototype amended (703), the client slice
+(704), each slice a RED and a GREEN commit, and this walk and documents
+slice (705). **13208 tests pass across 929 files** (one skipped) at
+`75eac67a`, against 13169 across 927 at the Header fit refactor: the walk's
+Meta folder suite and the Meta move suite are the two new files. `tsc -b
+--force` is clean; `eslint` over every file the initiative added or changed
+reports 0 errors and 1 warning, an unused `name` in
+`routes.exportSeries.test.ts` from issue 277, older than this initiative.
+Step 56 stays 🔜 until the refactor.
+
+### What shipped
+
+- **The name and both readers** (701). The **Meta folder** is `_meta/`, so
+  it sorts first in Explorer; `folderLayout` holds `META_FOLDER`,
+  `OLD_META_FOLDER` and `isMetaFolder`, the one rule every reader uses. The
+  walk passes either name in silence, knows an **Export folder** by either
+  and reads the sheet from `_meta/` before `Meta/`; `sheetRootOf` answers
+  the folder above for either; an Export writes `_meta/`.
+- **The Meta move** (702). Before each write the **Library sheet writer**
+  renames an **Old Meta folder** with nothing named `_meta` beside it to
+  `_meta/`, whole, whatever else it holds. A refused rename (the sheet open
+  in Excel) writes where the sheet lies, and the move is tried again at the
+  next write; nothing is deleted or merged.
+- **The prototype amended** (703). `feat.ImportFlow.dc.html` and
+  `page.LibraryFoldersPage.dc.html` draw the **Sheet note** under _What the
+  scanner accepts_; `page.SettingsPage.dc.html` lists the sheet second
+  under the Reset dialog's _What stays_; `COMPONENT-SPEC.md` follows.
+- **The Sheet note and the reset item** (704). `FolderShapes` draws the
+  Sheet note, its path in mono, for both Import setup and a group's
+  **Scan**; `ResetDialog`'s `WHAT_STAYS` gains the sheet, second of four.
+- **The Enrichment note** (`b23437c7` to `545dafa1`), which log 74 did not
+  list: the Enrichment setup's note said `Meta`. 703 brought the prototype
+  (`feat.EnrichmentFlow.dc.html`, `FamilyFlix.dc.html`) to `_meta` and 704
+  the app's `EnrichmentSetup`.
+- **The walk and the documents** (705), below.
+
+### The walk
+
+The shell ran in its start shape (`FAMILYFLIX_SHELL_PROD=1`) with the
+database, media and component slot in a scratch folder, driven over the
+DevTools protocol, on Library folders copied from the importer's fixture.
+All six checks passed:
+
+1. A fresh folder scanned and rated grew `_meta/familyflix-library.csv`,
+   first in Explorer's order (`StrCmpLogicalW`), the rating in its row.
+2. A copied library with `Meta/` and a `notes.txt` in it: the scan moved it
+   to `_meta/`, both files byte for byte, the sheet's rating read back.
+3. The sheet held open by a handle with no share mode: the scan recorded
+   both titles (the sheet unreadable, logged and scanned without it),
+   `Meta/` stayed and no `_meta/` appeared; after the handle closed, the
+   next rating moved it.
+4. The v0.16.1 Export, its sheet in `Meta/`, typed into Import setup over
+   re-linked `Movies/` and `Series/`: 3 matched, every poster, backdrop,
+   Still, Season poster and track copied, the Export left as it was.
+5. Import setup and the Library folders page drew the Sheet note, its path
+   in mono; the Reset dialog listed four items under _What stays_.
+6. A reset then a scan brought the library back, rating included; with
+   `_meta/` deleted, a reset then a scan started clean and wrote a fresh
+   sheet.
+
+### Judgement calls
+
+- **The importer's `Meta/` fixtures stay where they stand.** Each stands
+  for an old library or an Export written before the step (the v0.16.1
+  Export among them), so they keep proving the walk reads the Old Meta
+  folder; only the suites that pin what a current build writes say `_meta`.
+- **The walk's own suite is split out** as
+  `walkLibraryFolder.metaFolder.test.ts`, beside the walk's others, rather
+  than grown into one of them.
+- **The Meta move sits in `writeOne`** after the three skips and before the
+  sheet on disk is read, so a folder the writer would leave alone is never
+  renamed.
+
+---
+
 ## 2026-11-23: Header fit, the refactor (issue 699)
 
 Eleven commits against `docs/refactor-plans/73-header-fit-refactor.md`,
