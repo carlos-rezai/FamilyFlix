@@ -163,7 +163,7 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       reading _N titles this run brought in_, chosen.
 - [ ] The Library sheet, over the sandbox library: rate a film in a Title
       folder there. A few seconds later
-      `<sandbox>\Meta\familyflix-library.csv` is rewritten, and its row's
+      `<sandbox>\_meta\familyflix-library.csv` is rewritten, and its row's
       Rating cell holds the new rating.
 - [ ] The Layout fill, over the sandbox library: put a `heat-poster.png` in
       one film's `Images\` and empty another's, then Sync both. The empty
@@ -182,7 +182,7 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       video quality_ off: every tag and the pill go. Back on, put a copy of
       `smoke.mp4` in a folder of its own in the sandbox Library folder,
       _Scan all folders_ and rate it: its row of
-      `<sandbox>\Meta\familyflix-library.csv` reads `720p` in the _Quality_
+      `<sandbox>\_meta\familyflix-library.csv` reads `720p` in the _Quality_
       cell after _Runtime_.
 
 ## 6. The slot over the default
@@ -219,25 +219,31 @@ Quit the app. Open a Command Prompt in the install directory,
       _Erasing everything_, and the app reloads on an empty library.
 - [ ] The scan after a Factory reset: list the sandbox Library folder again
       and _Scan all folders_. Every title in it comes back with its ratings,
-      hearts and Status, read from its `Meta\familyflix-library.csv`.
+      hearts and Status, read from its `_meta\familyflix-library.csv`.
 - [ ] Rebuild whole, over the sandbox Library folder: a series there with a
       poster, a Season poster and a Still in its Title folder, hearted, one
       episode Watched. Note the size and modified time of
-      `<sandbox>\Meta\familyflix-library.csv`. Settings → _Factory reset_,
+      `<sandbox>\_meta\familyflix-library.csv`. Settings → _Factory reset_,
       list the folder again, _Scan new folders_, then _Done_: the series
       comes back with all three pieces of art, the heart and the Watched,
       and the sheet's size and modified time are unchanged.
 - [ ] Rebuild edges, over the sandbox Library folder in the shell: open
-      `<sandbox>\Meta\familyflix-library.csv` in a Dutch or German Excel,
+      `<sandbox>\_meta\familyflix-library.csv` in a Dutch or German Excel,
       change one rating to `8,5` and give one title a diacritic, and save it
       as plain _CSV_ (`;`, cp1252). _Scan new folders_, then _Done_: the
       rating reads 9, the title spells its diacritic, and the sheet is
       rewritten `;` with decimal commas.
+- [ ] Sheet in sight, over the sandbox Library folder in the shell: rename
+      its `_meta\` to `Meta\`, put a `notes.txt` beside the sheet, and rate a
+      film. A few seconds later `Meta\` is gone and `_meta\` holds both
+      `familyflix-library.csv` and `notes.txt`. _Import setup_ and a group's
+      _Scan_ draw the Sheet note, and the Factory reset dialog lists four
+      items under _What stays_, the sheet second.
 - [ ] Export round trip, over the sandbox Library folder in the shell: rename
       one title in the app and rate it, then _Export_ to a folder outside the
       sandbox. Settings → _Factory reset_, list the sandbox again, then
       _Import from spreadsheet_ with the Export's
-      `Meta\familyflix-library.csv`: the title comes back under its new
+      `_meta\familyflix-library.csv`: the title comes back under its new
       name with its rating, and review lists no Problem.
 - [ ] Export paths, over a sandbox holding a copy of the
       `server/src/import-export/createImporter/v0.16.1-export/` fixture and
@@ -245,7 +251,7 @@ Quit the app. Open a Command Prompt in the install directory,
       inner folder and _Import from spreadsheet_ with the fixture's
       `Meta\familyflix-library.csv`. Every title comes back with its poster,
       backdrop, Season poster, Still and tracks, and review lists no
-      Problem. A new _Export_ is flat, one folder per title beside `Meta/`.
+      Problem. A new _Export_ is flat, one folder per title beside `_meta/`.
 
 ## 9. Back on the dev machine
 
