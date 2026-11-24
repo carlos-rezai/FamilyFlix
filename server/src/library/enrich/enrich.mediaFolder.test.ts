@@ -90,3 +90,38 @@ describe('library: mediaFolderOf — the recorded Media folder', () => {
     expect(storage.getSeries(series.id)).not.toHaveProperty('mediaFolder');
   });
 });
+
+// 75 — Poster pick, phase 1 (issue #708): the **Late reserve** records the
+// folder it reserves through `storage.recordMediaFolder(kind, id, folder)`,
+// over a gone one, for a film or a series.
+describe('library: recordMediaFolder — a Media folder recorded late', () => {
+  it('records a film’s Media folder, and mediaFolderOf reads it back', () => {
+    const storage = freshStorage();
+    const { id } = storage.addMovie(newMovie());
+
+    storage.recordMediaFolder('movie', id, 'the-lantern-keeper-2019');
+
+    expect(storage.mediaFolderOf('movie', id)).toBe('the-lantern-keeper-2019');
+  });
+
+  it('records a series’ Media folder, and mediaFolderOf reads it back', () => {
+    const storage = freshStorage();
+    const { id } = storage.addSeries({ title: 'Harbor & Vine' });
+
+    storage.recordMediaFolder('series', id, 'harbor-vine-2019');
+
+    expect(storage.mediaFolderOf('series', id)).toBe('harbor-vine-2019');
+  });
+
+  it('records over a folder already recorded', () => {
+    const storage = freshStorage();
+    const { id } = storage.addSeries({
+      title: 'Harbor & Vine',
+      mediaFolder: 'gone-folder',
+    });
+
+    storage.recordMediaFolder('series', id, 'harbor-vine-2019');
+
+    expect(storage.mediaFolderOf('series', id)).toBe('harbor-vine-2019');
+  });
+});
