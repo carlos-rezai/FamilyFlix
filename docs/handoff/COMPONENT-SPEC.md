@@ -953,7 +953,8 @@ as siblings:
   again._ inside the card under the picker, 10px above, 13px sans, `--color-danger`,
   line-height 1.5, `role="status"`; none of that season's choices reads pressed while it is
   drawn, and the held caption is unchanged. It goes at that season's next press; another
-  season's card is untouched. Still no snackbar. `{ seasons: SeasonChoice[], onChoose(season, path) }`
+  season's card is untouched. Still no snackbar.
+  `{ seasons: SeasonChoice[], onChoose(season, path), seasonPhase(season), seasonRefused(season) }`
 
 **Decisions this encodes** (settled with the user before design):
 
