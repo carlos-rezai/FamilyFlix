@@ -161,6 +161,10 @@ export interface EnrichmentRunState {
  * _Match saved._ only once the hold is out, and a refusal settles it back to
  * `idle` with the run unchanged. Start and _Skip all_ each sit on their own
  * `useDelayedBusy`, answered as `starting` and `skippingAll`.
+ *
+ * A refused Season choice is remembered under its season and answered as
+ * `seasonRefused(season)`, the **Poster refusal** the card draws; sending
+ * that season again forgets it, and no other season is touched.
  */
 export function useEnrichmentRun(
   title: TitleReference | null

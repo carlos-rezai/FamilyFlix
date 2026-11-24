@@ -160,20 +160,21 @@ Sync, the **Late reserve**), a refused pick draws a **Poster refusal** line
 on the season's card and no snackbar, a movie added the same way has the
 same gap and the same fix, and the prototype gains that one line:
 
-57. ⬜ **Poster pick**: a chosen season poster always lands, on a linked
-    show too.
-    - **A folder when art needs one**: a series with no **Media folder**
-      gets one reserved the first time a Sync or a Season choice stores
-      art for it, as the series edit already does, and keeps it from then
-      on. Its videos stay linked where they lie.
-    - **The whole Sync, not only the pick**: the same gap drops the series
-      poster, the backdrop, each season poster and each still for such a
-      show, so the fix covers every image a Sync writes.
-    - **A refused pick says so**: today a refused **Season choice** leaves
-      the page as it was, without a word; it should show that the poster
-      was not saved.
-    - **Open**: whether a held library's folder-less series get a folder
-      by migration or only on their next Sync; what a refused pick shows
-      (a snackbar the prototype draws, or a line on the season's card);
-      whether a movie added the same way has the same gap; the prototype
-      amendment.
+57. 🔜 **Poster pick**: a synced title's art always lands, on a linked
+    title too, and a refused season poster says so.
+    - **The Late reserve**: a film or series with no **Media folder** (or
+      one that no longer opens) gets one reserved by its title and year
+      the first time a Sync or a **Season choice** has an image to store,
+      and recorded on the title, so the next Sync, the **Layout fill** and
+      a Delete all find it. One reserve serves a whole title pass, so the
+      poster, backdrop, Season posters and Stills land in the one folder.
+      With no image to store (Poster and Backdrop off, or every TMDB image
+      failing) nothing is made. No migration: a held library's folder-less
+      titles get theirs at their next Sync.
+    - **Videos stay where they lie**: a Linked video's path is unchanged,
+      the folder is in the **Managed media directory**, and the Sync writes
+      nothing into a Library folder.
+    - **The Poster refusal**: a Season choice that cannot be stored draws
+      _That poster wasn’t saved. Try again._ under that season's picker,
+      with no choice pressed and the held caption kept; the season's next
+      press clears it, another season is untouched, and no snackbar shows.

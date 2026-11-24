@@ -168,9 +168,12 @@ export interface Enrichment {
   /**
    * A **Season choice** taken: the TMDB image at `path` — one of that
    * season's choices — stored as the season's `S02-poster.jpg`, replacing the
-   * held one, and recorded as its **Season poster**. `not-found` without a
-   * single-series run holding that season; `not-offered` for a path it does
-   * not offer; `unreachable` when TMDB was not reached, nothing changed.
+   * held one, and recorded as its **Season poster**. A folder-less series is
+   * given its **Media folder** by a **Late reserve** first. `not-found`
+   * without a single-series run holding that season; `not-offered` for a path
+   * it does not offer; `unreachable` when TMDB was not reached; `failed` when
+   * the image could not be stored, which the review draws as the **Poster
+   * refusal**. Nothing changes on any of those four.
    */
   chooseSeasonPoster(
     season: number,
@@ -719,7 +722,9 @@ export function createEnrichment({
   /**
    * One matched show written: at show level, then every season it has on
    * disk — never season 0 — given its **Season poster**, then its episodes
-   * read and matched by episode number.
+   * read and matched by episode number. One **Late reserve** serves the whole
+   * pass, so a folder-less show's poster, backdrop, Season posters and Stills
+   * all land in the one Media folder it reserves when the first image arrives.
    */
   async function writeShow(
     current: EnrichmentRun,
@@ -885,6 +890,11 @@ export function createEnrichment({
     };
   }
 
+  /**
+   * The **Season choice** `Enrichment.chooseSeasonPoster` names: the held
+   * poster replaced under a free name, in the folder the show's **Late
+   * reserve** answers.
+   */
   async function chooseSeasonPoster(
     season: number,
     path: string
