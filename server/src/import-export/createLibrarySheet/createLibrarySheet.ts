@@ -24,14 +24,14 @@ import { sheetDialect } from '../sheetDialect/sheetDialect';
 import { sourceFoldersOf } from '../sourceFoldersOf/sourceFoldersOf';
 import { writeSheet } from '../writeSheet/writeSheet';
 
+/** The **Library sheet**'s filename inside its **Meta folder**. */
+const SHEET_FILENAME = `${LIBRARY_SHEET_STEM}.csv`;
+
 /** The **Library sheet**'s path inside its Library folder. */
-export const LIBRARY_SHEET = `${META_FOLDER}/${LIBRARY_SHEET_STEM}.csv`;
+export const LIBRARY_SHEET = `${META_FOLDER}/${SHEET_FILENAME}`;
 
 /** How long after the last touch a folder's sheet is rewritten. */
 export const LIBRARY_SHEET_DELAY_MS = 3000;
-
-/** The **Library sheet**'s filename inside its **Meta folder**. */
-const SHEET_FILENAME = `${LIBRARY_SHEET_STEM}.csv`;
 
 /**
  * What one Library folder's sheet is written from: the titles recorded
