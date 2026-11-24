@@ -843,6 +843,26 @@
                             </button>
                           </sc-for>
                         </div>
+                        <!-- The Poster refusal (log 75): a refused press, its Busy phase back to idle,
+                             draws this line under the picker, no choice pressed and the held caption
+                             kept, until that season's next press. Another season's card is untouched. -->
+                        <sc-if
+                          value="{{ sn.refused }}"
+                          hint-placeholder-val="{{ false }}"
+                        >
+                          <div
+                            role="status"
+                            style="
+                              font-family: var(--font-sans);
+                              font-size: 13px;
+                              color: var(--color-danger);
+                              line-height: 1.5;
+                              margin-top: 10px;
+                            "
+                          >
+                            That poster wasn’t saved. Try again.
+                          </div>
+                        </sc-if>
                       </div>
                     </sc-for>
                   </div>

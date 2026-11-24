@@ -948,7 +948,12 @@ as siblings:
   is an `aria-pressed` button named _Poster 2 for S02_ / _Series poster 5 for S02_, its border
   `--color-accent-line` on hover and while it is the season's pick, the 3px focus ring on
   keyboard focus. A press stores that image as the season's poster, replacing the held one —
-  no snackbar, no confirm. `{ seasons: SeasonChoice[], onChoose(season, path) }`
+  no snackbar, no confirm. A press TMDB or the disk refused draws the **Poster refusal**
+  (log 75) once that season's Busy phase is back to `idle`: _That poster wasn’t saved. Try
+  again._ inside the card under the picker, 10px above, 13px sans, `--color-danger`,
+  line-height 1.5, `role="status"`; none of that season's choices reads pressed while it is
+  drawn, and the held caption is unchanged. It goes at that season's next press; another
+  season's card is untouched. Still no snackbar. `{ seasons: SeasonChoice[], onChoose(season, path) }`
 
 **Decisions this encodes** (settled with the user before design):
 
