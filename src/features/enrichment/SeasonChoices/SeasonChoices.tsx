@@ -15,6 +15,7 @@ import {
   Picker,
   Poster,
   PosterImage,
+  Refusal,
   Rule,
   SeasonCard,
   SeriesPill,
@@ -26,6 +27,8 @@ export interface SeasonChoicesProps {
   onChoose: (season: number, path: string) => void;
   /** Each season's phase on the **Loader timing**. */
   seasonPhase: (season: number) => BusyPhase;
+  /** Each season's **Poster refusal**: its line drawn, no choice pressed. */
+  seasonRefused: (season: number) => boolean;
 }
 
 const HEADING_ID = 'enrichment-seasons-heading';
@@ -43,11 +46,15 @@ const HEADING_ID = 'enrichment-seasons-heading';
  * `aria-busy`, and refuses a press, as a **Busy button** does; once `shown`
  * it draws its **Busy overlay** last in the card, reading _Saving poster…_
  * over it, the held-poster caption kept under it.
+ *
+ * A refused season draws the **Poster refusal** under its picker, inside the
+ * card, and none of its choices reads pressed until its next press.
  */
 export function SeasonChoices({
   seasons,
   onChoose,
   seasonPhase,
+  seasonRefused,
 }: SeasonChoicesProps) {
   const [picked, setPicked] = useState<Record<number, string>>({});
   // The held poster urls that failed to load: a held tile whose poster is one
@@ -65,6 +72,7 @@ export function SeasonChoices({
           const label = formatEpisodeTag({ season });
           const { g1, g2 } = gradientFromId(label);
           const busy = seasonPhase(season);
+          const refused = seasonRefused(season);
           return (
             <SeasonCard key={season} $busy={busy}>
               <Picker role="group" aria-label={`Posters for ${label}`}>
@@ -90,7 +98,7 @@ export function SeasonChoices({
                 <Rule aria-hidden="true" />
                 {choices.map((choice, i) => {
                   const series = choice.source === 'series';
-                  const chosen = picked[season] === choice.path;
+                  const chosen = !refused && picked[season] === choice.path;
                   const art = gradientFromId(choice.path);
                   return (
                     <ChoiceCard
@@ -118,6 +126,11 @@ export function SeasonChoices({
                   );
                 })}
               </Picker>
+              {refused ? (
+                <Refusal role="status">
+                  That poster wasn’t saved. Try again.
+                </Refusal>
+              ) : null}
               {busy === 'shown' ? <BusyOverlay label="Saving poster…" /> : null}
             </SeasonCard>
           );

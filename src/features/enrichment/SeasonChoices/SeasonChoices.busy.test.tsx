@@ -48,6 +48,7 @@ function tree(two: BusyPhase) {
         seasons={[SEASON_ONE, SEASON_TWO]}
         onChoose={vi.fn()}
         seasonPhase={seasonPhase}
+        seasonRefused={() => false}
       />
     </ThemeProvider>
   );
@@ -193,6 +194,7 @@ describe('SeasonChoices: a locked season refuses a press', () => {
             seasons={[SEASON_ONE, SEASON_TWO]}
             onChoose={onChoose}
             seasonPhase={(season) => (season === 2 ? busy : 'idle')}
+            seasonRefused={() => false}
           />
         </ThemeProvider>
       );

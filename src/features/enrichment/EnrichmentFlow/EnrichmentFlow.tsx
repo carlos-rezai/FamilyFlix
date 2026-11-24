@@ -108,6 +108,7 @@ export function EnrichmentFlow() {
     skippingAll,
     chooseSeasonPoster,
     seasonPhase,
+    seasonRefused,
   } = useEnrichmentRun(single);
   // `?added=` is set by the Import flow's Finish alone, and only a library
   // Sync reads it.
@@ -217,7 +218,7 @@ export function EnrichmentFlow() {
   const onChooseSeasonPoster = useCallback(
     (season: number, path: string) => {
       chooseSeasonPoster(season, path).catch(() => {
-        // A refused choice leaves the held poster drawn, to choose again.
+        // The card shows the refusal: the held poster drawn, to choose again.
       });
     },
     [chooseSeasonPoster]
@@ -324,6 +325,7 @@ export function EnrichmentFlow() {
           onPick={onPick}
           rowPhase={rowPhase}
           seasonPhase={seasonPhase}
+          seasonRefused={seasonRefused}
           onSearch={onSearch}
           onApply={onApply}
           onChooseSeasonPoster={onChooseSeasonPoster}

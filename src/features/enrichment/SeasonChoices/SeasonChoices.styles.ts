@@ -72,6 +72,15 @@ export const HeldCaption = styled.span`
   color: ${({ theme }) => theme.colors.textFaint};
 `;
 
+/** The **Poster refusal**: one danger line under the picker. */
+export const Refusal = styled.div`
+  margin-top: 10px;
+  font-family: ${({ theme }) => theme.fonts.sans};
+  font-size: 13px;
+  line-height: 1.5;
+  color: ${({ theme }) => theme.colors.danger};
+`;
+
 /** The 1px rule between the held tile and the choices. */
 export const Rule = styled.div`
   flex: 0 0 1px;

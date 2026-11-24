@@ -6,6 +6,7 @@ import type {
   BusyPhase,
   ConflictChoices,
   EnrichmentRun,
+  SeasonChoice,
   StartEnrichment,
   TitleReference,
 } from '@/types';
@@ -132,6 +133,12 @@ export interface EnrichmentRunState {
    * choice** is sent; `idle` for a season with nothing sent.
    */
   seasonPhase: (season: number) => BusyPhase;
+  /**
+   * The **Poster refusal**: true once season `season`'s last Season choice
+   * was refused and its phase is back to `idle`, until that season is sent
+   * again.
+   */
+  seasonRefused: (season: number) => boolean;
 }
 
 /**
@@ -235,6 +242,12 @@ export function useEnrichmentRun(
     (season: number) => seasonPhaseOf(String(season)),
     [seasonPhaseOf]
   );
+  const [refused, setRefused] = useState<ReadonlySet<number>>(() => new Set());
+  const seasonRefused = useCallback(
+    (season: number) =>
+      refused.has(season) && seasonPhaseOf(String(season)) === 'idle',
+    [refused, seasonPhaseOf]
+  );
 
   const search = useCallback(
     async (id: string, query: string) => {
@@ -287,9 +300,21 @@ export function useEnrichmentRun(
 
   const chooseSeasonPoster = useCallback(
     async (season: number, path: string) => {
-      const echo = await runSeason(String(season), () =>
-        saveSeasonPoster(season, path)
-      );
+      setRefused((held) => {
+        if (!held.has(season)) return held;
+        const next = new Set(held);
+        next.delete(season);
+        return next;
+      });
+      let echo: SeasonChoice;
+      try {
+        echo = await runSeason(String(season), () =>
+          saveSeasonPoster(season, path)
+        );
+      } catch (error) {
+        setRefused((held) => new Set(held).add(season));
+        throw error;
+      }
       setRun((held) =>
         held?.seasons === undefined
           ? held
@@ -345,5 +370,6 @@ export function useEnrichmentRun(
     skippingAll,
     chooseSeasonPoster,
     seasonPhase,
+    seasonRefused,
   };
 }

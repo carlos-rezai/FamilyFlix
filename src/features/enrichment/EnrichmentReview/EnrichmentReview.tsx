@@ -55,6 +55,8 @@ export interface EnrichmentReviewProps {
   onChooseSeasonPoster: (season: number, path: string) => void;
   /** Each season's phase on the **Loader timing**. */
   seasonPhase: (season: number) => BusyPhase;
+  /** Each season's **Poster refusal**, drawn on its card. */
+  seasonRefused: (season: number) => boolean;
 }
 
 /**
@@ -85,6 +87,7 @@ export function EnrichmentReview({
   onApply,
   onChooseSeasonPoster,
   seasonPhase,
+  seasonRefused,
 }: EnrichmentReviewProps) {
   const [chosen, setChosen] = useState<DecisionKind | 'all'>('all');
   const filter = kindFilter(
@@ -116,6 +119,7 @@ export function EnrichmentReview({
           seasons={run.seasons}
           onChoose={onChooseSeasonPoster}
           seasonPhase={seasonPhase}
+          seasonRefused={seasonRefused}
         />
       )}
 
