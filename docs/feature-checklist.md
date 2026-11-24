@@ -86,6 +86,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Seamless art: the backdrop lands with the page      | ✅ Done    |
 | Header fit: every filter pill and Settings in reach | ✅ Done    |
 | Sheet in sight: `_meta/` on top, and said aloud     | ✅ Done    |
+| Poster pick: a chosen season poster always lands    | ⬜ Planned |
 
 Steps 1 to 9 are the first build order, ending with Software update, which
 shipped as v0.2.0. From step 10 on, each step came out of using FamilyFlix
@@ -144,3 +145,31 @@ grilled; once it ships, it is one line and a link.
 54. ✅ **Seamless art**: the backdrop lands with the page ([log 72](design-logs/72-seamless-art.md)).
 55. ✅ **Header fit**: every filter pill and Settings in reach ([log 73](design-logs/73-header-fit.md)).
 56. ✅ **Sheet in sight**: `_meta/` heads the folder, and the sheet is said aloud ([log 74](design-logs/74-sheet-in-sight.md)).
+
+Step 57 came out of a single-series Sync in real use. On the Death Note
+series page, the Sync's review offered each season a row of TMDB posters,
+but pressing one set nothing: the held tile kept reading _No poster yet_,
+however many times a poster was pressed. Confirmed on 2026-11-24 against a
+linked show: a show added through the **Show folder pick** with no art of
+its own is recorded with no **Media folder** (a linked video names none),
+so the Sync stores no art for it and quietly skips each season poster, and
+a **Season choice** answers `404` _No sync holds that season._, which the
+page swallows. Talked through on 2026-11-24, not yet grilled:
+
+57. ⬜ **Poster pick**: a chosen season poster always lands, on a linked
+    show too.
+    - **A folder when art needs one**: a series with no **Media folder**
+      gets one reserved the first time a Sync or a Season choice stores
+      art for it, as the series edit already does, and keeps it from then
+      on. Its videos stay linked where they lie.
+    - **The whole Sync, not only the pick**: the same gap drops the series
+      poster, the backdrop, each season poster and each still for such a
+      show, so the fix covers every image a Sync writes.
+    - **A refused pick says so**: today a refused **Season choice** leaves
+      the page as it was, without a word; it should show that the poster
+      was not saved.
+    - **Open**: whether a held library's folder-less series get a folder
+      by migration or only on their next Sync; what a refused pick shows
+      (a snackbar the prototype draws, or a line on the season's card);
+      whether a movie added the same way has the same gap; the prototype
+      amendment.
