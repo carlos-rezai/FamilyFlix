@@ -11,6 +11,72 @@ Newest entry first.
 
 ---
 
+## 2026-11-24: Poster pick, the build (issues 708 to 712)
+
+Two server slices (708, 709), the prototype amended (710), the client slice
+(711), each slice a RED and a GREEN commit, and this walk and documents
+slice (712). **13242 tests pass across 931 files** (one skipped) at
+`5b9c3cc6`, against 13208 across 929 at the Sheet in sight refactor: the
+late reserve's own suite and the Sync's late reserve suite are the two new
+files. `tsc -b --force` is clean; `eslint` over every file the initiative
+added or changed reports 1 error and 0 warnings, an empty arrow in
+`EnrichmentReview.test.tsx` from issue 362, older than this initiative.
+Step 57 stays 🔜 until the refactor.
+
+### What shipped
+
+- **A linked show's art lands** (708). `lateReserve` gives a title with no
+  usable **Media folder** one the first time an image has arrived to
+  store: the recorded folder when it still opens, else one reserved by
+  title and year and recorded through `recordMediaFolder`, beside
+  `mediaFolderOf`. `writeShow` makes one for the whole pass, and
+  `storeImage`, `writeSeries` and `writeEpisodes` take the getter, so a
+  show's poster, backdrop, Season posters and Stills land in one folder.
+  The Frame still guard on a missing folder is gone, and
+  `chooseSeasonPoster` makes its own reserve, so its `not-found` means only
+  that no run holds the season.
+- **A linked film's art lands** (709). `write` makes the same reserve for a
+  film's poster and backdrop; its video path stays as it was.
+- **The prototype amended** (710). `feat.EnrichmentFlow.dc.html` and
+  `FamilyFlix.dc.html` draw the **Poster refusal** under a season's
+  picker; `COMPONENT-SPEC.md` follows.
+- **A refused pick says so** (711). `useEnrichmentRun` answers
+  `seasonRefused` beside `seasonPhase`, the review and the Flow pass it
+  down, and `SeasonChoices` draws the line, a `Refusal`, with no choice
+  pressed while it shows.
+- **The walk and the documents** (712), below.
+
+### The walk
+
+The shell ran in its start shape (`FAMILYFLIX_SHELL_PROD=1`) with the
+database, media and component slot in a scratch folder, driven over the
+DevTools protocol, the native folder dialog answered from the main process,
+on a scratch Library folder holding a two-season show and a film, each a
+copy of the fixture video. All three checks passed:
+
+1. The show by the Show folder pick, linked, with no art, synced alone:
+   poster, backdrop, both Season posters and three Stills landed in one new
+   folder, recorded on the series; its videos stayed linked. Pressing a
+   Season poster swapped the held tile, the choice pressed.
+2. The film through the Movie form, linked, Add and sync: once its match
+   was picked, its poster and backdrop landed in a new recorded folder, the
+   video path unchanged.
+3. With the review open, an `icacls` deny-write on the show's folder,
+   standing in for a cut network: a press drew the Poster refusal with no
+   choice pressed, the held tile kept and no snackbar. With the deny
+   removed, the next press landed and the line went.
+
+### Judgement calls
+
+- **The reserve is asked inside each store's `try`**, after the image has
+  arrived, so a refused reserve is an image not stored and the Sync goes
+  on, as any other refused write.
+- **One reserve per title pass, a fresh one per Season choice press.** A
+  pass asks one getter for all its images; each press makes its own, which
+  answers the folder the pass recorded when it still opens.
+
+---
+
 ## 2026-11-24: Sheet in sight, the refactor (issue 706)
 
 Eight commits against `docs/refactor-plans/74-sheet-in-sight-refactor.md`,
