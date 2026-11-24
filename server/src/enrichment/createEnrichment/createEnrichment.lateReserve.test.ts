@@ -9,8 +9,8 @@
 // backdrop, **Season poster** and **Still** (a **Frame still** included) of
 // that pass lands in it. A **Season choice** taken on such a series reserves
 // the same way and answers `chosen`. A series whose folder still opens keeps
-// it; a Sync with Poster and Backdrop off stores nothing and so reserves nothing; a
-// refused reserve is an image not stored, and the Sync goes on.
+// it; a Sync with Poster and Backdrop off stores nothing and so reserves
+// nothing; a refused reserve is an image not stored, and the Sync goes on.
 //
 // Composed over a real in-memory library, a real `Media` over a sandbox, a
 // fake TMDB and a Playback whose `frame` is scripted: no test goes online.
