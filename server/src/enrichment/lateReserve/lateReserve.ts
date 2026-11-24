@@ -24,17 +24,15 @@ export function lateReserve(
   kind: 'movie' | 'series',
   { id, title, year }: ReservedTitle
 ): () => string {
-  let answered: string | null = null;
-  return () => {
-    if (answered !== null) return answered;
+  let answered: string | undefined;
+  function settle(): string {
     const recorded = storage.mediaFolderOf(kind, id);
     if (recorded !== null && media.openFolder(recorded) !== null) {
-      answered = recorded;
-      return answered;
+      return recorded;
     }
     const reserved = basename(media.reserveFolder(title, year));
     storage.recordMediaFolder(kind, id, reserved);
-    answered = reserved;
-    return answered;
-  };
+    return reserved;
+  }
+  return () => (answered ??= settle());
 }
