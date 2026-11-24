@@ -47,6 +47,7 @@ import {
   currentFields,
   currentSeriesFields,
 } from '../currentFields/currentFields';
+import { lateReserve } from '../lateReserve/lateReserve';
 import { planEpisode, type StillKind } from '../planEpisode/planEpisode';
 import { planFields } from '../planFields/planFields';
 import { planSeason, wantsSeasonPoster } from '../planSeason/planSeason';
@@ -420,24 +421,24 @@ export function createEnrichment({
   }
 
   /**
-   * One image streamed into a title's recorded **Media folder** (or a folder
-   * under it) as `name`; `null` when none is recorded, or the image could not
-   * be stored.
+   * One image streamed into a title's **Media folder** as `name`; `null` when
+   * the image could not be stored. `folder` is asked only once the image has
+   * arrived and the run goes on, so a **Late reserve** reserves nothing for an
+   * image that never came; a folder it cannot give is an image not stored.
    */
   async function storeImage(
     current: EnrichmentRun,
-    folder: string | null,
+    folder: () => string,
     path: string,
     name: string,
     signal: AbortSignal
   ): Promise<string | null> {
-    if (folder === null) return null;
     const image = await client.image(path, signal);
     if (image.kind !== 'ok' || signal.aborted) {
       return null;
     }
     try {
-      const stored = await media.storeNamed(folder, name, image.value);
+      const stored = await media.storeNamed(folder(), name, image.value);
       log(current, `↓ ${name}  →  ${stored}`, 'scan');
       return stored;
     } catch {
@@ -482,20 +483,23 @@ export function createEnrichment({
     });
 
     const enrichment = movieEnrichment(detail.id, fill);
-    if (fill.poster) {
+    // A film with no recorded Media folder stores no art yet.
+    const recorded = storage.mediaFolderOf('movie', movie.id);
+    const movieFolder = recorded === null ? null : () => recorded;
+    if (fill.poster && movieFolder !== null) {
       const stored = await storeImage(
         current,
-        storage.mediaFolderOf('movie', movie.id),
+        movieFolder,
         fill.poster,
         'poster.jpg',
         signal
       );
       if (stored !== null) enrichment.posterPath = stored;
     }
-    if (fill.backdrop) {
+    if (fill.backdrop && movieFolder !== null) {
       const stored = await storeImage(
         current,
-        storage.mediaFolderOf('movie', movie.id),
+        movieFolder,
         fill.backdrop,
         'backdrop.jpg',
         signal
@@ -571,12 +575,12 @@ export function createEnrichment({
    * year range, id and images. Answers the **Field conflicts** the plan left
    * for the review under the run's own scope, and what TMDB said — `write`'s
    * shape, so a series with a conflict has its gaps written as a film's are.
-   * Its images go into `seriesFolder`, the show's recorded **Media folder**.
+   * Its images go into `seriesFolder`, the show's **Late reserve**.
    */
   async function writeSeries(
     current: EnrichmentRun,
     series: Series,
-    seriesFolder: string | null,
+    seriesFolder: () => string,
     episodes: readonly Episode[],
     detail: TmdbTvDetail,
     fields: readonly EnrichField[],
@@ -631,7 +635,7 @@ export function createEnrichment({
    */
   async function writeEpisodes(
     current: EnrichmentRun,
-    seriesFolder: string | null,
+    seriesFolder: () => string,
     seasonNumber: number,
     episodes: readonly Episode[],
     season: TmdbSeason,
@@ -652,7 +656,7 @@ export function createEnrichment({
       );
       // The held **Frame still** TMDB's still replaces, once it is written.
       let replacedFrame: string | null = null;
-      if (still !== null && seriesFolder !== null) {
+      if (still !== null) {
         const stem = posix.basename(
           episode.videoPath,
           posix.extname(episode.videoPath)
@@ -676,7 +680,7 @@ export function createEnrichment({
           const name = `${stem}.${suffix}.jpg`;
           try {
             const stored = await media.storeNamed(
-              seriesFolder,
+              seriesFolder(),
               name,
               picture,
               seasonNumber
@@ -724,9 +728,14 @@ export function createEnrichment({
     // A series gone mid-run reads as no seasons, as its episodes would.
     const seasons = storage.getSeriesDetail(series.id)?.seasons ?? [];
     const episodes = seasons.flatMap((season) => season.episodes);
-    // The show's **Media folder**, read once for the whole pass: its images,
-    // its Season posters and its Stills all go under it.
-    const seriesFolder = storage.mediaFolderOf('series', series.id);
+    // The show's **Media folder**, one **Late reserve** for the whole pass:
+    // its images, its Season posters and its Stills all go under it, and it is
+    // reserved only once one of them has arrived to store.
+    const seriesFolder = lateReserve({ storage, media }, 'series', {
+      id: series.id,
+      title: series.title,
+      year: series.year,
+    });
     // Each episode's **Still source**, read once for the whole show.
     const stillSources = storage.stillSourcesOf(series.id);
     const { conflicts, fetched } = await writeSeries(
@@ -885,8 +894,6 @@ export function createEnrichment({
     if (!held.choices.some((choice) => choice.path === path)) {
       return { kind: 'not-offered' };
     }
-    const folder = storage.mediaFolderOf('series', seriesId);
-    if (folder === null) return { kind: 'not-found' };
     const image = await client.image(path);
     if (image.kind !== 'ok') return { kind: 'unreachable' };
     // Never the held poster's own name: the same name is the same url, and
@@ -900,9 +907,15 @@ export function createEnrichment({
       previous !== null && posix.basename(previous) === `${tag}-poster.jpg`
         ? `${tag}-poster-2.jpg`
         : `${tag}-poster.jpg`;
+    const show = storage.getSeries(seriesId);
+    const folder = lateReserve({ storage, media }, 'series', {
+      id: seriesId,
+      title: show?.title ?? '',
+      year: show?.year ?? null,
+    });
     let stored: string;
     try {
-      stored = await media.storeNamed(folder, free, image.value);
+      stored = await media.storeNamed(folder(), free, image.value);
       storage.setSeasonPoster(seriesId, season, stored);
     } catch {
       return { kind: 'failed' };

@@ -396,6 +396,8 @@ export interface LibraryStorage {
    * kind does not hold. Never on the wire.
    */
   mediaFolderOf(kind: 'movie' | 'series', id: string): string | null;
+  /** Record a title's **Media folder** late, over a gone one. */
+  recordMediaFolder(kind: 'movie' | 'series', id: string, folder: string): void;
   /**
    * Where a Movie or Series sits on disk: its Library folder's path joined to
    * its Source folder — `null` for a title with no folder.
@@ -677,6 +679,7 @@ export function createSqliteStorage(dbPath: string): LibraryStorage {
     },
     titleSource: enrich.titleSource,
     mediaFolderOf: enrich.mediaFolderOf,
+    recordMediaFolder: enrich.recordMediaFolder,
     sourcePath: enrich.sourcePath,
     titleAt: enrich.titleAt,
     titleHolding: holding.titleHolding,

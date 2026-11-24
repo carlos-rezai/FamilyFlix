@@ -140,6 +140,11 @@ export interface Enrich {
    */
   mediaFolderOf(kind: 'movie' | 'series', id: string): string | null;
   /**
+   * Record a title's **Media folder** late, over whatever was recorded: what
+   * the **Late reserve** writes once it has reserved one.
+   */
+  recordMediaFolder(kind: 'movie' | 'series', id: string, folder: string): void;
+  /**
    * The title's Library folder path joined to its Source folder, in one query
    * over both columns — `null` for a title with no folder.
    */
@@ -386,6 +391,19 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     return row?.media_folder ?? null;
   }
 
+  const updateMediaFolder = {
+    movie: db.prepare('UPDATE movies SET media_folder = ? WHERE id = ?'),
+    series: db.prepare('UPDATE series SET media_folder = ? WHERE id = ?'),
+  };
+
+  function recordMediaFolder(
+    kind: 'movie' | 'series',
+    id: string,
+    folder: string
+  ): void {
+    updateMediaFolder[kind].run(folder, id);
+  }
+
   function titleSource(id: string): TitleSource | null {
     const row = selectSource.get({ id }) as
       | {
@@ -406,6 +424,7 @@ export function createEnrich(db: SqliteDatabase, reader: MovieReader): Enrich {
     setSourceFolder,
     titleSource,
     mediaFolderOf,
+    recordMediaFolder,
     sourcePath,
     titleAt,
     enrichMovie,

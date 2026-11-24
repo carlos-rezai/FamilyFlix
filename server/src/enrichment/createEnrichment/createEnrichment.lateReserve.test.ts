@@ -9,7 +9,7 @@
 // backdrop, **Season poster** and **Still** (a **Frame still** included) of
 // that pass lands in it. A **Season choice** taken on such a series reserves
 // the same way and answers `chosen`. A series whose folder still opens keeps
-// it; a Sync with Poster off stores nothing and so reserves nothing; a
+// it; a Sync with Poster and Backdrop off stores nothing and so reserves nothing; a
 // refused reserve is an image not stored, and the Sync goes on.
 //
 // Composed over a real in-memory library, a real `Media` over a sandbox, a
@@ -45,8 +45,8 @@ import { createLayoutFill } from '../../import-export/createLayoutFill/createLay
 import { createEnrichment } from './createEnrichment';
 
 const ALL_FIELDS: EnrichField[] = [...ENRICH_FIELDS];
-const NO_POSTER: EnrichField[] = ALL_FIELDS.filter(
-  (field) => field !== 'poster'
+const NO_ART: EnrichField[] = ALL_FIELDS.filter(
+  (field) => field !== 'poster' && field !== 'backdrop'
 );
 
 const SHOW_ID = 71001;
@@ -245,12 +245,12 @@ describe('createEnrichment: a series whose Media folder opens', () => {
   });
 });
 
-describe('createEnrichment: a folder-less series with Poster off', () => {
+describe('createEnrichment: a folder-less series with Poster and Backdrop off', () => {
   it('makes no folder and records none', async () => {
     const { storage, enrichment, root, addShow } = world();
     const id = addShow();
 
-    await syncTheSeries(enrichment, id, NO_POSTER);
+    await syncTheSeries(enrichment, id, NO_ART);
 
     expect(readdirSync(root)).toEqual([]);
     expect(storage.mediaFolderOf('series', id)).toBeNull();
@@ -261,8 +261,8 @@ describe('createEnrichment: a Season choice on a folder-less series', () => {
   it('answers chosen, its folder reserved and recorded, and the held tile’s url follows it', async () => {
     const { storage, enrichment, root, addShow } = world();
     const id = addShow();
-    // Poster off: the pass stores nothing, so the series is still folder-less.
-    await syncTheSeries(enrichment, id, NO_POSTER);
+    // Poster and Backdrop off: the pass stores nothing, so the series is still folder-less.
+    await syncTheSeries(enrichment, id, NO_ART);
 
     const outcome = await enrichment.chooseSeasonPoster(1, '/s01-a.jpg');
 
