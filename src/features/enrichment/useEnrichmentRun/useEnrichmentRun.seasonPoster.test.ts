@@ -161,3 +161,162 @@ describe('useEnrichmentRun — chooseSeasonPoster', () => {
     expect(fetchMock.mock.calls.filter(isCurrent)).toHaveLength(before);
   });
 });
+
+/**
+ * 75, Poster pick, phase 4 (issue #711): the **Poster refusal**.
+ *
+ * `seasonRefused(season)` answers beside `seasonPhase`: set when that
+ * season's `saveSeasonPoster` rejects, cleared when that season is sent
+ * again, and true only once the season's **Busy phase** is back to `idle`
+ * (log 69's Loader timing). The hook still rejects to its caller.
+ */
+describe('useEnrichmentRun: seasonRefused, the Poster refusal', () => {
+  /** Each poster request held open until the test answers it, in order. */
+  let held: ((response: Response) => void)[];
+
+  async function mountHeld() {
+    held = [];
+    fetchMock.mockImplementation((input, init) => {
+      const call: FetchArgs = [input, init];
+      if (isSeasonPoster(call)) {
+        return new Promise<Response>((resolve) => {
+          held.push(resolve);
+        });
+      }
+      if (isCurrent(call)) {
+        return Promise.resolve(okResponse(inReview()));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${String(input)}`));
+    });
+    const rendered = renderHook(() =>
+      useEnrichmentRun({ kind: 'series', id: 's1' })
+    );
+    await elapse(0);
+    return rendered;
+  }
+
+  async function answer(response: Response) {
+    const next = held.shift();
+    if (next === undefined) throw new Error('no poster request is held');
+    await act(async () => {
+      next(response);
+    });
+  }
+
+  /** A press's promise, watched: still running, or settled with what. */
+  function watch(promise: Promise<void>) {
+    const state: { settled: boolean; error?: unknown } = { settled: false };
+    promise.then(
+      () => {
+        state.settled = true;
+      },
+      (error: unknown) => {
+        state.settled = true;
+        state.error = error;
+      }
+    );
+    return state;
+  }
+
+  it('answers false for every season before anything is pressed', async () => {
+    const { result } = await mountHeld();
+
+    expect(result.current.seasonRefused(1)).toBe(false);
+    expect(result.current.seasonRefused(2)).toBe(false);
+  });
+
+  it('answers true for a refused choice once its phase is idle, and not while it is busy', async () => {
+    const { result } = await mountHeld();
+
+    let choosing!: ReturnType<typeof watch>;
+    act(() => {
+      choosing = watch(result.current.chooseSeasonPoster(2, '/s02-a.jpg'));
+    });
+    expect(result.current.seasonPhase(2)).toBe('waiting');
+    expect(result.current.seasonRefused(2)).toBe(false);
+
+    await elapse(400);
+    expect(result.current.seasonPhase(2)).toBe('shown');
+    await answer(serverErrorResponse());
+    await elapse(399);
+    expect(result.current.seasonPhase(2)).toBe('shown');
+    expect(result.current.seasonRefused(2)).toBe(false);
+
+    await elapse(1);
+    expect(result.current.seasonPhase(2)).toBe('idle');
+    expect(result.current.seasonRefused(2)).toBe(true);
+    expect(choosing.settled).toBe(true);
+    expect(choosing.error).toBeInstanceOf(Error);
+  });
+
+  it('answers true for a quick refusal once it is idle', async () => {
+    const { result } = await mountHeld();
+
+    let choosing!: ReturnType<typeof watch>;
+    act(() => {
+      choosing = watch(result.current.chooseSeasonPoster(2, '/s02-a.jpg'));
+    });
+    await answer(serverErrorResponse());
+    await elapse(0);
+
+    expect(result.current.seasonPhase(2)).toBe('idle');
+    expect(result.current.seasonRefused(2)).toBe(true);
+    expect(choosing.error).toBeInstanceOf(Error);
+  });
+
+  it('answers false for a choice the route took', async () => {
+    const { result } = await mountHeld();
+
+    act(() => {
+      void result.current.chooseSeasonPoster(2, '/s02-a.jpg');
+    });
+    await answer(okResponse(ECHO));
+    await elapse(1_000);
+
+    expect(result.current.seasonPhase(2)).toBe('idle');
+    expect(result.current.seasonRefused(2)).toBe(false);
+  });
+
+  it('clears it the moment that season is sent again', async () => {
+    const { result } = await mountHeld();
+    act(() => {
+      void result.current
+        .chooseSeasonPoster(2, '/s02-a.jpg')
+        .catch(() => undefined);
+    });
+    await answer(serverErrorResponse());
+    await elapse(1_000);
+    expect(result.current.seasonRefused(2)).toBe(true);
+
+    act(() => {
+      void result.current.chooseSeasonPoster(2, '/show-1.jpg');
+    });
+    expect(result.current.seasonRefused(2)).toBe(false);
+
+    await answer(okResponse(ECHO));
+    await elapse(1_000);
+    expect(result.current.seasonRefused(2)).toBe(false);
+  });
+
+  it('leaves another season untouched, refused or pressed', async () => {
+    const { result } = await mountHeld();
+    act(() => {
+      void result.current
+        .chooseSeasonPoster(2, '/s02-a.jpg')
+        .catch(() => undefined);
+    });
+    await answer(serverErrorResponse());
+    await elapse(1_000);
+    expect(result.current.seasonRefused(1)).toBe(false);
+
+    act(() => {
+      void result.current.chooseSeasonPoster(1, '/s01-a.jpg');
+    });
+    expect(result.current.seasonRefused(2)).toBe(true);
+    await answer(okResponse(seasonOf(1, '/api/images/x/S01-poster.jpg')));
+    await elapse(1_000);
+
+    expect(result.current.seasonRefused(1)).toBe(false);
+    expect(result.current.seasonRefused(2)).toBe(true);
+  });
+});

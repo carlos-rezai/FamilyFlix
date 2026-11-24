@@ -24,7 +24,9 @@ import { makeSeriesDetail } from '@/test-support/makeSeriesDetail/makeSeriesDeta
 import {
   notFoundResponse,
   okResponse,
+  serverErrorResponse,
 } from '@/test-support/fakeResponse/fakeResponse';
+import { snackbarStack } from '@/test-support/snackbarStack/snackbarStack';
 
 /**
  * 42 — Review at scale, Slice 7: "choose a season's poster from TMDB" (issue
@@ -129,11 +131,14 @@ const isSeasonPoster = (input: RequestInfo | URL, init?: RequestInit) =>
   method(init) === 'POST';
 
 /** A server holding `held` as the Current run, in review. */
-function serve(held: EnrichmentRun) {
+function serve(
+  held: EnrichmentRun,
+  posterAnswer: () => Response = () => okResponse(ECHO)
+) {
   fetchMock.mockImplementation((input, init) => {
     const p = path(input);
     if (isSeasonPoster(input, init)) {
-      return Promise.resolve(okResponse(ECHO));
+      return Promise.resolve(posterAnswer());
     }
     if (p === '/api/enrichment/current' && method(init) === 'GET') {
       return Promise.resolve(okResponse(held));
@@ -233,5 +238,59 @@ describe('EnrichmentFlow — a library-wide review', () => {
     expect(await screen.findByText('Sundial')).toBeTruthy();
     expect(screen.queryByText('Seasons')).toBeNull();
     expect(screen.queryByRole('group', { name: /^Posters for/ })).toBeNull();
+  });
+});
+
+/**
+ * 75, Poster pick, phase 4 (issue #711): the **Poster refusal** through the
+ * Flow. A refused press draws _That poster wasn’t saved. Try again._ on that
+ * season's card once _Saving poster…_ has gone, with no snackbar; the next
+ * press on that season clears it.
+ */
+describe('EnrichmentFlow: a refused Season choice', () => {
+  const REFUSAL = 'That poster wasn’t saved. Try again.';
+
+  /** Refuses the first poster press, and takes every one after it. */
+  function serveRefusingFirst() {
+    let presses = 0;
+    serve(seriesReview([]), () =>
+      ++presses === 1 ? serverErrorResponse() : okResponse(ECHO)
+    );
+  }
+
+  it('draws the refusal on that season’s card, Saving poster… gone, and no snackbar', async () => {
+    serveRefusingFirst();
+    renderFlow(`/enrich?series=${SHOW}`);
+    const picker = await pickerFor('S02');
+
+    fireEvent.click(
+      within(picker).getByRole('button', { name: 'Poster 1 for S02' })
+    );
+
+    const line = await screen.findByText(REFUSAL);
+    expect(line.getAttribute('role')).toBe('status');
+    expect(picker.parentElement?.contains(line)).toBe(true);
+    expect(screen.queryByText('Saving poster…')).toBeNull();
+    expect(within(picker).getByText('No poster yet')).toBeTruthy();
+    expect(snackbarStack().children).toHaveLength(0);
+  });
+
+  it('clears the refusal at that season’s next press', async () => {
+    serveRefusingFirst();
+    renderFlow(`/enrich?series=${SHOW}`);
+    const picker = await pickerFor('S02');
+    fireEvent.click(
+      within(picker).getByRole('button', { name: 'Poster 1 for S02' })
+    );
+    expect(await screen.findByText(REFUSAL)).toBeTruthy();
+
+    fireEvent.click(
+      within(picker).getByRole('button', { name: 'Series poster 2 for S02' })
+    );
+
+    await waitFor(() => {
+      expect(within(picker).getByText('Current poster')).toBeTruthy();
+    });
+    expect(screen.queryByText(REFUSAL)).toBeNull();
   });
 });

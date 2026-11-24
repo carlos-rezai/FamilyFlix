@@ -44,7 +44,10 @@ const SEASON_TWO: SeasonChoice = {
   choices: [choice('/show-1.jpg', 'series'), choice('/show-2.jpg', 'series')],
 };
 
-function renderChoices(seasons: SeasonChoice[] = [SEASON_ONE, SEASON_TWO]) {
+function renderChoices(
+  seasons: SeasonChoice[] = [SEASON_ONE, SEASON_TWO],
+  seasonRefused: (season: number) => boolean = () => false
+) {
   const onChoose = vi.fn<(season: number, path: string) => void>();
   render(
     <ThemeProvider theme={theme}>
@@ -52,6 +55,7 @@ function renderChoices(seasons: SeasonChoice[] = [SEASON_ONE, SEASON_TWO]) {
         seasons={seasons}
         onChoose={onChoose}
         seasonPhase={() => 'idle'}
+        seasonRefused={seasonRefused}
       />
     </ThemeProvider>
   );
@@ -263,5 +267,117 @@ describe('SeasonChoices: a held poster that fails to load', () => {
     expect(paints.some((paint) => paint.includes('/api/images/'))).toBe(false);
     expect(within(picker).getByText('No poster yet')).toBeTruthy();
     expect(within(picker).queryByText('Current poster')).toBeNull();
+  });
+});
+
+/**
+ * 75, Poster pick, phase 4 (issue #711): the **Poster refusal**, as
+ * `feat.EnrichmentFlow.dc.html` draws it and `COMPONENT-SPEC.md`'s
+ * **Seasons** paragraph describes it. While `seasonRefused(season)` is true
+ * that season's card draws _That poster wasn’t saved. Try again._ inside the
+ * card, under the picker, with `role="status"`; none of its choices reads
+ * pressed, over the local pick; the held caption is unchanged. Another
+ * season's card is untouched, and nothing else is added.
+ */
+describe('SeasonChoices: the Poster refusal', () => {
+  const REFUSAL = 'That poster wasn’t saved. Try again.';
+  const twoRefused = (season: number) => season === 2;
+
+  /** The card that holds a season's picker. */
+  const cardFor = (label: string): HTMLElement => {
+    const card = pickerFor(label).parentElement;
+    if (card === null) throw new Error(`no card holds ${label}'s picker`);
+    return card;
+  };
+
+  function tree(seasonRefused: (season: number) => boolean) {
+    return (
+      <ThemeProvider theme={theme}>
+        <SeasonChoices
+          seasons={[SEASON_ONE, SEASON_TWO]}
+          onChoose={vi.fn()}
+          seasonPhase={() => 'idle'}
+          seasonRefused={seasonRefused}
+        />
+      </ThemeProvider>
+    );
+  }
+
+  it('draws the line with role status inside the refused season’s card, under its picker', () => {
+    renderChoices([SEASON_ONE, SEASON_TWO], twoRefused);
+
+    const line = screen.getByRole('status');
+    expect(line.textContent?.trim()).toBe(REFUSAL);
+    const picker = pickerFor('S02');
+    expect(cardFor('S02').contains(line)).toBe(true);
+    expect(picker.contains(line)).toBe(false);
+    expect(
+      picker.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('draws the one line, the refused season’s alone', () => {
+    renderChoices([SEASON_ONE, SEASON_TWO], twoRefused);
+
+    expect(screen.getAllByRole('status')).toHaveLength(1);
+    expect(within(cardFor('S01')).queryByText(REFUSAL)).toBeNull();
+  });
+
+  it('draws no line without it, and takes it away when it goes', () => {
+    const view = render(tree(twoRefused));
+    expect(within(cardFor('S02')).getByRole('status')).toBeTruthy();
+
+    view.rerender(tree(() => false));
+
+    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.queryByText(REFUSAL)).toBeNull();
+  });
+
+  it('reads no choice of that season pressed, over the pressed mark', () => {
+    const view = render(tree(() => false));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Series poster 2 for S02' })
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Poster 1 for S01' }));
+    expect(
+      screen
+        .getByRole('button', { name: 'Series poster 2 for S02' })
+        .getAttribute('aria-pressed')
+    ).toBe('true');
+
+    view.rerender(tree(twoRefused));
+
+    expect(
+      within(pickerFor('S02'))
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-pressed'))
+    ).toEqual(['false', 'false']);
+    expect(
+      within(pickerFor('S01'))
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-pressed'))
+    ).toEqual(['true', 'false', 'false']);
+  });
+
+  it('keeps the held caption telling what the tile holds', () => {
+    renderChoices([SEASON_ONE, SEASON_TWO], () => true);
+
+    expect(screen.getAllByRole('status')).toHaveLength(2);
+    expect(within(pickerFor('S01')).getByText('Current poster')).toBeTruthy();
+    expect(within(pickerFor('S02')).getByText('No poster yet')).toBeTruthy();
+  });
+
+  it('adds no control, confirm or alert', () => {
+    renderChoices([SEASON_ONE, SEASON_TWO], twoRefused);
+
+    expect(within(cardFor('S02')).getByRole('status')).toBeTruthy();
+    expect(
+      within(cardFor('S02'))
+        .getAllByRole('button')
+        .map((button) => button.getAttribute('aria-label'))
+    ).toEqual(['Series poster 1 for S02', 'Series poster 2 for S02']);
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(screen.queryByRole('alertdialog')).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
   });
 });
