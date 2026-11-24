@@ -1,12 +1,4 @@
-import {
-  lstat,
-  mkdir,
-  readFile,
-  rename,
-  rm,
-  stat,
-  writeFile,
-} from 'node:fs/promises';
+import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
 import type { Movie, SeriesDetail } from '@/types';
@@ -80,25 +72,6 @@ async function bytesAt(path: string): Promise<Buffer | null> {
   }
 }
 
-/** Whether anything at all lies at `path`. */
-async function somethingAt(path: string): Promise<boolean> {
-  try {
-    await lstat(path);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-/** Whether `path` is a folder. */
-async function folderAt(path: string): Promise<boolean> {
-  try {
-    return (await stat(path)).isDirectory();
-  } catch {
-    return false;
-  }
-}
-
 /**
  * The **Meta move**: the folder under `root` a sheet is written in. An **Old
  * Meta folder** with no `_meta` beside it is renamed whole to the **Meta
@@ -109,7 +82,10 @@ async function folderAt(path: string): Promise<boolean> {
 async function settledMetaFolder(root: string): Promise<string> {
   const meta = join(root, META_FOLDER);
   const oldMeta = join(root, OLD_META_FOLDER);
-  if ((await folderAt(oldMeta)) && !(await somethingAt(meta))) {
+  if (
+    (await readableFolder(oldMeta)) === 'readable' &&
+    (await readableFolder(meta)) === 'missing'
+  ) {
     try {
       await rename(oldMeta, meta);
     } catch {
