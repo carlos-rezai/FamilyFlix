@@ -917,7 +917,7 @@ else stays offline-first. Three surfaces, one flow component.
 as siblings:
 
 - **setup** — key/offline banners, scope radio cards (_Only what's missing_ | _Everything_ |
-  _Just this movie_, or _Just this series_ from a series), the field chips, and _Where it is saved_ (log 58): no toggles, two rows, **Your library** (badge _Required_) and **Your library folders** (mono `E:\Movies\<title folder>\Images`, with several folders `<title folder>\Images in each library folder`; badge _Always_), the note under the card always drawn: _Art goes into each title folder's `Images` folder, only where there isn't one already: nothing of yours is ever replaced. The sheet in `Meta` is FamilyFlix's own and is kept up to date._ The done summary reads _Saved to your library, each title folder, the sheet in Meta._ Start is `secondary` +
+  _Just this movie_, or _Just this series_ from a series), the field chips, and _Where it is saved_ (log 58): no toggles, two rows, **Your library** (badge _Required_) and **Your library folders** (mono `E:\Movies\<title folder>\Images`, with several folders `<title folder>\Images in each library folder`; badge _Always_), the note under the card always drawn: _Art goes into each title folder's `Images` folder, only where there isn't one already: nothing of yours is ever replaced. The sheet in `_meta` is FamilyFlix's own and is kept up to date._ The done summary reads _Saved to your library, each title folder, the sheet in \_meta._ Start is `secondary` +
   inert until `tmdbConnected && online`. Arriving from a run (log 54), _Finish_ on a run
   carrying `enrich` pushes `/enrich?added=<run.startedAt>` and a third card is drawn beside the
   library's two, chosen: **Just what was added**, _3 titles this run brought in_, in the same
@@ -952,22 +952,23 @@ as siblings:
 
 **Decisions this encodes** (settled with the user before design):
 
-| Question       | Decision                                                                                                                                                                                                          |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Where it lives | Settings row + own screen; Import checkbox; per-movie action                                                                                                                                                      |
-| Storage        | Library DB is the source of truth; the **Layout fill** adds art into each title folder's `Images` and the **Library sheet** is kept in `Meta/` (log 58), neither a toggle, nothing of the household's overwritten |
-| Fields         | Synopsis, Poster, Backdrop, Runtime, Year, Genres, Director, Cast, Original title, TMDB score                                                                                                                     |
-| Rating         | **Untouched.** TMDB's score is a _separate_ field beside the household rating                                                                                                                                     |
-| Conflicts      | Ask per movie in the review step — never a silent overwrite                                                                                                                                                       |
-| Matching       | Post-run review with a poster picker; no mid-run interruption                                                                                                                                                     |
-| API key        | Settings → **Network**: key field + _Test connection_; enrichment sits under it                                                                                                                                   |
-| Offline        | Explicit banner + Retry; the rest of the app is unaffected                                                                                                                                                        |
+| Question       | Decision                                                                                                                                                                                                                   |
+| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Where it lives | Settings row + own screen; Import checkbox; per-movie action                                                                                                                                                               |
+| Storage        | Library DB is the source of truth; the **Layout fill** adds art into each title folder's `Images` and the **Library sheet** is kept in `_meta/` (log 58, log 74), neither a toggle, nothing of the household's overwritten |
+| Fields         | Synopsis, Poster, Backdrop, Runtime, Year, Genres, Director, Cast, Original title, TMDB score                                                                                                                              |
+| Rating         | **Untouched.** TMDB's score is a _separate_ field beside the household rating                                                                                                                                              |
+| Conflicts      | Ask per movie in the review step — never a silent overwrite                                                                                                                                                                |
+| Matching       | Post-run review with a poster picker; no mid-run interruption                                                                                                                                                              |
+| API key        | Settings → **Network**: key field + _Test connection_; enrichment sits under it                                                                                                                                            |
+| Offline        | Explicit banner + Retry; the rest of the app is unaffected                                                                                                                                                                 |
 
 **Server-side note for the implementers:** the run is a pass over the _already-imported_
 library keyed by title + year — not a second filesystem scanner. The `tmdb_id`
 column finally gets a value. The Layout fill, which only adds, and the Library sheet writer,
-which only rewrites `Meta/familyflix-library.csv`, are the only writers into a Library
-folder (log 58); a folder the fill can't write is one Warning line.
+which only rewrites `_meta/familyflix-library.csv` and makes the one **Meta move**, are the
+only writers into a Library folder (log 58); a folder the fill can't write is one Warning
+line.
 
 ---
 
