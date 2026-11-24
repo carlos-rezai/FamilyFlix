@@ -14,9 +14,8 @@ import {
  * _What the scanner accepts_, from `feat.ImportFlow.dc.html`: the three folder
  * shapes in mono with the prototype's backslashes — the loose shape's note in
  * the sans face — then the folder-first rule, its two tags in mono, and the
- * **Sheet note** in the rule's style, its path in mono. No props:
- * Import setup and the Library folders page's group **Scan** draw the same
- * block.
+ * **Sheet note** in the rule's style, its path in mono. No props: Import
+ * setup and the Library folders page's group **Scan** draw the same block.
  */
 export function FolderShapes() {
   return (

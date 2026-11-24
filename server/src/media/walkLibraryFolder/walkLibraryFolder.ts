@@ -95,7 +95,9 @@ const isSystemFolder = (name: string): boolean =>
   name.startsWith('$') ||
   name === 'System Volume Information';
 
-/** Whether a folder holds a `_meta/` or `Meta/` folder: an **Export folder**. */
+/**
+ * Whether a folder holds a `_meta/` or `Meta/` folder: an **Export folder**.
+ */
 async function holdsMeta(dir: string): Promise<boolean> {
   try {
     const entries = await readdir(dir, { withFileTypes: true });
