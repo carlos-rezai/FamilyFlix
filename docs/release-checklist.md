@@ -127,6 +127,13 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       running range (`Smoke Show (2022–)`): the Title field reads _Smoke
       Show_ and the Year field _2022_. Add it under **Link**: its episodes
       play from where they lie.
+- [ ] Poster pick: add a show TMDB knows the same way, by the Show folder
+      pick under **Link** with no art, and Sync it alone. Its poster,
+      backdrop, Season posters and Stills land in one new folder under
+      `%APPDATA%\FamilyFlix\media\`, nothing new appears in its Title folder
+      beyond what the Layout fill adds, and its episodes still play from
+      where they lie. Press a season's poster in the review: it replaces the
+      held tile, with no snackbar.
 - [ ] Loading states, over the sandbox Library folder: Add a large film by hand under **Copy**:
       the button reads _Adding…_ after a moment, and the form leaves once the
       copy is done. Delete a long linked series from Manage library: the
