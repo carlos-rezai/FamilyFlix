@@ -5977,8 +5977,9 @@ describe('PATCH /api/movies/:id — the tracks', () => {
 //
 // **And it deletes exactly one file at a time.** Every replacement below is
 // checked against the files beside it: swapping a poster must not take the film
-// with it, and a track detached from the record is a record change rather than
-// a deletion.
+// with it. Since issue 726 the movie edit takes the series edit's rule: every
+// **Stored path** the old row held and the saved row no longer points at is
+// removed after the commit, so an emptied slot and a detached track go too.
 
 /** The bytes a replacement carries, so a swapped file can be told from the one it replaced. */
 const BETTER_POSTER_BYTES = Buffer.from('better poster bytes');
@@ -6184,7 +6185,7 @@ describe('PATCH /api/movies/:id — only a commit authorises the unlink', () => 
     );
   });
 
-  it('leaves an emptied slot’s file alone rather than deleting it', async () => {
+  it('deletes an emptied Poster’s old file after the commit', async () => {
     const { baseUrl, media } = freshApi();
     const movie = await storedMovie(baseUrl);
 
@@ -6194,13 +6195,45 @@ describe('PATCH /api/movies/:id — only a commit authorises the unlink', () => 
       unchangedParts(movie).filter(([name]) => name !== 'posterPath')
     );
 
-    // Only a *replacement* authorises an unlink. A slot cleared with nothing
-    // put in its place is a column set to nothing, and the file it named stays
-    // on disk — the same trade as a detached track below.
+    // Issue 726: the series edit's one rule. A Stored path the saved row no
+    // longer points at is no row's file, so emptying the slot lets it go,
+    // and nothing beside it goes with it.
     expect(amended.posterPath).toBeNull();
     expect(existsSync(storedFile(media, movie.posterPath as string))).toBe(
-      true
+      false
     );
+    expect(existsSync(storedFile(media, movie.videoPath))).toBe(true);
+    for (const track of trackOrder(movie)) {
+      expect(existsSync(storedFile(media, track.path))).toBe(true);
+    }
+  });
+
+  it('deletes nothing when an edit emptying the Poster is refused', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const [english] = trackOrder(movie);
+
+    const response = await patchParts(baseUrl, movie.id, [
+      ...unchangedParts(movie).filter(
+        ([name]) =>
+          name !== 'posterPath' &&
+          name !== 'subtitleLanguage' &&
+          name !== 'subtitlePath'
+      ),
+      ['subtitleLanguage', english.language],
+      ['subtitlePath', english.path],
+      ['genre', 'Documentaries'],
+    ]);
+    expect(response.status).toBe(400);
+
+    // Only a successful commit authorises the unlink: the refused edit
+    // leaves the row, and so every file it points at, exactly as it was.
+    expect(readFileSync(storedFile(media, movie.posterPath as string))).toEqual(
+      POSTER_BYTES
+    );
+    for (const track of trackOrder(movie)) {
+      expect(existsSync(storedFile(media, track.path))).toBe(true);
+    }
   });
 });
 
@@ -6226,7 +6259,7 @@ describe('PATCH /api/movies/:id — a track taken off the movie', () => {
     ).toEqual([['English', `${KEEPER_FOLDER}/lantern.en.srt`]]);
   });
 
-  it('leaves the detached track’s file on disk', async () => {
+  it('deletes the detached track’s file, keeping the track still held', async () => {
     const { baseUrl, media } = freshApi();
     const movie = await storedMovie(baseUrl);
     const [english, portuguese] = trackOrder(movie);
@@ -6239,10 +6272,41 @@ describe('PATCH /api/movies/:id — a track taken off the movie', () => {
       ['subtitlePath', english.path],
     ]);
 
-    // Detaching is a record change, not a deletion: this route removes a file
-    // only when a new one has taken its place, and one stranded `.srt` is a
-    // smaller harm than a rule with a second reason to delete in it.
-    expect(existsSync(storedFile(media, portuguese.path))).toBe(true);
+    // Issue 726: a track no row points at any more is removed after the
+    // commit, one file, while the track the body kept stays where it is.
+    expect(existsSync(storedFile(media, portuguese.path))).toBe(false);
+    expect(existsSync(storedFile(media, english.path))).toBe(true);
+    expect(existsSync(storedFile(media, movie.videoPath))).toBe(true);
+    expect(existsSync(storedFile(media, movie.posterPath as string))).toBe(
+      true
+    );
+  });
+
+  it('deletes a replaced track’s old file, the new pick on disk', async () => {
+    const { baseUrl, media } = freshApi();
+    const movie = await storedMovie(baseUrl);
+    const [english, portuguese] = trackOrder(movie);
+
+    const amended = await patchedMovie(baseUrl, movie.id, [
+      ...unchangedParts(movie).filter(
+        ([name]) => name !== 'subtitleLanguage' && name !== 'subtitlePath'
+      ),
+      ['subtitleLanguage', english.language],
+      ['subtitlePath', english.path],
+      ['subtitle', subtitlePart('lantern.pt-br.srt')],
+      ['subtitleLanguage', portuguese.language],
+    ]);
+
+    // The new file stands in the old one's place, so the old one is no
+    // row's any more and goes.
+    expect(trackOrder(amended).map((track) => track.path)).toEqual([
+      english.path,
+      `${KEEPER_FOLDER}/lantern.pt-br.srt`,
+    ]);
+    expect(
+      existsSync(storedFile(media, `${KEEPER_FOLDER}/lantern.pt-br.srt`))
+    ).toBe(true);
+    expect(existsSync(storedFile(media, portuguese.path))).toBe(false);
   });
 });
 
