@@ -612,6 +612,20 @@ function resolveFileOf(
   return path === undefined || path === '' ? null : { found: path };
 }
 
+/**
+ * An add's found **Poster** and **Backdrop**, either kind: the first one's
+ * refusal as `foundPathRefusal` words it, or `null` to take them both.
+ */
+function foundArtRefusal(art: FoundArt): string | null {
+  for (const path of [art.poster, art.backdrop]) {
+    const refused = path === null ? null : foundPathRefusal(path, 'image');
+    if (refused !== null) {
+      return refused;
+    }
+  }
+  return null;
+}
+
 /** What each refused TMDB key answers with. */
 const KEY_REFUSALS: Record<
   Exclude<SaveKeyOutcome['kind'], 'saved'>,
@@ -1136,10 +1150,8 @@ export function createApiRouter(
       backdrop: onlyField(fields, 'backdropPath') ?? null,
       seasonPosters: foundSeasonPosters.found,
     };
-    const artRefusal = [foundArt.poster, foundArt.backdrop]
-      .map((path) => (path === null ? null : foundPathRefusal(path, 'image')))
-      .find((refusal) => refusal !== null);
-    if (artRefusal !== undefined) {
+    const artRefusal = foundArtRefusal(foundArt);
+    if (artRefusal !== null) {
       rollback();
       res.status(400).json({ error: artRefusal });
       return;
@@ -1788,15 +1800,15 @@ export function createApiRouter(
     // track sends an empty `subtitlePath` and its bytes, a found one its
     // absolute path, copied in below, so a mixed list keeps its row order.
     const rows = subtitleRows(fields, uploads, read.languages);
-    const foundRefusal = [
-      ...[foundArt.poster, foundArt.backdrop].map((path) =>
-        path === null ? null : foundPathRefusal(path, 'image')
-      ),
-      ...rows.map((row) =>
-        'path' in row ? foundPathRefusal(row.path, 'subtitle') : null
-      ),
-    ].find((refusal) => refusal !== null);
-    if (foundRefusal !== undefined) {
+    const foundRefusal =
+      foundArtRefusal(foundArt) ??
+      rows
+        .map((row) =>
+          'path' in row ? foundPathRefusal(row.path, 'subtitle') : null
+        )
+        .find((refusal) => refusal !== null) ??
+      null;
+    if (foundRefusal !== null) {
       rollback();
       res.status(400).json({ error: foundRefusal });
       return;
