@@ -134,6 +134,13 @@ electron/.ffmpeg/ffmpeg.exe -i release/smoke.mp4 -c:v libx265 -c:a copy release/
       beyond what the Layout fill adds, and its episodes still play from
       where they lie. Press a season's poster in the review: it replaces the
       held tile, with no snackbar.
+- [ ] Whole add: with no TMDB key, add `The Show (2019)` by the Show folder
+      pick under **Link**: its Poster, Backdrop, each Season poster and every
+      Still in the folder fill their slots. Save: the series page draws them
+      all, and a little later every Still-less row draws a Frame still, none
+      of them written into the Title folder. Then pick
+      `Heat (1995)\Heat.mkv` on a movie add: its Poster, Backdrop and tracks
+      fill, and ✕ on the video takes them back.
 - [ ] Loading states, over the sandbox Library folder: Add a large film by hand under **Copy**:
       the button reads _Adding…_ after a moment, and the form leaves once the
       copy is done. Delete a long linked series from Manage library: the
