@@ -507,8 +507,8 @@ export function otherCandidates(detail: ImportProblemDetail): string[] {
 
 /**
  * Append one **File slot** to a body: a **Stored file** or a **Found file** as
- * the path it already has, a **Picked file** as its bytes, and an empty slot as
- * nothing at all.
+ * the path it already has, never as bytes, a **Picked file** as its bytes, and
+ * an empty slot as nothing at all.
  *
  * The two names travel together because the slot is one thing — `video` and
  * `videoPath` are the same slot answering in the only two ways it can. A found
@@ -650,13 +650,7 @@ export function seriesFormData(
   }
   body.append('rating', String(toRatingUnits(values.rating) ?? ''));
 
-  if (values.poster?.kind === 'picked') {
-    body.append('poster', values.poster.file);
-  } else if (values.poster !== null) {
-    // A held poster travels as the path it has, never as bytes; so does a
-    // found one.
-    body.append('posterPath', values.poster.path);
-  }
+  appendFile(body, 'poster', values.poster);
   appendFile(body, 'backdrop', values.backdrop);
 
   for (const row of episodes) {
