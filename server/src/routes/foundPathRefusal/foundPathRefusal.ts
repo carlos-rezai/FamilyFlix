@@ -9,10 +9,14 @@ import {
 /** What a **Found file** slot holds. */
 export type FoundKind = 'video' | 'subtitle' | 'image';
 
-const IS_KIND: Record<FoundKind, (filename: string) => boolean> = {
-  video: isVideoFilename,
-  subtitle: isSubtitleFilename,
-  image: isImageFilename,
+/** Each kind's test of a filename, and the noun its refusal names. */
+const FOUND_KINDS: Record<
+  FoundKind,
+  { is: (filename: string) => boolean; noun: string }
+> = {
+  video: { is: isVideoFilename, noun: 'a video file' },
+  subtitle: { is: isSubtitleFilename, noun: 'a subtitle file' },
+  image: { is: isImageFilename, noun: 'an image file' },
 };
 
 /**
@@ -26,7 +30,7 @@ export function foundPathRefusal(path: string, kind: FoundKind): string | null {
   if (!isAbsolute(path)) {
     return `Not an absolute path: ${JSON.stringify(path)}`;
   }
-  return IS_KIND[kind](basename(path))
-    ? null
-    : `Not ${kind === 'image' ? 'an' : 'a'} ${kind} file: ${JSON.stringify(basename(path))}`;
+  const { is, noun } = FOUND_KINDS[kind];
+  const name = basename(path);
+  return is(name) ? null : `Not ${noun}: ${JSON.stringify(name)}`;
 }
