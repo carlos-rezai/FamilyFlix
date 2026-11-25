@@ -173,7 +173,6 @@ export function MovieForm() {
     chooseVideo,
     pickPoster,
     removePoster,
-    backdropSlot,
     pickBackdrop,
     removeBackdrop,
     seasonPosters,
@@ -357,7 +356,7 @@ export function MovieForm() {
             poster={values.poster}
             onPickPoster={pickPoster}
             onRemovePoster={removePoster}
-            backdrop={backdropSlot ? values.backdrop : undefined}
+            backdrop={values.backdrop}
             onPickBackdrop={pickBackdrop}
             onRemoveBackdrop={removeBackdrop}
             seasonPosters={seasonPosters}
@@ -392,7 +391,7 @@ export function MovieForm() {
             poster={values.poster}
             onPickPoster={pickPoster}
             onRemovePoster={removePoster}
-            backdrop={backdropSlot ? values.backdrop : undefined}
+            backdrop={values.backdrop}
             onPickBackdrop={pickBackdrop}
             onRemoveBackdrop={removeBackdrop}
             subtitles={values.subtitles}

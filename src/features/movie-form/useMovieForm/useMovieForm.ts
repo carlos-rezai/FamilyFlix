@@ -167,11 +167,6 @@ export interface UseMovieFormResult {
   pickPoster: (file: File) => void;
   /** Empty the poster slot again. */
   removePoster: () => void;
-  /**
-   * Whether the Files card draws the **Backdrop** slot: an add or an edit of
-   * either kind, never a Resolve.
-   */
-  backdropSlot: boolean;
   /** Put artwork chosen off the disk into the backdrop slot. */
   pickBackdrop: (file: File) => void;
   /** Empty the backdrop slot again; a held backdrop goes on save. */
@@ -937,8 +932,6 @@ export function useMovieForm(): UseMovieFormResult {
     chooseVideo,
     pickPoster,
     removePoster,
-    // A Resolve's save has no backdrop to send, so it draws none.
-    backdropSlot: resolving === null,
     pickBackdrop,
     removeBackdrop,
     seasonPosters,

@@ -316,6 +316,7 @@ describe('createImporter.resolve — a Resolve stores its film’s quality', () 
       genres: [],
       video: { found: join(dieHard, 'Die.Hard.1988.1080p.mp4') },
       poster: { found: join(dieHard, 'Images', 'poster.jpg') },
+      backdrop: null,
       subtitles: [],
     };
     return { ...box, problem, form };

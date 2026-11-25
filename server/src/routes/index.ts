@@ -3548,13 +3548,22 @@ export function createApiRouter(
       return;
     }
 
-    const posterPath = onlyField(fields, 'posterPath');
-    const poster: ResolveFile | null =
-      uploads.poster !== undefined
-        ? { stored: uploads.poster }
-        : posterPath === undefined || posterPath === ''
+    // The Poster and Backdrop alike: a part is stored bytes, a non-empty
+    // path a **Found file**, silence an empty slot.
+    const artSlot = (
+      stored: string | undefined,
+      path: string | undefined
+    ): ResolveFile | null =>
+      stored !== undefined
+        ? { stored }
+        : path === undefined || path === ''
           ? null
-          : { found: posterPath };
+          : { found: path };
+    const poster = artSlot(uploads.poster, onlyField(fields, 'posterPath'));
+    const backdrop = artSlot(
+      uploads.backdrop,
+      onlyField(fields, 'backdropPath')
+    );
 
     try {
       const series = await importer.resolveSeries(id, {
@@ -3567,6 +3576,7 @@ export function createApiRouter(
         cast: read.cast,
         genres: read.genres,
         poster,
+        backdrop,
         episodes: read.episodes.map((episode) => ({
           season: episode.season,
           number: episode.number,
@@ -3610,7 +3620,7 @@ export function createApiRouter(
   // _Save & continue_: the **Movie form**'s own multipart encoding, read by
   // the same reader the two movie routes use. A **Found file** arrives as the
   // path field the edit route already reads for a **Stored file**
-  // (`videoPath`, `posterPath`, `subtitlePath`), a picked one as bytes in the
+  // (`videoPath`, `posterPath`, `backdropPath`, `subtitlePath`), a picked one as bytes in the
   // part beside it; the two are told apart exactly as the edit tells them
   // apart, so nothing about the encoding is this route's own. Since log 48 the
   // two adds take a found path too; the **Loopback guard** is what keeps a
@@ -3700,6 +3710,10 @@ export function createApiRouter(
         return;
       }
       const poster = slot(uploads.poster, onlyField(fields, 'posterPath'));
+      const backdrop = slot(
+        uploads.backdrop,
+        onlyField(fields, 'backdropPath')
+      );
 
       // The tracks, paired by the body reader exactly as the edit's are — and
       // read the other way: a path here is a **Found file** under a Library
@@ -3725,6 +3739,7 @@ export function createApiRouter(
             genres,
             video,
             poster,
+            backdrop,
             subtitles,
           })
         );

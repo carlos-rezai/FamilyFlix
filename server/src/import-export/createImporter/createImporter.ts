@@ -180,6 +180,7 @@ export interface ResolveForm {
   genres: string[];
   video: ResolveFile;
   poster: ResolveFile | null;
+  backdrop: ResolveFile | null;
   subtitles: { file: ResolveFile; language: string }[];
 }
 
@@ -206,7 +207,8 @@ export interface ResolveEpisode {
 
 /**
  * The series kind of the **Movie form** as the **Series Resolve** sends it:
- * the fields as the maintainer left them, the poster, and each episode.
+ * the fields as the maintainer left them, the poster, the backdrop, and each
+ * episode.
  */
 export interface ResolveSeriesForm {
   title: string;
@@ -218,6 +220,7 @@ export interface ResolveSeriesForm {
   cast: string[];
   genres: string[];
   poster: ResolveFile | null;
+  backdrop: ResolveFile | null;
   episodes: ResolveEpisode[];
 }
 
@@ -3629,6 +3632,7 @@ export function createImporter({
       // beside the one named outside it.
       const art: ResolveFile[] = [
         ...(form.poster === null ? [] : [form.poster]),
+        ...(form.backdrop === null ? [] : [form.backdrop]),
         ...form.subtitles.map((track) => track.file),
       ];
       refuseUnreadable([form.video], art);
@@ -3660,6 +3664,8 @@ export function createImporter({
         };
         const posterPath =
           form.poster === null ? undefined : await place(form.poster);
+        const backdropPath =
+          form.backdrop === null ? undefined : await place(form.backdrop);
         const subtitles: NewSubtitle[] = [];
         for (const track of form.subtitles) {
           subtitles.push({
@@ -3689,6 +3695,7 @@ export function createImporter({
           ...(form.cast.length === 0 ? {} : { cast: form.cast }),
           ...(form.genres.length === 0 ? {} : { genres: form.genres }),
           ...(posterPath === undefined ? {} : { posterPath }),
+          ...(backdropPath === undefined ? {} : { backdropPath }),
           ...(subtitles.length === 0 ? {} : { subtitles }),
         });
         takeOff(id);
@@ -3724,13 +3731,19 @@ export function createImporter({
       );
 
       // A join adds episodes and nothing else: the held series keeps its
-      // poster, so the form's — the held one, sent back — is not read.
+      // poster and backdrop, so the form's — the held ones, sent back — are
+      // not read.
       const poster = heldSeries === null ? form.poster : null;
+      const backdrop = heldSeries === null ? form.backdrop : null;
+      const seriesArt: ResolveFile[] = [
+        ...(poster === null ? [] : [poster]),
+        ...(backdrop === null ? [] : [backdrop]),
+      ];
 
       // Every found path is checked before the first is copied, as the
       // film's are.
       const slots: ResolveFile[] = [
-        ...(poster === null ? [] : [poster]),
+        ...seriesArt,
         ...form.episodes.flatMap((episode) => [
           episode.video,
           ...episode.subtitles.map((track) => track.file),
@@ -3739,7 +3752,7 @@ export function createImporter({
       refuseUnreadable(
         form.episodes.map((episode) => episode.video),
         [
-          ...(poster === null ? [] : [poster]),
+          ...seriesArt,
           ...form.episodes.flatMap((episode) =>
             episode.subtitles.map((track) => track.file)
           ),
@@ -3821,12 +3834,17 @@ export function createImporter({
           }
           series = heldSeries;
         } else {
-          const posterPath =
-            poster === null
+          /** A stored file as it is; a found one copied into the Series folder. */
+          const placeArt = async (
+            slot: ResolveFile | null
+          ): Promise<string | undefined> =>
+            slot === null
               ? undefined
-              : 'stored' in poster
-                ? poster.stored
-                : await media.copyIn(folder, poster.found);
+              : 'stored' in slot
+                ? slot.stored
+                : await media.copyIn(folder, slot.found);
+          const posterPath = await placeArt(poster);
+          const backdropPath = await placeArt(backdrop);
           const input: NewSeries = {
             title: form.title,
             ...(form.year === undefined ? {} : { year: form.year }),
@@ -3837,6 +3855,7 @@ export function createImporter({
             ...(form.cast.length === 0 ? {} : { cast: form.cast }),
             ...(form.genres.length === 0 ? {} : { genres: form.genres }),
             ...(posterPath === undefined ? {} : { posterPath }),
+            ...(backdropPath === undefined ? {} : { backdropPath }),
             mediaFolder: basename(folder),
           };
           series = storage.addSeries(input, episodes);

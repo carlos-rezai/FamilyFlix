@@ -138,6 +138,7 @@ const resolveForm = (
   genres: ['Crime'],
   video: { found: video },
   poster: null,
+  backdrop: null,
   subtitles: [],
   ...rest,
 });

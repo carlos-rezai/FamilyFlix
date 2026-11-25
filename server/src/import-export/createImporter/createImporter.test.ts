@@ -1725,6 +1725,7 @@ function dieHardForm(dieHard: string): ResolveForm {
     genres: ['Action', 'Thriller'],
     video: { found: join(dieHard, 'Die.Hard.1988.1080p.mp4') },
     poster: { found: join(dieHard, 'Images', 'poster.jpg') },
+    backdrop: null,
     subtitles: [
       {
         file: {
@@ -2302,6 +2303,7 @@ function resolveForm(
     genres: ['Drama'],
     video: { found: join(folder, video) },
     poster: null,
+    backdrop: null,
     subtitles: [],
   };
 }

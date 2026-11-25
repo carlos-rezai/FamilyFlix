@@ -53,7 +53,7 @@ export interface MovieFormFilesProps {
   onRemovePoster: () => void;
   /**
    * What is in the **Backdrop** slot, `null` while it is empty; omitted, the
-   * card draws no backdrop slot, as on a Resolve.
+   * card draws no backdrop slot.
    */
   backdrop?: MovieFormFile | null;
   /** Reports the backdrop the maintainer picked. */
@@ -74,7 +74,7 @@ export interface MovieFormFilesProps {
 /**
  * The Files card of the **Movie form**: the panel the prototype draws under the
  * metadata fields, with the video slot, the poster slot, the **Backdrop** slot
- * (none on a Resolve) and the subtitle list in it.
+ * (on the add, the edit and a Resolve) and the subtitle list in it.
  *
  * A feature sibling rather than a molecule, on the player's shape — the organism
  * owns the values and this draws what it is told. It knows which slots a

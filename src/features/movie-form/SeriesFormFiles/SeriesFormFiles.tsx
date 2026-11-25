@@ -86,7 +86,7 @@ export interface SeriesFormFilesProps {
   onRemovePoster: () => void;
   /**
    * What is in the **Backdrop** slot, `null` while it is empty; omitted, the
-   * card draws no backdrop slot, as on a Resolve.
+   * card draws no backdrop slot.
    */
   backdrop?: MovieFormFile | null;
   /** Reports the backdrop the maintainer picked. */
@@ -154,7 +154,7 @@ export interface SeriesFormFilesProps {
 /**
  * The Files card of the **Movie form** on the series kind —
  * `MovieFormFiles`' shape for a **Series**: the _Files_ caption, the Poster
- * slot, the **Backdrop** slot under it (none on a Resolve), the _Season
+ * slot, the **Backdrop** slot under it (on the add, the edit and a Resolve), the _Season
  * posters_ list (one slot per **Season** the rows hold, labelled `S01`,
  * `S02`…) and the _Episodes_ label the **Episode file rows** sit beside. No
  * video slot (a series' videos are its episodes') and no subtitle list of

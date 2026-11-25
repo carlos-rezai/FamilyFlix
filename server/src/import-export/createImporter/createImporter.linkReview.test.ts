@@ -290,6 +290,7 @@ async function twoVideoDieHard(mode: ImportMode) {
     genres: [],
     video: { found: join(dieHard, 'Die.Hard.1988.1080p.mp4') },
     poster: { found: join(dieHard, 'Images', 'poster.jpg') },
+    backdrop: null,
     subtitles: [
       {
         file: {
@@ -383,6 +384,7 @@ async function unplacedTidewater(mode: ImportMode) {
     cast: [],
     genres: [],
     poster: null,
+    backdrop: null,
     episodes: [
       {
         season: 1,
@@ -501,6 +503,7 @@ async function unplacedNewShow() {
     cast: [],
     genres: [],
     poster: null,
+    backdrop: null,
     episodes: [
       {
         season: 1,

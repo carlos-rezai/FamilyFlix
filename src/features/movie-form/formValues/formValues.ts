@@ -482,8 +482,7 @@ export function problemFormValues(
           ? foundFile(files.videos[0])
           : null,
     poster: files.poster === undefined ? null : foundFile(files.poster),
-    // A Resolve draws no backdrop slot.
-    backdrop: null,
+    backdrop: files.backdrop === undefined ? null : foundFile(files.backdrop),
     // In the folder's order, which is the order the run would have stored
     // them in — and each in the language the scan read off its name.
     subtitles: files.subtitles.map((track, index) => ({
