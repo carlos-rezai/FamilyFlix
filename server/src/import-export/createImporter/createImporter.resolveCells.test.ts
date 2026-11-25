@@ -5,10 +5,12 @@
 //
 // Heat's row names `Heat (1995)/`, a Title folder no Library folder holds:
 // the film lies in `Heat old rip/`, so the row is a `no-folder` **Problem**.
-// Its sheet lies outside any `Meta/` with `Heat (1995)/Images/poster.jpg` and
-// `Heat (1995)/Subtitles/English.srt` beside it, as an Export carries them.
-// The **Problem detail** offers both as **Found files**, and the Resolve's
-// save copies them in; a found video under the Sheet root is still refused.
+// Its sheet lies outside any `Meta/` with `Heat (1995)/Images/poster.jpg`,
+// `Heat (1995)/Images/backdrop.jpg` and `Heat (1995)/Subtitles/English.srt`
+// beside it, as an Export carries them. The **Problem detail** offers each
+// as a **Found file** (the backdrop since issue #725 gave the Resolve that
+// slot), and the Resolve's save copies them in; a found video under the
+// Sheet root is still refused.
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -41,10 +43,10 @@ afterEach(closeTracked);
 
 const HEAT = 'Heat (1995)';
 
-/** Heat's one-row sheet, its Poster and Subtitles cells under its Folder key. */
+/** Heat's one-row sheet, its Poster, Backdrop and Subtitles cells under its Folder key. */
 const SHEET = [
-  'Type,Folder,Title,Year,Genres,Poster,Subtitles',
-  `Movie,${HEAT},Heat,1995,Crime,${HEAT}/Images/poster.jpg,${HEAT}/Subtitles/English.srt`,
+  'Type,Folder,Title,Year,Genres,Poster,Backdrop,Subtitles',
+  `Movie,${HEAT},Heat,1995,Crime,${HEAT}/Images/poster.jpg,${HEAT}/Images/backdrop.jpg,${HEAT}/Subtitles/English.srt`,
   '',
 ].join('\n');
 
@@ -116,12 +118,18 @@ async function noFolder(box: Sandbox): Promise<ImportProblem> {
 }
 
 /** The art the sheet's cells name, laid beside the sheet. */
-function layArt(box: Sandbox): { poster: string; track: string } {
+function layArt(box: Sandbox): {
+  poster: string;
+  backdrop: string;
+  track: string;
+} {
   const poster = join(box.sheets, HEAT, 'Images', 'poster.jpg');
+  const backdrop = join(box.sheets, HEAT, 'Images', 'backdrop.jpg');
   const track = join(box.sheets, HEAT, 'Subtitles', 'English.srt');
   put(poster, 'poster bytes');
+  put(backdrop, 'backdrop bytes');
   put(track, 'track bytes');
-  return { poster, track };
+  return { poster, backdrop, track };
 }
 
 /** Heat's Resolve as the form sends it: its video picked, the rest as given. */
@@ -152,6 +160,14 @@ describe('createImporter: a no-folder row’s Problem detail', () => {
     expect(box.importer.problem(problem.id)?.files.poster).toBe(poster);
   });
 
+  it('offers the backdrop its Backdrop cell names under the Sheet root', async () => {
+    const box = sandbox();
+    const { backdrop } = layArt(box);
+    const problem = await noFolder(box);
+
+    expect(box.importer.problem(problem.id)?.files.backdrop).toBe(backdrop);
+  });
+
   it('offers each track its Subtitles cells name, in the language its name reads', async () => {
     const box = sandbox();
     const { track } = layArt(box);
@@ -168,6 +184,7 @@ describe('createImporter: a no-folder row’s Problem detail', () => {
 
     const files = box.importer.problem(problem.id)?.files;
     expect(files?.poster).toBeUndefined();
+    expect(files?.backdrop).toBeUndefined();
     expect(files?.subtitles).toEqual([]);
   });
 });
@@ -182,6 +199,7 @@ describe('createImporter: a no-folder row’s Resolve', () => {
       problem.id,
       resolveForm(box.video, {
         poster: { found: art.poster },
+        backdrop: { found: art.backdrop },
         subtitles: [{ file: { found: art.track }, language: 'English' }],
       })
     );
@@ -190,6 +208,9 @@ describe('createImporter: a no-folder row’s Resolve', () => {
     expect(readFileSync(join(box.media, movie.posterPath ?? ''), 'utf8')).toBe(
       'poster bytes'
     );
+    expect(
+      readFileSync(join(box.media, movie.backdropPath ?? ''), 'utf8')
+    ).toBe('backdrop bytes');
     expect(movie.subtitles.map((each) => each.language)).toEqual(['English']);
   });
 

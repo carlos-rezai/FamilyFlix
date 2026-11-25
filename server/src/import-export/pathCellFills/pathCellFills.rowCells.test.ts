@@ -4,9 +4,10 @@
 //
 // `rowCellFiles` reads a `no-folder` row's **Path cells** under the run's
 // **Sheet root** alone, there being no Title folder to look in first: the
-// poster its `Poster` cell names, and each track its `Subtitles` cells name
-// in the language its file name reads. A cell naming nothing finds nothing,
-// and the `Backdrop` cell is not read: the Resolve has no slot for it.
+// poster its `Poster` cell names, the backdrop its `Backdrop` cell names
+// (issue #725 gave the Resolve that slot), and each track its `Subtitles`
+// cells name in the language its file name reads. A cell naming nothing
+// finds nothing.
 
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -69,6 +70,18 @@ describe('rowCellFiles', () => {
     expect(files.poster).toBe(poster);
   });
 
+  it('finds the backdrop its Backdrop cell names under the Sheet root', async () => {
+    const root = sandboxRoot('familyflix-row-cells-');
+    const backdrop = put(root, `${HEAT}/Images/backdrop.jpg`);
+
+    const files = await rowCellFiles(
+      row({ backdrop: `${HEAT}/Images/backdrop.jpg` }),
+      root
+    );
+
+    expect(files.backdrop).toBe(backdrop);
+  });
+
   it('finds each track, in the language its name reads', async () => {
     const root = sandboxRoot('familyflix-row-cells-');
     const english = put(root, `${HEAT}/Subtitles/English.srt`);
@@ -96,11 +109,12 @@ describe('rowCellFiles', () => {
     const files = await rowCellFiles(
       row({
         poster: `${HEAT}/Images/poster.jpg`,
+        backdrop: `${HEAT}/Images/backdrop.jpg`,
         subtitles: [`${HEAT}/Subtitles/English.srt`],
       }),
       root
     );
 
-    expect(files).toEqual({ poster: null, subtitles: [] });
+    expect(files).toEqual({ poster: null, backdrop: null, subtitles: [] });
   });
 });
