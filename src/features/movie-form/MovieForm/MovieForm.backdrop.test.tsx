@@ -26,8 +26,9 @@ import {
  * 76, Whole add, Phase 1 (issue #716): the **Backdrop** by hand.
  *
  * Both kinds' Files card draws a Backdrop File field directly under Poster,
- * _Choose backdrop image_ when empty, on the add and the edit; a Resolve draws
- * none. An edit opens on the held backdrop. On the wire it is the Poster's
+ * _Choose backdrop image_ when empty, on the add, the edit and (since #725) a
+ * Resolve, which prefills it from the problem detail's found backdrop as a
+ * **Found file**, sent as its `backdropPath`. An edit opens on the held backdrop. On the wire it is the Poster's
  * word for word: a **Picked file** is a `backdrop` part, a held **Stored
  * path** a `backdropPath` field, and an edit whose ✕ emptied it sends neither.
  *
@@ -93,6 +94,36 @@ const SHOW_PROBLEM: ImportProblemDetail = {
   },
 };
 
+const LANTERN_SOURCE = 'E:\\Movies\\The Lantern Keeper (2019)';
+const FOUND_BACKDROP = `${LANTERN_SOURCE}\\Images\\backdrop.jpg`;
+
+/** A film's `failed` Problem whose Source folder holds a backdrop. */
+const FOUND_FILM_PROBLEM: ImportProblemDetail = {
+  id: 'p4',
+  kind: 'failed',
+  title: 'The Lantern Keeper',
+  reason: 'The copy failed.',
+  row: { title: 'The Lantern Keeper', year: 2019, genres: ['Drama'] },
+  folder: LANTERN_SOURCE,
+  files: {
+    video: `${LANTERN_SOURCE}\\lantern.mp4`,
+    videos: [`${LANTERN_SOURCE}\\lantern.mp4`],
+    poster: `${LANTERN_SOURCE}\\Images\\poster.jpg`,
+    backdrop: FOUND_BACKDROP,
+    subtitles: [],
+  },
+};
+
+const FERRY_SOURCE = 'E:\\Series\\The Night Ferry';
+const FOUND_SHOW_BACKDROP = `${FERRY_SOURCE}\\fanart.jpg`;
+
+/** A show's `unplaced` Problem whose Show folder holds a backdrop. */
+const FOUND_SHOW_PROBLEM: ImportProblemDetail = {
+  ...SHOW_PROBLEM,
+  id: 'p8',
+  files: { ...SHOW_PROBLEM.files, backdrop: FOUND_SHOW_BACKDROP },
+};
+
 beforeEach(() => {
   fetchMock =
     vi.fn<
@@ -116,6 +147,12 @@ beforeEach(() => {
     }
     if (url.includes('/api/import/current/problems/p3')) {
       return Promise.resolve(okResponse(FILM_PROBLEM));
+    }
+    if (url.includes('/api/import/current/problems/p4')) {
+      return Promise.resolve(okResponse(FOUND_FILM_PROBLEM));
+    }
+    if (url.includes('/api/import/current/problems/p8')) {
+      return Promise.resolve(okResponse(FOUND_SHOW_PROBLEM));
     }
     if (url.includes('/api/import/current/problems/p5')) {
       return Promise.resolve(okResponse(SHOW_PROBLEM));
@@ -213,6 +250,8 @@ async function fillSeriesAdd() {
 
 const addToLibrary = () =>
   fireEvent.click(screen.getByRole('button', { name: /add to library/i }));
+const saveAndContinue = () =>
+  fireEvent.click(screen.getByRole('button', { name: /save & continue/i }));
 const saveChanges = () =>
   fireEvent.click(screen.getByRole('button', { name: /save changes/i }));
 
@@ -252,21 +291,106 @@ describe('MovieForm: the Backdrop slot is drawn under Poster', () => {
   });
 });
 
-describe('MovieForm: a Resolve draws no Backdrop slot', () => {
-  it('on a film Resolve', async () => {
+describe('MovieForm: a Resolve draws the Backdrop slot under Poster (#725)', () => {
+  it('on a film Resolve, between Poster and Subtitles, empty when none was found', async () => {
     await renderAt(['/settings', '/import', '/add?problem=p3']);
 
+    const label = screen.getByText(/^backdrop$/i);
+    expect(backdropPicker()).not.toBeNull();
+    expect(before(screen.getByText(/^poster$/i), label)).toBe(true);
+    expect(before(label, screen.getByText(/^subtitles$/i))).toBe(true);
+  });
+
+  it('on a Series Resolve, between Poster and Episodes, empty when none was found', async () => {
+    await renderAt(['/settings', '/import', '/add?kind=series&problem=p5']);
+
+    const label = screen.getByText(/^backdrop$/i);
+    expect(backdropPicker()).not.toBeNull();
+    expect(before(screen.getByText(/^poster$/i), label)).toBe(true);
+    expect(before(label, screen.getByText(/^episodes$/i))).toBe(true);
+  });
+
+  it('on a Series Resolve joining a held series', async () => {
+    await renderAt([
+      '/settings',
+      '/import',
+      '/add?kind=series&problem=p5&series=harbor',
+    ]);
+
     expect(screen.getByText(/^poster$/i)).toBeDefined();
-    expect(screen.queryByText(/^backdrop$/i)).toBeNull();
+    expect(screen.getByText(/^backdrop$/i)).toBeDefined();
+  });
+
+  it('prefills a film Resolve’s slot with the found backdrop, as Poster is', async () => {
+    await renderAt(['/settings', '/import', '/add?problem=p4']);
+
+    expect(screen.getByText('backdrop.jpg')).toBeDefined();
     expect(backdropPicker()).toBeNull();
   });
 
-  it('on a Series Resolve', async () => {
+  it('prefills a Series Resolve’s slot with the found backdrop', async () => {
+    await renderAt(['/settings', '/import', '/add?kind=series&problem=p8']);
+
+    expect(screen.getByText('fanart.jpg')).toBeDefined();
+    expect(backdropPicker()).toBeNull();
+  });
+});
+
+describe('MovieForm: a Resolve’s backdrop on the wire (#725)', () => {
+  it('sends a found backdrop as its backdropPath on a film Resolve', async () => {
+    await renderAt(['/settings', '/import', '/add?problem=p4']);
+
+    saveAndContinue();
+    const body = await sentBody('POST');
+
+    expect(body.getAll('backdropPath')).toEqual([FOUND_BACKDROP]);
+    expect(body.getAll('backdrop')).toEqual([]);
+  });
+
+  it('sends a found backdrop as its backdropPath on a Series Resolve', async () => {
+    await renderAt(['/settings', '/import', '/add?kind=series&problem=p8']);
+
+    saveAndContinue();
+    const body = await sentBody('POST');
+
+    expect(body.getAll('backdropPath')).toEqual([FOUND_SHOW_BACKDROP]);
+    expect(body.getAll('backdrop')).toEqual([]);
+  });
+
+  it('sends a picked backdrop as a backdrop part in place of the found one', async () => {
+    await renderAt(['/settings', '/import', '/add?problem=p4']);
+    const wide = art('lantern-new.jpg');
+
+    removeBackdrop();
+    await pickBackdrop(wide);
+    saveAndContinue();
+    const body = await sentBody('POST');
+
+    expect(body.getAll('backdrop')).toEqual([wide]);
+    expect(body.getAll('backdropPath')).toEqual([]);
+  });
+
+  it('sends a picked backdrop as a backdrop part on a Series Resolve', async () => {
+    await renderAt(['/settings', '/import', '/add?kind=series&problem=p5']);
+    const wide = art('ferry-wide.jpg');
+
+    await pickBackdrop(wide);
+    saveAndContinue();
+    const body = await sentBody('POST');
+
+    expect(body.getAll('backdrop')).toEqual([wide]);
+    expect(body.getAll('backdropPath')).toEqual([]);
+  });
+
+  it('sends neither when no backdrop was found or picked, as today', async () => {
     await renderAt(['/settings', '/import', '/add?kind=series&problem=p5']);
 
-    expect(screen.getByText(/^poster$/i)).toBeDefined();
-    expect(screen.queryByText(/^backdrop$/i)).toBeNull();
-    expect(backdropPicker()).toBeNull();
+    expect(backdropPicker()).not.toBeNull();
+    saveAndContinue();
+    const body = await sentBody('POST');
+
+    expect(body.getAll('backdrop')).toEqual([]);
+    expect(body.getAll('backdropPath')).toEqual([]);
   });
 });
 

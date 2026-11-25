@@ -23,6 +23,7 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
+  readFileSync,
   writeFileSync,
 } from 'node:fs';
 import type { Server } from 'node:http';
@@ -375,5 +376,90 @@ describe('the Series Resolve — joining the series the run already holds', () =
     expect(
       (await getCurrent(api.baseUrl)).problems.map(({ id }) => id)
     ).toEqual([problem.id]);
+  });
+});
+
+// --- 76, Whole add follow-up (issue #725): a Backdrop on a Series Resolve
+//
+// The route reads the backdrop as it reads the poster: a `backdrop` part is
+// stored bytes, a non-empty `backdropPath` a Found file copied into the
+// **Series folder**; a join keeps the held series' backdrop and reads none.
+
+describe('the Series Resolve — the Backdrop', () => {
+  const STRAYS = ['Bonus One.mp4', 'Bonus Two.mp4'];
+  const DIE_HARD_BACKDROP = join(
+    LIBRARY_FIXTURE,
+    'root',
+    'Die Hard (1988)',
+    'Images',
+    'backdrop.jpg'
+  );
+
+  it('copies a found backdrop path into the new series’ Media folder', async () => {
+    const api = freshApi(STRAYS);
+    const problem = await unplacedProblem(api);
+    const found = join(api.root, SHOW, 'fanart.jpg');
+    cpSync(DIE_HARD_BACKDROP, found);
+
+    const response = await postResolve(api.baseUrl, problem.id, [
+      ['backdropPath', found],
+      episodeField(1, 1, 'Bonus One', join(api.season, 'Bonus One.mp4')),
+    ]);
+
+    expect(response.status).toBe(201);
+    const [series] = allSeries(api.storage);
+    const folder = api.storage.mediaFolderOf('series', series.id);
+    expect(series.backdropPath).toBe(`${folder}/fanart.jpg`);
+    expect(readFileSync(join(api.media, series.backdropPath ?? ''))).toEqual(
+      readFileSync(DIE_HARD_BACKDROP)
+    );
+  });
+
+  it('takes a picked backdrop as a backdrop part', async () => {
+    const api = freshApi(STRAYS);
+    const problem = await unplacedProblem(api);
+    const body = new FormData();
+    body.append('title', 'Lighthouse Keepers');
+    body.append('year', '2019');
+    body.append(
+      'backdrop',
+      new File([new Uint8Array([0xff, 0xd8, 0xfe])], 'wide.jpg', {
+        type: 'image/jpeg',
+      })
+    );
+    const [name, value] = episodeField(
+      1,
+      1,
+      'Bonus One',
+      join(api.season, 'Bonus One.mp4')
+    );
+    body.append(name, value);
+
+    const response = await fetch(
+      `${api.baseUrl}/api/import/current/problems/${encodeURIComponent(problem.id)}/resolve`,
+      { method: 'POST', body }
+    );
+
+    expect(response.status).toBe(201);
+    const [series] = allSeries(api.storage);
+    expect(series.backdropPath).not.toBeNull();
+    expect(readFileSync(join(api.media, series.backdropPath ?? ''))).toEqual(
+      Buffer.from([0xff, 0xd8, 0xfe])
+    );
+  });
+
+  it('refuses a backdrop outside the run’s roots with 400, making no series and no folder', async () => {
+    const api = freshApi(STRAYS);
+    const problem = await unplacedProblem(api);
+    const outside = join(api.scratch, '..', '..', 'elsewhere.jpg');
+
+    const response = await postResolve(api.baseUrl, problem.id, [
+      ['backdropPath', outside],
+      episodeField(1, 1, 'Bonus One', join(api.season, 'Bonus One.mp4')),
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(allSeries(api.storage)).toEqual([]);
+    expect(readdirSync(api.media)).toEqual(['die-hard-1988']);
   });
 });

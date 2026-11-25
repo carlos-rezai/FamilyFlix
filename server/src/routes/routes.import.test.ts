@@ -1237,3 +1237,73 @@ describe('a fresh API over the library of an interrupted run', () => {
     ]);
   });
 });
+
+// --- 76, Whole add follow-up (issue #725): a Backdrop on a film Resolve
+//
+// The resolve route reads the backdrop as it reads the poster: a `backdrop`
+// part is the bytes the route stored, a non-empty `backdropPath` a Found
+// file copied into the title's **Media folder**, and a found backdrop is
+// checked with the rest of the art before the first copy.
+
+describe('POST /api/import/current/problems/:id/resolve — the Backdrop', () => {
+  it('copies a found backdrop path into the Media folder beside the poster', async () => {
+    const { baseUrl, media, problem, dieHard } = await failedDieHardApi();
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+      ['posterPath', join(dieHard, 'Images', 'poster.jpg')],
+      ['backdropPath', join(dieHard, 'Images', 'backdrop.jpg')],
+    ]);
+
+    expect(response.status).toBe(201);
+    const movie = (await response.json()) as Movie;
+    expect(movie.backdropPath).toBe('die-hard-1988/backdrop.jpg');
+    expect(readFileSync(join(media, movie.backdropPath ?? ''))).toEqual(
+      readFileSync(join(dieHard, 'Images', 'backdrop.jpg'))
+    );
+  });
+
+  it('takes a picked backdrop as a backdrop part', async () => {
+    const { baseUrl, media, problem, dieHard } = await failedDieHardApi();
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+      [
+        'backdrop',
+        new File([new Uint8Array([0xff, 0xd8, 0xfe])], 'wide.jpg', {
+          type: 'image/jpeg',
+        }),
+      ],
+    ]);
+
+    expect(response.status).toBe(201);
+    const movie = (await response.json()) as Movie;
+    expect(movie.backdropPath).toBe('die-hard-1988/wide.jpg');
+    expect(readFileSync(join(media, movie.backdropPath ?? ''))).toEqual(
+      Buffer.from([0xff, 0xd8, 0xfe])
+    );
+  });
+
+  it('refuses a backdrop outside every library folder and the Sheet root, copying nothing', async () => {
+    const { baseUrl, storage, media, problem, dieHard, scratch } =
+      await failedDieHardApi();
+    const outside = join(scratch, '..', '..', 'elsewhere.jpg');
+
+    const response = await postResolve(baseUrl, problem.id, [
+      ...dieHardFields(),
+      ['videoPath', join(dieHard, 'Die.Hard.1988.1080p.mp4')],
+      ['posterPath', join(dieHard, 'Images', 'poster.jpg')],
+      ['backdropPath', outside],
+    ]);
+
+    expect(response.status).toBe(400);
+    expect(readdirSync(media).sort()).toEqual(['amelie-2001']);
+    expect(storage.listMovies({ sort: 'a-z' }).map((m) => m.title)).toEqual([
+      'Amélie',
+    ]);
+    const after = (await (await getCurrent(baseUrl)).json()) as ImportRun;
+    expect(after.problems.map((p) => p.id)).toEqual([problem.id]);
+  });
+});

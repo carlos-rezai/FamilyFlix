@@ -19,11 +19,21 @@
 // real `Media` over a sandbox managed directory, and a `Playback` reading each
 // folder's path off the same library, over the absent **Playback component**.
 
-import { copyFileSync, createReadStream, existsSync, mkdirSync } from 'node:fs';
+import {
+  copyFileSync,
+  createReadStream,
+  existsSync,
+  mkdirSync,
+  readdirSync,
+} from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 
-import { createImporter, type Importer } from './createImporter';
+import {
+  createImporter,
+  ImportPathError,
+  type Importer,
+} from './createImporter';
 import {
   createSqliteStorage,
   type LibraryStorage,
@@ -557,5 +567,97 @@ describe('createImporter — a Resolve over picked bytes finds the title’s fol
     );
     // The subtitle went into the same season, not a season under it.
     expect(episode.subtitles[0].path.split('/')).toHaveLength(3);
+  });
+});
+
+// --- 76, Whole add follow-up (issue #725): the Backdrop on a Resolve ----------
+//
+// `ResolveForm` and `ResolveSeriesForm` take `backdrop: ResolveFile | null`,
+// placed as the poster is: art, so a found one is copied into the title's
+// **Media folder** even in a Link run, and stored as `backdropPath`. A join
+// keeps the held series' backdrop and reads none from the form.
+
+describe('createImporter — a Resolve takes a Backdrop', () => {
+  it('a film Resolve copies the found backdrop into the poster’s folder, even in a Link run', async () => {
+    const box = await twoVideoDieHard('link');
+    const found = join(
+      box.folder.path,
+      'Die Hard (1988)',
+      'Images',
+      'backdrop.jpg'
+    );
+
+    const movie = await box.importer.resolve(box.problem.id, {
+      ...box.form,
+      backdrop: { found },
+    });
+
+    const folder = box.storage.mediaFolderOf('movie', movie.id);
+    expect(movie.backdropPath).toBe(`${folder}/backdrop.jpg`);
+    expect(existsSync(join(box.media, movie.backdropPath ?? ''))).toBe(true);
+  });
+
+  it('a film Resolve keeps a stored backdrop as it is', async () => {
+    const box = await twoVideoDieHard('copy');
+    const folder = box.mediaDomain.reserveFolder('Die Hard', 1988);
+    const stored = await box.mediaDomain.storeUpload(
+      folder,
+      'wide.jpg',
+      createReadStream(
+        join(box.folder.path, 'Die Hard (1988)', 'Images', 'backdrop.jpg')
+      )
+    );
+
+    const movie = await box.importer.resolve(box.problem.id, {
+      ...box.form,
+      backdrop: { stored },
+    });
+
+    expect(movie.backdropPath).toBe(stored);
+  });
+
+  it('a Series Resolve adding a show copies the found backdrop into its Series folder', async () => {
+    const box = await unplacedNewShow();
+    const found = join(
+      box.folder.path,
+      'Lighthouse Keepers (2020)',
+      'fanart.jpg'
+    );
+    copyFileSync(
+      join(
+        box.folder.path,
+        'Tidewater (2018)',
+        'Season 01',
+        'Images',
+        'poster.jpg'
+      ),
+      found
+    );
+
+    const series = await box.importer.resolveSeries(box.problem.id, {
+      ...box.form,
+      backdrop: { found },
+    });
+
+    const folder = box.storage.mediaFolderOf('series', series.id);
+    expect(series.backdropPath).toBe(`${folder}/fanart.jpg`);
+    expect(existsSync(join(box.media, series.backdropPath ?? ''))).toBe(true);
+    expect(box.storage.getSeries(series.id)?.backdropPath).toBe(
+      series.backdropPath
+    );
+  });
+
+  it('a film Resolve refuses a found backdrop outside the run’s roots, leaving no folder', async () => {
+    const box = await twoVideoDieHard('copy');
+    const before = readdirSync(box.media).sort();
+
+    await expect(
+      box.importer.resolve(box.problem.id, {
+        ...box.form,
+        backdrop: { found: join(box.media, '..', '..', 'elsewhere.jpg') },
+      })
+    ).rejects.toBeInstanceOf(ImportPathError);
+
+    expect(readdirSync(box.media).sort()).toEqual(before);
   });
 });
