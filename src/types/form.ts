@@ -79,6 +79,10 @@ export interface MovieFormValues {
    * empty one is a complete answer. `poster_path` is nullable, a film the
    * maintainer has no artwork to hand for still belongs in the library, and its
    * card draws the gradient `gradientFromId` already gives it.
+   *
+   * On a shell add a **Film folder read** or a **Show folder pick** offers
+   * its **Folder art** here as a **Found file**, filling an empty slot or one
+   * still holding an earlier pick's; a file picked by hand stays.
    */
   poster: MovieFormFile | null;
   /**
@@ -100,6 +104,9 @@ export interface MovieFormValues {
    * value here that is a list of files rather than a slot, and a complete
    * answer when it is empty: a film in the family's own language needs no
    * track.
+   *
+   * A movie add's **Film folder read** adds one found row per track of the
+   * video's folder, after the rows added by hand; its ✕ takes them back.
    */
   subtitles: MovieFormSubtitle[];
 }
@@ -168,8 +175,9 @@ export type FormKind = 'movie' | 'series';
 /**
  * The **Show folder read**: what `GET /api/show-folder` answers for a folder
  * picked on the series add — its **Folder key**, its numbered episodes in
- * season, then episode order, each with its stem-matched subtitles, its
- * **Unplaced** videos and how many subtitles matched no episode.
+ * season, then episode order, each with its tracks and its **Still**, its
+ * **Unplaced** videos, how many subtitles matched no episode, and its
+ * **Folder art**: the show's Poster and Backdrop and each **Season poster**.
  */
 export interface ShowFolderRead {
   /** The Show folder, absolute. */

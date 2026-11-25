@@ -17,9 +17,10 @@ const IS_KIND: Record<FoundKind, (filename: string) => boolean> = {
 
 /**
  * Why a **Found file** path an add names is not taken, as its sentence — not
- * absolute, or not of the `kind` its slot holds — or `null` to take it. Both
- * adds read it; the form never sends either, so only a hand-made request sees
- * one.
+ * absolute, or not of the `kind` its slot holds (a video, a track, or an
+ * image: a found Poster, Backdrop, **Season poster** or **Still**) — or `null`
+ * to take it. Both adds and the **Film folder read** read it; the form never
+ * sends either, so only a hand-made request sees one.
  */
 export function foundPathRefusal(path: string, kind: FoundKind): string | null {
   if (!isAbsolute(path)) {

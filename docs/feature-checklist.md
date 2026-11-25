@@ -197,32 +197,37 @@ art is; a movie pick in a Title folder holding two videos fills its art
 with no **Found-file choice**; and the prototype gains the Backdrop slot
 and the rewritten block, through the handoff until the last phase:
 
-58. ⬜ **Whole add**: adding a title by hand can fill every place of the
-    Folder layout, movie and series, with or without TMDB.
+58. 🔜 **Whole add**: a title added by hand fills every place of the Folder
+    layout, movie and series, with or without TMDB.
     - **A Backdrop slot** under Poster on the movie form and the series
-      form, on add and on edit, stored as `backdrop_path` and written to
-      `Images\` by the Layout fill.
-    - **The Show folder pick fills the form from its Layout read**: the
-      Poster, Backdrop, each Season poster and any Stills the folder holds
-      go into their slots along with the episodes and subtitles, each still
-      replaceable or removable by hand.
-    - **The same for a movie**: a video picked in a Title folder fills the
-      Poster, Backdrop and Subtitles from that folder.
-    - **Stills without a Sync**: a Frame still for each episode the folder
-      and TMDB give none, taken when the add is saved or later, so a show
-      added with no TMDB key still gets its Stills.
+      form, on add and on edit (never a Resolve), stored as `backdrop_path`
+      and written to `Images\` by the **Layout fill**. Emptied on an edit,
+      its file goes on save.
+    - **The Show folder pick takes the show whole, with its art**: its
+      **Folder art** (the show's Poster and Backdrop, each **Season
+      poster** and each episode's **Still**) fills those slots as **Found
+      files** along with the episodes and their tracks. A slot picked by
+      hand stays, a second pick replaces only the first's, and the Show
+      folder row's ✕ takes back every slot still holding it.
+    - **The same for a film**: a video picked on a shell add is read by the
+      **Film folder read** (`GET /api/film-folder`), and when its folder
+      reads as a film holding it (two videos included, with no **Found-file
+      choice**) its Poster, Backdrop and tracks fill the form by the same
+      rule; the video's ✕ takes them back. A video in a Season folder reads
+      none.
+    - **Found art is copied in, never linked**, a linked title's too: both
+      adds take it as absolute paths, refused when not absolute or not an
+      image, and copy it into the title's Media folder.
+    - **Stills without a Sync**: once a series add or edit answers, the
+      **Frame fill** takes a **Frame still** for each episode holding no
+      Still, in the background, one take at a time, through the **Late
+      reserve** and by the one `takeFrameStill` the Sync uses, so a show
+      added with no TMDB key still gets its Stills. A linked show's stay in
+      its Series folder; nothing is drawn while it runs.
     - **_What the scanner accepts_, rewritten** to the layout as log 58
-      reads it: a movie and a series example side by side (`Heat (1995)\`
-      with its video, `Images\` and `Subtitles\`; a show with `Images\` and
-      `Season 01\` holding its episodes and `Subtitles\S01E01\`), the
-      rules in a few lines (one video is a film, Season folders are a
-      series, the filename numbers the episode, art goes in `Images\`
-      named ending `poster` or `backdrop`, tracks go in `Subtitles\`,
-      anything it can't place lands in the review list), and the `_meta`
-      sentence kept as it stands.
-    - **Settled in log 76** (were open): when a Frame still is taken (on save, as a background
-      job with real progress, or on first view) and what a linked show's
-      Stills write into its folder; whether a pick's art is linked where it
-      lies or copied (today art is always copied); whether a movie pick in a
-      Title folder holding two videos draws the **Found-file choice**; and the
-      prototype amendments for the form and the block.
+      reads it, on Import setup and Library folders → Scan: a movie and a
+      series example side by side (`Heat (1995)\` with its video, `Images\`
+      and `Subtitles\`; a show with `Images\` and `Season 01\` holding its
+      episodes and `Subtitles\S01E01\`), the rules in a few lines, and the
+      `_meta` sentence kept as it stands. The handoff prototype carries the
+      Backdrop slot and the block.

@@ -88,8 +88,9 @@ it only when a top-level folder or one of its rules changes.
   **Managed media directory**.
 - **Movie form** (`/add`): file fields are manual pickers. In the shell an
   add links by default (a picked video's path read through the **Path
-  bridge**, a show taken whole by the **Show folder pick**) and copies a file
-  under no Library folder; a browser add copies what it's given. On an edit a
+  bridge**, its film's art and tracks read from its folder; a show taken
+  whole with its art by the **Show folder pick**) and copies a file under no
+  Library folder; a browser add copies what it's given. On an edit a
   held file travels as its path, only a new pick as bytes; uploads stream
   through `busboy`.
 - **Bulk import** reads nothing online, never makes a second copy of a held

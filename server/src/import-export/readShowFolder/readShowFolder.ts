@@ -91,6 +91,11 @@ async function showUnder(
  * but stands for its Show folder (`showFolderOf`): titled by the show's
  * name, held-checked as the show, each path answered inside the show.
  *
+ * Its **Folder art** is read too, each path absolute: the Show folder's
+ * Poster and Backdrop by `readTitleArt` (a picked Season folder answering
+ * its show's), each **Season poster** the Season folders hold, and each
+ * episode's **Still**.
+ *
  * Its `libraryFolderId` is the listed **Library folder** it lies inside, by
  * `listedFolderOf`, or `null`. A folder that is already a held series's
  * **Show folder** (the folder on record under that Library folder, as

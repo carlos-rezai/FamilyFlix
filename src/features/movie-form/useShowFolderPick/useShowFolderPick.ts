@@ -60,12 +60,14 @@ export interface UseShowFolderPickResult {
 /**
  * The series add's **Show folder pick**, a hook of its own on
  * `useEpisodeList`'s pattern: the folder the dialog answered, read by the
- * server, its rows after the held ones; the form is offered the read's
- * **Folder key**, and its Library folder says whether Link can be. A cancel
- * changes nothing; a refusal — unreadable, empty, or a held series's own
- * folder, worded by that series's title — adds no rows. A second pick
- * replaces only the first pick's rows, and the title and year the first pick
- * filled in, never a typed one.
+ * server, its rows after the held ones, each with its found **Still**; the
+ * form is offered the read's **Folder key** and its **Folder art** (the
+ * Poster, Backdrop and each **Season poster**), and its Library folder says
+ * whether Link can be. A cancel changes nothing; a refusal — unreadable,
+ * empty, or a held series's own folder, worded by that series's title — adds
+ * no rows. A second pick replaces only the first pick's rows, and the title,
+ * year and art the first pick filled in, never a typed field or a slot picked
+ * by hand. The row's ✕ takes the rows and that art back.
  *
  * `reading` is the read's **Busy phase** on `useDelayedBusy`: it wraps the
  * folder read and the held series' title read, never the dialog, so it is

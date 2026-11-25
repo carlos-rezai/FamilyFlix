@@ -634,7 +634,8 @@ export function createEnrichment({
   /**
    * One season's episodes on disk against TMDB's, by episode number: title and
    * air date when empty, always; the still under Poster — TMDB's, else a
-   * **Frame still** off the episode's own video; the runtime under Runtime.
+   * **Frame still** off the episode's own video, taken by `takeFrameStill`,
+   * the one the **Frame fill** takes too; the runtime under Runtime.
    * Never a Decision, never the watch state.
    */
   async function writeEpisodes(

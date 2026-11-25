@@ -1041,12 +1041,20 @@ export function createApiRouter(
     }
   );
 
-  // The **Movie form**'s series save: the series fields, the poster, then each
-  // episode as an `episode` JSON field followed by its `episodeVideo` and its
-  // `episodeSubtitle` parts. The **Series folder** is reserved when the first
-  // file needs it, each video lands in its `season-NN/`, each runtime is
-  // derived after its copy, and no row is written until every byte has landed.
-  // Every refusal is one sentence and takes the whole folder with it.
+  // The **Movie form**'s series save: the series fields, the poster and the
+  // backdrop, the Season posters, then each episode as an `episode` JSON field
+  // followed by its `episodeVideo` and its `episodeSubtitle` parts. The
+  // **Series folder** is reserved when the first file needs it, each video
+  // lands in its `season-NN/`, each runtime is derived after its copy, and no
+  // row is written until every byte has landed. Every refusal is one sentence
+  // and takes the whole folder with it.
+  //
+  // A **Show folder pick**'s **Folder art** arrives as absolute paths, each a
+  // **Found file**: the Poster, Backdrop and Season posters, and each
+  // episode's found **Still**, all copied in, never linked; a picked poster
+  // or backdrop part beats a found path. After the **Layout fill** the
+  // **Frame fill** starts for each episode holding no Still, and the save
+  // answers without waiting for it.
   router.post('/series', async (req: Request, res: Response) => {
     const { onFile, uploads } = collectEpisodeUploads(media, (before) =>
       media.reserveFolder(
@@ -1637,6 +1645,12 @@ export function createApiRouter(
   // subtitle slot taken at arrival, and every field this form carries. What is
   // left here is what an add alone decides — where the folder comes from, that a
   // refusal takes the whole folder back, and that the row is a new one.
+  //
+  // **A Film folder read's files arrive as paths.** A `posterPath`, a
+  // `backdropPath` and each track's `subtitlePath` name a **Found file**,
+  // absolute, refused by `foundPathRefusal` when it is not, and copied into
+  // the Media folder, never linked, a linked film's too; a picked part beats
+  // a found path for its slot.
   //
   // **On any refusal the bytes this request wrote are removed**, so a failed add
   // leaves no row *and* no folder. That is only reachable at all because a part
