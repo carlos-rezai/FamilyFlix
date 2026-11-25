@@ -11,6 +11,111 @@ Newest entry first.
 
 ---
 
+## 2026-11-25: Whole add, the build (issues 716 to 726)
+
+Five server and client slices (716 to 720), the prototype amended (721),
+the scanner block (722), each code slice a RED and a GREEN commit, and the
+walk and documents slice (723); then three follow-ups built inside the
+initiative (724, 725, 726), RED and GREEN each. **13440 tests pass across
+958 files** (one skipped) at `c74bff3a`, against 13242 across 931 at the
+Poster pick refactor, and 13408 across 956 at `f39f9cc1`, the end of the
+plan's own slices. `tsc -b --force` is clean; `eslint` over every file the
+initiative added or changed reports 0 errors and 83 warnings, every one
+older than this initiative (unused `root`s and names in the importer and
+import route suites, two non-null assertions in `routes.clearDetails`, and
+the unused `name` in `routes.exportSeries` from issue 277). Step 58 stays
+🔜 until the refactor.
+
+### What shipped
+
+- **A Backdrop by hand** (716). `MovieFormValues` gains `backdrop`, filled
+  from the held `backdropPath`; both Files cards draw a _Backdrop_
+  `FileField` under Poster; the wire is the Poster's word for word, a
+  `backdrop` part or a `backdropPath` field, and an edit that sends neither
+  removes it.
+- **A show's poster and backdrop, taken whole** (717). `readTitleArt` is
+  lifted out of `readTitleFolder`; `readShowFolder` answers the show's
+  **Folder art**, a picked **Season folder** still bringing its show's;
+  `FoundKind` gains `'image'`; `POST /series` takes found art, and
+  `copyFoundArt` copies it into the **Media folder**. The form fills each
+  slot by the one rule, `foundArtFill`, never over a hand pick.
+- **A show's Season posters and Stills** (718). The read answers each
+  season's poster and each episode's Still; `useSeasonPosters` takes the
+  same prefill; `copyFoundEpisodes` copies a found Still beside its
+  episode, stored as `picked`.
+- **A film taken whole** (719). `readFilmFolder` and
+  `GET /api/film-folder` answer a picked video's **Film folder read** (its
+  poster, backdrop and tracks, all empty for a series, a left-out or
+  unreadable folder or a video in a Season folder); `useFilmFolderPick`
+  offers it to the form, and `POST /movies` copies the found art and
+  tracks in.
+- **Stills without a Sync** (720). `takeFrameStill` is lifted out of
+  `writeEpisodes`, so the Sync and the **Frame fill** name
+  `<stem>.frame.jpg` in one place; `createFrameFill` queues one series at a
+  time and gives every Still-less episode a Frame still after a series add
+  or edit, injected into the router as `layoutFill` is.
+- **The prototype amended** (721) and **the scanner block** (722).
+  `FolderShapes` draws the movie and series examples side by side, the
+  three rules and the **Sheet note**.
+- **The walk and the documents** (723), below.
+
+### The walk
+
+The shell ran in its start shape with a scratch database, media and
+appdata, FFmpeg from `electron/.ffmpeg`, driven over the DevTools protocol
+(file fields set with `DOM.setFileInputFiles`, the native folder dialog
+answered from the main process), on a scratch Library folder of real
+FFmpeg-made videos and art. All five checks passed, as issue 723 records:
+
+1. `Hand Movie (2010)`, linked, a backdrop picked by hand: stored in its
+   Media folder and drawn behind the detail page; the Layout fill wrote
+   `Images\backdrop.jpg` into its Title folder.
+2. `The Show (2019)\` by the Show folder pick, no TMDB key: Poster,
+   Backdrop, both Season posters and all four Stills filled, and ✕ on the
+   Show folder row emptied every slot. Re-picked and saved: everything
+   copied in, each Still stored `still_source = picked`, drawn on the
+   series and season pages.
+3. `Heat (1995)\Heat.mkv`: Poster, Backdrop and two track rows filled, and
+   ✕ on the video took them all back. Re-picked and saved: the video stayed
+   linked, the art and tracks copied in.
+4. `Bare Show (2021)\`, no Stills: the save answered in 168 ms, and every
+   episode then held a `frame` Still in its Media folder, nothing written
+   into its Library folder.
+5. Import setup and Library folders → Scan draw the new scanner block.
+
+### The follow-ups
+
+- **A Frame fill after a Folder scan or a Resolve** (724). The importer
+  takes `frameFill` beside `layoutFill` and starts it for each show a Folder
+  scan imports or joins, right after its Layout fill, without waiting; a
+  **Series Resolve** starts one after its save. A sheet **Import** starts
+  none.
+- **A Backdrop on a Resolve** (725). `resolveMovie` and `resolveSeries`
+  take a backdrop and copy it in; both Files cards draw the slot on a
+  Resolve, prefilled with its found backdrop. A `no-folder` row's
+  `Backdrop` cell is now read, as its Poster cell is.
+- **A movie edit removes what it lets go** (726). `PATCH /movies/:id`
+  takes the series edit's rule: after the commit, each **Stored path** the
+  old row held that the saved row no longer points at is removed, a kept
+  or overwritten one and a **Linked video** never; the Backdrop's special
+  case went.
+
+### Judgement calls
+
+- **Art is always copied**, never linked, whatever the **Import mode**: a
+  found Poster, Backdrop, Season poster or Still lands in the Media folder.
+- **A found Still is stored as `picked`**, so a later Sync treats it as
+  the maintainer's and leaves it.
+- **The fill re-reads the series at its turn**, and an episode's Still
+  source just before it writes, so an edit or a Sync between the queue and
+  the take wins.
+- **One Late reserve per series**, so a folder-less show's Frame stills
+  land in one Media folder.
+- **The fill's work is lost on quit** and queued again by the next save of
+  that series; nothing persists the queue.
+
+---
+
 ## 2026-11-24: Poster pick, the refactor (issue 714)
 
 Eight commits against `docs/refactor-plans/75-poster-pick-refactor.md`,
