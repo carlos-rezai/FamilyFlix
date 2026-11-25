@@ -189,7 +189,13 @@ gives. Confirmed against the code on 2026-11-24:
   and the season comes only from the Season folder, while the filename
   gives only the episode number. It also never mentions `Images\`.
 
-Talked through on 2026-11-24, not yet grilled:
+Grilled in design log 76, which settles the open questions: a Frame
+still is taken after the save answers, in the background (the **Frame
+fill**), and a linked show's Frame stills stay in its Series folder, as
+the Layout fill has always left them; a pick's art is copied in, as all
+art is; a movie pick in a Title folder holding two videos fills its art
+with no **Found-file choice**; and the prototype gains the Backdrop slot
+and the rewritten block, through the handoff until the last phase:
 
 58. ⬜ **Whole add**: adding a title by hand can fill every place of the
     Folder layout, movie and series, with or without TMDB.
@@ -214,7 +220,7 @@ Talked through on 2026-11-24, not yet grilled:
       named ending `poster` or `backdrop`, tracks go in `Subtitles\`,
       anything it can't place lands in the review list), and the `_meta`
       sentence kept as it stands.
-    - **Open**: when a Frame still is taken (on save, as a background
+    - **Settled in log 76** (were open): when a Frame still is taken (on save, as a background
       job with real progress, or on first view) and what a linked show's
       Stills write into its folder; whether a pick's art is linked where it
       lies or copied (today art is always copied); whether a movie pick in a

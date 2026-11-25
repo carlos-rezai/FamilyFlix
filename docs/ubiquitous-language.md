@@ -1279,6 +1279,25 @@ handoff is `docs/handoff/handoff-poster-pick/README.md`.
 | **Series folder** (updated) | Since log 75, a linked show added with no art gets its Series folder from the **Late reserve** at its first Sync, as log 41 meant.                                                                                                     |                                           |
 | **Season choice** (updated) | Since log 75, a press on a show with no Media folder lands through the **Late reserve**; a refused press draws the **Poster refusal**; `404` means only that no single-series run holds the season.                                    |                                           |
 
+## Whole add
+
+Design log 76: step 58, initiative `whole-add`. **Add a title** gives the
+same complete title a **Folder scan** gives: a Backdrop slot, the art and
+tracks the picked folder holds, and Stills for a show no Sync reaches. The
+handoff is `docs/handoff/handoff-whole-add/README.md`.
+
+| Term                           | Definition                                                                                                                                                                                                                                                          | Aliases to avoid                       |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
+| **Folder art** (new)           | The poster, backdrop, **Season posters** and **Stills** a **Show folder read** or a **Film folder read** found, filling the form's empty slots as **Found files** and copied in on save, never over a file picked by hand (`FolderArt`).                            | picked art, scanned art, folder images |
+| **Film folder read** (new)     | What the server answers for a movie video picked on a shell add (`FilmFolderRead`, `GET /api/film-folder`, `import-export/readFilmFolder/`): the poster, backdrop and tracks of the video's **Title folder** when it reads as a film holding that video, else none. | movie folder scan, title folder read   |
+| **Frame fill** (new)           | The background pass a series add or edit starts after it answers (`enrichment/createFrameFill/`): a **Frame still** for each **Episode** holding no **Still**, one take at a time, through the **Late reserve**; nothing drawn while it runs.                       | still job, thumbnail pass, frame sync  |
+| **Show folder read** (updated) | Since log 76, also the show's poster and backdrop, each Season poster and each episode's Still, read by the scan's own readers (`readTitleArt`, `readSeasonFolder`).                                                                                                |                                        |
+| **Show folder pick** (updated) | Since log 76, its **Folder art** fills the Poster, Backdrop, Season poster and Still slots too; the Show folder row's ✕ takes back every slot still holding it.                                                                                                     |                                        |
+| **Found file** (updated)       | Since log 76, also an image: a poster, backdrop, Season poster or Still an add names by its absolute path (`FoundKind` `'image'`), and a movie add's found track; always copied in, never linked.                                                                   |                                        |
+| **Frame still** (updated)      | Since log 76, also taken by the **Frame fill** after a series add or edit, by the one `takeFrameStill` the Sync uses, so a show with no TMDB key gets its Stills.                                                                                                   |                                        |
+| **Backdrop** (updated)         | Since log 76, also picked by hand in the form's **Backdrop** slot, under Poster, on the add and the edit of both kinds (never on a Resolve).                                                                                                                        |                                        |
+| **Copy-in** (updated)          | Since log 76, also an add's **Folder art**: `copyFoundArt` and `copyFoundEpisodes` copy each found image into the title's **Media folder**.                                                                                                                         |                                        |
+
 ## Relationships
 
 - A **Delete** takes exactly one title out of FamilyFlix: its rows and its managed folder, and never an **Original**. For a title with a **Linked video** that is the link alone, and each video is recorded as a **Left-out video**; a copied title's Managed copy goes, and its original in its **Library folder** stays, as a Left-out video (updated, log 52).
@@ -1494,6 +1513,8 @@ handoff is `docs/handoff/handoff-poster-pick/README.md`.
 - A **Library folder** holds at most one **Library sheet** the scan reads: `_meta/`'s when there, else the **Old Meta folder**'s; the **Meta move** happens at most once per folder and deletes nothing (new, log 74).
 - A title has at most one **Media folder**; a **Late reserve** makes it at most once per Sync pass or Season choice, and only once an image has arrived (new, log 75).
 - A **Season choice**'s card draws at most one **Poster refusal**, its own season's (new, log 75).
+- A form slot holds **Folder art** only while no file was picked into it by hand; a pick fills at most one Poster, one Backdrop, one Season poster per season and one Still per episode (new, log 76).
+- A series has at most one **Frame fill** waiting; it takes at most one **Frame still** per Episode with no Still, and a Still that lands meanwhile wins (new, log 76).
 
 ## Example dialogue
 
@@ -2335,6 +2356,13 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
 > **Domain expert:** "Then no image arrives and no folder is made."
 > **Dev:** "Mum presses a season's poster while the Wi-Fi drops."
 > **Domain expert:** "The card draws the **Poster refusal**, _That poster wasn’t saved. Try again._, and no poster reads pressed. Her next press clears it."
+
+> **Dev:** "The maintainer picks `The Show (2019)\` with ＋ Add show folder. What fills?"
+> **Domain expert:** "Every episode row, and its **Folder art**: the Poster, the Backdrop, each Season poster and each Still the folder holds, as **Found files**."
+> **Dev:** "And they had already chosen a poster by hand?"
+> **Domain expert:** "It stays. Folder art only fills a slot that is empty or still holds the pick's own file."
+> **Dev:** "No TMDB key, and the folder has no Stills."
+> **Domain expert:** "The save answers at once, and the **Frame fill** takes a **Frame still** for each episode behind it."
 
 ## Flagged ambiguities
 
@@ -3375,3 +3403,10 @@ Hard` gets found and `Die Hard\extras` doesn't become a second film."
   its one **Media folder** when no add or edit reserved it. Never call the
   folder an "art folder": it is the Media folder, and a Delete removes it
   as any other.
+- **"Folder art" is not a Picked file (new):** a **Picked file** is bytes
+  the maintainer chose by hand; Folder art is a **Found file** a pick's read
+  put in a slot. Say "picked by hand" for the one, "Folder art" for the
+  other; never "picked art".
+- **"Frame fill" is not a Sync (new):** it takes only **Frame stills**,
+  reads nothing online and writes no other field. A Sync still takes its own
+  Frame stills where TMDB has none.
