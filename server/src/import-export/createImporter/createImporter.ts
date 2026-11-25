@@ -494,6 +494,9 @@ const cellFilesOf = (
   ...(cells === undefined || cells.poster === null
     ? {}
     : { poster: cells.poster }),
+  ...(cells === undefined || cells.backdrop === null
+    ? {}
+    : { backdrop: cells.backdrop }),
   subtitles: (cells?.subtitles ?? []).map(({ path, language }) => ({
     path,
     language,

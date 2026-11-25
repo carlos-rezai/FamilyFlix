@@ -120,15 +120,16 @@ export async function filmWithCells(
 /** The art a row's cells name when no Title folder holds the row. */
 export interface RowCellFiles {
   poster: string | null;
+  backdrop: string | null;
   subtitles: SubtitleFound[];
 }
 
 /**
  * A `no-folder` row's **Path cells** read under the run's **Sheet root**
  * `sheetRoot` alone, for its **Resolve** (log 68): the poster its `Poster`
- * cell names, and each track its `Subtitles` cells name, in the language its
- * file name reads. A cell naming nothing finds nothing; the `Backdrop` cell
- * is not read, the Resolve having no slot for it, nor the `Video` cell.
+ * cell names, the backdrop its `Backdrop` cell names, and each track its
+ * `Subtitles` cells name, in the language its file name reads. A cell naming
+ * nothing finds nothing; the `Video` cell is not read.
  */
 export async function rowCellFiles(
   row: SheetRow,
@@ -137,6 +138,7 @@ export async function rowCellFiles(
   const search = { dir: null, folderPath: row.folderPath, sheetRoot };
   return {
     poster: await fill(search, null, row.poster),
+    backdrop: await fill(search, null, row.backdrop),
     subtitles: await withTrackCells(search, [], row.subtitles),
   };
 }
