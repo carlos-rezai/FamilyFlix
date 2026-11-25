@@ -13,7 +13,7 @@ import type { MovieFormFile, SeasonPosterSlot } from '@/types';
  * `MovieFormFiles`' shape for a **Series**: the _Files_ caption, the Poster
  * File field, and the _Episodes_ label the **Episode file rows** will sit
  * beside. No video slot — a series' videos are its episodes' — no subtitle
- * list of its own, and no backdrop slot. The rows and _＋ Add episode files_
+ * list of its own. The rows and _＋ Add episode files_
  * are driven through `MovieForm`, so the episode callbacks here are inert.
  */
 
@@ -77,13 +77,12 @@ describe('SeriesFormFiles', () => {
     expect(screen.getByText(/^episodes$/i)).toBeDefined();
   });
 
-  it('offers no movie video slot, no subtitle list of its own and no backdrop', () => {
+  it('offers no movie video slot and no subtitle list of its own', () => {
     renderFiles();
 
     expect(screen.queryByText(/^video$/i)).toBeNull();
     expect(screen.queryByLabelText(/choose video file/i)).toBeNull();
     expect(screen.queryByText(/^subtitles$/i)).toBeNull();
-    expect(screen.queryByText(/backdrop/i)).toBeNull();
   });
 
   it('reports the poster that was picked', async () => {
