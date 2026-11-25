@@ -37,8 +37,15 @@ export const AcceptsHeading = styled.span`
   margin-bottom: 6px;
 `;
 
-/** The three shapes: 12px mono at 1.8, one to a line. */
-export const AcceptsShapes = styled.span`
+/** The examples' row: the film and the series side by side, wrapping. */
+export const AcceptsExamples = styled.span`
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+`;
+
+/** One example: 12px mono at 1.8, one file or folder to a line. */
+export const AcceptsExample = styled.span`
   display: block;
   font-family: ${({ theme }) => theme.fonts.mono};
   font-size: 12px;
@@ -46,7 +53,7 @@ export const AcceptsShapes = styled.span`
   line-height: 1.8;
 `;
 
-/** The folder-first rule: 13px sans, 8px under the shapes. */
+/** A rule, or the Sheet note: 13px sans, 8px under what comes before. */
 export const AcceptsRule = styled.span`
   display: block;
   font-family: ${({ theme }) => theme.fonts.sans};
@@ -57,12 +64,7 @@ export const AcceptsRule = styled.span`
   text-wrap: pretty;
 `;
 
-/** A run of the sans face inside the mono shapes: the loose shape's note. */
-export const Sans = styled.span`
-  font-family: ${({ theme }) => theme.fonts.sans};
-`;
-
-/** A run of the mono face inside the sans rule: an Episode tag. */
+/** A run of the mono face inside a sans rule: a folder or file name. */
 export const Mono = styled.span`
   font-family: ${({ theme }) => theme.fonts.mono};
 `;
