@@ -262,12 +262,10 @@ const STOP_LINES: Readonly<Record<Stop, string>> = {
     'Lost the connection, so the sync stopped. Anything already fetched is kept.',
 };
 
-/** Each kind of Still: the stored name's suffix and the log line's mark. */
-const STILL_KINDS: Readonly<
-  Record<StillKind, { suffix: string; mark: string }>
-> = {
-  tmdb: { suffix: 'still', mark: '↓' },
-  frame: { suffix: 'frame', mark: '▣' },
+/** Each kind of Still's mark on its log line. */
+const STILL_MARKS: Readonly<Record<StillKind, string>> = {
+  tmdb: '↓',
+  frame: '▣',
 };
 
 export function createEnrichment({
@@ -649,6 +647,10 @@ export function createEnrichment({
     signal: AbortSignal
   ): Promise<void> {
     for (const episode of episodes) {
+      const stem = posix.basename(
+        episode.videoPath,
+        posix.extname(episode.videoPath)
+      );
       const theirs = season.episodes.find(
         (each) => each.episode_number === episode.number
       );
@@ -669,31 +671,23 @@ export function createEnrichment({
           signal
         );
         if (signal.aborted) return;
-        const { mark } = STILL_KINDS.frame;
+        const mark = STILL_MARKS.frame;
         if (taken.kind === 'stored') {
           enrichment.stillPath = taken.stored;
           enrichment.stillSource = 'frame';
           log(current, `${mark} ${taken.name}  →  ${taken.stored}`, 'scan');
         } else if (taken.kind === 'none' && taken.reason !== 'aborted') {
           // The gradient stays, but the log says why (issue #390).
-          const stem = posix.basename(
-            episode.videoPath,
-            posix.extname(episode.videoPath)
-          );
           const words = taken.reason.replace('-', ' ');
           log(current, `${mark} ${stem}  no frame: ${words}`, 'scan');
         }
         // A still that cannot be stored leaves the gradient drawn.
       } else if (still?.kind === 'tmdb') {
-        const stem = posix.basename(
-          episode.videoPath,
-          posix.extname(episode.videoPath)
-        );
         const picture = await tmdbStill(still.path, signal);
         if (signal.aborted) return;
         if (picture !== null) {
-          const { suffix, mark } = STILL_KINDS[still.kind];
-          const name = `${stem}.${suffix}.jpg`;
+          const mark = STILL_MARKS.tmdb;
+          const name = `${stem}.still.jpg`;
           try {
             const stored = await media.storeNamed(
               seriesFolder(),
