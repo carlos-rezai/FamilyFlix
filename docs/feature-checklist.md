@@ -87,7 +87,7 @@ Every feature FamilyFlix has shipped or plans, in build order. The [README](../R
 | Header fit: every filter pill and Settings in reach | ✅ Done    |
 | Sheet in sight: `_meta/` on top, and said aloud     | ✅ Done    |
 | Poster pick: a chosen season poster always lands    | ✅ Done    |
-| Whole add: a title by hand, with all its art        | ⬜ Planned |
+| Whole add: a title by hand, with all its art        | ✅ Done    |
 
 Steps 1 to 9 are the first build order, ending with Software update, which
 shipped as v0.2.0. From step 10 on, each step came out of using FamilyFlix
@@ -147,87 +147,4 @@ grilled; once it ships, it is one line and a link.
 55. ✅ **Header fit**: every filter pill and Settings in reach ([log 73](design-logs/73-header-fit.md)).
 56. ✅ **Sheet in sight**: `_meta/` heads the folder, and the sheet is said aloud ([log 74](design-logs/74-sheet-in-sight.md)).
 57. ✅ **Poster pick**: a synced title's art always lands, and a refused season poster says so ([log 75](design-logs/75-poster-pick.md)).
-
-Step 58 came out of a walk through **Add a title** with a whole show in hand
-on 2026-11-24. The show is `The Show (2019)\` in the **Folder layout**: a
-poster and a backdrop in `Images\`, and four **Season folders** of twelve
-episodes, each with its own `Images\poster.jpg` and a `Subtitles\S01E01\`
-folder per episode, and no Stills. A **Folder scan** reads all of it, but
-the maintainer won't always have that route: their Library folders may be
-just _Movies_ and _Series_, and they would rather add one show by hand than
-list a third folder for it. Or they have no TMDB key, so nothing is ever
-synced and the add form is the only way art and details get in. Either
-way, adding a title by hand should give the same complete title a scan
-gives. Confirmed against the code on 2026-11-24:
-
-- **The Show folder pick keeps only the episodes.** `readShowFolder` reads
-  the Season folders by the scan's own reader, but passes the show's poster
-  and backdrop as `null` and drops each **Season poster** `readSeasonFolder`
-  found, so only the 48 episode rows and their subtitles reach the form.
-  The maintainer then opens five file dialogs for files in the folder they
-  just picked (the poster and four Season posters), and the backdrop can't
-  be added at all.
-- **Neither form has a Backdrop slot.** Log 11 left it out ("the form does
-  not collect one", `routes/index.ts`); since then only a **Sync** or a
-  scan fills `backdrop_path`. The server half is there: the column, and the
-  **Layout fill**, which writes a backdrop into `Images\`.
-- **No Stills without a Sync.** A **Frame still** is only taken inside a
-  Sync (log 44), so a show added by hand with no TMDB key, or one TMDB
-  doesn't know, never gets a Still. Saving takes none.
-- **A plain movie add reads nothing beside its video.** Picking a video in
-  a **Title folder** doesn't fill the Poster or the Subtitles from that
-  folder's `Images\` and `Subtitles\`; only Resolve's **Found files** read
-  a folder.
-- **In a browser it is roughly 57 dialogs**: four episode picks, 48
-  subtitle picks one row at a time, a poster and four Season posters, and
-  still no backdrop.
-- **_What the scanner accepts_ is out of date** (`FolderShapes`, drawn by
-  Import setup and Library folders → Scan). Three of its lines say what
-  log 58 stopped doing: `subs.en.srt` beside the video isn't read (tracks
-  are read from `Subtitles\` only); loose episodes at a show's root aren't
-  read (one video is a film, more is the _more than one video_ Problem);
-  and the season comes only from the Season folder, while the filename
-  gives only the episode number. It also never mentions `Images\`.
-
-Grilled in design log 76, which settles the open questions: a Frame
-still is taken after the save answers, in the background (the **Frame
-fill**), and a linked show's Frame stills stay in its Series folder, as
-the Layout fill has always left them; a pick's art is copied in, as all
-art is; a movie pick in a Title folder holding two videos fills its art
-with no **Found-file choice**; and the prototype gains the Backdrop slot
-and the rewritten block, through the handoff until the last phase:
-
-58. 🔜 **Whole add**: a title added by hand fills every place of the Folder
-    layout, movie and series, with or without TMDB.
-    - **A Backdrop slot** under Poster on the movie form and the series
-      form, on add and on edit (never a Resolve), stored as `backdrop_path`
-      and written to `Images\` by the **Layout fill**. Emptied on an edit,
-      its file goes on save.
-    - **The Show folder pick takes the show whole, with its art**: its
-      **Folder art** (the show's Poster and Backdrop, each **Season
-      poster** and each episode's **Still**) fills those slots as **Found
-      files** along with the episodes and their tracks. A slot picked by
-      hand stays, a second pick replaces only the first's, and the Show
-      folder row's ✕ takes back every slot still holding it.
-    - **The same for a film**: a video picked on a shell add is read by the
-      **Film folder read** (`GET /api/film-folder`), and when its folder
-      reads as a film holding it (two videos included, with no **Found-file
-      choice**) its Poster, Backdrop and tracks fill the form by the same
-      rule; the video's ✕ takes them back. A video in a Season folder reads
-      none.
-    - **Found art is copied in, never linked**, a linked title's too: both
-      adds take it as absolute paths, refused when not absolute or not an
-      image, and copy it into the title's Media folder.
-    - **Stills without a Sync**: once a series add or edit answers, the
-      **Frame fill** takes a **Frame still** for each episode holding no
-      Still, in the background, one take at a time, through the **Late
-      reserve** and by the one `takeFrameStill` the Sync uses, so a show
-      added with no TMDB key still gets its Stills. A linked show's stay in
-      its Series folder; nothing is drawn while it runs.
-    - **_What the scanner accepts_, rewritten** to the layout as log 58
-      reads it, on Import setup and Library folders → Scan: a movie and a
-      series example side by side (`Heat (1995)\` with its video, `Images\`
-      and `Subtitles\`; a show with `Images\` and `Season 01\` holding its
-      episodes and `Subtitles\S01E01\`), the rules in a few lines, and the
-      `_meta` sentence kept as it stands. The handoff prototype carries the
-      Backdrop slot and the block.
+58. ✅ **Whole add**: a title added by hand fills every place of the Folder layout, movie and series, with or without TMDB ([log 76](design-logs/76-whole-add.md)).

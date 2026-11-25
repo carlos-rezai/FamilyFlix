@@ -11,6 +11,92 @@ Newest entry first.
 
 ---
 
+## 2026-11-25: Whole add, the refactor (issue 728)
+
+Eighteen commits against `docs/refactor-plans/76-whole-add-refactor.md`,
+one per plan commit. This is the initiative's closing round: step 58 is ✅
+and issue 715 is done. **13450 tests pass across 959 files** (one
+skipped), against 13440 across 958 at `c74bff3a`: the ten new tests are
+`useFilmFolderPick`'s own suite, and no other test was added, weakened or
+changed its claim. `tsc -b --force` is clean, and `eslint` over every code
+file the round touched reports 0 errors and 36 warnings, every one an
+unused `root` in `createImporter.series.test.ts`, older than this
+initiative.
+
+### What each group changed
+
+- **Group 1, the server's found art in one spelling** (`978d8327`,
+  `efb00df9`, `c3ae0ee5`, `48bce647`, `523fe03b`, `f75ed505`). Both
+  Resolves read every slot through one `resolveFileOf`, and both adds
+  refuse found art through one `foundArtRefusal`, the movie add still
+  checking it before its tracks; the series add settles its poster,
+  backdrop and each Still as a value before the row and spreads it once;
+  `copyFoundArt` exports `NO_COPIED_ART`; `FoundArt` and `CopiedArt`
+  extend `TitleArt`, and `readFoundSeasonPosters` answers
+  `SeasonPosterPath[]`; `foundPathRefusal` reads its noun from
+  `FOUND_KINDS`, every sentence word for word.
+- **Group 2, the Sync's names and the fill's wiring** (`cd890e16`,
+  `62758b2d`). `STILL_MARKS` holds a mark per kind, the TMDB branch names
+  `<stem>.still.jpg` where it stores it, and `writeEpisodes` derives each
+  episode's stem once; `ImporterDeps.frameFill` is `FrameFill`, and the
+  `createFrameFill` imports sit with the other `enrichment/` ones.
+- **Group 3, the faces the follow-ups left behind** (`c4a82f62`,
+  `e4191046`, `1ff42175`, `787af6cc`, `1d2065df`). `SeriesEdit.backdropPath`
+  is required and written by `updateSeriesRow`, `setSeriesBackdrop` gone;
+  the Files cards' backdrop props are required, the `?.()` wrappers gone;
+  `seriesFormData` sends its poster through `appendFile`;
+  `useShowFolderPick`'s ✕ offers `NO_ART`; the stale docblocks say what is
+  true since 725, and the eight over-wide and two ragged comments are
+  rewrapped.
+- **Group 4, the hook's suite** (`9b2d34db`). `useFilmFolderPick.test.ts`
+  drives the hook over `fakeFolderBridge` and a stubbed `fetch`: a first
+  and a second pick, the ✕, a late answer after the ✕ or a later pick, an
+  edit, a file with no path, a refused read and no bridge.
+- **Group 5, the documents** (`99eaee3e`, `80ad5b84`, `7f7e62e3` and this
+  entry). The prototype's two comments and `COMPONENT-SPEC.md`'s
+  **MovieForm** row know the Resolve's Backdrop (`FileField ×3`); the
+  release checklist has a _Whole add_ smoke step after _Poster pick_; the
+  build has its journal entry; step 58 is one line and a link, its row ✅
+  Done.
+
+### Where this round left the plan
+
+- **The full suite ran after every code commit**, not only at each
+  group's end. Six runs met a failure (one of them two), every one in a
+  suite the commit could not reach: the backdrop `.warm` suites of `MovieDetail`,
+  `SeasonEpisodes` and `SeriesDetail` (a decode-then-paint race, once
+  `image.decode is not a function`) and `routes.enrichment`'s _lets a new
+  start begin after it_. Each passed alone, three runs in a row for
+  `SeriesDetail`.
+- **The Files cards' omitted-slot clause went in commit 10**, with the
+  optional props it described, rather than in 13, so no commit left a
+  docblock saying the slot could be omitted.
+- **The new suite was checked against the hook**: with the late-answer
+  counter and the plain-add guard broken, three of its ten tests fail.
+- **Two over-wide comment lines the plan did not name stay**: the
+  `readFilm` member of `UseFilmFolderPickResult` and a `scannerBlock`
+  docblock in `test-support/`.
+
+### Deliberately not changed
+
+Everything in the plan's Out of Scope: issue 727, the movie add's
+`let storedPath`, `readTitleFolder`'s inline `posters[0] ?? null`, a
+shared Files-card art slot, the 83 older lint warnings and the long `it`
+titles and test-support strings in the initiative's suites, and the
+handoff README and the glossary's earlier sections. No route, wire,
+schema or drawn pixel changed.
+
+### Follow-ups
+
+- **Issue 727.** `POST /series` reads a found Poster or Backdrop whatever
+  part arrived, so a request carrying both leaves an unreferenced copy in
+  the Media folder, and it refuses an empty field. Best taken on
+  `c3ae0ee5`'s settled paths.
+- **The next release runs the checklist's new Whole add step** on the
+  installed app.
+
+---
+
 ## 2026-11-25: Whole add, the build (issues 716 to 726)
 
 Five server and client slices (716 to 720), the prototype amended (721),
