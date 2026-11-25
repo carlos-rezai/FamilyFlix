@@ -122,6 +122,7 @@ describe('LibraryStorage.onChange: a write that changes a sheet cell', () => {
           rating: null,
           genres: [],
           posterPath: null,
+          backdropPath: null,
           episodes: [
             {
               id: episode.id,

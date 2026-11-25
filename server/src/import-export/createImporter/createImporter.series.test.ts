@@ -1222,6 +1222,7 @@ describe('createImporter — the Source file', () => {
       rating: detail.series.rating,
       genres: detail.series.genres.map((genre) => genre.name),
       posterPath: detail.series.posterPath,
+      backdropPath: detail.series.backdropPath,
       episodes: [pilot, storm].map((episode) => ({
         id: episode.id,
         season: episode.season,

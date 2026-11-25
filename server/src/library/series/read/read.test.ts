@@ -272,6 +272,7 @@ function unchangedEdit(storage: LibraryStorage, seriesId: string) {
     rating: series.rating,
     genres: series.genres.map((genre) => genre.name),
     posterPath: series.posterPath,
+    backdropPath: series.backdropPath,
     episodes: storage.listEpisodes(seriesId).map((episode) => ({
       id: episode.id,
       season: episode.season,

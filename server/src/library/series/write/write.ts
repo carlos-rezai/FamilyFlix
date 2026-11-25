@@ -101,8 +101,7 @@ export interface SeriesEdit {
   rating: number | null;
   genres: string[];
   posterPath: string | null;
-  /** The series' **Backdrop**, `null` to take it away; omitted, it stays. */
-  backdropPath?: string | null;
+  backdropPath: string | null;
   /** `null` is the **Match unlink**; an omitted key keeps the match. */
   tmdbId?: null;
   episodes: EpisodeEdit[];
@@ -319,12 +318,10 @@ export function createSeriesWrite(
     UPDATE series SET
       title = @title, year = @year, end_year = @end_year, synopsis = @synopsis,
       creator = @creator, cast = @cast, rating = @rating,
-      poster_path = @poster_path, updated_at = @updated_at
+      poster_path = @poster_path, backdrop_path = @backdrop_path,
+      updated_at = @updated_at
     WHERE id = @id
   `);
-  const setSeriesBackdrop = db.prepare(
-    'UPDATE series SET backdrop_path = ? WHERE id = ?'
-  );
   const clearSeriesMatch = db.prepare(
     'UPDATE series SET tmdb_id = NULL WHERE id = ?'
   );
@@ -442,11 +439,9 @@ export function createSeriesWrite(
         cast: edit.cast.length === 0 ? null : JSON.stringify(edit.cast),
         rating: edit.rating,
         poster_path: edit.posterPath,
+        backdrop_path: edit.backdropPath,
         updated_at: now,
       });
-      if (edit.backdropPath !== undefined) {
-        setSeriesBackdrop.run(edit.backdropPath, id);
-      }
       if (edit.tmdbId === null) {
         clearSeriesMatch.run(id);
       }
