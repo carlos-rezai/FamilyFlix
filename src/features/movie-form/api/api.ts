@@ -350,13 +350,7 @@ export async function readFilmFolder(video: string): Promise<FilmFolderRead> {
   if (!response.ok) {
     throw new Error(`GET /api/film-folder failed: ${response.status}`);
   }
-  // Read field by field, so an answer missing one fills nothing there.
-  const read = (await response.json()) as Partial<FilmFolderRead>;
-  return {
-    poster: read.poster ?? null,
-    backdrop: read.backdrop ?? null,
-    subtitles: read.subtitles ?? [],
-  };
+  return (await response.json()) as FilmFolderRead;
 }
 
 const containingEndpoint = (path: string) =>

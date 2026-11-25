@@ -71,6 +71,11 @@ beforeEach(() => {
     if (url.includes('/api/library-folders/containing')) {
       return Promise.resolve(okResponse({ libraryFolderId: 'films' }));
     }
+    if (url.includes('/api/film-folder')) {
+      return Promise.resolve(
+        okResponse({ poster: null, backdrop: null, subtitles: [] })
+      );
+    }
     return Promise.resolve(okResponse({ genres: POOL }));
   });
   vi.stubGlobal('fetch', fetchMock);

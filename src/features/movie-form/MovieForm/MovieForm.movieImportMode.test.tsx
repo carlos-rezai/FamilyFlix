@@ -86,6 +86,11 @@ beforeEach(() => {
     if (url.includes('/api/movies/')) {
       return Promise.resolve(okResponse(makeMovie({ id: 'a1' })));
     }
+    if (url.includes('/api/film-folder')) {
+      return Promise.resolve(
+        okResponse({ poster: null, backdrop: null, subtitles: [] })
+      );
+    }
     return Promise.resolve(okResponse({ genres: POOL }));
   });
   vi.stubGlobal('fetch', fetchMock);
