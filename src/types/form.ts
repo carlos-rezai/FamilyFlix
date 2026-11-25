@@ -199,6 +199,18 @@ export interface ShowFolderRead {
 }
 
 /**
+ * The **Film folder read**: what `GET /api/film-folder` answers for a video
+ * picked on the movie add, its film's **Poster** and **Backdrop**, absolute,
+ * `null` for none, and its tracks, absolute, each with its language. All
+ * empty when the video's folder reads as no film holding it.
+ */
+export interface FilmFolderRead {
+  poster: string | null;
+  backdrop: string | null;
+  subtitles: { path: string; language: string }[];
+}
+
+/**
  * A **Show folder pick**'s **Folder art**: the show's **Poster** and
  * **Backdrop** the read found, absolute, `null` for none, and each **Season
  * poster** it found, absolute, by season.

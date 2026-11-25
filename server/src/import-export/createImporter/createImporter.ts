@@ -79,11 +79,13 @@ import {
   readShowFolder,
   type ShowFolderAnswer,
 } from '../readShowFolder/readShowFolder';
+import { readFilmFolder } from '../readFilmFolder/readFilmFolder';
 import { titleKey } from '../titleKey/titleKey';
 import type {
   CandidateFolder,
   ImportField,
   ImportMode,
+  FilmFolderRead,
   ImportProblem,
   ImportProblemDetail,
   ImportRun,
@@ -360,6 +362,12 @@ export interface Importer {
    * listed Library folders and the held series on record at a folder.
    */
   readShowFolder(path: string): Promise<ShowFolderAnswer>;
+
+  /**
+   * The **Film folder read** of one absolute video picked on the movie add,
+   * `readFilmFolder`'s: its film's art and tracks, all empty for no film.
+   */
+  readFilmFolder(video: string): Promise<FilmFolderRead>;
 }
 
 /** The sheet formats the reader opens, by extension. */
@@ -3483,6 +3491,8 @@ export function createImporter({
         },
         titleHolding: storage.titleHolding,
       }),
+
+    readFilmFolder,
 
     cancel: async () => {
       // Gone from the first line: a `current` read while the rollback is

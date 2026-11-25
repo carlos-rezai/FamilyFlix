@@ -8,6 +8,7 @@ import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import type {
   BusyPhase,
   EpisodeFormRow,
+  FilmFolderRead,
   FolderArt,
   FormKind,
   ImportMode,
@@ -33,6 +34,7 @@ import {
 import { useImportMode } from '../useImportMode/useImportMode';
 import { useSeasonPosters } from '../useSeasonPosters/useSeasonPosters';
 import { useShowFolderPick } from '../useShowFolderPick/useShowFolderPick';
+import { useFilmFolderPick } from '../useFilmFolderPick/useFilmFolderPick';
 import {
   createMovie,
   createSeries,
@@ -44,6 +46,7 @@ import {
   updateSeries,
 } from '../api/api';
 import {
+  filmFolderValues,
   folderArtValues,
   folderKeyValues,
   movieAddValues,
@@ -594,6 +597,19 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, rating }));
   }, []);
 
+  // The movie add's **Film folder read**, `useFilmFolderPick`'s: the picked
+  // video's art and tracks, by `filmFolderValues`'s rule.
+  const prefillFilmFolder = useCallback(
+    (read: FilmFolderRead, picked: FilmFolderRead | null) => {
+      setValues((current) => filmFolderValues(current, read, picked));
+    },
+    []
+  );
+  const { readFilm, forgetFilm } = useFilmFolderPick({
+    plainAdd,
+    prefillFilmFolder,
+  });
+
   // A browser hands over a name and bytes and never a path, so the `File` is
   // the whole of what there is to hold — and its own name is what the slot
   // shows, because it is the only way to tell the right film from the one
@@ -603,7 +619,7 @@ export function useMovieForm(): UseMovieFormResult {
   // its **Title guess** — a prefill, never a write, so a typed title stays.
   //
   // On a shell add the picked video is read by `useImportMode`, whose answer
-  // says whether Link is available.
+  // says whether Link is available, and its folder by `useFilmFolderPick`.
   const pickVideo = useCallback(
     (file: File) => {
       setValues((current) => ({
@@ -615,14 +631,16 @@ export function useMovieForm(): UseMovieFormResult {
         video: pickedFile(file),
       }));
       readVideo(file);
+      readFilm(file);
     },
-    [readVideo]
+    [readVideo, readFilm]
   );
 
   const removeVideo = useCallback(() => {
     forgetVideo();
+    forgetFilm();
     setValues((current) => ({ ...current, video: null }));
-  }, [forgetVideo]);
+  }, [forgetVideo, forgetFilm]);
 
   const chooseVideo = useCallback((video: MovieFormFile) => {
     setValues((current) => ({ ...current, video }));

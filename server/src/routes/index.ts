@@ -1733,20 +1733,47 @@ export function createApiRouter(
     }
     const { title, year, director, synopsis, rating, cast, genres } = read;
 
-    // The third list, paired by the body reader as the edit's is: the form
-    // sends an empty `subtitlePath` for every picked track on the add as on
-    // the edit, so it is the same read with the path column always empty.
-    // **Bytes only**, on this route: a row that named a path instead is not a
-    // track here, whatever the path says, and is left out rather than read.
-    const subtitles: NewSubtitle[] = [];
-    for (const row of subtitleRows(fields, uploads, read.languages)) {
-      if ('stored' in row) {
-        subtitles.push({ path: row.stored, language: row.language });
-      }
+    // A **Film folder read**'s found **Poster** and **Backdrop**: absolute
+    // image paths, always copied, never linked, also for a linked film. A
+    // picked part beats a found path for its slot.
+    const foundArt: FoundArt = {
+      poster:
+        uploads.poster === undefined
+          ? onlyField(fields, 'posterPath') || null
+          : null,
+      backdrop:
+        uploads.backdrop === undefined
+          ? onlyField(fields, 'backdropPath') || null
+          : null,
+    };
+    // The third list, paired by the body reader as the edit's is: a picked
+    // track sends an empty `subtitlePath` and its bytes, a found one its
+    // absolute path, copied in below, so a mixed list keeps its row order.
+    const rows = subtitleRows(fields, uploads, read.languages);
+    const foundRefusal = [
+      ...[foundArt.poster, foundArt.backdrop].map((path) =>
+        path === null ? null : foundPathRefusal(path, 'image')
+      ),
+      ...rows.map((row) =>
+        'path' in row ? foundPathRefusal(row.path, 'subtitle') : null
+      ),
+    ].find((refusal) => refusal !== null);
+    if (foundRefusal !== undefined) {
+      rollback();
+      res.status(400).json({ error: foundRefusal });
+      return;
     }
+    const findsFiles =
+      foundArt.poster !== null ||
+      foundArt.backdrop !== null ||
+      rows.some((row) => 'path' in row);
 
-    // A found video copied in needs a Media folder no part reserved.
-    if (uploads.folder === null && found !== undefined && placed === null) {
+    // A found video copied in, or found art or tracks, need a Media folder no
+    // part reserved.
+    if (
+      uploads.folder === null &&
+      ((found !== undefined && placed === null) || findsFiles)
+    ) {
       uploads.folder = media.reserveFolder(title, year ?? null);
     }
 
@@ -1754,9 +1781,11 @@ export function createApiRouter(
     // being the one a part needed and becomes the one the movie is called. A
     // body that named its film before it sent it — which is every body the form
     // sends — is already there, and nothing moves.
+    let storedPath = (path: string): string => path;
     if (uploads.folder !== null) {
       const renamed = media.renameFolder(uploads.folder, title, year ?? null);
       uploads.folder = renamed.folder;
+      storedPath = (path) => renamed.storedPath(path);
       if (uploads.video !== undefined) {
         uploads.video = renamed.storedPath(uploads.video);
       }
@@ -1766,10 +1795,38 @@ export function createApiRouter(
       if (uploads.backdrop !== undefined) {
         uploads.backdrop = renamed.storedPath(uploads.backdrop);
       }
-      for (const subtitle of subtitles) {
-        subtitle.path = renamed.storedPath(subtitle.path);
-      }
     }
+
+    // Each found file copied into the Media folder's root, after the rename
+    // so its **Stored path** is final. A copy that breaks is the save's
+    // failure, and takes the folder with it.
+    const subtitles: NewSubtitle[] = [];
+    let copiedArt: CopiedArt = {
+      poster: null,
+      backdrop: null,
+      seasonPosters: [],
+    };
+    try {
+      if (uploads.folder !== null) {
+        const folder = uploads.folder;
+        copiedArt = await copyFoundArt(media, folder, foundArt);
+        for (const row of rows) {
+          subtitles.push({
+            path:
+              'path' in row
+                ? await media.copyIn(folder, row.path)
+                : storedPath(row.stored),
+            language: row.language,
+          });
+        }
+      }
+    } catch {
+      rollback();
+      res.status(500).json({ error: 'Could not add the movie' });
+      return;
+    }
+    const posterPath = uploads.poster ?? copiedArt.poster ?? undefined;
+    const backdropPath = uploads.backdrop ?? copiedArt.backdrop ?? undefined;
 
     // Derived here, after the rename and before the row: the bytes are where
     // they are going to stay, and the one column the form has no field for is
@@ -1800,10 +1857,8 @@ export function createApiRouter(
         // No poster part is a film with no artwork, which is a normal row:
         // `poster_path` stays null and the card draws its gradient. No
         // backdrop part is the same: the detail page falls back to it too.
-        ...(uploads.poster === undefined ? {} : { posterPath: uploads.poster }),
-        ...(uploads.backdrop === undefined
-          ? {}
-          : { backdropPath: uploads.backdrop }),
+        ...(posterPath === undefined ? {} : { posterPath }),
+        ...(backdropPath === undefined ? {} : { backdropPath }),
         ...(year === undefined ? {} : { year }),
         ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
         ...(videoQuality === null ? {} : { videoQuality }),
@@ -2404,6 +2459,19 @@ export function createApiRouter(
       return;
     }
     res.json(answer.read);
+  });
+
+  // The movie add's **Film folder read**: the picked video's film's art and
+  // tracks, all empty for no film. A path not absolute or of no video kind
+  // is refused by `foundPathRefusal`.
+  router.get('/film-folder', async (req: Request, res: Response) => {
+    const video = typeof req.query.video === 'string' ? req.query.video : '';
+    const refused = foundPathRefusal(video, 'video');
+    if (refused !== null) {
+      res.status(400).json({ error: refused });
+      return;
+    }
+    res.json(await importer.readFilmFolder(video));
   });
 
   // The listed **Library folder** a path lies under, or `null` — what the

@@ -1,6 +1,7 @@
 import type {
   ImportMode,
   EpisodeFormRow,
+  FilmFolderRead,
   FolderArt,
   ImportProblemDetail,
   Movie,
@@ -308,6 +309,38 @@ export function folderArtValues(
     ...current,
     poster: foundArtFill(current.poster, art.poster, picked?.poster),
     backdrop: foundArtFill(current.backdrop, art.backdrop, picked?.backdrop),
+  };
+}
+
+/** The key prefix of a **Film folder read**'s found Subtitles rows. */
+const FILM_FOLDER_KEY = 'film-folder-';
+
+/**
+ * The form's values after a movie add's **Film folder read** offers its art
+ * and tracks: the Poster and Backdrop by the one fill rule, against `picked`,
+ * the read an earlier pick offered (`null` before any), and the earlier
+ * pick's track rows replaced by one found row per track, its language
+ * chosen, after the rows added by hand. An empty read takes the pick back.
+ */
+export function filmFolderValues(
+  current: MovieFormValues,
+  read: FilmFolderRead,
+  picked: FilmFolderRead | null
+): MovieFormValues {
+  return {
+    ...current,
+    poster: foundArtFill(current.poster, read.poster, picked?.poster),
+    backdrop: foundArtFill(current.backdrop, read.backdrop, picked?.backdrop),
+    subtitles: [
+      ...current.subtitles.filter(
+        (subtitle) => !subtitle.key.startsWith(FILM_FOLDER_KEY)
+      ),
+      ...read.subtitles.map((track, at) => ({
+        key: `${FILM_FOLDER_KEY}subtitle-${at}`,
+        file: foundFile(track.path),
+        language: track.language,
+      })),
+    ],
   };
 }
 

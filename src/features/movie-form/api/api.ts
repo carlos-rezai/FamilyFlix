@@ -1,6 +1,7 @@
 import type {
   ImportMode,
   EpisodeFormRow,
+  FilmFolderRead,
   Genre,
   GenrePoolPayload,
   ImportProblemDetail,
@@ -335,6 +336,27 @@ export async function readShowFolder(path: string): Promise<ShowFolderAnswer> {
     throw new Error(`GET /api/show-folder failed: ${response.status}`);
   }
   return { kind: 'read', read: (await response.json()) as ShowFolderRead };
+}
+
+const filmFolderEndpoint = (video: string) =>
+  `/api/film-folder?video=${encodeURIComponent(video)}`;
+
+/**
+ * The **Film folder read** of a video picked on the movie add, by its
+ * absolute path: its film's art and tracks, all empty for no film.
+ */
+export async function readFilmFolder(video: string): Promise<FilmFolderRead> {
+  const response = await fetch(filmFolderEndpoint(video));
+  if (!response.ok) {
+    throw new Error(`GET /api/film-folder failed: ${response.status}`);
+  }
+  // Read field by field, so an answer missing one fills nothing there.
+  const read = (await response.json()) as Partial<FilmFolderRead>;
+  return {
+    poster: read.poster ?? null,
+    backdrop: read.backdrop ?? null,
+    subtitles: read.subtitles ?? [],
+  };
 }
 
 const containingEndpoint = (path: string) =>
