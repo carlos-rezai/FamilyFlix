@@ -5,17 +5,16 @@ import { ThemeProvider } from 'styled-components';
 import { FolderShapes } from './FolderShapes';
 import { theme } from '@/styles/theme';
 import { comesBefore } from '@/test-support/comesBefore/comesBefore';
-
-/**
- * 30 — Library folders, Phase 2: "the Folder scan" (issue #269).
- *
- * _What the scanner accepts_, extracted from `ImportSetup` on its second
- * caller — the Library folders page's group **Scan** — and word for word from
- * `feat.ImportFlow.dc.html`: the heading, the three shapes in mono with the
- * prototype's backslashes — the loose shape's note in the sans face — and the
- * folder-first rule, its two tags in mono. It takes no props: both callers
- * draw the same block.
- */
+import {
+  FILM_EXAMPLE,
+  RETIRED,
+  RULE_NAMES,
+  RULES,
+  SERIES_EXAMPLE,
+  holdsInOrder,
+  innermostHolding,
+  normalized,
+} from '@/test-support/scannerBlock/scannerBlock';
 
 function renderShapes() {
   return render(
@@ -25,102 +24,148 @@ function renderShapes() {
   );
 }
 
-const normalized = (text: string | null) =>
-  (text ?? '').replace(/\s+/g, ' ').trim();
-
-/** The deepest element whose text holds `text` — whatever it is nested in. */
-function innermost(text: string): HTMLElement {
-  const holding = Array.from(document.body.querySelectorAll('*')).filter(
-    (element) => normalized(element.textContent).includes(text)
+const film = () =>
+  innermostHolding(FILM_EXAMPLE[0] as string, FILM_EXAMPLE.at(-1) as string);
+const series = () =>
+  innermostHolding(
+    SERIES_EXAMPLE[0] as string,
+    SERIES_EXAMPLE.at(-1) as string
   );
-  const deepest = holding.filter(
-    (element) =>
-      !holding.some((other) => other !== element && element.contains(other))
-  );
-  if (deepest.length !== 1) {
-    throw new Error(
-      `expected one element holding "${text}", found ${deepest.length}`
-    );
-  }
-  return deepest[0] as HTMLElement;
-}
+const rule = (index: number) => innermostHolding(RULES[index] as string);
 
-const SHAPES = [
-  'Movie Title (2019)\\ movie.mkv · subs.en.srt',
-  'Show Name\\ Season 01\\ S01E03.mkv',
-  'Show Name\\ S01E03.mkv',
-];
-const LOOSE_NOTE = '(loose episodes at the show root are fine)';
-const RULE =
-  'Season and episode numbers come from the folder first, then the filename (S01E03, 1x03). Anything it can’t place lands in the review list.';
-
-describe('FolderShapes — what the scanner accepts', () => {
-  it('draws its heading above the shapes', () => {
+/**
+ * 76 — Whole add, Phase 7: "the scanner block" (issue #722).
+ *
+ * _What the scanner accepts_, from the amended `feat.ImportFlow.dc.html`
+ * (log 76): under the heading, the film `Heat (1995)\` and the series
+ * `The Show (2019)\` side by side in 12px mono, faint, line-height 1.8, in a
+ * wrapping flex with `gap: 32px`; then three rules in 13px sans, faint, their
+ * folder and file names in mono. The three shape lines and the folder-first
+ * sentence are gone. It takes no props: both callers draw the same block.
+ */
+describe('FolderShapes — the examples', () => {
+  it('draws its heading above the examples', () => {
     renderShapes();
 
     const heading = screen.getByText('What the scanner accepts');
-    expect(comesBefore(heading, innermost(SHAPES[0] as string))).toBe(true);
+    expect(comesBefore(heading, film())).toBe(true);
   });
 
-  it('lists the three shapes, in order, with the prototype’s backslashes', () => {
+  it('draws the film example line by line, in order', () => {
     renderShapes();
 
-    const text = normalized(document.body.textContent);
-    const at = SHAPES.map((shape) => text.indexOf(shape));
-    expect(at.every((index) => index >= 0)).toBe(true);
-    expect([...at].sort((a, b) => a - b)).toEqual(at);
-    expect(text).toContain(`${SHAPES[2]} ${LOOSE_NOTE}`);
-  });
-
-  it('sets the shapes in mono and the loose shape’s note in the sans face', () => {
-    renderShapes();
-
-    for (const shape of SHAPES) {
-      expect(getComputedStyle(innermost(shape)).fontFamily).toContain(
-        'JetBrains Mono'
-      );
-    }
-    expect(getComputedStyle(innermost(LOOSE_NOTE)).fontFamily).toContain(
-      'Hanken Grotesk'
+    expect(holdsInOrder(normalized(film().textContent), FILM_EXAMPLE)).toBe(
+      true
     );
   });
 
-  it('states the folder-first rule word for word, after the shapes', () => {
+  it('draws the series example line by line, in order', () => {
+    renderShapes();
+
+    expect(holdsInOrder(normalized(series().textContent), SERIES_EXAMPLE)).toBe(
+      true
+    );
+  });
+
+  it('sets each example on its own, the film before the series', () => {
+    renderShapes();
+
+    expect(film()).not.toBe(series());
+    expect(film().contains(series())).toBe(false);
+    expect(series().contains(film())).toBe(false);
+    expect(comesBefore(film(), series())).toBe(true);
+  });
+
+  it('sets both examples in 12px mono, faint, at line-height 1.8', () => {
+    renderShapes();
+
+    for (const example of [film(), series()]) {
+      const drawn = getComputedStyle(example);
+      expect(drawn.fontFamily).toContain('JetBrains Mono');
+      expect(drawn.fontSize).toBe('12px');
+      expect(drawn.lineHeight).toBe('1.8');
+      expect(drawn.color).toBe(getComputedStyle(rule(0)).color);
+    }
+  });
+
+  it('sits the examples side by side in a wrapping flex, 32px apart', () => {
+    renderShapes();
+
+    const row = innermostHolding(
+      FILM_EXAMPLE[0] as string,
+      SERIES_EXAMPLE[0] as string
+    );
+    expect(row.contains(film())).toBe(true);
+    expect(row.contains(series())).toBe(true);
+    const drawn = getComputedStyle(row);
+    expect(drawn.display).toBe('flex');
+    expect(drawn.gap).toBe('32px');
+    expect(drawn.flexWrap).toBe('wrap');
+  });
+});
+
+describe('FolderShapes — the rules', () => {
+  it('states the three rules word for word, in order, after the examples', () => {
     renderShapes();
 
     const text = normalized(document.body.textContent);
-    expect(text).toContain(RULE);
-    expect(text.indexOf(SHAPES[2] as string)).toBeLessThan(text.indexOf(RULE));
+    expect(holdsInOrder(text, RULES)).toBe(true);
+    expect(comesBefore(series(), rule(0))).toBe(true);
   });
 
-  it('sets the rule’s two tags in mono', () => {
+  it('draws each rule as its own line in 13px sans, faint', () => {
     renderShapes();
 
-    for (const tag of ['S01E03', '1x03']) {
-      expect(getComputedStyle(screen.getByText(tag)).fontFamily).toContain(
+    const rules = RULES.map((_, index) => rule(index));
+    expect(new Set(rules).size).toBe(3);
+    for (const drawnRule of rules) {
+      const drawn = getComputedStyle(drawnRule);
+      expect(drawn.display).toBe('block');
+      expect(drawn.fontFamily).toContain('Hanken Grotesk');
+      expect(drawn.fontSize).toBe('13px');
+      expect(drawn.color).toBe(getComputedStyle(rules[0] as HTMLElement).color);
+    }
+  });
+
+  it('sets the rules’ folder and file names in mono', () => {
+    renderShapes();
+
+    for (const name of RULE_NAMES) {
+      expect(getComputedStyle(screen.getByText(name)).fontFamily).toContain(
         'JetBrains Mono'
       );
+    }
+  });
+
+  it('no longer draws the retired shape lines or the folder-first sentence', () => {
+    renderShapes();
+
+    const text = normalized(document.body.textContent);
+    for (const retired of RETIRED) {
+      expect(text).not.toContain(retired);
     }
   });
 });
 
 /**
- * 74 — Sheet in sight, Phase 4 (issue #704).
+ * 74 — Sheet in sight, Phase 4 (issue #704), its place moved by log 76.
  *
- * The **Sheet note**, from the amended `feat.ImportFlow.dc.html`: a second
- * paragraph after the folder-first rule, in the rule's style, the path
- * `_meta\familyflix-library.csv` in mono. No control comes with it.
+ * The **Sheet note**, from the amended `feat.ImportFlow.dc.html`: a paragraph
+ * after the rules, in their style, the path `_meta\familyflix-library.csv` in
+ * mono. No control comes with it.
  */
 const SHEET_PATH = '_meta\\familyflix-library.csv';
 const SHEET_NOTE = `FamilyFlix keeps a sheet of each folder’s titles in ${SHEET_PATH} and reads it first, so a scan after a reset or on another computer brings every title back as it was, ratings, hearts and what’s been watched included.`;
+const LAST_RULE = RULES[2] as string;
 
 describe('FolderShapes — the Sheet note', () => {
-  it('states the Sheet note word for word, after the folder-first rule', () => {
+  it('states the Sheet note word for word, after the rules', () => {
     renderShapes();
 
     const text = normalized(document.body.textContent);
     expect(text).toContain(SHEET_NOTE);
-    expect(text.indexOf(RULE)).toBeLessThan(text.indexOf(SHEET_NOTE));
+    expect(text).toContain(LAST_RULE);
+    expect(text.indexOf(LAST_RULE)).toBeLessThan(text.indexOf(SHEET_NOTE));
   });
 
   it('sets the sheet’s path in mono', () => {
@@ -131,19 +176,19 @@ describe('FolderShapes — the Sheet note', () => {
     );
   });
 
-  it('draws the note as its own paragraph, in the rule’s style', () => {
+  it('draws the note as its own paragraph, in the rules’ style', () => {
     renderShapes();
 
-    const note = innermost(SHEET_NOTE);
-    const rule = innermost(RULE);
-    expect(note).not.toBe(rule);
-    expect(rule.contains(note)).toBe(false);
-    expect(note.contains(rule)).toBe(false);
+    const note = innermostHolding(SHEET_NOTE);
+    const ruled = rule(2);
+    expect(note).not.toBe(ruled);
+    expect(ruled.contains(note)).toBe(false);
+    expect(note.contains(ruled)).toBe(false);
     const drawn = getComputedStyle(note);
-    const ruled = getComputedStyle(rule);
+    const ruledStyle = getComputedStyle(ruled);
     expect(drawn.fontFamily).toContain('Hanken Grotesk');
-    expect(drawn.fontSize).toBe(ruled.fontSize);
-    expect(drawn.color).toBe(ruled.color);
+    expect(drawn.fontSize).toBe(ruledStyle.fontSize);
+    expect(drawn.color).toBe(ruledStyle.color);
     expect(drawn.display).toBe('block');
   });
 

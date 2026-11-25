@@ -24,6 +24,15 @@ import {
   resolvedStyle,
 } from '@/test-support/resolvedStyle/resolvedStyle';
 import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
+import {
+  FILM_EXAMPLE,
+  RETIRED,
+  RULE_NAMES,
+  RULES,
+  SERIES_EXAMPLE,
+  holdsInOrder,
+  normalized,
+} from '@/test-support/scannerBlock/scannerBlock';
 
 /**
  * 30 — Library folders, Phase 2: "the Folder scan" (issue #269).
@@ -509,5 +518,52 @@ describe('LibraryFolders — the Sheet note', () => {
       sheetPath.compareDocumentPosition(button) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
+  });
+});
+
+/**
+ * 76 — Whole add, Phase 7: "the scanner block" (issue #722): the group
+ * **Scan** draws _What the scanner accepts_ as Import setup does, the film
+ * and the series examples, the three rules with their names in mono, and
+ * none of the retired shape lines or the folder-first sentence.
+ */
+describe('LibraryFolders — the scanner block', () => {
+  it('draws the film and the series examples, then the three rules, before Scan all folders', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    const button = await scanButton();
+    const text = normalized(document.body.textContent);
+    expect(
+      holdsInOrder(text, [...FILM_EXAMPLE, ...SERIES_EXAMPLE, ...RULES])
+    ).toBe(true);
+    expect(
+      screen
+        .getByText(RULE_NAMES[1] as string)
+        .compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+  });
+
+  it('sets the rules’ folder and file names in mono', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    await scanButton();
+    for (const name of RULE_NAMES) {
+      expect(getComputedStyle(screen.getByText(name)).fontFamily).toContain(
+        'JetBrains Mono'
+      );
+    }
+  });
+
+  it('no longer draws the retired shape lines or the folder-first sentence', async () => {
+    serve([MOVIES]);
+    renderPage();
+
+    await scanButton();
+    const text = normalized(document.body.textContent);
+    for (const retired of RETIRED) {
+      expect(text).not.toContain(retired);
+    }
   });
 });

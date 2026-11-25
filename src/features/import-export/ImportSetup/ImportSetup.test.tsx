@@ -20,6 +20,15 @@ import {
 import { fakeFolderBridge } from '@/test-support/fakeFolderBridge/fakeFolderBridge';
 import { LocationProbe } from '@/test-support/LocationProbe/LocationProbe';
 import { makeLibraryFolder } from '@/test-support/makeLibraryFolder/makeLibraryFolder';
+import {
+  FILM_EXAMPLE,
+  RETIRED,
+  RULE_NAMES,
+  RULES,
+  SERIES_EXAMPLE,
+  holdsInOrder,
+  normalized,
+} from '@/test-support/scannerBlock/scannerBlock';
 
 /**
  * 13 — Bulk import, Phase 2: "the tracer bullet" (issue #125), and
@@ -501,46 +510,16 @@ describe('ImportSetup — the refusal line', () => {
     expect(sheetField().value).toBe(SHEET);
   });
 });
-
 /**
- * 22 — Series (TV), Phase 8: "re-runs, year ranges, unnamed shows, the setup
- * panel" (issue #198).
+ * 22 — Series (TV), Phase 8 (issue #198), redrawn by 76 — Whole add, Phase 7:
+ * "the scanner block" (issue #722).
  *
- * _What the scanner accepts_, word for word from `feat.ImportFlow.dc.html`:
- * the three shapes in mono with the prototype's backslashes — the loose
- * shape's note in the sans face — and the folder-first rule, its two tags in
- * mono. It sits under the Library folders group, above _Start import_.
+ * _What the scanner accepts_, as the amended `feat.ImportFlow.dc.html` draws
+ * it: the film and the series examples, then the three rules, their names in
+ * mono. The retired shape lines and the folder-first sentence are gone. It
+ * sits under the Library folders group, above _Start import_.
  */
 describe('ImportSetup — what the scanner accepts', () => {
-  const normalized = (text: string | null) =>
-    (text ?? '').replace(/\s+/g, ' ').trim();
-
-  /** The deepest element whose text holds `text` — whatever it is nested in. */
-  function innermost(text: string): HTMLElement {
-    const holding = Array.from(document.body.querySelectorAll('*')).filter(
-      (element) => normalized(element.textContent).includes(text)
-    );
-    const deepest = holding.filter(
-      (element) =>
-        !holding.some((other) => other !== element && element.contains(other))
-    );
-    if (deepest.length !== 1) {
-      throw new Error(
-        `expected one element holding "${text}", found ${deepest.length}`
-      );
-    }
-    return deepest[0] as HTMLElement;
-  }
-
-  const SHAPES = [
-    'Movie Title (2019)\\ movie.mkv · subs.en.srt',
-    'Show Name\\ Season 01\\ S01E03.mkv',
-    'Show Name\\ S01E03.mkv',
-  ];
-  const LOOSE_NOTE = '(loose episodes at the show root are fine)';
-  const RULE =
-    'Season and episode numbers come from the folder first, then the filename (S01E03, 1x03). Anything it can’t place lands in the review list.';
-
   it('draws its heading under the Library folders group, above Start import', async () => {
     renderSetup();
 
@@ -549,44 +528,31 @@ describe('ImportSetup — what the scanner accepts', () => {
     expect(comesBefore(heading, startButton())).toBe(true);
   });
 
-  it('lists the three shapes, in order, with the prototype’s backslashes', () => {
+  it('draws the film and the series examples, then the three rules', () => {
     renderSetup();
 
     const text = normalized(document.body.textContent);
-    const at = SHAPES.map((shape) => text.indexOf(shape));
-    expect(at.every((index) => index >= 0)).toBe(true);
-    expect([...at].sort((a, b) => a - b)).toEqual(at);
-    expect(text).toContain(`${SHAPES[2]} ${LOOSE_NOTE}`);
+    expect(
+      holdsInOrder(text, [...FILM_EXAMPLE, ...SERIES_EXAMPLE, ...RULES])
+    ).toBe(true);
   });
 
-  it('sets the shapes in mono and the loose shape’s note in the sans face', () => {
+  it('sets the rules’ folder and file names in mono', () => {
     renderSetup();
 
-    for (const shape of SHAPES) {
-      expect(getComputedStyle(innermost(shape)).fontFamily).toContain(
+    for (const name of RULE_NAMES) {
+      expect(getComputedStyle(screen.getByText(name)).fontFamily).toContain(
         'JetBrains Mono'
       );
     }
-    expect(getComputedStyle(innermost(LOOSE_NOTE)).fontFamily).toContain(
-      'Hanken Grotesk'
-    );
   });
 
-  it('states the folder-first rule word for word, after the shapes', () => {
+  it('no longer draws the retired shape lines or the folder-first sentence', () => {
     renderSetup();
 
     const text = normalized(document.body.textContent);
-    expect(text).toContain(RULE);
-    expect(text.indexOf(SHAPES[2])).toBeLessThan(text.indexOf(RULE));
-  });
-
-  it('sets the rule’s two tags in mono', () => {
-    renderSetup();
-
-    for (const tag of ['S01E03', '1x03']) {
-      expect(getComputedStyle(screen.getByText(tag)).fontFamily).toContain(
-        'JetBrains Mono'
-      );
+    for (const retired of RETIRED) {
+      expect(text).not.toContain(retired);
     }
   });
 });
