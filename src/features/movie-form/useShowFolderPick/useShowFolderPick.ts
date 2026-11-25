@@ -7,6 +7,9 @@ import type { BusyPhase, EpisodeFormRow, FolderArt } from '@/types';
 import { readShowFolder } from '../api/api';
 import { type PickedKey, showFolderRows } from '../formValues/formValues';
 
+/** The art a pick's fills are taken back with: none in any slot. */
+const NO_ART: FolderArt = { poster: null, backdrop: null, seasonPosters: {} };
+
 /** The refusal of a picked folder that is already a held series's Show folder. */
 const heldShowFolderRefusal = (title: string): string =>
   `${title} is already in your library.`;
@@ -164,10 +167,7 @@ export function useShowFolderPick({
     dropShowFolder();
     // The pick's art goes with it, from each slot that still holds it.
     if (pickedArt.current !== null) {
-      prefillFolderArt(
-        { poster: null, backdrop: null, seasonPosters: {} },
-        pickedArt.current
-      );
+      prefillFolderArt(NO_ART, pickedArt.current);
       pickedArt.current = null;
     }
   }, [dropShowFolder, setShowLink, prefillFolderArt]);
