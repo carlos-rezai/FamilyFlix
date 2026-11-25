@@ -1250,6 +1250,9 @@ export function createApiRouter(
           language: episode.subtitleLanguages[track],
         })),
       ];
+      // A picked Still's Stored path, else the copied one, else none.
+      const stillPath =
+        episode.still === undefined ? still : stored(episode.still);
       return {
         season: episode.season,
         number: episode.number,
@@ -1258,28 +1261,22 @@ export function createApiRouter(
         ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
         ...(videoQuality === null ? {} : { videoQuality }),
         ...(subtitles.length === 0 ? {} : { subtitles }),
-        ...(episode.still === undefined
-          ? still === null
-            ? {}
-            : { stillPath: still }
-          : { stillPath: stored(episode.still) }),
+        ...(stillPath === null ? {} : { stillPath }),
       };
     });
+    const posterPath =
+      uploads.poster === undefined ? copiedArt.poster : stored(uploads.poster);
+    const backdropPath =
+      uploads.backdrop === undefined
+        ? copiedArt.backdrop
+        : stored(uploads.backdrop);
 
     try {
       const series: Series = storage.addSeries(
         {
           title,
-          ...(uploads.poster === undefined
-            ? copiedArt.poster === null
-              ? {}
-              : { posterPath: copiedArt.poster }
-            : { posterPath: stored(uploads.poster) }),
-          ...(uploads.backdrop === undefined
-            ? copiedArt.backdrop === null
-              ? {}
-              : { backdropPath: copiedArt.backdrop }
-            : { backdropPath: stored(uploads.backdrop) }),
+          ...(posterPath === null ? {} : { posterPath }),
+          ...(backdropPath === null ? {} : { backdropPath }),
           ...(year === undefined ? {} : { year }),
           ...(endYear === undefined ? {} : { endYear }),
           ...(creator === undefined ? {} : { creator }),
