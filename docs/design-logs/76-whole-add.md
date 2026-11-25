@@ -1,7 +1,7 @@
 # 76: Whole add
 
 > **Initiative:** `whole-add`
-> **PRD:** to be written (`docs/PRDs/76-whole-add.md`)
+> **PRD:** `docs/PRDs/76-whole-add.md`, issue #715
 > **Handoff:** `docs/handoff/handoff-whole-add/`
 
 This log is the `grill-me` session for step 58 of the build order, **Whole
@@ -206,19 +206,19 @@ null`. Read by the scan's own readers, no second rule: the art reader is
     folder that cannot be read) answers all empty. A path that is not
     absolute or not a video is a `400` by `foundPathRefusal`.
 
-        ```ts
-        /** `src/types/form.ts`: what a movie pick's folder holds. */
-        export interface FilmFolderRead {
-          poster: string | null;
-          backdrop: string | null;
-          subtitles: { path: string; language: string }[];
-        }
-        ```
+            ```ts
+            /** `src/types/form.ts`: what a movie pick's folder holds. */
+            export interface FilmFolderRead {
+              poster: string | null;
+              backdrop: string | null;
+              subtitles: { path: string; language: string }[];
+            }
+            ```
 
-        ❌ **Folding it into the containing read**: the containing read is
-        `useImportMode`'s and answers a Library folder; one read per question
-        keeps both small. ❌ **Under `media/`**: a read the route asks of a
-        domain goes through the importer, as `readShowFolder` does.
+            ❌ **Folding it into the containing read**: the containing read is
+            `useImportMode`'s and answers a Library folder; one read per question
+            keeps both small. ❌ **Under `media/`**: a read the route asks of a
+            domain goes through the importer, as `readShowFolder` does.
 
 13. **A folder holding two videos?** ✅ **No Found-file choice**: the
     maintainer already picked the video, and the folder's art and tracks are
@@ -255,44 +255,44 @@ null`. Read by the scan's own readers, no second rule: the art reader is
 17. **The unit?** ✅ `server/src/enrichment/createFrameFill/`, beside the
     Sync that already owns the Frame still and the **Late reserve**:
 
-        ```ts
-        export interface FrameFillDeps {
-          storage: Pick<
-            LibraryStorage,
-            | 'getSeriesDetail'
-            | 'stillSourcesOf'
-            | 'enrichEpisode'
-            | 'mediaFolderOf'
-            | 'recordMediaFolder'
-          >;
-          media: Media;
-          playback: Pick<Playback, 'frame'>;
-        }
-        /** The **Frame fill** a series save starts. */
-        export interface FrameFill {
-          /**
-           * Take a **Frame still** for each of the series' episodes holding no
-           * Still, queued behind any fill in flight, one take at a time; a
-           * series already waiting is filled once. Resolves when its turn is
-           * done; never rejects.
-           */
-          fill(seriesId: string): Promise<void>;
-        }
-        export function createFrameFill(deps: FrameFillDeps): FrameFill;
-        ```
+         ```ts
+         export interface FrameFillDeps {
+           storage: Pick<
+             LibraryStorage,
+             | 'getSeriesDetail'
+             | 'stillSourcesOf'
+             | 'enrichEpisode'
+             | 'mediaFolderOf'
+             | 'recordMediaFolder'
+           >;
+           media: Media;
+           playback: Pick<Playback, 'frame'>;
+         }
+         /** The **Frame fill** a series save starts. */
+         export interface FrameFill {
+           /**
+            * Take a **Frame still** for each of the series' episodes holding no
+            * Still, queued behind any fill in flight, one take at a time; a
+            * series already waiting is filled once. Resolves when its turn is
+            * done; never rejects.
+            */
+           fill(seriesId: string): Promise<void>;
+         }
+         export function createFrameFill(deps: FrameFillDeps): FrameFill;
+         ```
 
-        At its turn it reads the series again (gone: nothing, so a Delete or a
-        Reset mid-queue reserves no folder), takes each Still-less episode in
-        season, then episode order, specials included, stores it through one
-        `lateReserve` per series, and writes `stillPath` and `stillSource:
+         At its turn it reads the series again (gone: nothing, so a Delete or a
+         Reset mid-queue reserves no folder), takes each Still-less episode in
+         season, then episode order, specials included, stores it through one
+         `lateReserve` per series, and writes `stillPath` and `stillSource:
 
     'frame'`. Just before writing it reads the episode's Still source again:
-    a Still that landed meanwhile wins, and the picture is dropped. The take
-    and its name are lifted out of `writeEpisodes`into
-   `server/src/enrichment/takeFrameStill/takeFrameStill.ts`, so the Sync and
-    the fill spell `<stem>.frame.jpg`once. Wired in`server/src/main.ts`and
-    injected into`createApiRouter`as`frameFill`, as `layoutFill`is;
-   `POST /series`and`PATCH /series/:id`call`void frameFill.fill(id)`    after the Layout fill. Movies take none. ❌ **In`playback/`\*\*: playback
+ a Still that landed meanwhile wins, and the picture is dropped. The take
+ and its name are lifted out of `writeEpisodes`into
+`server/src/enrichment/takeFrameStill/takeFrameStill.ts`, so the Sync and
+ the fill spell `<stem>.frame.jpg`once. Wired in`server/src/main.ts`and
+ injected into`createApiRouter`as`frameFill`, as `layoutFill`is;
+`POST /series`and`PATCH /series/:id`call`void frameFill.fill(id)`    after the Layout fill. Movies take none. ❌ **In`playback/`\*\*: playback
     knows no rows, and the Late reserve is enrichment's.
 
 18. **A linked show's Stills in its folder?** ✅ **No change**: the Layout
