@@ -90,6 +90,8 @@ const EMPTY: MovieFormValues = {
   // The other empty slot, and no part of the gate at all: a film with no
   // artwork to hand still belongs in the library.
   poster: null,
+  // The **Backdrop**, the poster's word for word.
+  backdrop: null,
   // No tracks, which is a complete answer rather than a slot left empty: a film
   // in the family's own language needs none.
   subtitles: [],
@@ -160,6 +162,15 @@ export interface UseMovieFormResult {
   pickPoster: (file: File) => void;
   /** Empty the poster slot again. */
   removePoster: () => void;
+  /**
+   * Whether the Files card draws the **Backdrop** slot: an add or an edit of
+   * either kind, never a Resolve.
+   */
+  backdropSlot: boolean;
+  /** Put artwork chosen off the disk into the backdrop slot. */
+  pickBackdrop: (file: File) => void;
+  /** Empty the backdrop slot again; a held backdrop goes on save. */
+  removeBackdrop: () => void;
   /**
    * The series kind's _Season posters_: one slot per **Season** the episode
    * rows hold, in season order — none outside a series add or edit.
@@ -628,6 +639,14 @@ export function useMovieForm(): UseMovieFormResult {
     setValues((current) => ({ ...current, poster: null }));
   }, []);
 
+  const pickBackdrop = useCallback((file: File) => {
+    setValues((current) => ({ ...current, backdrop: pickedFile(file) }));
+  }, []);
+
+  const removeBackdrop = useCallback(() => {
+    setValues((current) => ({ ...current, backdrop: null }));
+  }, []);
+
   // The rows are held by a key of the form's own, handed out here and never
   // reused. Two files can share a name, a name can be picked again after the
   // wrong row was removed, and there is no subtitle id until the save lands —
@@ -887,6 +906,10 @@ export function useMovieForm(): UseMovieFormResult {
     chooseVideo,
     pickPoster,
     removePoster,
+    // A Resolve's save has no backdrop to send, so it draws none.
+    backdropSlot: resolving === null,
+    pickBackdrop,
+    removeBackdrop,
     seasonPosters,
     pickSeasonPoster,
     removeSeasonPoster,

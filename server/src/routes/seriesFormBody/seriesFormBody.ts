@@ -58,6 +58,7 @@ export interface EpisodeUploads {
   /** The **Series folder** this request wrote into, or `null`. */
   folder: string | null;
   poster?: string;
+  backdrop?: string;
   episodes: (EpisodeUpload | undefined)[];
   /**
    * Each picked **Season poster** as it landed: the k-th entry belongs to the
@@ -403,11 +404,13 @@ export function collectEpisodeUploads(
       );
       return;
     }
-    if (name === 'poster') {
+    let art: 'poster' | 'backdrop' | null = null;
+    if (name === 'poster' || name === 'backdrop') {
       if (!isImageFilename(filename)) {
-        refuse(`Not a poster image: ${JSON.stringify(filename)}`);
+        refuse(`Not a ${name} image: ${JSON.stringify(filename)}`);
         return;
       }
+      art = name;
     } else if (name === 'episodeVideo') {
       if (!isVideoFilename(filename)) {
         refuse(`Not a video file: ${JSON.stringify(filename)}`);
@@ -468,9 +471,9 @@ export function collectEpisodeUploads(
         ? uploads.folder
         : media.seasonFolder(uploads.folder, target.season);
     const stored = await media.storeUpload(folder, filename, part);
-    if (target === null) {
-      uploads.poster = stored;
-    } else {
+    if (art !== null) {
+      uploads[art] = stored;
+    } else if (target !== null) {
       target.slot(stored);
     }
   };

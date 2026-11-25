@@ -49,6 +49,10 @@ export const CARD_LABEL = 'Files';
 export const POSTER_LABEL = 'Poster';
 export const POSTER_CHOOSE = 'Choose poster image';
 
+/** The **Backdrop** slot's name, and what its picker says. */
+export const BACKDROP_LABEL = 'Backdrop';
+export const BACKDROP_CHOOSE = 'Choose backdrop image';
+
 /** The movie's video slot's name, and what its picker says. */
 export const VIDEO_LABEL = 'Video';
 export const VIDEO_CHOOSE = 'Choose video file';

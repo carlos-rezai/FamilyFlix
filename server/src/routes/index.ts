@@ -1186,6 +1186,9 @@ export function createApiRouter(
           ...(uploads.poster === undefined
             ? {}
             : { posterPath: stored(uploads.poster) }),
+          ...(uploads.backdrop === undefined
+            ? {}
+            : { backdropPath: stored(uploads.backdrop) }),
           ...(year === undefined ? {} : { year }),
           ...(endYear === undefined ? {} : { endYear }),
           ...(creator === undefined ? {} : { creator }),
@@ -1284,6 +1287,7 @@ export function createApiRouter(
         }
         const written = [
           uploads.poster,
+          uploads.backdrop,
           ...uploads.seasonPosters,
           ...uploads.episodes.flatMap((upload) =>
             upload === undefined
@@ -1356,6 +1360,8 @@ export function createApiRouter(
           cast,
           genres,
           posterPath: uploads.poster ?? onlyField(fields, 'posterPath') ?? null,
+          backdropPath:
+            uploads.backdrop ?? onlyField(fields, 'backdropPath') ?? null,
           // The **Match unlink**: a new title or year is another show to
           // TMDB, so the match goes — and the fields it filled stay.
           ...(title !== existing.title || (year ?? null) !== existing.year
@@ -1702,6 +1708,9 @@ export function createApiRouter(
       if (uploads.poster !== undefined) {
         uploads.poster = renamed.storedPath(uploads.poster);
       }
+      if (uploads.backdrop !== undefined) {
+        uploads.backdrop = renamed.storedPath(uploads.backdrop);
+      }
       for (const subtitle of subtitles) {
         subtitle.path = renamed.storedPath(subtitle.path);
       }
@@ -1735,9 +1744,11 @@ export function createApiRouter(
         ...video,
         // No poster part is a film with no artwork, which is a normal row:
         // `poster_path` stays null and the card draws its gradient. No
-        // backdrop is written either — the form does not collect one, and the
-        // detail page falls back to the same gradient.
+        // backdrop part is the same: the detail page falls back to it too.
         ...(uploads.poster === undefined ? {} : { posterPath: uploads.poster }),
+        ...(uploads.backdrop === undefined
+          ? {}
+          : { backdropPath: uploads.backdrop }),
         ...(year === undefined ? {} : { year }),
         ...(runtimeMinutes === null ? {} : { runtimeMinutes }),
         ...(videoQuality === null ? {} : { videoQuality }),
@@ -1861,6 +1872,7 @@ export function createApiRouter(
         for (const written of [
           uploads.video,
           uploads.poster,
+          uploads.backdrop,
           ...uploads.subtitles,
         ]) {
           if (written !== undefined) {
@@ -1906,6 +1918,8 @@ export function createApiRouter(
       }
       const posterPath =
         uploads.poster ?? onlyField(fields, 'posterPath') ?? null;
+      const backdropPath =
+        uploads.backdrop ?? onlyField(fields, 'backdropPath') ?? null;
 
       // The tracks, paired by the body reader: a path here is a **Stored
       // path** the library already holds, and a part is a track the maintainer
@@ -1957,6 +1971,7 @@ export function createApiRouter(
           genres,
           videoPath,
           posterPath,
+          backdropPath,
           subtitles,
           ...(reserved === null ? {} : { mediaFolder: basename(reserved) }),
         });
@@ -2005,6 +2020,15 @@ export function createApiRouter(
           // a stranded file is the smaller harm against a lost correction.
           media.removeFile(superseded);
         }
+      }
+      // The **Backdrop** is the one art slot whose emptying authorises the
+      // unlink too: its file is no row's once the column lets go of it.
+      if (
+        existing.backdropPath !== null &&
+        existing.backdropPath !== '' &&
+        existing.backdropPath !== backdropPath
+      ) {
+        media.removeFile(existing.backdropPath);
       }
     }
   );

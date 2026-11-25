@@ -79,12 +79,14 @@ export interface MovieFormValues {
    * empty one is a complete answer. `poster_path` is nullable, a film the
    * maintainer has no artwork to hand for still belongs in the library, and its
    * card draws the gradient `gradientFromId` already gives it.
-   *
-   * There is no backdrop beside it, and that is not a slot missing: the form
-   * collects the one image a maintainer actually has, and the detail page falls
-   * back to the same gradient for the one it does not.
    */
   poster: MovieFormFile | null;
+  /**
+   * The **Backdrop**, the poster's word for word: `null` is an empty slot and
+   * a complete answer, the detail page falling back to the same gradient. A
+   * Resolve draws no slot for it, so it stays `null` there.
+   */
+  backdrop: MovieFormFile | null;
   /**
    * The genres picked, by name, **in the order they were picked** — not the
    * pool's order. `genres[0]` is the primary tag the repository has preserved

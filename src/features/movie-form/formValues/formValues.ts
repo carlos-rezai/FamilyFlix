@@ -156,6 +156,7 @@ export function movieFormValues(movie: Movie): MovieFormValues {
     rating: toRatingPercent(movie.rating),
     video: storedFile(movie.videoPath),
     poster: storedFile(movie.posterPath),
+    backdrop: storedFile(movie.backdropPath),
     // In track order, so the rows are listed in the order the family
     // already has.
     subtitles: inTrackOrder(movie.subtitles).map((track) => ({
@@ -188,6 +189,7 @@ export function seriesFormValues({ series }: SeriesDetail): MovieFormValues {
     rating: toRatingPercent(series.rating),
     video: null,
     poster: storedFile(series.posterPath),
+    backdrop: storedFile(series.backdropPath),
     subtitles: [],
   };
 }
@@ -410,6 +412,8 @@ export function problemFormValues(
           ? foundFile(files.videos[0])
           : null,
     poster: files.poster === undefined ? null : foundFile(files.poster),
+    // A Resolve draws no backdrop slot.
+    backdrop: null,
     // In the folder's order, which is the order the run would have stored
     // them in — and each in the language the scan read off its name.
     subtitles: files.subtitles.map((track, index) => ({
@@ -524,6 +528,7 @@ export function movieFormData(
 
   appendFile(body, 'video', values.video);
   appendFile(body, 'poster', values.poster);
+  appendFile(body, 'backdrop', values.backdrop);
 
   for (const subtitle of values.subtitles) {
     body.append('subtitleLanguage', subtitle.language);
@@ -583,6 +588,7 @@ export function seriesFormData(
     // found one.
     body.append('posterPath', values.poster.path);
   }
+  appendFile(body, 'backdrop', values.backdrop);
 
   for (const row of episodes) {
     const subtitles = row.subtitles.filter(

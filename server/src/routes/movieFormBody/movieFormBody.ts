@@ -44,6 +44,9 @@ export interface Uploads {
   /** The **Stored path** of the poster this request wrote, if it wrote one. */
   poster?: string;
 
+  /** The **Stored path** of the backdrop this request wrote, if it wrote one. */
+  backdrop?: string;
+
   /**
    * The tracks this request wrote, in the order their **parts arrived** —
    * which is the order they are stored in, because `position` is what
@@ -61,6 +64,9 @@ export interface Uploads {
 
   /** The name of a poster part this route will not store, if one arrived. */
   rejectedPoster?: string;
+
+  /** The name of a backdrop part this route will not store, if one arrived. */
+  rejectedBackdrop?: string;
 
   /** The name of a subtitle part this route will not store, if one arrived. */
   rejectedSubtitle?: string;
@@ -89,7 +95,12 @@ export function collectUploads(
   const onFile: OnFilePart = async (name, filename, part, before) => {
     // Every other part is drained rather than stored: a part these routes do
     // not know about is not a reason to refuse the save.
-    if (name !== 'video' && name !== 'poster' && name !== 'subtitle') {
+    if (
+      name !== 'video' &&
+      name !== 'poster' &&
+      name !== 'backdrop' &&
+      name !== 'subtitle'
+    ) {
       part.resume();
       return;
     }
@@ -100,6 +111,13 @@ export function collectUploads(
     if (name === 'poster' && !isImageFilename(filename)) {
       part.resume();
       uploads.rejectedPoster = filename;
+      return;
+    }
+
+    // The backdrop is the poster's word for word.
+    if (name === 'backdrop' && !isImageFilename(filename)) {
+      part.resume();
+      uploads.rejectedBackdrop = filename;
       return;
     }
 
@@ -123,6 +141,8 @@ export function collectUploads(
       uploads.video = stored;
     } else if (name === 'poster') {
       uploads.poster = stored;
+    } else if (name === 'backdrop') {
+      uploads.backdrop = stored;
     } else {
       uploads.subtitles[slot] = stored;
     }
@@ -232,6 +252,12 @@ export function readMovieFields(
   if (uploads.rejectedPoster !== undefined) {
     return refuse(
       `Not a poster image: ${JSON.stringify(uploads.rejectedPoster)}`
+    );
+  }
+
+  if (uploads.rejectedBackdrop !== undefined) {
+    return refuse(
+      `Not a backdrop image: ${JSON.stringify(uploads.rejectedBackdrop)}`
     );
   }
 

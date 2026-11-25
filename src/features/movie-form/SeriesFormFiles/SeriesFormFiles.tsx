@@ -12,6 +12,8 @@ import { formatEpisodeTag } from '@/utils';
 
 import {
   CARD_LABEL,
+  BACKDROP_CHOOSE,
+  BACKDROP_LABEL,
   POSTER_ACCEPT,
   POSTER_CHOOSE,
   POSTER_LABEL,
@@ -83,6 +85,15 @@ export interface SeriesFormFilesProps {
   /** Reports that the poster slot's ✕ was pressed. */
   onRemovePoster: () => void;
   /**
+   * What is in the **Backdrop** slot, `null` while it is empty; omitted, the
+   * card draws no backdrop slot, as on a Resolve.
+   */
+  backdrop?: MovieFormFile | null;
+  /** Reports the backdrop the maintainer picked. */
+  onPickBackdrop?: (file: File) => void;
+  /** Reports that the backdrop slot's ✕ was pressed. */
+  onRemoveBackdrop?: () => void;
+  /**
    * One slot per **Season** the episode rows hold, in the order drawn — none
    * draws no list.
    */
@@ -143,16 +154,19 @@ export interface SeriesFormFilesProps {
 /**
  * The Files card of the **Movie form** on the series kind —
  * `MovieFormFiles`' shape for a **Series**: the _Files_ caption, the Poster
- * slot, the _Season posters_ list under it — one slot per **Season** the rows
- * hold, labelled `S01`, `S02`… — and the _Episodes_ label the **Episode file
- * rows** sit beside. No
- * video slot — a series' videos are its episodes' — no subtitle list of its
- * own, and no backdrop slot.
+ * slot, the **Backdrop** slot under it (none on a Resolve), the _Season
+ * posters_ list (one slot per **Season** the rows hold, labelled `S01`,
+ * `S02`…) and the _Episodes_ label the **Episode file rows** sit beside. No
+ * video slot (a series' videos are its episodes') and no subtitle list of
+ * its own.
  */
 export function SeriesFormFiles({
   poster,
   onPickPoster,
   onRemovePoster,
+  backdrop,
+  onPickBackdrop,
+  onRemoveBackdrop,
   seasonPosters,
   onPickSeasonPoster,
   onRemoveSeasonPoster,
@@ -187,6 +201,17 @@ export function SeriesFormFiles({
         onPick={onPickPoster}
         onRemove={onRemovePoster}
       />
+      {backdrop !== undefined && (
+        <FileField
+          label={BACKDROP_LABEL}
+          chooseLabel={BACKDROP_CHOOSE}
+          filename={backdrop?.filename}
+          accept={POSTER_ACCEPT}
+          icon={<ImageIcon size={16} />}
+          onPick={(file) => onPickBackdrop?.(file)}
+          onRemove={() => onRemoveBackdrop?.()}
+        />
+      )}
       {seasonPosters.length > 0 && (
         <SeasonPosters role="group" aria-labelledby={SEASON_POSTERS_LABEL_ID}>
           <SeasonPostersLabel id={SEASON_POSTERS_LABEL_ID}>

@@ -8,6 +8,8 @@ import {
 
 import {
   CARD_LABEL,
+  BACKDROP_CHOOSE,
+  BACKDROP_LABEL,
   POSTER_ACCEPT,
   POSTER_CHOOSE,
   POSTER_LABEL,
@@ -49,6 +51,15 @@ export interface MovieFormFilesProps {
   onPickPoster: (file: File) => void;
   /** Reports that the poster slot's ✕ was pressed. */
   onRemovePoster: () => void;
+  /**
+   * What is in the **Backdrop** slot, `null` while it is empty; omitted, the
+   * card draws no backdrop slot, as on a Resolve.
+   */
+  backdrop?: MovieFormFile | null;
+  /** Reports the backdrop the maintainer picked. */
+  onPickBackdrop?: (file: File) => void;
+  /** Reports that the backdrop slot's ✕ was pressed. */
+  onRemoveBackdrop?: () => void;
   /** The tracks attached so far, in the order they will be stored in. */
   subtitles: MovieFormSubtitle[];
   /** Reports the track that was picked — the `File` itself. What language it
@@ -62,8 +73,8 @@ export interface MovieFormFilesProps {
 
 /**
  * The Files card of the **Movie form**: the panel the prototype draws under the
- * metadata fields, with the video slot, the poster slot and the subtitle list
- * in it.
+ * metadata fields, with the video slot, the poster slot, the **Backdrop** slot
+ * (none on a Resolve) and the subtitle list in it.
  *
  * A feature sibling rather than a molecule, on the player's shape — the organism
  * owns the values and this draws what it is told. It knows which slots a
@@ -91,6 +102,9 @@ export function MovieFormFiles({
   poster,
   onPickPoster,
   onRemovePoster,
+  backdrop,
+  onPickBackdrop,
+  onRemoveBackdrop,
   subtitles,
   onAddSubtitle,
   onChangeSubtitleLanguage,
@@ -126,6 +140,17 @@ export function MovieFormFiles({
         onPick={onPickPoster}
         onRemove={onRemovePoster}
       />
+      {backdrop !== undefined && (
+        <FileField
+          label={BACKDROP_LABEL}
+          chooseLabel={BACKDROP_CHOOSE}
+          filename={backdrop?.filename}
+          accept={POSTER_ACCEPT}
+          icon={<ImageIcon size={16} />}
+          onPick={(file) => onPickBackdrop?.(file)}
+          onRemove={() => onRemoveBackdrop?.()}
+        />
+      )}
       <Subtitles>
         <SubtitlesLabel>{SUBTITLES_LABEL}</SubtitlesLabel>
         <Tracks>

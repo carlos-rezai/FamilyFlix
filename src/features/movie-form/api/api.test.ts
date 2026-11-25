@@ -91,6 +91,7 @@ function typed(values: Partial<MovieFormValues> = {}): MovieFormValues {
     // what every test above this slice is about.
     video: null,
     poster: null,
+    backdrop: null,
     // No tracks attached, which is a complete answer: story 64's film with no
     // subtitles is a normal row.
     subtitles: [],
@@ -837,6 +838,7 @@ const RESOLVED_VALUES: MovieFormValues = {
     path: 'C:\\Movies\\Die.Hard.1988.1080p\\poster.jpg',
     filename: 'poster.jpg',
   },
+  backdrop: null,
   subtitles: [
     {
       key: 'f1',

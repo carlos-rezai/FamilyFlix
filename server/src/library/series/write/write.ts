@@ -101,6 +101,8 @@ export interface SeriesEdit {
   rating: number | null;
   genres: string[];
   posterPath: string | null;
+  /** The series' **Backdrop**, `null` to take it away; omitted, it stays. */
+  backdropPath?: string | null;
   /** `null` is the **Match unlink**; an omitted key keeps the match. */
   tmdbId?: null;
   episodes: EpisodeEdit[];
@@ -320,6 +322,9 @@ export function createSeriesWrite(
       poster_path = @poster_path, updated_at = @updated_at
     WHERE id = @id
   `);
+  const setSeriesBackdrop = db.prepare(
+    'UPDATE series SET backdrop_path = ? WHERE id = ?'
+  );
   const clearSeriesMatch = db.prepare(
     'UPDATE series SET tmdb_id = NULL WHERE id = ?'
   );
@@ -360,6 +365,7 @@ export function createSeriesWrite(
   /** Every **Stored path** a series' rows point at. */
   const pathsOf = (series: Series, episodes: readonly Episode[]): string[] => [
     ...(series.posterPath === null ? [] : [series.posterPath]),
+    ...(series.backdropPath === null ? [] : [series.backdropPath]),
     ...episodes.flatMap((episode) => [
       // A Linked video is not a Stored path, and never the app's to remove.
       ...(episode.videoFolderId === null ? [episode.videoPath] : []),
@@ -370,7 +376,8 @@ export function createSeriesWrite(
 
   /**
    * The files to clean up after a change: each path a series pointed at
-   * `before` (once) that no row of it points at now, its own poster, its
+   * `before` (once) that no row of it points at now, its own poster and
+   * backdrop, its
    * episodes' tracks, stills and Managed videos, and its Season posters.
    */
   const removedPathsOf = (
@@ -437,6 +444,9 @@ export function createSeriesWrite(
         poster_path: edit.posterPath,
         updated_at: now,
       });
+      if (edit.backdropPath !== undefined) {
+        setSeriesBackdrop.run(edit.backdropPath, id);
+      }
       if (edit.tmdbId === null) {
         clearSeriesMatch.run(id);
       }
