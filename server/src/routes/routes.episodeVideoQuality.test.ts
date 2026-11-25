@@ -129,6 +129,7 @@ function freshApi(prober: Prober | 'none'): {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

@@ -128,6 +128,7 @@ function freshApi(episodes: string[]): {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

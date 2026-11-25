@@ -29,6 +29,7 @@ import {
   closeTracked,
   track,
 } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import {
@@ -86,6 +87,7 @@ function sandbox(): Sandbox {
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: writer,
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   return { importer, writer, root, folder: storage.addLibraryFolder(root) };
 }

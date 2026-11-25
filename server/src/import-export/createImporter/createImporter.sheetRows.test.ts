@@ -29,6 +29,7 @@ import { freshStorage } from '../../test-support/freshStorage/freshStorage';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { SERIES_FIXTURE } from '../../test-support/seriesFixture/seriesFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { LibraryStorage } from '../../library';
@@ -127,6 +128,7 @@ async function importSheet(
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
 
   await importer.start(sheetPath);

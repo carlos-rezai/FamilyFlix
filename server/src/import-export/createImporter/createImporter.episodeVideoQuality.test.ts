@@ -42,6 +42,7 @@ import {
   closeTracked,
   track,
 } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
@@ -136,6 +137,7 @@ function sandbox(prober: Prober | 'none'): Sandbox {
     playback,
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   return {
     storage,

@@ -42,6 +42,7 @@ import {
 import { heldCopy } from '../../test-support/heldCopy/heldCopy';
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportMode, ImportRun, Movie } from '@/types';
@@ -83,6 +84,7 @@ function sandbox({
     playback,
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   const folder = storage.addLibraryFolder(films);
   return { storage, db, importer, playback, media, folder };

@@ -83,6 +83,7 @@ function apiUnderDotSegment(): {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

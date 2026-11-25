@@ -35,6 +35,7 @@ import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { FIXTURE_VIDEO } from '../../test-support/fixtureVideo/fixtureVideo';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
@@ -117,6 +118,7 @@ function sandbox(cells: Cells): Sandbox {
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   const folder = storage.addLibraryFolder(root);
   return { storage, importer, folder, media, poster, backdrop, heat };

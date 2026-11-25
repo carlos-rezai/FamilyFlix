@@ -65,6 +65,7 @@ function launch(dbPath: string, media: string): Launch {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

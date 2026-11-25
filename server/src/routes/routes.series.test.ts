@@ -79,6 +79,7 @@ function freshApi(): { storage: LibraryStorage; baseUrl: string } {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

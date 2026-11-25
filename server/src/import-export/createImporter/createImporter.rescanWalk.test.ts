@@ -65,6 +65,7 @@ import {
   closeTracked,
   track,
 } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { ENRICH_FIELDS, type ImportRun } from '@/types';
@@ -155,6 +156,7 @@ function sandbox(): Sandbox {
     ),
     librarySheet: writer,
     layoutFill,
+    frameFill: idleFrameFill(),
   });
   const enrichment = createEnrichment({
     storage,

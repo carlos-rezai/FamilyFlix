@@ -84,6 +84,7 @@ function freshApi(): { baseUrl: string; film: string } {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

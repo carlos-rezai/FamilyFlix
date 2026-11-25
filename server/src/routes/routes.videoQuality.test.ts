@@ -136,6 +136,7 @@ function freshApi(component: PlaybackComponent): {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

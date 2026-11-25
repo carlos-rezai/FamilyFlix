@@ -33,6 +33,7 @@ import {
 import { createMedia, type Media } from '../../media/createMedia/createMedia';
 import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import {
@@ -101,6 +102,7 @@ function sandbox(): Sandbox {
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: writer,
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   return { storage, importer, writer, mediaDomain, media, root, exports, dir };
 }

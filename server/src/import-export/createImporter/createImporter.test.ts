@@ -93,6 +93,7 @@ import {
   libraryFixture,
 } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { LibraryStorage } from '../../library';
@@ -137,6 +138,7 @@ function sandbox({
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, media, root, sheet };
@@ -2541,6 +2543,7 @@ describe('createImporter — the importer restarting mid-run', () => {
       playback: createPlayback(media, fixedSlot(null), () => null),
       librarySheet: idleLibrarySheet(),
       layoutFill: idleLayoutFill(),
+      frameFill: idleFrameFill(),
     });
     return { storage, media, root, sheet, restarted };
   }

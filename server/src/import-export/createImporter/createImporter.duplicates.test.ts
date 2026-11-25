@@ -26,6 +26,7 @@ import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import type { ImportRun } from '@/types';
@@ -66,6 +67,7 @@ function sandbox(lines: string[]): Sandbox {
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
     layoutFill: createLayoutFill({ storage, media: mediaRoot }),
+    frameFill: idleFrameFill(),
   });
   const folder = storage.addLibraryFolder(root);
   return { importer, folder, sheet };

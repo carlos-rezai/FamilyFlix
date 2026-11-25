@@ -36,6 +36,7 @@ import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
 import { freshStorage } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
@@ -85,6 +86,7 @@ function compose(dir: string, root: string, title: string): Sandbox {
     ),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   const folder = storage.addLibraryFolder(root);
   return { storage, importer, media, folder, mediaDir, title };

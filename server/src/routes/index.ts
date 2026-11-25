@@ -792,8 +792,9 @@ const RESET_REFUSALS: Record<
  * Sync runs too, made by the composition root like every other writer.
  *
  * `frameFill` is the **Frame fill** a series add and edit start after the
- * Layout fill and do not wait for, injected so no route learns there is an
- * FFmpeg behind a Frame still.
+ * Layout fill, and a **Series Resolve** after its save, none of them waiting
+ * for it; injected so no route learns there is an FFmpeg behind a Frame
+ * still.
  *
  * All eight are required, `media` included. It used to default to the domain over
  * `mediaPath` so that a test could compose the router with three arguments —
@@ -3508,7 +3509,8 @@ export function createApiRouter(
   // `episodeVideo` part that follows its field, else its `videoPath`, which
   // here is a **Found file** under a Library folder. The importer creates the
   // series or joins the held one; the refusals are the film resolve's, plus a
-  // number the held series has.
+  // number the held series has. The **Frame fill** starts on the series
+  // answered, a join's included, and the `201` does not wait for it.
   const resolveSeries = async (
     req: Request<{ id: string }>,
     res: Response,
@@ -3555,38 +3557,39 @@ export function createApiRouter(
           : { found: posterPath };
 
     try {
-      res.status(201).json(
-        await importer.resolveSeries(id, {
-          title: read.title,
-          ...(read.year === undefined ? {} : { year: read.year }),
-          ...(read.endYear === undefined ? {} : { endYear: read.endYear }),
-          ...(read.creator === undefined ? {} : { creator: read.creator }),
-          ...(read.synopsis === undefined ? {} : { synopsis: read.synopsis }),
-          ...(read.rating === undefined ? {} : { rating: read.rating }),
-          cast: read.cast,
-          genres: read.genres,
-          poster,
-          episodes: read.episodes.map((episode) => ({
-            season: episode.season,
-            number: episode.number,
-            ...(episode.title === undefined ? {} : { title: episode.title }),
-            video: episode.freshVideo
-              ? { stored: episode.video }
-              : { found: episode.video },
-            // The held tracks an edit would send are Found files here.
-            subtitles: [
-              ...episode.heldTracks.map((track) => ({
-                file: { found: track.path },
-                language: track.language,
-              })),
-              ...episode.pickedTracks.map((track) => ({
-                file: { stored: track.path },
-                language: track.language,
-              })),
-            ],
-          })),
-        })
-      );
+      const series = await importer.resolveSeries(id, {
+        title: read.title,
+        ...(read.year === undefined ? {} : { year: read.year }),
+        ...(read.endYear === undefined ? {} : { endYear: read.endYear }),
+        ...(read.creator === undefined ? {} : { creator: read.creator }),
+        ...(read.synopsis === undefined ? {} : { synopsis: read.synopsis }),
+        ...(read.rating === undefined ? {} : { rating: read.rating }),
+        cast: read.cast,
+        genres: read.genres,
+        poster,
+        episodes: read.episodes.map((episode) => ({
+          season: episode.season,
+          number: episode.number,
+          ...(episode.title === undefined ? {} : { title: episode.title }),
+          video: episode.freshVideo
+            ? { stored: episode.video }
+            : { found: episode.video },
+          // The held tracks an edit would send are Found files here.
+          subtitles: [
+            ...episode.heldTracks.map((track) => ({
+              file: { found: track.path },
+              language: track.language,
+            })),
+            ...episode.pickedTracks.map((track) => ({
+              file: { stored: track.path },
+              language: track.language,
+            })),
+          ],
+        })),
+      });
+      // The Frame fill starts and is not waited for, as `POST /series` does.
+      void frameFill.fill(series.id);
+      res.status(201).json(series);
     } catch (error) {
       rollback();
       if (

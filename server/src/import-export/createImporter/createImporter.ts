@@ -75,6 +75,7 @@ import {
   type SheetSkip,
 } from '../readSheet/readSheet';
 import type { LayoutFill } from '../createLayoutFill/createLayoutFill';
+import type { FrameFill } from '../../enrichment/createFrameFill/createFrameFill';
 import {
   readShowFolder,
   type ShowFolderAnswer,
@@ -952,6 +953,12 @@ export interface ImporterDeps {
    * or fills, its lines the run's own.
    */
   layoutFill: LayoutFill;
+  /**
+   * The **Frame fill** a **Folder scan** starts for each show it imports or
+   * joins, right after its Layout fill, without waiting: no run line is
+   * written for it, and a sheet **Import** starts none.
+   */
+  frameFill: Pick<FrameFill, 'fill'>;
 }
 
 /**
@@ -1023,6 +1030,7 @@ export function createImporter({
   playback,
   librarySheet,
   layoutFill,
+  frameFill,
 }: ImporterDeps): Importer {
   let run: ImportRun | null = null;
   /**
@@ -2570,6 +2578,7 @@ export function createImporter({
       }
       if (seriesId !== null && verb === 'Scan') {
         await fillTitleFolder(current, seriesId);
+        void frameFill.fill(seriesId);
       }
     }
 

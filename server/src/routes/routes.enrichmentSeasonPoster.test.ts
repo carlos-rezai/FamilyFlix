@@ -150,6 +150,7 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       enrichment,
       createLayoutFill({ storage, media }),

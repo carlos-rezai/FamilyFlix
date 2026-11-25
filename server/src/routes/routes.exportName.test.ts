@@ -105,6 +105,7 @@ function freshApi(): { baseUrl: string; dir: string; destination: string } {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

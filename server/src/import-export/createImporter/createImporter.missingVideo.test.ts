@@ -45,6 +45,7 @@ import {
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { newMovie } from '../../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { ImportRun } from '@/types';
@@ -102,6 +103,7 @@ function sandbox(): Sandbox {
     playback,
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   return {
     dir,

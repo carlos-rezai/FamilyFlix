@@ -30,6 +30,7 @@ import {
 } from '../../test-support/freshStorage/freshStorage';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 
@@ -82,6 +83,7 @@ describe('createImporter — the Import phase under Link', () => {
       },
       librarySheet: idleLibrarySheet(),
       layoutFill: idleLayoutFill(),
+      frameFill: idleFrameFill(),
     });
 
     setImmediate(turn);

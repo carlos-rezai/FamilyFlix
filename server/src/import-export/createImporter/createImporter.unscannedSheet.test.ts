@@ -38,6 +38,7 @@ import {
   closeTracked,
   track,
 } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
@@ -107,6 +108,7 @@ function sandbox(): Sandbox {
     ),
     librarySheet: writer,
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   return { storage, importer, writer, mediaDomain, root, exports };
 }

@@ -30,6 +30,7 @@ import {
   closeTracked,
   track,
 } from '../../test-support/freshStorage/freshStorage';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import { LIBRARY_FIXTURE } from '../../test-support/libraryFixture/libraryFixture';
@@ -200,6 +201,7 @@ function sandbox(): Sandbox {
     ),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   storage.addLibraryFolder(root);
   return { storage, importer, dir };

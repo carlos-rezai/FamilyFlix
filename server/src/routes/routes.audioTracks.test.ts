@@ -157,6 +157,7 @@ function freshApi(probe: MediaProbe = TWO_TRACK_MKV): {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

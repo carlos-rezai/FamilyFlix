@@ -43,6 +43,7 @@ import {
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { FIXTURE_VIDEO } from '../test-support/fixtureVideo/fixtureVideo';
 import { framelessPlayback } from '../test-support/framelessPlayback/framelessPlayback';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
@@ -137,6 +138,7 @@ function freshApi() {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

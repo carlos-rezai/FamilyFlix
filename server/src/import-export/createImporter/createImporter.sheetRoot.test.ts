@@ -20,6 +20,7 @@ import { createSqliteStorage, type LibraryStorage } from '../../library';
 import { createMedia } from '../../media/createMedia/createMedia';
 import { unfittedArt } from '../../test-support/unfittedArt/unfittedArt';
 import { createPlayback } from '../../playback/createPlayback/createPlayback';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import { fixedSlot } from '../../test-support/fixedSlot/fixedSlot';
@@ -72,6 +73,7 @@ function sandbox(): Sandbox {
     playback: createPlayback(media, fixedSlot(null), () => null),
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   storage.addLibraryFolder(library);
   return { storage, importer, library, dir };

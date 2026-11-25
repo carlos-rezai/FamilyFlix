@@ -43,6 +43,7 @@ import {
 import { libraryFixture } from '../../test-support/libraryFixture/libraryFixture';
 import { sandboxRoot } from '../../test-support/sandboxRoot/sandboxRoot';
 import { seriesFixture } from '../../test-support/seriesFixture/seriesFixture';
+import { idleFrameFill } from '../../test-support/idleFrameFill/idleFrameFill';
 import { idleLayoutFill } from '../../test-support/idleLayoutFill/idleLayoutFill';
 import { idleLibrarySheet } from '../../test-support/idleLibrarySheet/idleLibrarySheet';
 import type {
@@ -93,6 +94,7 @@ function sandbox(kind: 'films' | 'shows'): Sandbox {
     playback,
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   return {
     storage,

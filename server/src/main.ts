@@ -79,7 +79,8 @@ async function start(): Promise<Started> {
   const media = createMedia(MEDIA_PATH, playback);
   // The one **Layout fill**, run after an add, an edit and a Sync.
   const layoutFill = createLayoutFill({ storage, media });
-  // The one **Frame fill**, started after a series add and edit.
+  // The one **Frame fill**, started after a series add and edit, a Folder
+  // scan's shows and a Series Resolve.
   const frameFill = createFrameFill({ storage, media, playback });
 
   // The import domain over the same library and managed directory the routes
@@ -91,6 +92,7 @@ async function start(): Promise<Started> {
     playback,
     librarySheet,
     layoutFill,
+    frameFill,
   });
   // The one domain that goes online, over the global `fetch`.
   const enrichment = createEnrichment({

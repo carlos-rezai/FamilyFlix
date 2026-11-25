@@ -165,6 +165,7 @@ async function filledApi({
     playback,
     librarySheet: idleLibrarySheet(),
     layoutFill: idleLayoutFill(),
+    frameFill: idleFrameFill(),
   });
   const tmdb = fakeTmdb();
   const enrichment = createEnrichment({

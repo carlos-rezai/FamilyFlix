@@ -132,6 +132,7 @@ function freshApi(options: { breakReads?: boolean } = {}): {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

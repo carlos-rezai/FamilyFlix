@@ -148,6 +148,7 @@ function freshApi(component: PlaybackComponent | null = null): {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       createEnrichment({
         storage,

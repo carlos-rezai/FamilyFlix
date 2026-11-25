@@ -118,6 +118,7 @@ function freshApi(tmdb: Tmdb = 'accepts'): Api {
         playback,
         librarySheet: idleLibrarySheet(),
         layoutFill: idleLayoutFill(),
+        frameFill: idleFrameFill(),
       }),
       enrichment,
       createLayoutFill({ storage, media: mediaDomain }),
