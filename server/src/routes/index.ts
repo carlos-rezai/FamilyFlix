@@ -8,6 +8,7 @@ import type {
   SeasonPosterOutcome,
   StartEnrichmentOutcome,
 } from '../enrichment/createEnrichment/createEnrichment';
+import type { FrameFill } from '../enrichment/createFrameFill/createFrameFill';
 import express, { type Request, type Response, type Router } from 'express';
 
 import type { LibraryStorage, SeriesUpdate } from '../library';
@@ -43,7 +44,6 @@ import {
   type FoundArt,
 } from '../import-export/copyFoundArt/copyFoundArt';
 import type { LayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
-import type { FrameFill } from '../enrichment/createFrameFill/createFrameFill';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
   placeFilmFolder,

@@ -10,6 +10,7 @@ import {
   resolve,
 } from 'node:path';
 
+import type { FrameFill } from '../../enrichment/createFrameFill/createFrameFill';
 import type {
   HeldTitle,
   LibraryStorage,
@@ -75,7 +76,6 @@ import {
   type SheetSkip,
 } from '../readSheet/readSheet';
 import type { LayoutFill } from '../createLayoutFill/createLayoutFill';
-import type { FrameFill } from '../../enrichment/createFrameFill/createFrameFill';
 import {
   readShowFolder,
   type ShowFolderAnswer,
@@ -964,7 +964,7 @@ export interface ImporterDeps {
    * joins, right after its Layout fill, without waiting: no run line is
    * written for it, and a sheet **Import** starts none.
    */
-  frameFill: Pick<FrameFill, 'fill'>;
+  frameFill: FrameFill;
 }
 
 /**

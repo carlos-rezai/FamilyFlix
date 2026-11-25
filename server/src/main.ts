@@ -1,10 +1,10 @@
 import express from 'express';
 
 import { createEnrichment } from './enrichment/createEnrichment/createEnrichment';
+import { createFrameFill } from './enrichment/createFrameFill/createFrameFill';
 import { createTmdbClient } from './enrichment/tmdbClient/tmdbClient';
 import { createImporter } from './import-export/createImporter/createImporter';
 import { createLayoutFill } from './import-export/createLayoutFill/createLayoutFill';
-import { createFrameFill } from './enrichment/createFrameFill/createFrameFill';
 import { createLibrarySheet } from './import-export/createLibrarySheet/createLibrarySheet';
 import { createSqliteStorage } from './library';
 import { createArtSweep } from './media/createArtSweep/createArtSweep';
