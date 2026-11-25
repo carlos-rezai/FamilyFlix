@@ -26,6 +26,13 @@ export interface CopiedArt {
   seasonPosters: SeasonPosterPath[];
 }
 
+/** Nothing copied: no Poster, no Backdrop, no Season poster. */
+export const NO_COPIED_ART: Readonly<CopiedArt> = {
+  poster: null,
+  backdrop: null,
+  seasonPosters: [],
+};
+
 /**
  * A title's found **Poster** and **Backdrop** copied with `Media.copyIn` into
  * the **Media folder** `folder`'s root, and each found **Season poster** into

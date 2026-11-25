@@ -38,6 +38,7 @@ import {
 } from '../import-export/copyFoundEpisodes/copyFoundEpisodes';
 import {
   copyFoundArt,
+  NO_COPIED_ART,
   type CopiedArt,
   type FoundArt,
 } from '../import-export/copyFoundArt/copyFoundArt';
@@ -1215,11 +1216,7 @@ export function createApiRouter(
     // Each **Found file** is copied into its season — a copy that breaks is
     // the save's failure, and takes the folder with it.
     let copied: CopiedEpisode[];
-    let copiedArt: CopiedArt = {
-      poster: null,
-      backdrop: null,
-      seasonPosters: [],
-    };
+    let copiedArt: CopiedArt = NO_COPIED_ART;
     try {
       copied = await copyFoundEpisodes(
         media,
@@ -1848,11 +1845,7 @@ export function createApiRouter(
     // so its **Stored path** is final. A copy that breaks is the save's
     // failure, and takes the folder with it.
     const subtitles: NewSubtitle[] = [];
-    let copiedArt: CopiedArt = {
-      poster: null,
-      backdrop: null,
-      seasonPosters: [],
-    };
+    let copiedArt: CopiedArt = NO_COPIED_ART;
     try {
       if (uploads.folder !== null) {
         const folder = uploads.folder;
