@@ -13,6 +13,7 @@
 // Composed over a real in-memory SQLite library, a real `Media` over a
 // sandbox media root, and `fakeTmdb`: no test here goes online.
 
+import { readdirSync } from 'node:fs';
 import { posix } from 'node:path';
 import { Readable } from 'node:stream';
 import { describe, expect, it } from 'vitest';
@@ -97,10 +98,8 @@ const ON_DISK = [
 function world(client: FakeTmdb = knowsTheShow()) {
   const storage = freshStorage();
   storage.setTmdbKey(KEY);
-  const media = createMedia(
-    sandboxRoot('familyflix-enrich-season-choices-'),
-    unfittedArt()
-  );
+  const root = sandboxRoot('familyflix-enrich-season-choices-');
+  const media = createMedia(root, unfittedArt());
   const enrichment = createEnrichment({
     storage,
     client,
@@ -131,7 +130,7 @@ function world(client: FakeTmdb = knowsTheShow()) {
     return { id: series.id, folder: posix.dirname(posix.dirname(video)) };
   }
 
-  return { storage, client, enrichment, addShow };
+  return { storage, client, enrichment, root, addShow };
 }
 
 type Enrichment = ReturnType<typeof world>['enrichment'];
@@ -260,5 +259,21 @@ describe('createEnrichment: a library-wide run carries no Season choices', () =>
     expect(run.enriched).toBe(1);
     expect(run.seasons).toBeUndefined();
     expect(client.seriesImages).not.toHaveBeenCalled();
+  });
+});
+
+describe('createEnrichment: a Season choice on a series gone since its review opened', () => {
+  it('answers not-found, and the media root holds no new folder', async () => {
+    const { storage, enrichment, root, addShow } = world();
+    const { id } = await addShow();
+    await syncTheSeries(enrichment, id);
+    // Deleted from Manage library while its review is open.
+    storage.deleteSeries(id);
+    const before = readdirSync(root).sort();
+
+    const outcome = await enrichment.chooseSeasonPoster(1, '/s01-1.jpg');
+
+    expect(outcome).toEqual({ kind: 'not-found' });
+    expect(readdirSync(root).sort()).toEqual(before);
   });
 });

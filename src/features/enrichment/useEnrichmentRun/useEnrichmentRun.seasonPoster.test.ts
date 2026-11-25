@@ -298,6 +298,44 @@ describe('useEnrichmentRun: seasonRefused, the Poster refusal', () => {
     expect(result.current.seasonRefused(2)).toBe(false);
   });
 
+  it('forgets every refused season once the run is cancelled and started again', async () => {
+    const { result } = await mountHeld();
+    act(() => {
+      void result.current
+        .chooseSeasonPoster(1, '/s01-a.jpg')
+        .catch(() => undefined);
+    });
+    await answer(serverErrorResponse());
+    await elapse(1_000);
+    expect(result.current.seasonRefused(1)).toBe(true);
+
+    fetchMock.mockImplementation((input, init) => {
+      const url = String(input);
+      const method = (init?.method ?? 'GET').toUpperCase();
+      if (url.endsWith('/api/enrichment/current/cancel') && method === 'POST') {
+        return Promise.resolve(okResponse({}));
+      }
+      if (url.endsWith('/api/enrichment') && method === 'POST') {
+        return Promise.resolve(okResponse(inReview()));
+      }
+      return Promise.reject(new Error(`Unexpected request: ${url}`));
+    });
+    act(() => {
+      result.current.cancel();
+    });
+    await act(async () => {
+      await result.current.start({
+        scope: 'single',
+        seriesId: 's1',
+        fields: ['poster'],
+      });
+    });
+    await elapse(1_000);
+
+    expect(result.current.run).toEqual(inReview());
+    expect(result.current.seasonRefused(1)).toBe(false);
+  });
+
   it('leaves another season untouched, refused or pressed', async () => {
     const { result } = await mountHeld();
     act(() => {
