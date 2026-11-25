@@ -164,7 +164,8 @@ export interface EnrichmentRunState {
  *
  * A refused Season choice is remembered under its season and answered as
  * `seasonRefused(season)`, the **Poster refusal** the card draws; sending
- * that season again forgets it, and no other season is touched.
+ * that season again forgets it, and no other season is touched. A start or a
+ * cancel forgets every one, as it drops the run.
  */
 export function useEnrichmentRun(
   title: TitleReference | null
@@ -182,6 +183,8 @@ export function useEnrichmentRun(
   const [attaching, setAttaching] = useState(true);
   /** Bumped by every start and cancel, so a read from before either is stale. */
   const generation = useRef(0);
+  /** The seasons whose last Season choice was refused; a start or cancel forgets them. */
+  const [refused, setRefused] = useState<ReadonlySet<number>>(() => new Set());
 
   useEffect(() => {
     let left = false;
@@ -210,6 +213,7 @@ export function useEnrichmentRun(
   const start = useCallback(
     async (options: StartEnrichment) => {
       generation.current += 1;
+      setRefused(new Set());
       const held = await runStart(async () => {
         try {
           return await startEnrichment(options);
@@ -232,6 +236,7 @@ export function useEnrichmentRun(
 
   const cancel = useCallback(() => {
     generation.current += 1;
+    setRefused(new Set());
     setRun(null);
     setWaiting(null);
     cancelEnrichment().catch(() => {
@@ -246,7 +251,6 @@ export function useEnrichmentRun(
     (season: number) => seasonPhaseOf(String(season)),
     [seasonPhaseOf]
   );
-  const [refused, setRefused] = useState<ReadonlySet<number>>(() => new Set());
   const seasonRefused = useCallback(
     (season: number) =>
       refused.has(season) && seasonPhaseOf(String(season)) === 'idle',

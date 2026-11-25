@@ -900,6 +900,9 @@ export function createEnrichment({
     if (!held.choices.some((choice) => choice.path === path)) {
       return { kind: 'not-offered' };
     }
+    // A series deleted while its review is open: no run holds that season.
+    const show = storage.getSeries(seriesId);
+    if (show === null) return { kind: 'not-found' };
     const image = await client.image(path);
     if (image.kind !== 'ok') return { kind: 'unreachable' };
     // Never the held poster's own name: the same name is the same url, and
@@ -913,12 +916,7 @@ export function createEnrichment({
       previous !== null && posix.basename(previous) === `${tag}-poster.jpg`
         ? `${tag}-poster-2.jpg`
         : `${tag}-poster.jpg`;
-    const show = storage.getSeries(seriesId);
-    const folder = lateReserve({ storage, media }, 'series', {
-      id: seriesId,
-      title: show?.title ?? '',
-      year: show?.year ?? null,
-    });
+    const folder = lateReserve({ storage, media }, 'series', show);
     let stored: string;
     try {
       stored = await media.storeNamed(folder(), free, image.value);
