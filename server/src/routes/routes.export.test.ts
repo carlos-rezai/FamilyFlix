@@ -58,6 +58,7 @@ import { libraryFixture } from '../test-support/libraryFixture/libraryFixture';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { EXPORT_FORMATS, SHEET_COLUMNS } from '@/types';
 import type {
@@ -127,7 +128,8 @@ function freshApi(): {
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       }),
-      createLayoutFill({ storage, media: mediaDomain })
+      createLayoutFill({ storage, media: mediaDomain }),
+      idleFrameFill()
     )
   );
 

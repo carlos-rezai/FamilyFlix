@@ -91,6 +91,7 @@ import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { newMovie } from '../test-support/newMovie/newMovie';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import {
   DEFAULT_SUBTITLE_LANGUAGE,
@@ -189,7 +190,8 @@ function freshApi({
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       }),
-      createLayoutFill({ storage, media: mediaDomain })
+      createLayoutFill({ storage, media: mediaDomain }),
+      idleFrameFill()
     )
   );
 
@@ -1223,8 +1225,9 @@ describe('POST /api/playback/component — the pair goes live', () => {
     // argument here would be a second resolution of the component, and the
     // report and pressing Play could then disagree. (The sixth the router does
     // take is the `enrichment/` domain, issue #203 — not the component; the
-    // seventh is the Layout fill, issue #545.)
-    expect(createApiRouter).toHaveLength(7);
+    // seventh is the Layout fill, issue #545; the eighth the Frame fill,
+    // issue #720.)
+    expect(createApiRouter).toHaveLength(8);
 
     const { baseUrl } = freshApi({ slot: uploadableSlot().slot });
 
@@ -1409,8 +1412,8 @@ describe('POST /api/playback/component — what the router was composed with', (
     // resolution of the component, and the report and pressing Play could
     // then disagree. (The sixth the router does take is the `enrichment/`
     // domain, issue #203 — not the component; the seventh is the Layout fill,
-    // issue #545.)
-    expect(createApiRouter).toHaveLength(7);
+    // issue #545; the eighth the Frame fill, issue #720.)
+    expect(createApiRouter).toHaveLength(8);
   });
 });
 

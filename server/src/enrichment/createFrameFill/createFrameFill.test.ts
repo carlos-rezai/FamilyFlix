@@ -261,11 +261,13 @@ describe('createFrameFill: every episode with no Still', () => {
       reason: 'no-component',
     }));
     const id = addShow('The Hollow Coast', [[1, 1]]);
+    // What `addSeries` derived from the videos' paths; no reserve records one.
+    const recorded = storage.mediaFolderOf('series', id);
 
     await frameFill.fill(id);
 
     expect(foldersUnder(root)).toEqual([]);
-    expect(storage.mediaFolderOf('series', id)).toBeNull();
+    expect(storage.mediaFolderOf('series', id)).toBe(recorded);
   });
 });
 

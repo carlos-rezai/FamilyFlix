@@ -43,6 +43,7 @@ import {
 } from '../test-support/fixtureVideo/fixtureVideo';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import type { EpisodeRead } from '@/types';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
@@ -101,7 +102,8 @@ function freshApi(): Api {
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       }),
-      createLayoutFill({ storage, media: mediaDomain })
+      createLayoutFill({ storage, media: mediaDomain }),
+      idleFrameFill()
     )
   );
   const server = app.listen(0);

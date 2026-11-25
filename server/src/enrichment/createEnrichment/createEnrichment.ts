@@ -58,6 +58,7 @@ import {
   seriesEnrichment,
 } from '../plannedEnrichment/plannedEnrichment';
 import { searchLadder, type SearchRung } from '../searchLadder/searchLadder';
+import { takeFrameStill } from '../takeFrameStill/takeFrameStill';
 import type {
   TmdbClient,
   TmdbMovieDetail,
@@ -659,24 +660,35 @@ export function createEnrichment({
       );
       // The held **Frame still** TMDB's still replaces, once it is written.
       let replacedFrame: string | null = null;
-      if (still !== null) {
+      if (still?.kind === 'frame') {
+        const taken = await takeFrameStill(
+          { playback, media },
+          { ...episode, season: seasonNumber },
+          seriesFolder,
+          signal
+        );
+        if (signal.aborted) return;
+        const { mark } = STILL_KINDS.frame;
+        if (taken.kind === 'stored') {
+          enrichment.stillPath = taken.stored;
+          enrichment.stillSource = 'frame';
+          log(current, `${mark} ${taken.name}  →  ${taken.stored}`, 'scan');
+        } else if (taken.kind === 'none' && taken.reason !== 'aborted') {
+          // The gradient stays, but the log says why (issue #390).
+          const stem = posix.basename(
+            episode.videoPath,
+            posix.extname(episode.videoPath)
+          );
+          const words = taken.reason.replace('-', ' ');
+          log(current, `${mark} ${stem}  no frame: ${words}`, 'scan');
+        }
+        // A still that cannot be stored leaves the gradient drawn.
+      } else if (still?.kind === 'tmdb') {
         const stem = posix.basename(
           episode.videoPath,
           posix.extname(episode.videoPath)
         );
-        let picture: Readable | null;
-        if (still.kind === 'tmdb') {
-          picture = await tmdbStill(still.path, signal);
-        } else {
-          const outcome = await playback.frame(episode, signal);
-          picture = outcome.kind === 'frame' ? outcome.picture : null;
-          if (outcome.kind === 'none' && outcome.reason !== 'aborted') {
-            // The gradient stays, but the log says why (issue #390).
-            const words = outcome.reason.replace('-', ' ');
-            const { mark } = STILL_KINDS.frame;
-            log(current, `${mark} ${stem}  no frame: ${words}`, 'scan');
-          }
-        }
+        const picture = await tmdbStill(still.path, signal);
         if (signal.aborted) return;
         if (picture !== null) {
           const { suffix, mark } = STILL_KINDS[still.kind];
@@ -688,7 +700,7 @@ export function createEnrichment({
               picture,
               seasonNumber
             );
-            if (still.kind === 'tmdb') replacedFrame = still.replaces;
+            replacedFrame = still.replaces;
             enrichment.stillPath = stored;
             enrichment.stillSource = still.kind;
             log(current, `${mark} ${name}  →  ${stored}`, 'scan');

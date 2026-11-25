@@ -4,6 +4,7 @@ import { createEnrichment } from './enrichment/createEnrichment/createEnrichment
 import { createTmdbClient } from './enrichment/tmdbClient/tmdbClient';
 import { createImporter } from './import-export/createImporter/createImporter';
 import { createLayoutFill } from './import-export/createLayoutFill/createLayoutFill';
+import { createFrameFill } from './enrichment/createFrameFill/createFrameFill';
 import { createLibrarySheet } from './import-export/createLibrarySheet/createLibrarySheet';
 import { createSqliteStorage } from './library';
 import { createArtSweep } from './media/createArtSweep/createArtSweep';
@@ -78,6 +79,8 @@ async function start(): Promise<Started> {
   const media = createMedia(MEDIA_PATH, playback);
   // The one **Layout fill**, run after an add, an edit and a Sync.
   const layoutFill = createLayoutFill({ storage, media });
+  // The one **Frame fill**, started after a series add and edit.
+  const frameFill = createFrameFill({ storage, media, playback });
 
   // The import domain over the same library and managed directory the routes
   // write through, so an imported film is a hand-added one to every read in
@@ -114,7 +117,8 @@ async function start(): Promise<Started> {
       media,
       importer,
       enrichment,
-      layoutFill
+      layoutFill,
+      frameFill
     )
   );
   mountRenderer(app, RENDERER_PATH);

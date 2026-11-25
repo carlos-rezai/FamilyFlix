@@ -41,6 +41,7 @@ import type { MediaProbe } from '../playback/probe/probe';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { closeTracked, track } from '../test-support/freshStorage/freshStorage';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
@@ -136,7 +137,8 @@ function freshApi(prober: Prober | 'none'): {
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       }),
-      createLayoutFill({ storage, media: mediaDomain })
+      createLayoutFill({ storage, media: mediaDomain }),
+      idleFrameFill()
     )
   );
   const server = app.listen(0);

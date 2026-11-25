@@ -50,6 +50,7 @@ import {
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
@@ -151,7 +152,8 @@ async function freshApi(client: FakeTmdb = knowsTheShow()) {
         layoutFill: idleLayoutFill(),
       }),
       enrichment,
-      createLayoutFill({ storage, media })
+      createLayoutFill({ storage, media }),
+      idleFrameFill()
     )
   );
   const server = app.listen(0);

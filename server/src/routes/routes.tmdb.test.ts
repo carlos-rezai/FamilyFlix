@@ -36,6 +36,7 @@ import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { createLayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 
@@ -119,7 +120,8 @@ function freshApi(tmdb: Tmdb = 'accepts'): Api {
         layoutFill: idleLayoutFill(),
       }),
       enrichment,
-      createLayoutFill({ storage, media: mediaDomain })
+      createLayoutFill({ storage, media: mediaDomain }),
+      idleFrameFill()
     )
   );
 

@@ -42,6 +42,7 @@ import {
   type FoundArt,
 } from '../import-export/copyFoundArt/copyFoundArt';
 import type { LayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
+import type { FrameFill } from '../enrichment/createFrameFill/createFrameFill';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
   placeFilmFolder,
@@ -790,7 +791,11 @@ const RESET_REFUSALS: Record<
  * injected so the router writes into a Library folder through the one the
  * Sync runs too, made by the composition root like every other writer.
  *
- * All seven are required, `media` included. It used to default to the domain over
+ * `frameFill` is the **Frame fill** a series add and edit start after the
+ * Layout fill and do not wait for, injected so no route learns there is an
+ * FFmpeg behind a Frame still.
+ *
+ * All eight are required, `media` included. It used to default to the domain over
  * `mediaPath` so that a test could compose the router with three arguments —
  * which made it a seam pointed at the tests rather than at the app, and left two
  * places able to decide what the router is made of. `playback`, the seam this
@@ -804,7 +809,8 @@ export function createApiRouter(
   media: Media,
   importer: Importer,
   enrichment: Enrichment,
-  layoutFill: LayoutFill
+  layoutFill: LayoutFill,
+  frameFill: FrameFill
 ): Router {
   const router = express.Router();
 
@@ -1276,6 +1282,7 @@ export function createApiRouter(
         )
       );
       await fillAfterSave(series.id);
+      void frameFill.fill(series.id);
       res.status(201).json(series);
     } catch {
       rollback();
@@ -1466,6 +1473,7 @@ export function createApiRouter(
 
       storage.leaveOut(removedVideos);
       await fillAfterSave(outcome.series.id);
+      void frameFill.fill(outcome.series.id);
       res.json(outcome.series);
 
       // Only a commit authorises the unlink: what no row points at any more.

@@ -27,6 +27,7 @@ import { createMedia } from '../media/createMedia/createMedia';
 import { createPlayback } from '../playback/createPlayback/createPlayback';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { sandboxRoot } from '../test-support/sandboxRoot/sandboxRoot';
@@ -91,7 +92,8 @@ function freshApi(): { baseUrl: string; film: string } {
         playback,
         layoutFill: createLayoutFill({ storage, media: mediaDomain }),
       }),
-      createLayoutFill({ storage, media: mediaDomain })
+      createLayoutFill({ storage, media: mediaDomain }),
+      idleFrameFill()
     )
   );
   const server = app.listen(0);

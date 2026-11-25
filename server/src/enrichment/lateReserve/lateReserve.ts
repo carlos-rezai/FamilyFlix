@@ -20,7 +20,13 @@ export interface ReservedTitle {
  * makes no folder. It throws whatever `reserveFolder` throws.
  */
 export function lateReserve(
-  { storage, media }: { storage: LibraryStorage; media: Media },
+  {
+    storage,
+    media,
+  }: {
+    storage: Pick<LibraryStorage, 'mediaFolderOf' | 'recordMediaFolder'>;
+    media: Media;
+  },
   kind: 'movie' | 'series',
   { id, title, year }: ReservedTitle
 ): () => string {

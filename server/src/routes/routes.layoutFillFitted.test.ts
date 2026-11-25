@@ -37,6 +37,7 @@ import { mediaFilePath } from '../playback/mediaFilePath/mediaFilePath';
 import { fixedSlot } from '../test-support/fixedSlot/fixedSlot';
 import { FIXTURE_VIDEO } from '../test-support/fixtureVideo/fixtureVideo';
 import { idleLayoutFill } from '../test-support/idleLayoutFill/idleLayoutFill';
+import { idleFrameFill } from '../test-support/idleFrameFill/idleFrameFill';
 import { idleLibrarySheet } from '../test-support/idleLibrarySheet/idleLibrarySheet';
 import { offlineTmdb } from '../test-support/offlineTmdb/offlineTmdb';
 import { jpegBytes } from '../test-support/pictureBytes/pictureBytes';
@@ -105,7 +106,8 @@ function freshApi() {
         playback,
         layoutFill,
       }),
-      layoutFill
+      layoutFill,
+      idleFrameFill()
     )
   );
   const server = app.listen(0);
