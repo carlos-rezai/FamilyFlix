@@ -350,6 +350,18 @@
                   on-remove="{{ form.removePoster }}"
                   hint-size="100%,42px"
                 ></dc-import>
+                <!-- Backdrop (log 76): directly under Poster, both kinds, the add and the edit, never a
+                     Resolve. mol.FileField as Poster; filled, the file's name and ✕ to remove. -->
+                <dc-import
+                  name="mol.FileField"
+                  label="Backdrop"
+                  filename="{{ form.backdrop }}"
+                  choose-label="Choose backdrop image"
+                  icon="poster"
+                  on-pick="{{ form.pickBackdrop }}"
+                  on-remove="{{ form.removeBackdrop }}"
+                  hint-size="100%,42px"
+                ></dc-import>
 
                 <div style="display: flex; gap: 12px">
                   <div
@@ -448,6 +460,18 @@
                   icon="poster"
                   on-pick="{{ form.pickPoster }}"
                   on-remove="{{ form.removePoster }}"
+                  hint-size="100%,42px"
+                ></dc-import>
+                <!-- Backdrop (log 76): directly under Poster, both kinds, the add and the edit, never a
+                     Resolve. mol.FileField as Poster; filled, the file's name and ✕ to remove. -->
+                <dc-import
+                  name="mol.FileField"
+                  label="Backdrop"
+                  filename="{{ form.backdrop }}"
+                  choose-label="Choose backdrop image"
+                  icon="poster"
+                  on-pick="{{ form.pickBackdrop }}"
+                  on-remove="{{ form.removeBackdrop }}"
                   hint-size="100%,42px"
                 ></dc-import>
 

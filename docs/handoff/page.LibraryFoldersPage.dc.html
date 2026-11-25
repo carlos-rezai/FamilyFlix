@@ -300,19 +300,45 @@
                     "
                     >What the scanner accepts</span
                   >
+                  <!-- The examples (log 76): a film and a series side by side, each in the shapes'
+                       face, nested lines indented two spaces. -->
+                  <span style="display: flex; gap: 32px; flex-wrap: wrap">
+                    <span
+                      style="
+                        display: block;
+                        font-family: var(--font-mono);
+                        font-size: 12px;
+                        color: var(--color-text-faint);
+                        line-height: 1.8;
+                      "
+                      >Heat (1995)\<br />&nbsp;&nbsp;Heat.mkv<br />&nbsp;&nbsp;Images\poster.jpg<br />&nbsp;&nbsp;Images\backdrop.jpg<br />&nbsp;&nbsp;Subtitles\English.srt</span
+                    >
+                    <span
+                      style="
+                        display: block;
+                        font-family: var(--font-mono);
+                        font-size: 12px;
+                        color: var(--color-text-faint);
+                        line-height: 1.8;
+                      "
+                      >The Show (2019)\<br />&nbsp;&nbsp;Images\poster.jpg<br />&nbsp;&nbsp;Season
+                      01\<br />&nbsp;&nbsp;&nbsp;&nbsp;The Show S01E01.mkv<br />&nbsp;&nbsp;&nbsp;&nbsp;Images\poster.jpg<br />&nbsp;&nbsp;&nbsp;&nbsp;Images\Stills\S01E01.jpg<br />&nbsp;&nbsp;&nbsp;&nbsp;Subtitles\S01E01\English.srt</span
+                    >
+                  </span>
+                  <!-- The three rules, in the rule's face, the folder and file names in mono. -->
                   <span
                     style="
                       display: block;
-                      font-family: var(--font-mono);
-                      font-size: 12px;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
                       color: var(--color-text-faint);
-                      line-height: 1.8;
+                      margin-top: 8px;
+                      line-height: 1.5;
+                      text-wrap: pretty;
                     "
-                    >Movie Title (2019)\ movie.mkv · subs.en.srt<br />Show Name\
-                    Season 01\ S01E03.mkv<br />Show Name\ S01E03.mkv
-                    <span style="font-family: var(--font-sans)"
-                      >(loose episodes at the show root are fine)</span
-                    ></span
+                    >A folder with one video is a film; one with Season folders
+                    (<span style="font-family: var(--font-mono)">Season 01</span
+                    >) is a series.</span
                   >
                   <span
                     style="
@@ -324,13 +350,32 @@
                       line-height: 1.5;
                       text-wrap: pretty;
                     "
-                    >Season and episode numbers come from the folder first, then
-                    the filename (<span style="font-family: var(--font-mono)"
+                    >Each episode’s number comes from its filename (<span
+                      style="font-family: var(--font-mono)"
                       >S01E03</span
-                    >, <span style="font-family: var(--font-mono)">1x03</span>).
-                    Anything it can’t place lands in the review list.</span
+                    >, <span style="font-family: var(--font-mono)">1x03</span>),
+                    its season from its Season folder.</span
                   >
-                  <!-- The Sheet note (log 74): the folder-first rule's style, the path in mono. -->
+                  <span
+                    style="
+                      display: block;
+                      font-family: var(--font-sans);
+                      font-size: 13px;
+                      color: var(--color-text-faint);
+                      margin-top: 8px;
+                      line-height: 1.5;
+                      text-wrap: pretty;
+                    "
+                    >Art goes in
+                    <span style="font-family: var(--font-mono)">Images\</span>,
+                    named ending in
+                    <span style="font-family: var(--font-mono)">poster</span> or
+                    <span style="font-family: var(--font-mono)">backdrop</span>;
+                    subtitles go in
+                    <span style="font-family: var(--font-mono)">Subtitles\</span
+                    >. Anything it can’t place lands in the review list.</span
+                  >
+                  <!-- The Sheet note (log 74): the rules' style, the path in mono. -->
                   <span
                     style="
                       display: block;
