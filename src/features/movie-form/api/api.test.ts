@@ -1243,6 +1243,7 @@ describe('readShowFolder', () => {
     heldSeriesId: null,
     poster: null,
     backdrop: null,
+    seasonPosters: [],
     episodes: [],
     unplaced: [],
     straySubtitles: 0,

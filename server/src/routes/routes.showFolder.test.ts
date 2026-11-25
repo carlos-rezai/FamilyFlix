@@ -148,6 +148,7 @@ describe('GET /api/show-folder', () => {
       'libraryFolderId',
       'path',
       'poster',
+      'seasonPosters',
       'straySubtitles',
       'title',
       'unplaced',
@@ -166,6 +167,7 @@ describe('GET /api/show-folder', () => {
             language: 'Portuguese',
           },
         ],
+        still: null,
       },
       {
         season: 2,
@@ -174,6 +176,7 @@ describe('GET /api/show-folder', () => {
         video: join(seasonTwo, 'Harbor.and.Vine.S01E07.Spring.Tide.mkv'),
         relativePath: 'Season 02/Harbor.and.Vine.S01E07.Spring.Tide.mkv',
         subtitles: [],
+        still: null,
       },
     ]);
   });

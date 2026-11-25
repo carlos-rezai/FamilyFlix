@@ -191,13 +191,23 @@ export interface ShowFolderRead {
   poster: string | null;
   /** The Show folder's **Backdrop**, absolute, or `null` for none. */
   backdrop: string | null;
+  /**
+   * Each **Season poster** the read found, absolute: only seasons holding
+   * one, in number order.
+   */
+  seasonPosters: { season: number; path: string }[];
 }
 
 /**
  * A **Show folder pick**'s **Folder art**: the show's **Poster** and
- * **Backdrop** the read found, absolute, `null` for none.
+ * **Backdrop** the read found, absolute, `null` for none, and each **Season
+ * poster** it found, absolute, by season.
  */
-export type FolderArt = Pick<ShowFolderRead, 'poster' | 'backdrop'>;
+export interface FolderArt {
+  poster: string | null;
+  backdrop: string | null;
+  seasonPosters: Readonly<Record<number, string>>;
+}
 
 /** One video of a {@link ShowFolderRead}, by the two paths it is read by. */
 export interface ShowFolderVideo {
@@ -216,4 +226,6 @@ export interface ShowFolderEpisode {
   /** The video's path inside the Show folder, forward slashes. */
   relativePath: string;
   subtitles: { path: string; language: string }[];
+  /** Its **Still**, absolute, or `null` for none. */
+  still: string | null;
 }

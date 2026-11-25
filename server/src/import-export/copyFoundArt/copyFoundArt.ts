@@ -1,20 +1,35 @@
 import type { Media } from '../../media/createMedia/createMedia';
 
-/** A title's found **Poster** and **Backdrop**, absolute, `null` for none. */
+/** One season's **Season poster**, by season: absolute when found, stored once copied. */
+export interface SeasonPosterPath {
+  season: number;
+  path: string;
+}
+
+/**
+ * A title's found **Poster** and **Backdrop**, absolute, `null` for none, and
+ * a show's found **Season posters**, none when absent.
+ */
 export interface FoundArt {
   poster: string | null;
   backdrop: string | null;
+  seasonPosters?: SeasonPosterPath[];
 }
 
-/** A title's found art once copied: each file's **Stored path**, or `null`. */
+/**
+ * A title's found art once copied: each file's **Stored path**, or `null`,
+ * and each Season poster's by season.
+ */
 export interface CopiedArt {
   poster: string | null;
   backdrop: string | null;
+  seasonPosters: SeasonPosterPath[];
 }
 
 /**
  * A title's found **Poster** and **Backdrop** copied with `Media.copyIn` into
- * the **Media folder** `folder`'s root, copied, never moved, so the picked
+ * the **Media folder** `folder`'s root, and each found **Season poster** into
+ * its `season-NN/` (`media.seasonFolder`), copied, never moved, so the picked
  * folder is left as it was. Rejects on the first copy that breaks; the caller
  * takes the folder back.
  */
@@ -27,5 +42,12 @@ export async function copyFoundArt(
     path === null ? Promise.resolve(null) : media.copyIn(folder, path);
   const poster = await copy(art.poster);
   const backdrop = await copy(art.backdrop);
-  return { poster, backdrop };
+  const seasonPosters: SeasonPosterPath[] = [];
+  for (const { season, path } of art.seasonPosters ?? []) {
+    seasonPosters.push({
+      season,
+      path: await media.copyIn(media.seasonFolder(folder, season), path),
+    });
+  }
+  return { poster, backdrop, seasonPosters };
 }

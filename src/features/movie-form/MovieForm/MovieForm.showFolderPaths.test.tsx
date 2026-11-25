@@ -50,6 +50,7 @@ const READ = {
   heldSeriesId: null,
   poster: null,
   backdrop: null,
+  seasonPosters: [],
   episodes: [
     {
       season: 1,
@@ -57,6 +58,7 @@ const READ = {
       title: null,
       video: `${SHOW}\\Seizoen 1\\Aflevering 1.mp4`,
       relativePath: 'Seizoen 1/Aflevering 1.mp4',
+      still: null,
       subtitles: [],
     },
     {
@@ -65,6 +67,7 @@ const READ = {
       title: null,
       video: `${SHOW}\\Seizoen 2\\Aflevering 1.mp4`,
       relativePath: 'Seizoen 2/Aflevering 1.mp4',
+      still: null,
       subtitles: [],
     },
   ],

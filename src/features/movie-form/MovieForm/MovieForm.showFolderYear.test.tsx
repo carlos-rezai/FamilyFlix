@@ -71,6 +71,7 @@ const readOf = (path: string): ShowFolderRead => ({
   heldSeriesId: null,
   poster: null,
   backdrop: null,
+  seasonPosters: [],
   episodes: [
     {
       season: 1,
@@ -78,6 +79,7 @@ const readOf = (path: string): ShowFolderRead => ({
       title: null,
       video: `${path}\\S01E01.mkv`,
       relativePath: 'S01E01.mkv',
+      still: null,
       subtitles: [],
     },
   ],

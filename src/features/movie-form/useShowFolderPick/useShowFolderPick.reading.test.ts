@@ -35,6 +35,7 @@ const readOf = (extra: Partial<ShowFolderRead> = {}): ShowFolderRead => ({
   heldSeriesId: null,
   poster: null,
   backdrop: null,
+  seasonPosters: [],
   episodes: [
     {
       season: 1,
@@ -42,6 +43,7 @@ const readOf = (extra: Partial<ShowFolderRead> = {}): ShowFolderRead => ({
       title: null,
       video: `${HARBOR}\\S01E01.mkv`,
       relativePath: 'S01E01.mkv',
+      still: null,
       subtitles: [],
     },
   ],

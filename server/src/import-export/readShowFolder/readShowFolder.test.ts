@@ -197,6 +197,7 @@ describe('readShowFolder: the Folder key', () => {
       'libraryFolderId',
       'path',
       'poster',
+      'seasonPosters',
       'straySubtitles',
       'title',
       'unplaced',

@@ -31,6 +31,7 @@ const seasonTwoRead = (
   heldSeriesId: null,
   poster: null,
   backdrop: null,
+  seasonPosters: [],
   episodes,
   unplaced: unplaced.map((name) => ({
     video: `${PICKED}\\${name}`,
@@ -64,6 +65,7 @@ describe('showFolderRows: episodes numbered by their season', () => {
           title: null,
           video: `${PICKED}\\De.Veerboot.S02E02.mkv`,
           relativePath: 'Season 02/De.Veerboot.S02E02.mkv',
+          still: null,
           subtitles: [],
         },
       ]
@@ -108,6 +110,7 @@ describe('showFolderRows: a Season N folder', () => {
     heldSeriesId: null,
     poster: null,
     backdrop: null,
+    seasonPosters: [],
     episodes: [],
     unplaced: inside.map((relativePath) => ({
       video: `${DEATH_NOTE}\\${relativePath.split('/').join('\\')}`,

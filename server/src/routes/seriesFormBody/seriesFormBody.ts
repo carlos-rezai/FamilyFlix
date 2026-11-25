@@ -227,6 +227,36 @@ export function readSeasonPosters(
 }
 
 /**
+ * The found **Season posters** of an add's body: each `seasonPoster` field
+ * carrying a `path` and followed by no file, an absolute image path checked
+ * by `foundPathRefusal`. A refusal for the first that is not one; a field
+ * that is not the contract's is {@link readSeasonPosters}'s to refuse.
+ */
+export function readFoundSeasonPosters(
+  fields: Record<string, string[]>,
+  uploads: EpisodeUploads
+):
+  | { ok: true; found: { season: number; path: string }[] }
+  | ({ ok: false } & Refusal) {
+  const found: { season: number; path: string }[] = [];
+  for (const [index, text] of (fields.seasonPoster ?? []).entries()) {
+    const field = readSeasonPosterField(text);
+    if (
+      field?.path === undefined ||
+      uploads.seasonPosters[index] !== undefined
+    ) {
+      continue;
+    }
+    const refused = foundPathRefusal(field.path, 'image');
+    if (refused !== null) {
+      return { ok: false, status: 400, error: refused };
+    }
+    found.push({ season: field.season, path: field.path });
+  }
+  return { ok: true, found };
+}
+
+/**
  * A body's Season poster changes → the edits a series save writes: a picked
  * file at the Stored path `stored` gives it, a removed one `null`, and a kept
  * one nothing. A new series holds no Season poster, so a `remove` on an add
@@ -564,6 +594,12 @@ export function readSeriesFields(
     }
     for (const track of episode.storedSubtitles ?? []) {
       const refused = foundPathRefusal(track.path, 'subtitle');
+      if (refused !== null) {
+        return refused;
+      }
+    }
+    if (episode.stillPath !== undefined) {
+      const refused = foundPathRefusal(episode.stillPath, 'image');
       if (refused !== null) {
         return refused;
       }

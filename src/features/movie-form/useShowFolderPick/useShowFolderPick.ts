@@ -133,7 +133,13 @@ export function useShowFolderPick({
     const key: PickedKey = { title: read.title, year: read.year };
     prefillFolderKey(key, pickedKey.current);
     pickedKey.current = key;
-    const art: FolderArt = { poster: read.poster, backdrop: read.backdrop };
+    const art: FolderArt = {
+      poster: read.poster,
+      backdrop: read.backdrop,
+      seasonPosters: Object.fromEntries(
+        read.seasonPosters.map(({ season, path }) => [season, path])
+      ),
+    };
     prefillFolderArt(art, pickedArt.current);
     pickedArt.current = art;
   }, [
@@ -156,7 +162,10 @@ export function useShowFolderPick({
     dropShowFolder();
     // The pick's art goes with it, from each slot that still holds it.
     if (pickedArt.current !== null) {
-      prefillFolderArt({ poster: null, backdrop: null }, pickedArt.current);
+      prefillFolderArt(
+        { poster: null, backdrop: null, seasonPosters: {} },
+        pickedArt.current
+      );
       pickedArt.current = null;
     }
   }, [dropShowFolder, setShowLink, prefillFolderArt]);

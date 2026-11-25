@@ -132,6 +132,7 @@ export async function readShowFolder(
         path,
         language,
       })),
+      still: episode.still,
     }))
     .sort((a, b) => a.season - b.season || a.number - b.number);
   const unplaced = [...(read.show?.unplaced ?? []), ...read.loose];
@@ -169,6 +170,9 @@ export async function readShowFolder(
       straySubtitles: read.show?.straySubtitles.length ?? 0,
       poster: read.poster,
       backdrop: read.backdrop,
+      seasonPosters: (read.show?.seasons ?? []).flatMap(({ number, poster }) =>
+        poster === null ? [] : [{ season: number, path: poster }]
+      ),
     },
   };
 }

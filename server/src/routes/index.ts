@@ -86,6 +86,7 @@ import {
   readSeasonPosters,
   readSeriesEditFields,
   readSeriesFields,
+  readFoundSeasonPosters,
   seasonPosterEdits,
   seasonPosterNamer,
   stillNamer,
@@ -1087,14 +1088,23 @@ export function createApiRouter(
       res.status(seasonPosters.status).json({ error: seasonPosters.error });
       return;
     }
+    const foundSeasonPosters = readFoundSeasonPosters(fields, uploads);
+    if (!foundSeasonPosters.ok) {
+      rollback();
+      res
+        .status(foundSeasonPosters.status)
+        .json({ error: foundSeasonPosters.error });
+      return;
+    }
     const { title, year, endYear, creator, synopsis, rating, cast, genres } =
       read;
 
-    // A **Show folder pick**'s found **Poster** and **Backdrop**: absolute
-    // image paths, always copied, never linked.
+    // A **Show folder pick**'s found **Poster**, **Backdrop** and **Season
+    // posters**: absolute image paths, always copied, never linked.
     const foundArt: FoundArt = {
       poster: onlyField(fields, 'posterPath') ?? null,
       backdrop: onlyField(fields, 'backdropPath') ?? null,
+      seasonPosters: foundSeasonPosters.found,
     };
     const artRefusal = [foundArt.poster, foundArt.backdrop]
       .map((path) => (path === null ? null : foundPathRefusal(path, 'image')))
@@ -1144,10 +1154,12 @@ export function createApiRouter(
       read.episodes.some(
         (episode, index) =>
           (episode.video === undefined && placed[index] === null) ||
-          (episode.storedSubtitles ?? []).length > 0
+          (episode.storedSubtitles ?? []).length > 0 ||
+          episode.stillPath !== undefined
       ) ||
       foundArt.poster !== null ||
-      foundArt.backdrop !== null;
+      foundArt.backdrop !== null ||
+      foundSeasonPosters.found.length > 0;
     if (uploads.folder === null && findsFiles) {
       uploads.folder = media.reserveFolder(title, year ?? null);
     }
@@ -1161,7 +1173,11 @@ export function createApiRouter(
     // Each **Found file** is copied into its season — a copy that breaks is
     // the save's failure, and takes the folder with it.
     let copied: CopiedEpisode[];
-    let copiedArt: CopiedArt = { poster: null, backdrop: null };
+    let copiedArt: CopiedArt = {
+      poster: null,
+      backdrop: null,
+      seasonPosters: [],
+    };
     try {
       copied = await copyFoundEpisodes(
         media,
@@ -1180,7 +1196,7 @@ export function createApiRouter(
     }
 
     const episodes: NewEpisode[] = read.episodes.map((episode, index) => {
-      const { video, tracks } = copied[index];
+      const { video, tracks, still } = copied[index];
       const { runtimeMinutes, videoQuality } = derivedVideoFacts(
         playback,
         video
@@ -1201,7 +1217,9 @@ export function createApiRouter(
         ...(videoQuality === null ? {} : { videoQuality }),
         ...(subtitles.length === 0 ? {} : { subtitles }),
         ...(episode.still === undefined
-          ? {}
+          ? still === null
+            ? {}
+            : { stillPath: still }
           : { stillPath: stored(episode.still) }),
       };
     });
@@ -1232,7 +1250,13 @@ export function createApiRouter(
             : { mediaFolder: basename(uploads.folder) }),
         },
         episodes,
-        seasonPosterEdits(seasonPosters.changes, stored)
+        [
+          ...seasonPosterEdits(seasonPosters.changes, stored),
+          ...copiedArt.seasonPosters.map(({ season, path }) => ({
+            season,
+            posterPath: path,
+          })),
+        ]
       );
       if (showFolder !== null) {
         storage.setSourceFolder(

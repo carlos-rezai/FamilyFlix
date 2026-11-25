@@ -10,12 +10,16 @@ export interface FoundEpisode {
   videoPath?: string;
   /** A Found file row's absolute subtitle paths, each with its language. */
   storedSubtitles?: readonly NewSubtitle[];
+  /** A found **Still**'s absolute path. */
+  stillPath?: string;
 }
 
 /** One episode's files, where they now lie. */
 export interface CopiedEpisode {
   video: StoredVideo;
   tracks: NewSubtitle[];
+  /** Its found **Still**'s **Stored path**, or `null` for none. */
+  still: string | null;
 }
 
 /**
@@ -23,7 +27,7 @@ export interface CopiedEpisode {
  * kept where it lies; a found video copied with `Media.copyIn` into its season
  * folder under the **Series folder** `folder` — copied, never moved, so the
  * picked folder is left as it was; a picked one's **Stored path**, through
- * `stored`; and its found subtitles copied beside it. Rejects on the first
+ * `stored`; and its found subtitles and **Still** copied beside it. Rejects on the first
  * copy that breaks — the caller takes the folder back.
  */
 export async function copyFoundEpisodes(
@@ -54,7 +58,9 @@ export async function copyFoundEpisodes(
     for (const track of episode.storedSubtitles ?? []) {
       tracks.push({ path: await copy(track.path), language: track.language });
     }
-    copied.push({ video, tracks });
+    const still =
+      episode.stillPath === undefined ? null : await copy(episode.stillPath);
+    copied.push({ video, tracks, still });
   }
   return copied;
 }

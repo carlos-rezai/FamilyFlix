@@ -304,21 +304,28 @@ export function folderArtValues(
   art: FolderArt,
   picked: FolderArt | null
 ): MovieFormValues {
-  const slot = (
-    held: MovieFormFile | null,
-    offered: string | null,
-    earlier: string | null | undefined
-  ): MovieFormFile | null =>
-    held === null || (held.kind === 'found' && held.path === earlier)
-      ? offered === null
-        ? null
-        : foundFile(offered)
-      : held;
   return {
     ...current,
-    poster: slot(current.poster, art.poster, picked?.poster),
-    backdrop: slot(current.backdrop, art.backdrop, picked?.backdrop),
+    poster: foundArtFill(current.poster, art.poster, picked?.poster),
+    backdrop: foundArtFill(current.backdrop, art.backdrop, picked?.backdrop),
   };
+}
+
+/**
+ * The one fill rule of a **Folder art** slot: a slot that is empty, or still
+ * holds `earlier`, the file an earlier pick filled in, takes `offered` as a
+ * **Found file**, or empties for `null`; a slot picked by hand stays.
+ */
+export function foundArtFill(
+  held: MovieFormFile | null,
+  offered: string | null,
+  earlier: string | null | undefined
+): MovieFormFile | null {
+  return held === null || (held.kind === 'found' && held.path === earlier)
+    ? offered === null
+      ? null
+      : foundFile(offered)
+    : held;
 }
 
 /**
@@ -339,7 +346,7 @@ export function showFolderRows(read: ShowFolderRead): EpisodeFormRow[] {
       file: foundFile(track.path),
       language: track.language,
     })),
-    still: null,
+    still: episode.still === null ? null : foundFile(episode.still),
   }));
   const unplaced = numberFoundRows(
     read.unplaced.map(({ video, relativePath }) => ({
@@ -658,11 +665,15 @@ export function seriesFormData(
               : { storedSubtitles: foundTracks }),
           }
         : {};
+    // A found **Still** travels as its path, never as bytes.
+    const foundStill =
+      row.still?.kind === 'found' ? { stillPath: row.still.path } : {};
     body.append(
       'episode',
       JSON.stringify({
         ...held,
         ...found,
+        ...foundStill,
         season: Number(row.season),
         number: Number(row.number),
         title: row.title,

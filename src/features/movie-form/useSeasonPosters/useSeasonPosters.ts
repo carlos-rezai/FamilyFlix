@@ -1,7 +1,16 @@
 import { useCallback, useMemo, useState } from 'react';
 
-import type { EpisodeFormRow, MovieFormFile, SeasonPosterSlot } from '@/types';
-import { pickedFile, typedNumber } from '../formValues/formValues';
+import type {
+  EpisodeFormRow,
+  FolderArt,
+  MovieFormFile,
+  SeasonPosterSlot,
+} from '@/types';
+import {
+  foundArtFill,
+  pickedFile,
+  typedNumber,
+} from '../formValues/formValues';
 
 export interface SeasonPosters {
   /**
@@ -19,6 +28,14 @@ export interface SeasonPosters {
    * land, as `holdEpisodes` does the rows.
    */
   hold: (posters: Readonly<Record<number, MovieFormFile>>) => void;
+  /**
+   * A **Show folder pick**'s offer, `useShowFolderPick`'s prefill: each
+   * **Season poster** of `art` fills its season's slot by the one fill rule
+   * (`foundArtFill`), `picked` the art an earlier pick offered (`null` before
+   * any); a slot still holding an earlier pick's poster `art` has none for
+   * empties, and one picked by hand stays.
+   */
+  prefillFolderArt: (art: FolderArt, picked: FolderArt | null) => void;
 }
 
 /** What one season's slot holds, and whether the edit opened with a poster. */
@@ -71,6 +88,32 @@ export function useSeasonPosters(
     []
   );
 
+  const prefillFolderArt = useCallback(
+    (art: FolderArt, picked: FolderArt | null) => {
+      setContents((current) => {
+        const earlier = picked?.seasonPosters ?? {};
+        const seasons = new Set(
+          [...Object.keys(art.seasonPosters), ...Object.keys(earlier)].map(
+            Number
+          )
+        );
+        const next = { ...current };
+        for (const season of seasons) {
+          next[season] = {
+            poster: foundArtFill(
+              current[season]?.poster ?? null,
+              art.seasonPosters[season] ?? null,
+              earlier[season]
+            ),
+            held: current[season]?.held ?? false,
+          };
+        }
+        return next;
+      });
+    },
+    []
+  );
+
   const slots = useMemo<SeasonPosterSlot[]>(() => {
     if (!drawn) {
       return [];
@@ -90,5 +133,5 @@ export function useSeasonPosters(
       }));
   }, [episodes, drawn, contents]);
 
-  return { slots, pick, remove, hold };
+  return { slots, pick, remove, hold, prefillFolderArt };
 }

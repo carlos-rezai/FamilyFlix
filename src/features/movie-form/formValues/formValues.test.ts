@@ -674,6 +674,7 @@ describe('showFolderRows', () => {
     heldSeriesId: null,
     poster: null,
     backdrop: null,
+    seasonPosters: [],
     episodes,
     unplaced: unplaced.map((video) => ({
       video,
@@ -692,6 +693,7 @@ describe('showFolderRows', () => {
       title: 'Pilot',
       video: PILOT,
       relativePath: 'Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
+      still: null,
       subtitles: [{ path: PILOT_PT, language: 'Portuguese' }],
     },
     {
@@ -700,6 +702,7 @@ describe('showFolderRows', () => {
       title: 'Low Tide',
       video: LOW_TIDE,
       relativePath: 'Season 1/Harbor.and.Vine.S01E02.Low.Tide.mkv',
+      still: null,
       subtitles: [],
     },
     {
@@ -708,6 +711,7 @@ describe('showFolderRows', () => {
       title: null,
       video: SPRING,
       relativePath: 'Season 2/Harbor.and.Vine.S02E01.Spring.mkv',
+      still: null,
       subtitles: [],
     },
   ];
@@ -825,6 +829,7 @@ describe('isShowFolderRow', () => {
       heldSeriesId: null,
       poster: null,
       backdrop: null,
+      seasonPosters: [],
       episodes: [],
       unplaced: [
         { video: 'E:\\Shows\\Harbor\\bonus.mkv', relativePath: 'bonus.mkv' },

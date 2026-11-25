@@ -76,12 +76,14 @@ const READ = {
   heldSeriesId: null,
   poster: null,
   backdrop: null,
+  seasonPosters: [],
   episodes: [
     {
       season: 1,
       number: 1,
       title: 'Pilot',
       relativePath: PILOT_ROW,
+      still: null,
       video: `${SEASON_ONE}\\${PILOT}`,
       subtitles: [],
     },
@@ -90,6 +92,7 @@ const READ = {
       number: 2,
       title: 'Low Tide',
       relativePath: LOW_TIDE_ROW,
+      still: null,
       video: `${SEASON_ONE}\\${LOW_TIDE}`,
       subtitles: [],
     },
@@ -122,12 +125,14 @@ const OTHER_READ = {
   heldSeriesId: null,
   poster: null,
   backdrop: null,
+  seasonPosters: [],
   episodes: [
     {
       season: 1,
       number: 1,
       title: 'Arrival',
       relativePath: ARRIVAL,
+      still: null,
       video: `${OTHER_SHOW}\\${ARRIVAL}`,
       subtitles: [],
     },

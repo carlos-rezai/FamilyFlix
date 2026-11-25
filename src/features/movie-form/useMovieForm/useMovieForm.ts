@@ -449,6 +449,7 @@ export function useMovieForm(): UseMovieFormResult {
     pick: pickSeasonPoster,
     remove: removeSeasonPoster,
     hold: holdSeasonPosters,
+    prefillFolderArt: prefillSeasonPosters,
   } = useSeasonPosters(episodes, resolving === null);
 
   // The URL, read once: which of the five jobs this screen is doing.
@@ -684,7 +685,8 @@ export function useMovieForm(): UseMovieFormResult {
   }, []);
 
   // The **Show folder pick**, `useShowFolderPick`'s: the title and year are
-  // `folderKeyValues`'s rule, the Poster and Backdrop `folderArtValues`'s.
+  // `folderKeyValues`'s rule, the Poster and Backdrop `folderArtValues`'s,
+  // the Season posters `useSeasonPosters`'.
   // Its Library folder says whether Link can be.
   const prefillFolderKey = useCallback(
     (key: PickedKey, picked: PickedKey | null) => {
@@ -695,8 +697,9 @@ export function useMovieForm(): UseMovieFormResult {
   const prefillFolderArt = useCallback(
     (art: FolderArt, picked: FolderArt | null) => {
       setValues((current) => folderArtValues(current, art, picked));
+      prefillSeasonPosters(art, picked);
     },
-    []
+    [prefillSeasonPosters]
   );
   const showFolderPick = useShowFolderPick({
     plainAdd,

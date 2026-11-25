@@ -36,6 +36,7 @@ const readOf = (
   heldSeriesId: null,
   poster,
   backdrop,
+  seasonPosters: [],
   episodes: [
     {
       season: 1,
@@ -43,6 +44,7 @@ const readOf = (
       title: null,
       video: `${path}\\S01E01.mkv`,
       relativePath: 'S01E01.mkv',
+      still: null,
       subtitles: [],
     },
   ],

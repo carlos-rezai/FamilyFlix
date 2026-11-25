@@ -108,12 +108,14 @@ const SHOW_READ: ShowFolderRead = {
   heldSeriesId: null,
   poster: null,
   backdrop: null,
+  seasonPosters: [],
   episodes: [
     {
       season: 1,
       number: 1,
       title: 'Pilot',
       relativePath: 'Season 1/Harbor.and.Vine.S01E01.Pilot.mkv',
+      still: null,
       video: `${SHOW_FOLDER}\\Season 1\\Harbor.and.Vine.S01E01.Pilot.mkv`,
       subtitles: [],
     },
