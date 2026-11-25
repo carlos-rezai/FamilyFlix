@@ -60,6 +60,9 @@ function renderFiles(slots: Slots = {}) {
         onRemoveVideo={onRemoveVideo}
         onPickPoster={onPickPoster}
         onRemovePoster={onRemovePoster}
+        backdrop={null}
+        onPickBackdrop={vi.fn()}
+        onRemoveBackdrop={vi.fn()}
         onAddSubtitle={onAddSubtitle}
         onChangeSubtitleLanguage={onChangeSubtitleLanguage}
         onRemoveSubtitle={onRemoveSubtitle}
@@ -470,6 +473,9 @@ describe('MovieFormFiles — the Found-file choice', () => {
           onRemoveVideo={() => undefined}
           onPickPoster={() => undefined}
           onRemovePoster={() => undefined}
+          backdrop={null}
+          onPickBackdrop={() => undefined}
+          onRemoveBackdrop={() => undefined}
           onAddSubtitle={() => undefined}
           onChangeSubtitleLanguage={() => undefined}
           onRemoveSubtitle={() => undefined}

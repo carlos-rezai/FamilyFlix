@@ -84,15 +84,12 @@ export interface SeriesFormFilesProps {
   onPickPoster: (file: File) => void;
   /** Reports that the poster slot's ✕ was pressed. */
   onRemovePoster: () => void;
-  /**
-   * What is in the **Backdrop** slot, `null` while it is empty; omitted, the
-   * card draws no backdrop slot.
-   */
-  backdrop?: MovieFormFile | null;
+  /** What is in the **Backdrop** slot, or `null` while it is empty. */
+  backdrop: MovieFormFile | null;
   /** Reports the backdrop the maintainer picked. */
-  onPickBackdrop?: (file: File) => void;
+  onPickBackdrop: (file: File) => void;
   /** Reports that the backdrop slot's ✕ was pressed. */
-  onRemoveBackdrop?: () => void;
+  onRemoveBackdrop: () => void;
   /**
    * One slot per **Season** the episode rows hold, in the order drawn — none
    * draws no list.
@@ -201,17 +198,15 @@ export function SeriesFormFiles({
         onPick={onPickPoster}
         onRemove={onRemovePoster}
       />
-      {backdrop !== undefined && (
-        <FileField
-          label={BACKDROP_LABEL}
-          chooseLabel={BACKDROP_CHOOSE}
-          filename={backdrop?.filename}
-          accept={POSTER_ACCEPT}
-          icon={<ImageIcon size={16} />}
-          onPick={(file) => onPickBackdrop?.(file)}
-          onRemove={() => onRemoveBackdrop?.()}
-        />
-      )}
+      <FileField
+        label={BACKDROP_LABEL}
+        chooseLabel={BACKDROP_CHOOSE}
+        filename={backdrop?.filename}
+        accept={POSTER_ACCEPT}
+        icon={<ImageIcon size={16} />}
+        onPick={onPickBackdrop}
+        onRemove={onRemoveBackdrop}
+      />
       {seasonPosters.length > 0 && (
         <SeasonPosters role="group" aria-labelledby={SEASON_POSTERS_LABEL_ID}>
           <SeasonPostersLabel id={SEASON_POSTERS_LABEL_ID}>

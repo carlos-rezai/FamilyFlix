@@ -51,15 +51,12 @@ export interface MovieFormFilesProps {
   onPickPoster: (file: File) => void;
   /** Reports that the poster slot's ✕ was pressed. */
   onRemovePoster: () => void;
-  /**
-   * What is in the **Backdrop** slot, `null` while it is empty; omitted, the
-   * card draws no backdrop slot.
-   */
-  backdrop?: MovieFormFile | null;
+  /** What is in the **Backdrop** slot, or `null` while it is empty. */
+  backdrop: MovieFormFile | null;
   /** Reports the backdrop the maintainer picked. */
-  onPickBackdrop?: (file: File) => void;
+  onPickBackdrop: (file: File) => void;
   /** Reports that the backdrop slot's ✕ was pressed. */
-  onRemoveBackdrop?: () => void;
+  onRemoveBackdrop: () => void;
   /** The tracks attached so far, in the order they will be stored in. */
   subtitles: MovieFormSubtitle[];
   /** Reports the track that was picked — the `File` itself. What language it
@@ -140,17 +137,15 @@ export function MovieFormFiles({
         onPick={onPickPoster}
         onRemove={onRemovePoster}
       />
-      {backdrop !== undefined && (
-        <FileField
-          label={BACKDROP_LABEL}
-          chooseLabel={BACKDROP_CHOOSE}
-          filename={backdrop?.filename}
-          accept={POSTER_ACCEPT}
-          icon={<ImageIcon size={16} />}
-          onPick={(file) => onPickBackdrop?.(file)}
-          onRemove={() => onRemoveBackdrop?.()}
-        />
-      )}
+      <FileField
+        label={BACKDROP_LABEL}
+        chooseLabel={BACKDROP_CHOOSE}
+        filename={backdrop?.filename}
+        accept={POSTER_ACCEPT}
+        icon={<ImageIcon size={16} />}
+        onPick={onPickBackdrop}
+        onRemove={onRemoveBackdrop}
+      />
       <Subtitles>
         <SubtitlesLabel>{SUBTITLES_LABEL}</SubtitlesLabel>
         <Tracks>
