@@ -8,6 +8,7 @@ import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
 import type {
   BusyPhase,
   EpisodeFormRow,
+  FolderArt,
   FormKind,
   ImportMode,
   MovieFormFile,
@@ -43,6 +44,7 @@ import {
   updateSeries,
 } from '../api/api';
 import {
+  folderArtValues,
   folderKeyValues,
   movieAddValues,
   pickedFile,
@@ -682,10 +684,17 @@ export function useMovieForm(): UseMovieFormResult {
   }, []);
 
   // The **Show folder pick**, `useShowFolderPick`'s: the title and year are
-  // `folderKeyValues`'s rule. Its Library folder says whether Link can be.
+  // `folderKeyValues`'s rule, the Poster and Backdrop `folderArtValues`'s.
+  // Its Library folder says whether Link can be.
   const prefillFolderKey = useCallback(
     (key: PickedKey, picked: PickedKey | null) => {
       setValues((current) => folderKeyValues(current, key, picked));
+    },
+    []
+  );
+  const prefillFolderArt = useCallback(
+    (art: FolderArt, picked: FolderArt | null) => {
+      setValues((current) => folderArtValues(current, art, picked));
     },
     []
   );
@@ -694,6 +703,7 @@ export function useMovieForm(): UseMovieFormResult {
     holdShowFolder: episodeList.holdShowFolder,
     removeShowFolder: episodeList.removeShowFolder,
     prefillFolderKey,
+    prefillFolderArt,
     setShowLink,
   });
 

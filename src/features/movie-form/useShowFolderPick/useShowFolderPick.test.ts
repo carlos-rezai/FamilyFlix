@@ -42,6 +42,8 @@ const readOf = (
   year: null,
   libraryFolderId: 'shows',
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes: videos.map((video, index) => ({
     season: 1,
     number: index + 1,
@@ -92,6 +94,7 @@ function renderPick() {
       holdShowFolder: list.holdShowFolder,
       removeShowFolder: list.removeShowFolder,
       prefillFolderKey,
+      prefillFolderArt: () => undefined,
       setShowLink,
     });
     return { list, pick };

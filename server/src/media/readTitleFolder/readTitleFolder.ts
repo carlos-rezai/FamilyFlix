@@ -365,6 +365,34 @@ export async function readSeasonFolders(
   return oneSeasonPerNumber(await readEverySeasonFolder(dir)).seasons;
 }
 
+/** A title's **Poster** and **Backdrop**, absolute, `null` for none. */
+export interface TitleArt {
+  poster: string | null;
+  backdrop: string | null;
+}
+
+/** Every poster and backdrop of a folder's `Images/` by role, in name order. */
+async function titleArtOf(
+  dir: string
+): Promise<{ posters: string[]; backdrops: string[] }> {
+  const imagesDir = join(dir, IMAGES_FOLDER);
+  const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
+  return {
+    posters: imagesByRole(imagesDir, images, 'poster'),
+    backdrops: imagesByRole(imagesDir, images, 'backdrop'),
+  };
+}
+
+/**
+ * A folder's **Poster** and **Backdrop** by role from `Images/`, the first of
+ * each by name order, `null` for none: the art reader of a **Title folder**,
+ * shared with the **Show folder read**.
+ */
+export async function readTitleArt(dir: string): Promise<TitleArt> {
+  const { posters, backdrops } = await titleArtOf(dir);
+  return { poster: posters[0] ?? null, backdrop: backdrops[0] ?? null };
+}
+
 /**
  * Read one **Title folder** by the **Folder layout**, whatever its name: a
  * yearless `Heat/` reads as a `Heat (1995)/` does. One loose video or more
@@ -401,10 +429,7 @@ export async function readTitleFolder(dir: string): Promise<TitleFolderScan> {
     return { kind: 'left-out', dir, name, reason: 'empty' };
   }
 
-  const imagesDir = join(dir, IMAGES_FOLDER);
-  const images = filesIn(await entriesOf(imagesDir)).filter(isImageFilename);
-  const posters = imagesByRole(imagesDir, images, 'poster');
-  const backdrops = imagesByRole(imagesDir, images, 'backdrop');
+  const { posters, backdrops } = await titleArtOf(dir);
   const poster = posters[0] ?? null;
   const backdrop = backdrops[0] ?? null;
   const doubled = [

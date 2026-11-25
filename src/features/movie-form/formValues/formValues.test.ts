@@ -672,6 +672,8 @@ describe('showFolderRows', () => {
     year: null,
     libraryFolderId: 'shows',
     heldSeriesId: null,
+    poster: null,
+    backdrop: null,
     episodes,
     unplaced: unplaced.map((video) => ({
       video,
@@ -821,6 +823,8 @@ describe('isShowFolderRow', () => {
       year: null,
       libraryFolderId: null,
       heldSeriesId: null,
+      poster: null,
+      backdrop: null,
       episodes: [],
       unplaced: [
         { video: 'E:\\Shows\\Harbor\\bonus.mkv', relativePath: 'bonus.mkv' },

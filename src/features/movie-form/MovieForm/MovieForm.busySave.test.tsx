@@ -106,6 +106,8 @@ const SHOW_READ: ShowFolderRead = {
   year: null,
   libraryFolderId: null,
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes: [
     {
       season: 1,

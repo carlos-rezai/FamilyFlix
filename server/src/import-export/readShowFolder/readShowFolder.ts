@@ -6,6 +6,7 @@ import {
   readLooseFiles,
   readSeasonFolder,
   readSeasonFolders,
+  readTitleArt,
   type SeasonFolderScan,
 } from '../../media/readTitleFolder/readTitleFolder';
 import { isSeasonFolder } from '../../media/seasonNumberOf/seasonNumberOf';
@@ -42,10 +43,12 @@ export interface ShowFolderContext {
   titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
 
-/** What a pick holds: its numbered show, or its loose videos. */
+/** What a pick holds: its numbered show, or its loose videos, and its show's art. */
 interface PickedFolder {
   show: ShowScan | null;
   loose: string[];
+  poster: string | null;
+  backdrop: string | null;
 }
 
 /**
@@ -58,22 +61,22 @@ async function showUnder(
   dir: string,
   showFolder: string
 ): Promise<PickedFolder> {
+  const art = await readTitleArt(showFolder);
   const number = (seasons: SeasonFolderScan[]): ShowScan =>
     numberShow({
       dir: showFolder,
       name: basename(showFolder),
-      poster: null,
-      backdrop: null,
+      ...art,
       seasons,
     });
   if (isSeasonFolder(basename(dir))) {
-    return { show: number([await readSeasonFolder(dir)]), loose: [] };
+    return { show: number([await readSeasonFolder(dir)]), loose: [], ...art };
   }
   const { videos } = await readLooseFiles(dir);
   if (videos.length > 0) {
-    return { show: null, loose: videos };
+    return { show: null, loose: videos, ...art };
   }
-  return { show: number(await readSeasonFolders(dir)), loose: [] };
+  return { show: number(await readSeasonFolders(dir)), loose: [], ...art };
 }
 
 /**
@@ -164,6 +167,8 @@ export async function readShowFolder(
         relativePath: sourceFileOf(showFolder, video),
       })),
       straySubtitles: read.show?.straySubtitles.length ?? 0,
+      poster: read.poster,
+      backdrop: read.backdrop,
     },
   };
 }

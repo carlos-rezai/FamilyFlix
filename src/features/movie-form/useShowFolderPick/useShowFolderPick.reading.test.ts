@@ -33,6 +33,8 @@ const readOf = (extra: Partial<ShowFolderRead> = {}): ShowFolderRead => ({
   year: null,
   libraryFolderId: 'shows',
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes: [
     {
       season: 1,
@@ -70,6 +72,7 @@ function renderPick() {
       holdShowFolder: list.holdShowFolder,
       removeShowFolder: list.removeShowFolder,
       prefillFolderKey: () => undefined,
+      prefillFolderArt: () => undefined,
       setShowLink: () => undefined,
     });
   });

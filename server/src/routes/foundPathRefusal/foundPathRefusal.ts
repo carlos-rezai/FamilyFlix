@@ -1,16 +1,18 @@
 import { basename, isAbsolute } from 'node:path';
 
 import {
+  isImageFilename,
   isSubtitleFilename,
   isVideoFilename,
 } from '../../media/fileKinds/fileKinds';
 
 /** What a **Found file** slot holds. */
-export type FoundKind = 'video' | 'subtitle';
+export type FoundKind = 'video' | 'subtitle' | 'image';
 
 const IS_KIND: Record<FoundKind, (filename: string) => boolean> = {
   video: isVideoFilename,
   subtitle: isSubtitleFilename,
+  image: isImageFilename,
 };
 
 /**
@@ -25,5 +27,5 @@ export function foundPathRefusal(path: string, kind: FoundKind): string | null {
   }
   return IS_KIND[kind](basename(path))
     ? null
-    : `Not a ${kind} file: ${JSON.stringify(basename(path))}`;
+    : `Not ${kind === 'image' ? 'an' : 'a'} ${kind} file: ${JSON.stringify(basename(path))}`;
 }

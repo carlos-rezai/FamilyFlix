@@ -3,7 +3,7 @@ import { useCallback, useRef, useState } from 'react';
 import { fetchSeriesDetail } from '@/api/fetchSeriesDetail/fetchSeriesDetail';
 import { folderBridge } from '@/api/folderBridge/folderBridge';
 import { useDelayedBusy } from '@/hooks/useDelayedBusy/useDelayedBusy';
-import type { BusyPhase, EpisodeFormRow } from '@/types';
+import type { BusyPhase, EpisodeFormRow, FolderArt } from '@/types';
 import { readShowFolder } from '../api/api';
 import { type PickedKey, showFolderRows } from '../formValues/formValues';
 
@@ -23,6 +23,11 @@ export interface UseShowFolderPickInput {
    * earlier pick offered (`null` before any), so a typed field stays.
    */
   prefillFolderKey: (key: PickedKey, picked: PickedKey | null) => void;
+  /**
+   * Offer the form the read's **Folder art**, with `picked`, the art an
+   * earlier pick offered (`null` before any), so a slot picked by hand stays.
+   */
+  prefillFolderArt: (art: FolderArt, picked: FolderArt | null) => void;
   /** `useImportMode`'s: whether Link can be for the picked folder. */
   setShowLink: (available: boolean) => void;
 }
@@ -36,7 +41,10 @@ export interface UseShowFolderPickResult {
   addShowFolder: (() => void) | null;
   /** The picked **Show folder**, absolute, for its row — or `null`. */
   showFolder: string | null;
-  /** The Show folder row's ✕: its rows go, the rows added by hand stay. */
+  /**
+   * The Show folder row's ✕: its rows go, the rows added by hand stay, and
+   * each art slot still holding the pick's art empties.
+   */
   removeShowFolder: () => void;
   /** The sentence a refused Show folder read is drawn as, or `null`. */
   refusal: string | null;
@@ -69,6 +77,7 @@ export function useShowFolderPick({
   holdShowFolder,
   removeShowFolder: dropShowFolder,
   prefillFolderKey,
+  prefillFolderArt,
   setShowLink,
 }: UseShowFolderPickInput): UseShowFolderPickResult {
   const [showFolder, setShowFolder] = useState<string | null>(null);
@@ -77,6 +86,9 @@ export function useShowFolderPick({
   // The **Folder key** the last pick offered, so a new pick knows the fields
   // it may replace.
   const pickedKey = useRef<PickedKey | null>(null);
+  // The **Folder art** the last pick offered, so a new pick and the ✕ know the
+  // slots they may replace.
+  const pickedArt = useRef<FolderArt | null>(null);
   const bridge = folderBridge();
   const { phase: reading, run } = useDelayedBusy();
 
@@ -121,7 +133,17 @@ export function useShowFolderPick({
     const key: PickedKey = { title: read.title, year: read.year };
     prefillFolderKey(key, pickedKey.current);
     pickedKey.current = key;
-  }, [bridge, run, holdShowFolder, prefillFolderKey, setShowLink]);
+    const art: FolderArt = { poster: read.poster, backdrop: read.backdrop };
+    prefillFolderArt(art, pickedArt.current);
+    pickedArt.current = art;
+  }, [
+    bridge,
+    run,
+    holdShowFolder,
+    prefillFolderKey,
+    prefillFolderArt,
+    setShowLink,
+  ]);
 
   const addShowFolder = useCallback(() => {
     void pickShowFolder();
@@ -132,7 +154,12 @@ export function useShowFolderPick({
     setStraySubtitles(0);
     setShowLink(true);
     dropShowFolder();
-  }, [dropShowFolder, setShowLink]);
+    // The pick's art goes with it, from each slot that still holds it.
+    if (pickedArt.current !== null) {
+      prefillFolderArt({ poster: null, backdrop: null }, pickedArt.current);
+      pickedArt.current = null;
+    }
+  }, [dropShowFolder, setShowLink, prefillFolderArt]);
 
   return {
     addShowFolder: bridge !== null && plainAdd ? addShowFolder : null,

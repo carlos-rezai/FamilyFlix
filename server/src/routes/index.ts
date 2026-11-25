@@ -36,6 +36,11 @@ import {
   copyFoundEpisodes,
   type CopiedEpisode,
 } from '../import-export/copyFoundEpisodes/copyFoundEpisodes';
+import {
+  copyFoundArt,
+  type CopiedArt,
+  type FoundArt,
+} from '../import-export/copyFoundArt/copyFoundArt';
 import type { LayoutFill } from '../import-export/createLayoutFill/createLayoutFill';
 import { exportSummary } from '../import-export/exportSummary/exportSummary';
 import {
@@ -1085,6 +1090,21 @@ export function createApiRouter(
     const { title, year, endYear, creator, synopsis, rating, cast, genres } =
       read;
 
+    // A **Show folder pick**'s found **Poster** and **Backdrop**: absolute
+    // image paths, always copied, never linked.
+    const foundArt: FoundArt = {
+      poster: onlyField(fields, 'posterPath') ?? null,
+      backdrop: onlyField(fields, 'backdropPath') ?? null,
+    };
+    const artRefusal = [foundArt.poster, foundArt.backdrop]
+      .map((path) => (path === null ? null : foundPathRefusal(path, 'image')))
+      .find((refusal) => refusal !== null);
+    if (artRefusal !== undefined) {
+      rollback();
+      res.status(400).json({ error: artRefusal });
+      return;
+    }
+
     // Each **Found file**'s video placed by the **Placed video** rule: in
     // Link, one under a listed Library folder is linked where it lies; a
     // `null` is copied. A Link path under no listed folder is refused.
@@ -1120,11 +1140,14 @@ export function createApiRouter(
     // as a movie's does, and every stored path follows it.
     // A row of a **Show folder pick** sends no bytes, so a save of only those
     // reserves its Series folder here.
-    const findsFiles = read.episodes.some(
-      (episode, index) =>
-        (episode.video === undefined && placed[index] === null) ||
-        (episode.storedSubtitles ?? []).length > 0
-    );
+    const findsFiles =
+      read.episodes.some(
+        (episode, index) =>
+          (episode.video === undefined && placed[index] === null) ||
+          (episode.storedSubtitles ?? []).length > 0
+      ) ||
+      foundArt.poster !== null ||
+      foundArt.backdrop !== null;
     if (uploads.folder === null && findsFiles) {
       uploads.folder = media.reserveFolder(title, year ?? null);
     }
@@ -1138,6 +1161,7 @@ export function createApiRouter(
     // Each **Found file** is copied into its season — a copy that breaks is
     // the save's failure, and takes the folder with it.
     let copied: CopiedEpisode[];
+    let copiedArt: CopiedArt = { poster: null, backdrop: null };
     try {
       copied = await copyFoundEpisodes(
         media,
@@ -1146,6 +1170,9 @@ export function createApiRouter(
         placed,
         stored
       );
+      if (uploads.folder !== null) {
+        copiedArt = await copyFoundArt(media, uploads.folder, foundArt);
+      }
     } catch {
       rollback();
       res.status(500).json({ error: 'Could not add the series' });
@@ -1184,10 +1211,14 @@ export function createApiRouter(
         {
           title,
           ...(uploads.poster === undefined
-            ? {}
+            ? copiedArt.poster === null
+              ? {}
+              : { posterPath: copiedArt.poster }
             : { posterPath: stored(uploads.poster) }),
           ...(uploads.backdrop === undefined
-            ? {}
+            ? copiedArt.backdrop === null
+              ? {}
+              : { backdropPath: copiedArt.backdrop }
             : { backdropPath: stored(uploads.backdrop) }),
           ...(year === undefined ? {} : { year }),
           ...(endYear === undefined ? {} : { endYear }),

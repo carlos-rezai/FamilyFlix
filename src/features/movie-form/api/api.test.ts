@@ -1241,6 +1241,8 @@ describe('readShowFolder', () => {
     year: null,
     libraryFolderId: 'shows',
     heldSeriesId: null,
+    poster: null,
+    backdrop: null,
     episodes: [],
     unplaced: [],
     straySubtitles: 0,

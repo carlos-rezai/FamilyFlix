@@ -69,6 +69,8 @@ const readOf = (path: string): ShowFolderRead => ({
   ...KEYS[path],
   libraryFolderId: null,
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes: [
     {
       season: 1,

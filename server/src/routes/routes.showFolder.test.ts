@@ -142,10 +142,12 @@ describe('GET /api/show-folder', () => {
     expect(read.title).toBe('Harbor and Vine');
     expect(read.year).toBe(2019);
     expect(Object.keys(read).sort()).toEqual([
+      'backdrop',
       'episodes',
       'heldSeriesId',
       'libraryFolderId',
       'path',
+      'poster',
       'straySubtitles',
       'title',
       'unplaced',

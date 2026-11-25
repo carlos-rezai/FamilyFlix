@@ -29,6 +29,8 @@ const seasonTwoRead = (
   year: null,
   libraryFolderId: 'shows',
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes,
   unplaced: unplaced.map((name) => ({
     video: `${PICKED}\\${name}`,
@@ -104,6 +106,8 @@ describe('showFolderRows: a Season N folder', () => {
     year: null,
     libraryFolderId: 'shows',
     heldSeriesId: null,
+    poster: null,
+    backdrop: null,
     episodes: [],
     unplaced: inside.map((relativePath) => ({
       video: `${DEATH_NOTE}\\${relativePath.split('/').join('\\')}`,

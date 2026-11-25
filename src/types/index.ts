@@ -107,6 +107,7 @@ export type {
 } from './playback';
 export type {
   EpisodeFormRow,
+  FolderArt,
   FormKind,
   MovieFormFile,
   MovieFormSubtitle,

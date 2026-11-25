@@ -68,6 +68,8 @@ const readOf = (path: string, libraryFolderId: string | null) => ({
   year: null,
   libraryFolderId,
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes: [
     {
       season: 1,

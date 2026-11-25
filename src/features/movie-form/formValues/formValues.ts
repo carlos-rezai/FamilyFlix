@@ -1,6 +1,7 @@
 import type {
   ImportMode,
   EpisodeFormRow,
+  FolderArt,
   ImportProblemDetail,
   Movie,
   MovieFormFile,
@@ -288,6 +289,35 @@ export function folderKeyValues(
     )
       ? yearText(key.year)
       : current.year,
+  };
+}
+
+/**
+ * The form's values after a **Show folder pick** offers its **Folder art**:
+ * the Poster and Backdrop slots, each decided apart by the one fill rule. A
+ * slot that is empty, or still holds the art an earlier pick (`picked`,
+ * `null` before any) filled in, takes the offered file as a **Found file**,
+ * or empties for `null`; a slot picked by hand stays.
+ */
+export function folderArtValues(
+  current: MovieFormValues,
+  art: FolderArt,
+  picked: FolderArt | null
+): MovieFormValues {
+  const slot = (
+    held: MovieFormFile | null,
+    offered: string | null,
+    earlier: string | null | undefined
+  ): MovieFormFile | null =>
+    held === null || (held.kind === 'found' && held.path === earlier)
+      ? offered === null
+        ? null
+        : foundFile(offered)
+      : held;
+  return {
+    ...current,
+    poster: slot(current.poster, art.poster, picked?.poster),
+    backdrop: slot(current.backdrop, art.backdrop, picked?.backdrop),
   };
 }
 

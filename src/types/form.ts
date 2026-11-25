@@ -187,7 +187,17 @@ export interface ShowFolderRead {
   unplaced: ShowFolderVideo[];
   /** Subtitles that matched no episode's stem. */
   straySubtitles: number;
+  /** The Show folder's **Poster**, absolute, or `null` for none. */
+  poster: string | null;
+  /** The Show folder's **Backdrop**, absolute, or `null` for none. */
+  backdrop: string | null;
 }
+
+/**
+ * A **Show folder pick**'s **Folder art**: the show's **Poster** and
+ * **Backdrop** the read found, absolute, `null` for none.
+ */
+export type FolderArt = Pick<ShowFolderRead, 'poster' | 'backdrop'>;
 
 /** One video of a {@link ShowFolderRead}, by the two paths it is read by. */
 export interface ShowFolderVideo {

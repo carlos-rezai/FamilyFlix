@@ -74,6 +74,8 @@ const READ = {
   year: null,
   libraryFolderId: null,
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes: [
     {
       season: 1,
@@ -118,6 +120,8 @@ const OTHER_READ = {
   year: null,
   libraryFolderId: null,
   heldSeriesId: null,
+  poster: null,
+  backdrop: null,
   episodes: [
     {
       season: 1,
