@@ -1,5 +1,6 @@
 import { basename, extname } from 'node:path';
 
+import type { SeasonPosterPath } from '../../import-export/copyFoundArt/copyFoundArt';
 import type { Media } from '../../media/createMedia/createMedia';
 import { spellEpisodeTag } from '../../media/episodeTag/episodeTag';
 import {
@@ -235,10 +236,8 @@ export function readSeasonPosters(
 export function readFoundSeasonPosters(
   fields: Record<string, string[]>,
   uploads: EpisodeUploads
-):
-  | { ok: true; found: { season: number; path: string }[] }
-  | ({ ok: false } & Refusal) {
-  const found: { season: number; path: string }[] = [];
+): { ok: true; found: SeasonPosterPath[] } | ({ ok: false } & Refusal) {
+  const found: SeasonPosterPath[] = [];
   for (const [index, text] of (fields.seasonPoster ?? []).entries()) {
     const field = readSeasonPosterField(text);
     if (

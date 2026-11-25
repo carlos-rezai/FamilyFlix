@@ -1,4 +1,5 @@
 import type { Media } from '../../media/createMedia/createMedia';
+import type { TitleArt } from '../../media/readTitleFolder/readTitleFolder';
 
 /** One season's **Season poster**, by season: absolute when found, stored once copied. */
 export interface SeasonPosterPath {
@@ -10,9 +11,7 @@ export interface SeasonPosterPath {
  * A title's found **Poster** and **Backdrop**, absolute, `null` for none, and
  * a show's found **Season posters**, none when absent.
  */
-export interface FoundArt {
-  poster: string | null;
-  backdrop: string | null;
+export interface FoundArt extends TitleArt {
   seasonPosters?: SeasonPosterPath[];
 }
 
@@ -20,9 +19,7 @@ export interface FoundArt {
  * A title's found art once copied: each file's **Stored path**, or `null`,
  * and each Season poster's by season.
  */
-export interface CopiedArt {
-  poster: string | null;
-  backdrop: string | null;
+export interface CopiedArt extends TitleArt {
   seasonPosters: SeasonPosterPath[];
 }
 
