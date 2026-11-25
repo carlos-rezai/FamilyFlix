@@ -597,6 +597,21 @@ function audioTrackQuery(value: unknown): number | null {
   return Number.isSafeInteger(index) ? index : null;
 }
 
+/**
+ * A Resolve's slot, film or series: bytes this request stored, or a
+ * non-empty path, which there is a **Found file** under a Library folder
+ * rather than a file the library holds. Silence is an empty slot.
+ */
+function resolveFileOf(
+  stored: string | undefined,
+  path: string | undefined
+): ResolveFile | null {
+  if (stored !== undefined) {
+    return { stored };
+  }
+  return path === undefined || path === '' ? null : { found: path };
+}
+
 /** What each refused TMDB key answers with. */
 const KEY_REFUSALS: Record<
   Exclude<SaveKeyOutcome['kind'], 'saved'>,
@@ -3540,19 +3555,11 @@ export function createApiRouter(
       return;
     }
 
-    // The Poster and Backdrop alike: a part is stored bytes, a non-empty
-    // path a **Found file**, silence an empty slot.
-    const artSlot = (
-      stored: string | undefined,
-      path: string | undefined
-    ): ResolveFile | null =>
-      stored !== undefined
-        ? { stored }
-        : path === undefined || path === ''
-          ? null
-          : { found: path };
-    const poster = artSlot(uploads.poster, onlyField(fields, 'posterPath'));
-    const backdrop = artSlot(
+    const poster = resolveFileOf(
+      uploads.poster,
+      onlyField(fields, 'posterPath')
+    );
+    const backdrop = resolveFileOf(
       uploads.backdrop,
       onlyField(fields, 'backdropPath')
     );
@@ -3678,21 +3685,10 @@ export function createApiRouter(
       }
       const { title, year, director, synopsis, rating, cast, genres } = read;
 
-      // A slot answers in one of two ways, as it does on the edit: bytes this
-      // request stored, or a path — which here is a **Found file** under a
-      // Library folder rather than a file the library holds. Silence is an
-      // empty slot.
-      const slot = (
-        stored: string | undefined,
-        path: string | undefined
-      ): ResolveFile | null =>
-        stored !== undefined
-          ? { stored }
-          : path === undefined || path === ''
-            ? null
-            : { found: path };
-
-      const video = slot(uploads.video, onlyField(fields, 'videoPath'));
+      const video = resolveFileOf(
+        uploads.video,
+        onlyField(fields, 'videoPath')
+      );
       if (video === null) {
         // The form's own gate, held on the wire: a title and a film. Unlike
         // the add, a resolve with no film behind it is not a row this route
@@ -3701,8 +3697,11 @@ export function createApiRouter(
         res.status(400).json({ error: 'Body must carry a video' });
         return;
       }
-      const poster = slot(uploads.poster, onlyField(fields, 'posterPath'));
-      const backdrop = slot(
+      const poster = resolveFileOf(
+        uploads.poster,
+        onlyField(fields, 'posterPath')
+      );
+      const backdrop = resolveFileOf(
         uploads.backdrop,
         onlyField(fields, 'backdropPath')
       );
