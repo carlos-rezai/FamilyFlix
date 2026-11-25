@@ -1,7 +1,10 @@
 import type { Media } from '../../media/createMedia/createMedia';
 import type { TitleArt } from '../../media/readTitleFolder/readTitleFolder';
 
-/** One season's **Season poster**, by season: absolute when found, stored once copied. */
+/**
+ * One season's **Season poster**, by season: absolute when found, stored once
+ * copied.
+ */
 export interface SeasonPosterPath {
   season: number;
   path: string;

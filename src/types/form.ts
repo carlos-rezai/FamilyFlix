@@ -88,7 +88,7 @@ export interface MovieFormValues {
   /**
    * The **Backdrop**, the poster's word for word: `null` is an empty slot and
    * a complete answer, the detail page falling back to the same gradient. A
-   * Resolve draws no slot for it, so it stays `null` there.
+   * Resolve prefills it with its found backdrop.
    */
   backdrop: MovieFormFile | null;
   /**

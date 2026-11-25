@@ -43,7 +43,10 @@ export interface ShowFolderContext {
   titleHolding(folderId: string, videoPath: string): HeldTitle | null;
 }
 
-/** What a pick holds: its numbered show, or its loose videos, and its show's art. */
+/**
+ * What a pick holds: its numbered show, or its loose videos, and its show's
+ * art.
+ */
 interface PickedFolder {
   show: ShowScan | null;
   loose: string[];

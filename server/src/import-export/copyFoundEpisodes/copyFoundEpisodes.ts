@@ -27,8 +27,8 @@ export interface CopiedEpisode {
  * kept where it lies; a found video copied with `Media.copyIn` into its season
  * folder under the **Series folder** `folder` — copied, never moved, so the
  * picked folder is left as it was; a picked one's **Stored path**, through
- * `stored`; and its found subtitles and **Still** copied beside it. Rejects on the first
- * copy that breaks — the caller takes the folder back.
+ * `stored`; and its found subtitles and **Still** copied beside it. Rejects on
+ * the first copy that breaks — the caller takes the folder back.
  */
 export async function copyFoundEpisodes(
   media: Media,

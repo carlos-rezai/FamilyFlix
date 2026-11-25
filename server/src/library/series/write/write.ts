@@ -374,8 +374,8 @@ export function createSeriesWrite(
   /**
    * The files to clean up after a change: each path a series pointed at
    * `before` (once) that no row of it points at now, its own poster and
-   * backdrop, its
-   * episodes' tracks, stills and Managed videos, and its Season posters.
+   * backdrop, its episodes' tracks, stills and Managed videos, and its Season
+   * posters.
    */
   const removedPathsOf = (
     seriesId: string,

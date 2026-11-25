@@ -3837,7 +3837,10 @@ export function createImporter({
           }
           series = heldSeries;
         } else {
-          /** A stored file as it is; a found one copied into the Series folder. */
+          /**
+           * A stored file as it is; a found one copied into the Series
+           * folder.
+           */
           const placeArt = async (
             slot: ResolveFile | null
           ): Promise<string | undefined> =>

@@ -44,7 +44,9 @@ export interface Uploads {
   /** The **Stored path** of the poster this request wrote, if it wrote one. */
   poster?: string;
 
-  /** The **Stored path** of the backdrop this request wrote, if it wrote one. */
+  /**
+   * The **Stored path** of the backdrop this request wrote, if it wrote one.
+   */
   backdrop?: string;
 
   /**

@@ -12,7 +12,8 @@ const EMPTY: FilmFolderRead = { poster: null, backdrop: null, subtitles: [] };
  * when that reads as a `film` whose videos include the picked one (a folder
  * of two videos still answers them). A series, a left-out folder or one that
  * cannot be read answers all empty, and so does a video in a **Season
- * folder**, whose art and tracks are a season's, never a film's. Answered as a value, never a throw.
+ * folder**, whose art and tracks are a season's, never a film's. Answered as
+ * a value, never a throw.
  */
 export async function readFilmFolder(video: string): Promise<FilmFolderRead> {
   if (isSeasonFolder(basename(dirname(video)))) {

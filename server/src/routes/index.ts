@@ -826,10 +826,10 @@ const RESET_REFUSALS: Record<
  * for it; injected so no route learns there is an FFmpeg behind a Frame
  * still.
  *
- * All eight are required, `media` included. It used to default to the domain over
- * `mediaPath` so that a test could compose the router with three arguments —
- * which made it a seam pointed at the tests rather than at the app, and left two
- * places able to decide what the router is made of. `playback`, the seam this
+ * All eight are required, `media` included. It used to default to the domain
+ * over `mediaPath` so that a test could compose the router with three
+ * arguments — which made it a seam pointed at the tests rather than at the
+ * app, and left two places able to decide what the router is made of. `playback`, the seam this
  * one was modelled on, never had one. The composition root is now the only
  * answer to what this app is composed of.
  */
@@ -3621,9 +3621,9 @@ export function createApiRouter(
   // _Save & continue_: the **Movie form**'s own multipart encoding, read by
   // the same reader the two movie routes use. A **Found file** arrives as the
   // path field the edit route already reads for a **Stored file**
-  // (`videoPath`, `posterPath`, `backdropPath`, `subtitlePath`), a picked one as bytes in the
-  // part beside it; the two are told apart exactly as the edit tells them
-  // apart, so nothing about the encoding is this route's own. Since log 48 the
+  // (`videoPath`, `posterPath`, `backdropPath`, `subtitlePath`), a picked one
+  // as bytes in the part beside it; the two are told apart exactly as the
+  // edit tells them apart, so nothing about the encoding is this route's own. Since log 48 the
   // two adds take a found path too; the **Loopback guard** is what keeps a
   // path-accepting route off the network. What is this route's own is where a
   // path may point: the importer copies from under the **Current run**'s
