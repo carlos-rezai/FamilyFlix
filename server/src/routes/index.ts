@@ -2120,48 +2120,40 @@ export function createApiRouter(
       await fillAfterSave(saved.id);
       res.json(saved);
 
-      // The only place in the app that deletes media, and it runs here rather
-      // than one line earlier because **only a successful commit authorises the
-      // unlink**: a delete that ran ahead of a save that then failed would have
-      // destroyed a file the record still points at.
+      // It runs here rather than one line earlier because **only a successful
+      // commit authorises the unlink**: a delete that ran ahead of a save that
+      // then failed would have destroyed a file the record still points at.
       //
-      // It takes the file a replacement superseded and nothing beside it — one
-      // file per replaced slot, reasoned about by path and never by folder, so
-      // swapping a poster cannot take the film or the tracks with it. A slot the
-      // maintainer merely emptied authorises nothing: without new bytes in its
-      // place there is no replacement, only a column set to nothing, and the
-      // same goes for a track detached from the record. A replacement carrying
-      // the old file's name was written *over* it, so the two paths are equal
-      // and there is nothing left to take away — unlinking the old path anyway
-      // would delete the file the row now points at.
-      for (const [replacement, superseded] of [
-        // A Linked video is never the app's to remove: only a Stored path is.
+      // One rule, the series edit's: each **Stored path** the old row held that
+      // the saved row no longer points at is removed, whether a replacement
+      // superseded it, a slot was emptied or a track was detached. It is
+      // reasoned about by path and never by folder, so letting go of a poster
+      // cannot take the film or the tracks with it. A path the saved row still
+      // holds (kept, or written over in place by a file of the same name) is
+      // never removed. A Linked video is never the app's to remove: only a
+      // Stored video counts.
+      const held = new Set<string>([
+        saved.videoPath,
+        saved.posterPath ?? '',
+        saved.backdropPath ?? '',
+        ...saved.subtitles.map((track) => track.path),
+      ]);
+      const letGo = new Set<string>(
         [
-          uploads.video,
           existing.videoFolderId === null ? existing.videoPath : null,
-        ],
-        [uploads.poster, existing.posterPath],
-      ] as const) {
-        if (
-          replacement !== undefined &&
-          superseded !== null &&
-          superseded !== '' &&
-          superseded !== replacement
-        ) {
-          // `removeFile` swallows its own failure: the edit has already
-          // committed and the maintainer has already been told it was made, so
-          // a stranded file is the smaller harm against a lost correction.
-          media.removeFile(superseded);
-        }
-      }
-      // The **Backdrop** is the one art slot whose emptying authorises the
-      // unlink too: its file is no row's once the column lets go of it.
-      if (
-        existing.backdropPath !== null &&
-        existing.backdropPath !== '' &&
-        existing.backdropPath !== backdropPath
-      ) {
-        media.removeFile(existing.backdropPath);
+          existing.posterPath,
+          existing.backdropPath,
+          ...existing.subtitles.map((track) => track.path),
+        ].filter(
+          (path): path is string =>
+            path !== null && path !== '' && !held.has(path)
+        )
+      );
+      for (const path of letGo) {
+        // `removeFile` swallows its own failure: the edit has already
+        // committed and the maintainer has already been told it was made, so
+        // a stranded file is the smaller harm against a lost correction.
+        media.removeFile(path);
       }
     }
   );
