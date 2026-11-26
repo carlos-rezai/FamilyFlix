@@ -1145,10 +1145,18 @@ export function createApiRouter(
       read;
 
     // A **Show folder pick**'s found **Poster**, **Backdrop** and **Season
-    // posters**: absolute image paths, always copied, never linked.
+    // posters**: absolute image paths, always copied, never linked. A picked
+    // part beats a found path for its slot, and an empty field is no found
+    // file, as on the movie add.
     const foundArt: FoundArt = {
-      poster: onlyField(fields, 'posterPath') ?? null,
-      backdrop: onlyField(fields, 'backdropPath') ?? null,
+      poster:
+        uploads.poster === undefined
+          ? onlyField(fields, 'posterPath') || null
+          : null,
+      backdrop:
+        uploads.backdrop === undefined
+          ? onlyField(fields, 'backdropPath') || null
+          : null,
       seasonPosters: foundSeasonPosters.found,
     };
     const artRefusal = foundArtRefusal(foundArt);
